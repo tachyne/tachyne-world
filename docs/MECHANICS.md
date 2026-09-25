@@ -96,8 +96,8 @@ counts as finished, absorbing the client/server timer race) — **✅**.
 | Lava contact | ~4 HP / 0.5 s + lingering fire | `lavaDamagePerSec=8` | 🟡 same rate; post-exit burning not modelled |
 | Cactus contact | 1 HP / 0.5 s on hitbox overlap | `cactusDamagePerSec=1` (4-neighbour feet/body check) | 🟡 approximated, 1 Hz |
 | Fire block / burning status | fire 1 HP/s + 8s afterburn; lava 15s afterburn; water/rain douse | same (`fire.go`: fireSecs on tracked, flame overlay metadata, afterburn paused while still in the source) | ✅ (no suffocation yet) |
-| TNT | 80-tick fuse entity, power 4, chains, ~1/4 drops | `primedTNT` + fuse metadata, `explodeAt` shared with creepers, chain-priming with random 10-30 fuses, blast resistance ≥100 survives (obsidian) | ✅ (no propelled/falling TNT) |
-| Fire spread | ignite odds by flammability, age, burnout | placed fire burns out in ~5 s, NO spread (deliberate until mobGriefing gamerule lands) | 🟡 |
+| TNT | 80-tick fuse entity, power 4, chains, ~1/4 drops | `primedTNT` + fuse metadata, `explodeAt` shared with creepers, chain-priming with random 10-30 fuses, blast resistance ≥100 survives (obsidian); primed TNT falls under gravity and is thrown by blasts and dispensers | ✅ |
+| Fire spread | ignite odds by flammability, age, burnout | FireBlock.tick port: spreads by ignite/burn odds, ages and burns out, humid biomes and rain slow it, infiniburn per dimension, fire_spread_radius_around_player | ✅ |
 
 Sources: [Damage](https://minecraft.wiki/w/Damage), [Void](https://minecraft.wiki/w/Void).
 
@@ -598,7 +598,7 @@ elytra.
 | Mechanic | Vanilla | Ours | Status |
 |---|---|---|---|
 | Dimension | the_end effects, void, fixed time | third world (end.gob, own cache namespace), main island lens + 10-pillar ring, void beyond r=95; vanilla spawn platform at (100,49,0); /end op command | 🟡 |
-| Stronghold | full maze, libraries, silverfish spawner | vanilla StrongholdPieces port: full piece graph (corridors, doors, prison halls, turns, room crossings, stairs, five crossings, chest corridors, libraries, portal room), stone-brick selector, corridor/crossing/library loot, silverfish spawner; placement still the 1536-cell grid, not concentric rings (GenVersion 20) | 🟡 |
+| Stronghold | full maze, libraries, silverfish spawner | vanilla StrongholdPieces port: full piece graph (corridors, doors, prison halls, turns, room crossings, stairs, five crossings, chest corridors, libraries, portal room), stone-brick selector, corridor/crossing/library loot, silverfish spawner; placement still the 1536-cell grid, not concentric rings (GenVersion 21) | 🟡 |
 | Eyes of ender | fly + drop/shatter, 20%% break | fly toward the nearest stronghold, always consumed, no drop | 🟡 |
 | End portal | filling animation, per-frame checks | server recomputes the ring from the seed on every eye (the click is a wish); 12 eyes fill the 3x3 instantly | ✅ |
 | Dragon | phases (circling/strafing/perching), breath, bossbar, crystal beams | 200 HP flyer: circles the ring, 12s swoop cycles at survival players, 8 contact damage, +2 HP/s while any crystal lives; no perch/breath/bossbar/beam visuals | 🟡 |
@@ -620,7 +620,7 @@ elytra.
 | Entity metadata across versions | per-version data indexes | 26.2 moved cube-mob SIZE from index 16 to 18 (baby/age-locked inserted) — the chain now shifts index-16 VarInts for 776. LESSON: metadata INDEXES shift between versions like packet ids do; a type mismatch is an instant client disconnect naming the entity | ✅ fixed 2026-07-04 |
 | Nether mobs | piglins/ghasts/blazes/magma cubes/wither skeletons, fortresses | zombified piglin (neutral, 16-block pack anger, gold drops), magma cube (splits, magma cream), blaze (fireballs ignite, rods on player kills); spawn on netherrack around players, cap 14; no ghasts/fortresses | 🟡 |
 | Brewing | stand w/ per-slot progress arrow, potion_contents component, splash/lingering, modifiers (redstone/glowstone) | full water→awkward→6 potions chain, 20s brews, blaze-powder fuel; potions carry a server-side type + custom NAME (no potion_contents on the wire — its component id shifts per version; liquid renders default purple but labels/effects are real); no splash/modifiers; stand contents in-session only | 🟡 |
-| Nether wart | soul sand farms, 3 growth stages | wild wart on nether soul-sand floors (GenVersion 4); plantable; grows only in overworld farms (block sim is dim-0) | 🟡 |
+| Nether wart | soul sand farms, 3 growth stages | wild wart on nether soul-sand floors (GenVersion 4); plantable; grows in every dimension | ✅ |
 | Portal pairing | proximity re-search each trip | STICKY LINKS: first travel records the pair (both directions, hub registry); later trips land at the exact partner portal's doorstep if it's still intact + safe, else fall back to the scan and re-link. In-session only (links reset on restart → first trip re-learns) | ✅ |
 | Portal linking round-trip | 128-block overworld search | portal search scans the EDIT OVERLAY within 128 blocks both ways; matched portals must be INTACT (obsidian footing + held sheet) and lava-safe or they're rebuilt | ✅ |
 | Portal breaking | frame break pops the sheet | orphaned portal blocks cascade-pop on neighbor updates (overworld sim; nether-side strays only harmless — never link targets) | ✅ |
@@ -645,7 +645,7 @@ elytra.
 |---|---|---|---|
 | Dungeons | 1-2 chests, cobble/mossy floor mix, spawner w/ spinning mob | one chest, mossy shell mix, live spawner (200-800t delay, 16-block activation, cap 6) — no spinning-mob display (needs block-entity data packet) | 🟡 |
 | Spawner | block entity, XP on break, silk-touch rules | pure-seed lookup (no block entity); mine it → dead | 🟡 |
-| Mineshafts | vast nets, corridors+stairs, cave spider spawners, loot carts | vanilla MineshaftPieces port: rooms, corridors, crossings, stairs, supports, cobwebs, rails, pillars/chains, cave spider nests + spawners, chest minecarts (abandoned_mineshaft), mesa variant; per-chunk 0.004 placement (GenVersion 20) | ✅ |
+| Mineshafts | vast nets, corridors+stairs, cave spider spawners, loot carts | vanilla MineshaftPieces port: rooms, corridors, crossings, stairs, supports, cobwebs, rails, pillars/chains, cave spider nests + spawners, chest minecarts (abandoned_mineshaft), mesa variant; per-chunk 0.004 placement (GenVersion 21) | ✅ |
 | Lakes |水 both types, underground too | surface bowls only, 20%% lava | 🟡 |
 | Ruins | (n/a — flavor) | small broken stone-brick shells | ✅ |
 | GenVersion | — | bumped 1→2 (2026-07-04): terrain regenerates under existing builds; VM state backed up to ~/backups/20260704-1807 first | ⚠️ |
