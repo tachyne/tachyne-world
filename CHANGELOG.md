@@ -95,6 +95,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Redstone from jukeboxes and trapped chests.** A jukebox whose song
+  ends now turns off the redstone it was powering, and a trapped chest in
+  the Nether or the End gives a signal when opened, as in vanilla.
 - **Fences join their gates.** A fence now connects to a fence gate set in
   line with it, as in vanilla, and no longer reaches out to glass panes,
   leaves, pumpkins or melons; wooden fences and the nether brick fence keep

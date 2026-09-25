@@ -301,7 +301,7 @@ func (h *hub) ownSignal(x, y, z int, s uint32) int {
 			return 15
 		}
 	case isTrappedChest(s): // clamp(open count, 0, 15)
-		return min(h.chestOpenCount(0, blockPos{x, y, z}), 15)
+		return min(h.chestOpenCount(h.rsDim, blockPos{x, y, z}), 15) // the chest's own dimension
 	}
 	return 0
 }
