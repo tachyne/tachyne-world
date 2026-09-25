@@ -555,6 +555,7 @@ func (h *hub) loadRules() {
 	h.syncLoginFlags()
 	if h.rules.Border != nil {
 		h.border = *h.rules.Border
+		h.publishBorder()
 	}
 	if ws := h.rules.Weather; ws != nil {
 		h.clearTime, h.rainTime, h.thunderTime = ws.ClearTime, ws.RainTime, ws.ThunderTime

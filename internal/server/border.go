@@ -268,3 +268,40 @@ func (h *hub) cmdWorldBorder(players map[int32]*tracked, t *tracked, args []stri
 	}
 	return "Usage: /worldborder [get|set|add|center|damage|warning]"
 }
+
+// publishBorder hands the session goroutines a copy of the border: the
+// click paths (handleDig, handlePlace) run there and may not read h.border.
+func (h *hub) publishBorder() {
+	b := h.border
+	h.borderSnap.Store(&b)
+}
+
+// cellWithinBorder is ServerLevel.mayInteract's border half,
+// WorldBorder.isWithinBounds(BlockPos): the whole block cell inside the
+// wall. Safe from any goroutine. Overworld only, as withinBorder.
+func (h *hub) cellWithinBorder(dim, x, z int) bool {
+	b := h.borderSnap.Load()
+	if dim != dimOverworld || b == nil {
+		return true
+	}
+	half := b.sizeAt(h.tick.Load()) / 2
+	fx, fz := float64(x), float64(z)
+	return fx >= b.CenterX-half && fx+1 <= b.CenterX+half && fz >= b.CenterZ-half && fz+1 <= b.CenterZ+half
+}
+
+// targetOutsideBorder: an entity interaction or attack whose target stands
+// past the wall is dropped (handleInteract: isWithinBounds(target)).
+func (h *hub) targetOutsideBorder(players map[int32]*tracked, eid int32) bool {
+	switch {
+	case players[eid] != nil:
+		t := players[eid]
+		return !h.withinBorder(t.dim, t.x, t.z)
+	case h.mobs[eid] != nil:
+		m := h.mobs[eid]
+		return !h.withinBorder(m.dim, m.x, m.z)
+	case h.vehicles[eid] != nil:
+		v := h.vehicles[eid]
+		return !h.withinBorder(v.dim, v.x, v.z)
+	}
+	return false
+}

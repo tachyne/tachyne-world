@@ -2,6 +2,7 @@ package server
 
 import (
 	"testing"
+	"time"
 
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
@@ -163,5 +164,42 @@ func TestNothingSpawnsOutsideTheBorder(t *testing.T) {
 	// The Nether keeps its own reckoning (one border, overworld only).
 	if !h.withinBorder(dimNether, 400.5, 0.5) {
 		t.Error("the border is overworld-only here, matching dragonegg.go")
+	}
+}
+
+// ServerLevel.mayInteract: past the world border a player can neither break
+// nor place, and a mob out there cannot be hit.
+func TestBorderStopsInteraction(t *testing.T) {
+	s, h, p := breakPlaceServer(t)
+	w := s.world
+	h.post(evBorderCmd{p: p, args: []string{"set", "20"}})
+	poll := func(what string, ok func() bool) {
+		t.Helper()
+		for i := 0; i < 400 && !ok(); i++ {
+			time.Sleep(5 * time.Millisecond)
+		}
+		if !ok() {
+			t.Fatal(what)
+		}
+	}
+	poll("the border never shrank", func() bool { return !h.cellWithinBorder(0, 30, 0) })
+	x, y, z := 30, 70, 0 // outside a 20-wide border centred on 0,0
+	w.SetBlock(x, y, z, worldgen.BlockBase("stone"))
+	w.SetBlock(x, y+1, z, worldgen.Air)
+	p.setHotbarSlot(0, itemByName["stone"])
+	selectSlot(p, 0)
+	s.handleDig(p, digBody(0, x, y, z))
+	s.handlePlace(p, placeBody(x, y, z, 1))
+	// Inside, the same place works — and once it has landed, the hub has
+	// handled everything posted before it.
+	w.SetBlock(3, y, 0, worldgen.BlockBase("stone"))
+	w.SetBlock(3, y+1, 0, worldgen.Air)
+	s.handlePlace(p, placeBody(3, y, 0, 1))
+	poll("a placement inside the border did not happen", func() bool { return w.Block(3, y+1, 0) != worldgen.Air })
+	if w.Block(x, y, z) != worldgen.BlockBase("stone") {
+		t.Fatal("a block past the border was broken")
+	}
+	if w.Block(x, y+1, z) != worldgen.Air {
+		t.Fatal("a block was placed past the border")
 	}
 }

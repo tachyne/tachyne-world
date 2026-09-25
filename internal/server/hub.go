@@ -432,14 +432,15 @@ type hub struct {
 	// owned reports whether this pod owns a chunk in a sharded world. nil means
 	// unsharded — own the whole world (the default for a single-pod or test hub).
 	// Set by Server from the region map; see shardown.go.
-	shardOf      func(cx, cz int32) int32 // chunk → owning SID (nil = unsharded: own everything)
-	topo         shard.Map                // region map (for shadow awareness; zero when unsharded)
-	sid          int32                    // this pod's shard id (eid mint lane when sharded)
-	debugBorders bool                     // dev: particle wall along region seams (-debug-borders)
-	border       worldBorder              // the world border (persisted in settings.json)
-	peers        peerSender               // warm world↔world links to neighbours (nil = unsharded)
-	handoffs     map[string]*handoff      // player releases in flight, by migID
-	migSeq       int64                    // monotonic handover id counter
+	shardOf      func(cx, cz int32) int32    // chunk → owning SID (nil = unsharded: own everything)
+	topo         shard.Map                   // region map (for shadow awareness; zero when unsharded)
+	sid          int32                       // this pod's shard id (eid mint lane when sharded)
+	debugBorders bool                        // dev: particle wall along region seams (-debug-borders)
+	border       worldBorder                 // the world border (persisted in settings.json)
+	borderSnap   atomic.Pointer[worldBorder] // a copy for session goroutines (publishBorder)
+	peers        peerSender                  // warm world↔world links to neighbours (nil = unsharded)
+	handoffs     map[string]*handoff         // player releases in flight, by migID
+	migSeq       int64                       // monotonic handover id counter
 
 	// Cross-seam shadows (shadow.go): read-only mirrors of near-border entities.
 	// shadowOut = local eid → neighbour SIDs currently holding its shadow;
@@ -926,6 +927,7 @@ func newHub(w *world.World) *hub {
 	h.initStars(newStarStore())    // …and for a firework's bursts (see fireworkstar.go)
 	h.names = newNameStore()
 	globalNames.Store(h.names) // ditto for custom names (see names.go)
+	h.publishBorder()
 	return h
 }
 
@@ -1856,6 +1858,7 @@ func (h *hub) run() {
 			case evBorderCmd:
 				if t := players[e.p.eid]; t != nil {
 					e.p.tell(h.cmdWorldBorder(players, t, e.args))
+					h.publishBorder()
 				}
 			case evScoreboardCmd:
 				h.cmdScoreboard(players, e)
@@ -1968,7 +1971,9 @@ func (h *hub) run() {
 					h.placeFrogspawn(players, t)
 				}
 			case evAttack:
-				h.onAttack(players, e)
+				if !h.targetOutsideBorder(players, e.target) {
+					h.onAttack(players, e)
+				}
 			case evPlaceVehicleLook:
 				if t := players[e.eid]; t != nil {
 					h.placeVehicleFromLook(players, t, e.item, e.slot)
@@ -2019,7 +2024,7 @@ func (h *hub) run() {
 					h.leashToFence(players, t, e.pos)
 				}
 			case evInteractMob:
-				if t := players[e.eid]; t != nil {
+				if t := players[e.eid]; t != nil && !h.targetOutsideBorder(players, e.target) {
 					if st := h.armorStands[e.target]; st != nil {
 						h.interactStand(players, t, st)
 						break

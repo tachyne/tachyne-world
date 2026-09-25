@@ -66,6 +66,10 @@ func (s *Server) handleDig(p *player, data []byte) {
 		return // this pod does not own the target chunk (finite world / cross-shard)
 	}
 	broken := s.worldFor(p).Block(x, y, z)
+	if !s.hub.cellWithinBorder(p.dim, x, z) { // ServerLevel.mayInteract: not past the border
+		s.sendBlockChange(p, x, y, z, broken, seq)
+		return
+	}
 	mode := s.modes.get(p.key())
 	// Player.blockActionRestricted: an adventure or spectator player cannot
 	// break anything. The client predicts the break regardless, so the block
@@ -228,7 +232,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	// world. (Vanilla does let one open a container's menu to look inside;
 	// this stops short of that rather than open doors and place blocks too.)
 	placeMode := s.modes.get(p.key())
-	if placeMode == gmSpectator {
+	if placeMode == gmSpectator || !s.hub.cellWithinBorder(p.dim, x, z) { // mayInteract: not past the border
 		s.sendBlockChange(p, x, y, z, s.worldFor(p).Block(x, y, z), seq)
 		return
 	}

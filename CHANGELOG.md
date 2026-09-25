@@ -102,6 +102,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **The world border holds.** Past the world border you can no longer
+  break or place blocks, and mobs and players standing beyond it cannot be
+  hit or used, as in vanilla.
 - **Operator shortcuts and gamerule flags.** Operators' clients now know
   their permission level, so F3+F4 (the game-mode switcher) works, on 26.x
   too. The `immediate_respawn` and `limited_crafting` gamerules reach the
