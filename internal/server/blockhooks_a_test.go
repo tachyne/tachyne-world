@@ -376,3 +376,31 @@ func TestEnderChestStatOnlyWhenItOpens(t *testing.T) {
 		t.Errorf("open_enderchest = %d after an open, want 1", got)
 	}
 }
+
+// JukeboxBlock.useItemOn: an empty jukebox clicked with anything but a disc
+// PASSes, so the held block is placed against it.
+func TestEmptyJukeboxPassesABlock(t *testing.T) {
+	s, _, p := breakPlaceServer(t)
+	w := s.world
+	x, y, z := 5, 70, 5
+	w.SetBlock(x, y, z, jukeboxState(false))
+	w.SetBlock(x, y+1, z, worldgen.Air)
+	p.setHotbarSlot(0, itemByName["stone"])
+	selectSlot(p, 0)
+	s.handlePlace(p, placeBody(x, y, z, 1))
+	if w.Block(x, y+1, z) != worldgen.BlockBase("stone") {
+		t.Error("stone clicked on an empty jukebox should be placed on it")
+	}
+}
+
+// Putting a disc in a jukebox is a BLOCK_CHANGE (tryInsertIntoJukebox).
+func TestSculkHearsADiscGoIn(t *testing.T) {
+	f := sculkHears(t, func(h *hub, players map[int32]*tracked, pl *tracked) {
+		h.world.SetBlock(7, 180, 4, jukeboxState(false))
+		pl.inv.slots[0] = invStack{item: itemByName["music_disc_cat"], count: 1}
+		h.onUseJukebox(players, evUseJukebox{eid: pl.p.eid, x: 7, y: 180, z: 4, slot: 0})
+	})
+	if f != freqBlockChange {
+		t.Errorf("the sensor heard %d, want BLOCK_CHANGE %d", f, freqBlockChange)
+	}
+}

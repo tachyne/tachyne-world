@@ -891,6 +891,12 @@ func (s *Server) tryUseBlock(p *player, off bool, x, y, z int, seq int32, face i
 		return true
 	}
 	if isJukebox(state) {
+		// JukeboxBlock.useItemOn: an empty jukebox takes a disc; anything
+		// else falls to useWithoutItem, which PASSes on an empty jukebox,
+		// so the held block is placed against it.
+		if _, _, disc := jukeboxSongFor(int32(held)); state == jukeboxState(false) && !disc {
+			return false
+		}
 		s.hub.post(evUseJukebox{eid: p.eid, x: x, y: y, z: z, slot: slot})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true

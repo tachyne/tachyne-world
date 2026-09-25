@@ -1097,8 +1097,8 @@ func (h *hub) run() {
 					t.p.trySendEv(body)
 				}
 			}
+			h.jukeboxTick(players) // end songs whose length elapsed (JukeboxBlockEntity ticks every tick)
 			if age%20 == 0 {
-				h.jukeboxTick(players)   // end songs whose length elapsed
 				h.lodestoneTick(players) // compasses forget a removed lodestone
 			}
 			if age%80 == 0 {

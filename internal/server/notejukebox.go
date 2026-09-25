@@ -305,6 +305,7 @@ func (h *hub) onUseJukebox(players map[int32]*tracked, e evUseJukebox) {
 		h.sendSlot(t, int(e.slot))
 	}
 	h.jukeboxes[pos] = &jukebox{disc: disc, started: h.tick.Load(), length: length}
+	h.vib(t.dim, freqBlockChange, e.x, e.y, e.z, t.p.eid) // JukeboxPlayable.tryInsertIntoJukebox: BLOCK_CHANGE
 	h.advance(players, t, "item_used_on_block", advMatch{blockState: h.worldFor(t.dim).At(e.x, e.y, e.z), item: disc.item,
 		biome: h.worldFor(t.dim).BiomeAt3D(e.x, e.y, e.z)})
 	h.setBlockLive(players, t.dim, e.x, e.y, e.z, jukeboxState(true))
@@ -325,15 +326,21 @@ func (h *hub) ejectJukebox(players map[int32]*tracked, pos simPos, jb *jukebox) 
 		Event: worldEventJukeboxStop, X: pos.x, Y: pos.y, Z: pos.z})
 }
 
-// jukeboxTick ends songs after their length (vanilla stops server-side and
-// tells clients; the disc stays until ejected). 1 Hz is plenty.
+// jukeboxTick ends songs after their length (JukeboxSongPlayer.tick: the
+// server stops it and tells clients; the disc stays until ejected). The
+// song's end is a signal change — a playing jukebox powers redstone — so the
+// neighbours hear of it (JukeboxBlockEntity.onSongChanged).
 func (h *hub) jukeboxTick(players map[int32]*tracked) {
+	if len(h.jukeboxes) == 0 {
+		return
+	}
 	now := h.tick.Load()
 	for pos, jb := range h.jukeboxes {
 		if jb.started != 0 && now-jb.started >= jb.length {
 			jb.started = 0
 			h.toNearbyEv(players, pos.dim, float64(pos.x), float64(pos.z), attachproto.WorldFX{
 				Event: worldEventJukeboxStop, X: pos.x, Y: pos.y, Z: pos.z})
+			h.inDim(pos.dim, func() { h.scheduleSignalAround(players, pos.blockPos) })
 		}
 	}
 }
