@@ -1,6 +1,7 @@
 package server
 
 import (
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -70,37 +71,39 @@ func (h *hub) harvestBeeHome(players map[int32]*tracked, t *tracked, pos blockPo
 	}
 	held := usedStack(t)
 	tool := held.item // the bottle or shears, for the item_used_on_block trigger
-	var give invStack
-	sound := "minecraft:block.beehive.shear"
+	slot := t.useSlot()
 	switch held.item {
 	case int32(itemByName["shears"]):
-		give = invStack{item: int32(itemByName["honeycomb"]), count: beeHoneycombYield}
-		h.applyToolWear(t, t.useSlot(), 1)
+		// dropHoneycomb: the harvest_beehive loot pops out of the hive.
+		h.spawnBlockDrop(players, t.dim, int32(itemByName["honeycomb"]), beeHoneycombYield, pos.x, pos.y, pos.z)
+		h.playSoundDim(players, t.dim, "minecraft:block.beehive.shear", sndBlock, t.x, t.y, t.z, 1, 1)
+		h.applyToolWear(t, slot, 1)
+		h.gameEvent(t.dim, freqShear, pos.x, pos.y, pos.z, t.p.eid)
 	case int32(itemByName["glass_bottle"]):
-		give = invStack{item: int32(itemByName["honey_bottle"]), count: 1}
-		sound = "minecraft:item.bottle.fill" // vanilla: BOTTLE_FILL, not the shear
-		slot := t.useSlot()
+		h.playSoundDim(players, t.dim, "minecraft:item.bottle.fill", sndBlock, t.x, t.y, t.z, 1, 1)
+		honey := invStack{item: int32(itemByName["honey_bottle"]), count: 1}
 		if held.count--; held.count <= 0 {
-			held = invStack{}
+			*t.handStack(slot) = honey // the last bottle becomes the honey, in the same hand
+		} else {
+			*t.handStack(slot) = held
+			changed, left := t.inv.addStack(honey)
+			for _, sl := range changed {
+				h.sendSlot(t, sl)
+			}
+			if left > 0 {
+				h.spawnItemIn(players, t.dim, honey.item, left, t.x, t.y, t.z)
+			}
 		}
-		*t.handStack(slot) = held // the hand the bottle came from
 		h.sendHandSlot(t, slot)
+		h.gameEvent(t.dim, freqFluidPickup, pos.x, pos.y, pos.z, t.p.eid)
 	default:
 		return false
 	}
+	h.incStat(t, attachproto.StatUsed, tool, 1)
 
-	changed, left := t.inv.addStack(give)
 	// ItemUsedOnBlockTrigger (safely_harvest_honey wants a smoked hive + bottle).
 	h.advance(players, t, "item_used_on_block", advMatch{blockState: h.worldFor(t.dim).At(pos.x, pos.y, pos.z), item: tool, smokey: h.campfireUnder(t.dim, pos)})
-	for _, sl := range changed {
-		h.sendSlot(t, sl)
-	}
-	if left > 0 {
-		h.spawnItemIn(players, t.dim, give.item, left, t.x, t.y, t.z)
-	}
 	h.setBlockAt(players, t.dim, pos, withHoney(cur, 0))
-	h.playSoundDim(players, t.dim, sound, sndBlock,
-		float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5, 1, 1)
 
 	// Robbing a hive turns the bees on you — the ones inside come OUT angry —
 	// unless smoke is keeping them calm.

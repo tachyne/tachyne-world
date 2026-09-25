@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -488,14 +489,20 @@ func TestBeehiveHarvest(t *testing.T) {
 	if got := honeyLevel(w.At(pos.x, pos.y, pos.z)); got != 0 {
 		t.Errorf("honey level %d after harvesting, want 0", got)
 	}
+	// dropHoneycomb: the comb pops out of the hive, not into the pocket.
 	comb := 0
+	for _, it := range h.items {
+		if it.item == int32(itemByName["honeycomb"]) && math.Abs(it.x-float64(pos.x)-0.5) < 0.5 && math.Abs(it.z-float64(pos.z)-0.5) < 0.5 {
+			comb += it.count
+		}
+	}
 	for _, st := range pl.inv.slots {
 		if st.item == int32(itemByName["honeycomb"]) {
-			comb += st.count
+			t.Error("the honeycomb went into the inventory")
 		}
 	}
 	if comb != beeHoneycombYield {
-		t.Errorf("got %d honeycomb, want %d", comb, beeHoneycombYield)
+		t.Errorf("%d honeycomb dropped at the hive, want %d", comb, beeHoneycombYield)
 	}
 
 	// Full + bottle: one honey bottle.
@@ -504,14 +511,8 @@ func TestBeehiveHarvest(t *testing.T) {
 	if !h.harvestBeeHome(players, pl, pos) {
 		t.Fatal("a bottle did not draw honey")
 	}
-	found := false
-	for _, st := range pl.inv.slots {
-		if st.item == int32(itemByName["honey_bottle"]) {
-			found = true
-		}
-	}
-	if !found {
-		t.Error("no honey bottle was produced")
+	if st := pl.inv.slots[pl.p.heldSlot()]; st.item != int32(itemByName["honey_bottle"]) || st.count != 1 {
+		t.Errorf("the last bottle should become the honey in the same hand, holding %+v", st)
 	}
 }
 
