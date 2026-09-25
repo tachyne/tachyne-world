@@ -189,7 +189,7 @@ func (h *hub) villagerGiveBirth(players map[int32]*tracked, m, o *mob) {
 		return // a plugin cancelled the birth; the bed stays free
 	}
 	child.baby, child.growLeft = true, growUpTicks // setAge(-24000)
-	child.setMoveSpeed(0.135)
+	child.setMoveSpeed(vanillaMoveSpeed[entityVillager] * attrToStep)
 	h.initVillagerTrades(child, profUnemployed) // born unemployed: it takes a workstation when it grows
 	h.sendVillagerData(players, child)
 	h.toTracking(players, child.eid, child.dim, child.x, child.z, metaEv(babyMeta(child.eid, true)))

@@ -161,6 +161,17 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 		m.huntedUntil = h.tick.Load() + uint64(piglinHuntMin+h.rng.Intn(piglinHuntSpan))
 	}
 	m.traderDespawn = sm.TraderDespawn
+	if sm.BeeHive != nil {
+		m.beeHome, m.beeHasHome = unpackPos(*sm.BeeHive), true
+	}
+	if sm.BeeFlower != nil {
+		m.beeFlower, m.beeHasFlower = unpackPos(*sm.BeeFlower), true
+	}
+	m.beeNectar, m.beeNoNectar = sm.BeeNectar, sm.BeeNoNectar
+	m.shAttach = sm.AttachFace
+	if sm.WanderTarget != nil {
+		m.traderWander, m.traderWandering = unpackPos(*sm.WanderTarget), true
+	}
 	m.endermiteLife = sm.Lifetime
 	m.tadpoleAge = sm.TadpoleAge
 	for i, n := range sm.Trusted {
@@ -181,7 +192,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 			// The village-population stance (updateVillages) — spawnMob alone
 			// leaves a villager as a generic grazer.
 			m.behavior, m.usesDoors = villagerBehavior{}, true
-			m.setMoveSpeed(0.135)
+			m.setMoveSpeed(vanillaMoveSpeed[entityVillager] * attrToStep)
 		} else {
 			m.converting, m.curer = sm.Converting, sm.Curer
 			if m.converting > 0 {

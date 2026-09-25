@@ -27,6 +27,10 @@ var syncableAttrs = map[api.ID]bool{
 	api.MovementSpeed: true, api.OxygenBonus: true, api.SafeFallDistance: true, api.Scale: true,
 	api.SneakingSpeed: true, api.StepHeight: true, api.SubmergedMiningSpeed: true,
 	api.SweepingDamageRatio: true, api.WaterMovementEfficiency: true, api.CameraDistance: true,
+	// 26.3's own: a 26.2 client is spared them by the translation chain,
+	// which leaves out every attribute its registry lacks.
+	api.Bounciness: true, api.FrictionModifier: true, api.AirDragModifier: true,
+	api.BelowNameDistance: true, api.NameTagDistance: true,
 }
 
 // attributeFrame is the snapshot of every syncable attribute the map holds,

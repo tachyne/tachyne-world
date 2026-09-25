@@ -324,6 +324,9 @@ func (h *hub) ejectJukebox(players map[int32]*tracked, pos simPos, jb *jukebox) 
 	h.setBlockLive(players, pos.dim, pos.x, pos.y, pos.z, jukeboxState(false))
 	h.toNearbyEv(players, pos.dim, float64(pos.x), float64(pos.z), attachproto.WorldFX{
 		Event: worldEventJukeboxStop, X: pos.x, Y: pos.y, Z: pos.z})
+	if jb.started != 0 {
+		h.allaysHearJukebox(players, pos.dim, pos.blockPos, false) // JUKEBOX_STOP_PLAY
+	}
 }
 
 // jukeboxTick ends songs after their length (JukeboxSongPlayer.tick: the
@@ -336,8 +339,12 @@ func (h *hub) jukeboxTick(players map[int32]*tracked) {
 	}
 	now := h.tick.Load()
 	for pos, jb := range h.jukeboxes {
+		if jb.started != 0 && now-jb.started < jb.length && (now-jb.started)%20 == 0 {
+			h.allaysHearJukebox(players, pos.dim, pos.blockPos, true) // JukeboxSongPlayer.tick: JUKEBOX_PLAY
+		}
 		if jb.started != 0 && now-jb.started >= jb.length {
 			jb.started = 0
+			h.allaysHearJukebox(players, pos.dim, pos.blockPos, false) // stop: JUKEBOX_STOP_PLAY
 			h.toNearbyEv(players, pos.dim, float64(pos.x), float64(pos.z), attachproto.WorldFX{
 				Event: worldEventJukeboxStop, X: pos.x, Y: pos.y, Z: pos.z})
 			// JukeboxBlockEntity.onSongChanged → updateNeighborsAt: the
@@ -365,4 +372,7 @@ func (h *hub) spillJukebox(players map[int32]*tracked, dim, x, y, z int, newStat
 	}
 	h.toNearbyEv(players, dim, float64(x), float64(z), attachproto.WorldFX{
 		Event: worldEventJukeboxStop, X: x, Y: y, Z: z})
+	if jb.started != 0 {
+		h.allaysHearJukebox(players, dim, pos.blockPos, false) // JUKEBOX_STOP_PLAY
+	}
 }

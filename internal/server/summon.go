@@ -99,7 +99,11 @@ func (h *hub) summonAt(players map[int32]*tracked, e evSummon) {
 		if n, ok := snbtInt(e.nbt["fuse"]); ok {
 			fuse = int(n)
 		}
-		h.spawnPrimedTNT(players, e.dim, floorInt(e.x), floorInt(e.y), floorInt(e.z), fuse)
+		// EntityType.create: a summoned charge is at rest where it was put
+		// (the hop is TntBlock's, when a block is lit).
+		pt := &primedTNT{eid: h.allocEID(), dim: e.dim, x: e.x, y: e.y, z: e.z, fuse: fuse}
+		h.tnt = append(h.tnt, pt)
+		h.showPrimedTNT(players, pt)
 	case name == "experience_orb":
 		value := 0
 		if n, ok := snbtInt(e.nbt["Value"]); ok {
@@ -142,6 +146,10 @@ func (h *hub) summonAt(players map[int32]*tracked, e evSummon) {
 		h.vehicles[v.eid] = v
 		h.toNearbyEv(players, e.dim, e.x, e.z, entAdd(v.eid, e.etype, v.uuid, e.x, e.y, e.z, v.yaw, 0))
 	default:
+		if h.summonNonLivingAt(players, e) { // projectiles, end crystals, …
+			h.cmdOK(players, e.by)("Summoned new " + mobDisplayName(e.etype))
+			return
+		}
 		m := h.summonMob(players, e) // the hub runs this under the COMMAND spawn cause
 		if m == nil {
 			fail()

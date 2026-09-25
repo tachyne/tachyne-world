@@ -114,9 +114,18 @@ func (rangedBehavior) steer(h *hub, m *mob) (float64, float64) {
 		return 0, 0
 	}
 	if d > bowRadius {
-		sp := m.moveSpeed() * bowApproachMod(m.etype) // outside bow range: close in
-		return dx / d * sp, dz / d * sp
+		// Outside bow range it closes in on the navigation (moveTo), which
+		// is what RestrictSunGoal trims: a skeleton in shade will not path
+		// out into the daylight.
+		mod := bowApproachMod(m.etype)
+		if m.flies || m.swims {
+			sp := m.moveSpeed() * mod
+			return dx / d * sp, dz / d * sp
+		}
+		vx, vz := h.pathSteer(m, m.tx, m.tz)
+		return vx * mod, vz * mod
 	}
+	m.path = nil // strafing is MoveControl's, not the navigation's
 	// Inside it the goal strafes: a sideways half-speed circle plus a
 	// forward/back half-speed drift, both flipping about 30% of the time each
 	// second, held to the band between a quarter and three quarters of the
@@ -169,6 +178,9 @@ func chaseSpeedMod(m *mob) float64 {
 	}
 	if m.etype == entityWarden {
 		return wardenFightMod // FIGHT: SetWalkTargetFromAttackTargetIfTargetOutOfReach(1.2)
+	}
+	if m.etype == entityBee {
+		return beeAttackSpeed
 	}
 	return 1
 }

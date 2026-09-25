@@ -380,6 +380,45 @@ func (d *speciesDef) poisonFor(difficulty int) int {
 	return 0
 }
 
+// vanillaMoveSpeed is MOVEMENT_SPEED from createAttributes (the registry's
+// 0.7 where a class adds none) for the species whose per-update step is
+// tuned by hand rather than derived from it. Their attribute carries
+// vanilla's figure — it is what the client steers a ridden nautilus or
+// happy ghast by, and what /attribute reports — and moveSpeed scales it
+// back to the tuned step (stepScaleFor).
+var vanillaMoveSpeed = map[int]float64{
+	entityTurtle: 0.25, entityFrog: 1.0, entityWanderingTrader: 0.7, entityAxolotl: 1.0,
+	entityDolphin: 1.2, entityGuardian: 0.5, entityElderGuardian: 0.3, entityNautilus: 1.0,
+	entityZombieNautilus: 1.1, entityBat: 0.7, entityParrot: 0.2, entityAllay: 0.1, entityBee: 0.3,
+	entityHappyGhast: 0.05, entityWither: 0.6, entityTadpole: 1.0, entityPhantom: 0.7,
+	entityVex: 0.7, entityGhast: 0.7, entitySquid: 0.7, entityGlowSquid: 0.7, entityCod: 0.7,
+	entitySalmon: 0.7, entityTropicalFish: 0.7, entityPufferfish: 0.7, entityBreeze: 0.63,
+	entityEvoker: 0.5, entityIllusioner: 0.5, entityVillager: 0.5,
+}
+
+// villagerStep is the villager's tuned per-update step (its brain's walk
+// speeds applied to MOVEMENT_SPEED 0.5).
+const villagerStep = 0.135
+
+// stepScaleFor is the tuned step over the attribute-derived one: moveSpeed
+// multiplies the attribute (vanilla's figure × attrToStep) by it, so the
+// mob moves as it was tuned while its attribute reads as vanilla's.
+func stepScaleFor(etype int) float64 {
+	v, ok := vanillaMoveSpeed[etype]
+	if !ok {
+		return 1
+	}
+	step := villagerStep
+	if etype != entityVillager {
+		d := speciesOf(etype)
+		if d == nil || d.step <= 0 {
+			return 1
+		}
+		step = d.step
+	}
+	return step / (v * attrToStep)
+}
+
 // stepSpeed is the species' per-update movement (explicit override, else the
 // MOVEMENT_SPEED attribute converted like speedFor's hand-tuned species).
 func (d *speciesDef) stepSpeed() float64 {

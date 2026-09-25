@@ -414,7 +414,8 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 			}
 			if !a.spent && (h.arrowHitsPlayer(players, a, px, py, pz) ||
 				((a.playerShot || a.mobShot || a.shooter == 0) && h.arrowHitsMob(players, a, px, py, pz)) ||
-				h.arrowHitsVehicle(players, a, px, py, pz)) {
+				h.arrowHitsVehicle(players, a, px, py, pz) || h.arrowHitsHanging(players, a, px, py, pz) ||
+				h.arrowHitsStand(players, a, px, py, pz)) {
 				hit = true
 				break
 			}
@@ -711,6 +712,20 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				continue
 			}
 		}
+		if part != "" {
+			if a.turnedBy == m.eid {
+				continue // already turned away by it
+			}
+			if dragonSitting(m.dragon().phase) && dragonTurnsAway(a) {
+				// AbstractDragonSittingPhase.onHurt: an arrow or a wind
+				// charge does nothing to a sitting dragon, and the failed
+				// hit turns the arrow back (ProjectileDeflection.REVERSE).
+				a.vx, a.vy, a.vz = -a.vx*0.5, -a.vy*0.5, -a.vz*0.5
+				a.turnedBy, a.turnedNow = m.eid, true
+				return false
+			}
+			m.dragonMeleePart, m.dragonHitByPlayer = part, a.playerShot // the dragon's hurt filter
+		}
 		if a.hitMobs != nil && a.hitMobs[m.eid] {
 			continue // piercing bolt already struck this mob — pass through
 		}
@@ -808,11 +823,7 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			if a.mobShot {
 				m.lastAttacker = a.shooter // a mob's arrow counts as its blow (the creeper's disc)
 			}
-			hit := float64(dmg)
-			if part != "" {
-				// EnderDragon.hurt: anywhere but the head is worth a quarter.
-				hit = dragonPartDamage(part, hit)
-			}
+			hit := float64(dmg) // the dragon's part rule is its hurt filter's
 			// Set alight before the blow; a blow that does nothing puts the
 			// old fire back (as on a player, above).
 			ignite := ignitesOnHit(a) && !fireImmune[m.etype]
@@ -1003,4 +1014,14 @@ func (h *hub) hatchEgg(players map[int32]*tracked, a *arrowEntity) {
 			h.toTracking(players, chick.eid, chick.dim, chick.x, chick.z, metaEv(meta))
 		}
 	}
+}
+
+// dragonTurnsAway is the sitting dragon's onHurt test: the direct entity is
+// an arrow (AbstractArrow: arrows, spectral arrows, tridents) or a wind charge.
+func dragonTurnsAway(a *arrowEntity) bool {
+	switch a.etype {
+	case entityArrow, entitySpectralArrow, entityTrident, entityWindCharge, entityBreezeWindCharge:
+		return true
+	}
+	return false
 }

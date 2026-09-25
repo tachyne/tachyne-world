@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -114,5 +115,50 @@ func TestParrotFollowsAMob(t *testing.T) {
 	p.followRecalc = 0
 	if h.parrotFollowMobStep(p) {
 		t.Fatal("a mob beyond seven is let go")
+	}
+}
+
+// ParrotWanderGoal: a parrot with a tree beside it flies up to perch on it
+// (getTreePos, all but one time in a thousand) and settles there instead of
+// strolling about in the air.
+func TestParrotWandersToATree(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	for x := -12; x <= 12; x++ {
+		for z := -12; z <= 12; z++ {
+			h.world.SetBlock(x, 179, z, worldgen.Stone)
+		}
+	}
+	// A trunk with a leaf on top, beside the parrot: the perch is the air
+	// over the leaf.
+	for y := 180; y <= 183; y++ {
+		h.world.SetBlock(2, y, 0, worldgen.BlockBase("oak_log"))
+	}
+	h.world.SetBlock(2, 184, 0, worldgen.BlockBase("oak_leaves"))
+	pl := survPlayer(h)
+	pl.x, pl.y, pl.z = 8.5, 180, 8.5
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	p := h.spawnSpecies(players, entityParrot, 0, 0.5, 180, 0.5)
+	perched := false
+	for i := 0; i < 3000 && !perched; i++ {
+		h.tick.Add(mobMoveInterval)
+		h.updateMobs(players)
+		perched = !p.parrotWandering && math.Abs(p.x-2.5) < 1.2 && math.Abs(p.z-0.5) < 1.2 && p.y > 184.5 && p.y < 186
+	}
+	if !perched {
+		t.Fatalf("the parrot never perched on the tree: at (%.1f,%.1f,%.1f) wandering %v", p.x, p.y, p.z, p.parrotWandering)
+	}
+	// Settled, it stays on its branch rather than drifting off on a stroll.
+	x0, z0 := p.x, p.z
+	for i := 0; i < 20; i++ {
+		h.tick.Add(mobMoveInterval)
+		h.updateMobs(players)
+		if p.parrotWandering {
+			return // a new wander began: that is the goal, not a drift
+		}
+	}
+	if math.Hypot(p.x-x0, p.z-z0) > 0.5 {
+		t.Fatalf("a settled parrot drifted from (%.1f,%.1f) to (%.1f,%.1f)", x0, z0, p.x, p.z)
 	}
 }

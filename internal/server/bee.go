@@ -82,12 +82,19 @@ const (
 	beeGoalKindNone   = 0
 	beeGoalKindFlower = 1
 	beeGoalKindHive   = 2
+	// BeeGoToKnownFlowerGoal: a bee thirty seconds out of the hive with no
+	// nectar heads back to the flower it remembers, for up to 2400 ticks.
+	beeGoalKindKnownFlower = 3
+	beeKnownFlowerAfter    = 600 / 20
+	beeKnownFlowerGiveUp   = 2400 / 20
+	beeAttackSpeed         = 1.4 // Bee.BeeAttackGoal(this, 1.4, true)
 )
 
 // hiveOccupant is one bee inside a hive.
 type hiveOccupant struct {
-	SecsLeft int  `json:"secs"`
-	Nectar   bool `json:"nectar"`
+	SecsLeft int     `json:"secs"`
+	Nectar   bool    `json:"nectar"`
+	Flower   *[3]int `json:"flower,omitempty"` // the bee's savedFlowerPos (flower_pos)
 }
 
 // hiveStore persists hive occupants across restarts — hives.json, the same
@@ -259,8 +266,8 @@ func (h *hub) updateBees(players map[int32]*tracked) {
 		cur := w.At(pos.x, pos.y, pos.z)
 		if !isBeeHome(cur) {
 			// The hive block is gone: its bees tumble out where it stood.
-			for range occ {
-				h.beeOut(players, pos.dim, pos.blockPos, false)
+			for _, o := range occ {
+				h.beeOut(players, pos.dim, pos.blockPos, false, o)
 			}
 			delete(h.hives, pos)
 			changed = true
@@ -281,7 +288,7 @@ func (h *hub) updateBees(players map[int32]*tracked) {
 					cur = w.At(pos.x, pos.y, pos.z)
 				}
 			}
-			h.beeOut(players, pos.dim, pos.blockPos, false)
+			h.beeOut(players, pos.dim, pos.blockPos, false, occ[i])
 			occ = append(occ[:i], occ[i+1:]...)
 		}
 		h.hives[pos] = occ
@@ -301,8 +308,9 @@ func (h *hub) updateBees(players map[int32]*tracked) {
 }
 
 // beeOut spawns a bee just outside a hive, fresh from inside, in the hive's
-// own dimension.
-func (h *hub) beeOut(players map[int32]*tracked, dim int, pos blockPos, angry bool) *mob {
+// own dimension. It keeps the flower it went in knowing; one that knew none
+// learns the hive's nine times in ten (releaseOccupant).
+func (h *hub) beeOut(players map[int32]*tracked, dim int, pos blockPos, angry bool, occ hiveOccupant) *mob {
 	m := h.spawnMobIn(players, entityBee, dim, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+1.2) // the south face
 	if m == nil {
 		return nil // plugin-cancelled spawn
@@ -310,6 +318,11 @@ func (h *hub) beeOut(players map[int32]*tracked, dim int, pos blockPos, angry bo
 	h.applySpecies(players, m)
 	m.beeHome, m.beeHasHome = pos, true
 	m.beeNoEnter = beeReenterSecs
+	if occ.Flower != nil {
+		m.beeFlower, m.beeHasFlower = unpackPos(*occ.Flower), true
+	} else if f, ok := h.hiveFlower[simPos{dim: dim, blockPos: pos}]; ok && h.rng.Float32() < 0.9 {
+		m.beeFlower, m.beeHasFlower = f, true
+	}
 	if angry {
 		m.anger = h.neutralAngerTime() // PERSISTENT_ANGER_TIME, 20-39 s
 	}
@@ -340,6 +353,17 @@ func (h *hub) updateBee(players map[int32]*tracked, m *mob, day, raining bool) {
 	}
 	h.syncBeeLook(players, m)
 	w := h.worldFor(m.dim) // the bee's flowers and hive are in its own world
+	// ValidateFlowerGoal: a remembered flower that is no longer one is
+	// forgotten (only where its chunk is loaded). The goal holds no flag, so
+	// it runs whatever else the bee is doing.
+	if m.beeHasFlower && w.Loaded(int32(m.beeFlower.x>>4), int32(m.beeFlower.z>>4)) &&
+		!worldgen.IsFlower(w.At(m.beeFlower.x, m.beeFlower.y, m.beeFlower.z)) {
+		m.beeHasFlower = false
+		if m.beeGoalKind == beeGoalKindKnownFlower {
+			m.beeGoalKind = beeGoalKindNone
+			m.flyClearPath()
+		}
+	}
 	// The pollen coat at work — even while flying home, and regardless of a
 	// fight: the nectar drips (vanilla aiStep, 5% per tick) and crops below
 	// get a boost until ten have grown this trip.
@@ -366,7 +390,8 @@ func (h *hub) updateBee(players map[int32]*tracked, m *mob, day, raining bool) {
 	if m.beePollinate > 0 {
 		if !worldgen.IsFlower(w.At(m.beeGoal.x, m.beeGoal.y, m.beeGoal.z)) {
 			m.beePollinate, m.beeGoalKind = 0, beeGoalKindNone
-			return // the flower is gone
+			m.beeHasFlower = false // ValidateFlowerGoal: dropFlower
+			return                 // the flower is gone
 		}
 		if m.beePollinate--; m.beePollinate <= 0 {
 			m.beeNectar = true
@@ -450,9 +475,42 @@ func (h *hub) updateBee(players map[int32]*tracked, m *mob, day, raining bool) {
 	}
 	if h.rng.Intn(4) == 0 {
 		if p, ok := h.findFlowerFor(m); ok {
+			// BeePollinateGoal.canBeeUse: the flower it finds is the one it
+			// remembers from now on (savedFlowerPos).
 			m.beeGoal, m.beeGoalKind = p, beeGoalKindFlower
+			m.beeFlower, m.beeHasFlower = p, true
+			return
 		}
 	}
+	h.beeKnownFlowerStep(m)
+}
+
+// beeKnownFlowerStep is BeeGoToKnownFlowerGoal: a bee with a remembered
+// flower, no home restriction and thirty seconds out without nectar flies
+// back to it until within two blocks. It gives the flower up after 2400
+// ticks of travel, or when it is 48 or more away.
+func (h *hub) beeKnownFlowerStep(m *mob) {
+	if !m.beeHasFlower || m.homeR != 0 || m.beeNoNectar <= beeKnownFlowerAfter ||
+		h.beeCloserThan(m, m.beeFlower, 2) {
+		if m.beeGoalKind == beeGoalKindKnownFlower {
+			m.beeGoalKind, m.beeTravel = beeGoalKindNone, 0
+			m.flyClearPath()
+		}
+		return
+	}
+	if m.beeGoalKind != beeGoalKindKnownFlower {
+		m.beeGoal, m.beeGoalKind, m.beeTravel = m.beeFlower, beeGoalKindKnownFlower, 0
+	}
+	if m.beeTravel++; m.beeTravel > beeKnownFlowerGiveUp || !h.beeCloserThan(m, m.beeFlower, beeTooFar) {
+		m.beeHasFlower = false // dropFlower
+		m.beeGoalKind, m.beeTravel = beeGoalKindNone, 0
+		m.flyClearPath()
+	}
+}
+
+// beeCloserThan is Bee.closerThan: the block's centre within d.
+func (h *hub) beeCloserThan(m *mob, p blockPos, d float64) bool {
+	return dist3sq(float64(p.x)+0.5, float64(p.y)+0.5, float64(p.z)+0.5, m.x, m.y, m.z) < d*d
 }
 
 // beeWantsHive is Bee.wantsToEnterHive. The first four are hard refusals —
@@ -548,7 +606,20 @@ func (h *hub) enterHive(players map[int32]*tracked, m *mob) {
 	m.beeTravel, m.beeBanned, m.beeNoNectar = 0, nil, 0
 	m.flyClearPath()
 	home := simPos{dim: m.dim, blockPos: m.beeHome}
-	h.hives[home] = append(h.hives[home], hiveOccupant{SecsLeft: stay, Nectar: m.beeNectar})
+	o := hiveOccupant{SecsLeft: stay, Nectar: m.beeNectar}
+	if m.beeHasFlower {
+		f := packPos(m.beeFlower)
+		o.Flower = &f
+		// addOccupant: the hive learns the flower when it knows none, else
+		// one time in two.
+		if _, known := h.hiveFlower[home]; !known || h.rng.Intn(2) == 0 {
+			if h.hiveFlower == nil {
+				h.hiveFlower = map[simPos]blockPos{}
+			}
+			h.hiveFlower[home] = m.beeFlower
+		}
+	}
+	h.hives[home] = append(h.hives[home], o)
 	h.hivesMark()
 	h.removeMob(players, m)
 }
@@ -661,8 +732,8 @@ func (h *hub) robHive(players map[int32]*tracked, t *tracked, dim int, pos block
 func (h *hub) releaseHiveBees(players map[int32]*tracked, dim int, pos blockPos, t *tracked) {
 	sp := simPos{dim: dim, blockPos: pos}
 	occ := h.hives[sp]
-	for range occ {
-		if m := h.beeOut(players, dim, pos, t != nil); m != nil && t != nil {
+	for _, o := range occ {
+		if m := h.beeOut(players, dim, pos, t != nil, o); m != nil && t != nil {
 			h.provoke(m, t)
 		}
 	}

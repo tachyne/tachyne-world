@@ -48,7 +48,7 @@ func TestShulkerShell(t *testing.T) {
 		h.shulkerTick(players, s)
 		moved = s.x != 0.5 || s.z != 0.5 || s.y != 180
 	}
-	if !moved || w.At(int(s.x), int(s.y)-1, int(s.z)) != worldgen.Stone {
-		t.Fatalf("hurt below half it teleports onto a floor: %.1f,%.1f,%.1f", s.x, s.y, s.z)
+	if !moved || !h.shulkerCanStayAt(s.dim, blockPos{floorInt(s.x), floorInt(s.y), floorInt(s.z)}, s.shAttach) {
+		t.Fatalf("hurt below half it teleports onto a face it can cling to: %.1f,%.1f,%.1f face %d", s.x, s.y, s.z, s.shAttach)
 	}
 }

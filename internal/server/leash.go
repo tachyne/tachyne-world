@@ -259,33 +259,38 @@ func (h *hub) updateLeashes(players map[int32]*tracked) {
 			led[m.leash]++
 		}
 		if m.dying > 0 {
-			h.dropLeash(players, m, true)
+			h.dropLeash(players, m, h.rules.EntityDrops) // !canInteractWithLevel: entity_drops decides
 			continue
 		}
 		hx, hy, hz, hdim, ok := h.leashHolderPos(players, m)
 		if !ok || hdim != m.dim {
 			// The holder logged out, died, or walked through a portal. Vanilla
-			// drops the lead when the two can no longer see each other.
-			h.dropLeash(players, m, true)
+			// drops the lead when the two can no longer see each other — as an
+			// item only with entity_drops on.
+			h.dropLeash(players, m, h.rules.EntityDrops)
 			continue
+		}
+		snap, elastic := leashSnapDist, leashElasticDist
+		if m.etype == entityHappyGhast { // HappyGhast.leashSnapDistance / leashElasticDistance
+			snap, elastic = 16, 10
 		}
 		d := dist3(m.x, m.y, m.z, hx, hy, hz)
 		if isCamelKind(m.etype) && d > 6 && m.camelSitting() && !m.camelInTransition(h.tick.Load()) {
 			h.camelStandUp(players, m) // handleLeashAtDistance: led past six blocks, it gets up
 		}
-		if d > leashSnapDist {
+		if d > snap {
 			h.playSoundDim(players, m.dim, "minecraft:entity.lead.break", sndNeutral, m.x, m.y, m.z, 1, 1)
 			h.dropLeash(players, m, true)
 			continue
 		}
-		if d <= leashElasticDist {
+		if d <= elastic {
 			continue // slack: the mob wanders as it likes
 		}
 		// The spring: pull along the rope, proportional to how far past the
 		// slack it has stretched. Vanilla's full model is a damped spring with
 		// angular momentum; this is its translational half, which is the part
 		// that actually drags a mob along behind you.
-		pull := (d - leashElasticDist) * leashStiffness
+		pull := (d - elastic) * leashStiffness
 		if m.hasBody() && d > 1e-6 { // a sulfur cube's ball is towed through its own motion
 			m.cube.vx += (hx - m.x) / d * pull
 			m.cube.vy += (hy - m.y) / d * pull

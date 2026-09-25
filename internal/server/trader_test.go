@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -257,5 +258,37 @@ func TestTraderWandersToTheBell(t *testing.T) {
 	tr.x = float64(bell.x) + 30.5
 	if !h.traderWanderStep(tr) || tr.vx >= 0 {
 		t.Fatal("outside its home it walks back in")
+	}
+}
+
+// TestTraderWanderTargetSurvivesReload is WanderingTrader's wander_target:
+// a trader still on its way to the bell keeps that point across a save.
+func TestTraderWanderTargetSurvivesReload(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	h.world.ForceLoad(0, 0, 2)
+	tr := h.spawnSpecies(players, entityWanderingTrader, 0, 0.5, 180, 0.5)
+	if tr == nil {
+		t.Fatal("no trader")
+	}
+	tr.traderWander, tr.traderWandering = blockPos{12, 70, -7}, true
+	sm := toSavedMob(tr)
+	b, err := json.Marshal(sm)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var back savedMob
+	if err := json.Unmarshal(b, &back); err != nil {
+		t.Fatal(err)
+	}
+	m := h.reloadMob(players, &back)
+	if m == nil || !m.traderWandering || m.traderWander != (blockPos{12, 70, -7}) {
+		t.Fatalf("the wander target is lost on reload: %+v", m)
+	}
+	// A trader that has let its point go saves none.
+	m.traderWandering = false
+	if sm := toSavedMob(m); sm.WanderTarget != nil {
+		t.Fatalf("no wander target once reached: %v", sm.WanderTarget)
 	}
 }

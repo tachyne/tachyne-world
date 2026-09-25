@@ -86,6 +86,10 @@ func speciesStateMeta(m *mob) []byte {
 		if m.bearStanding {
 			return bearStandingMeta(m)
 		}
+	case entityShulker:
+		if m.shAttach != 0 {
+			return shulkerAttachMeta(m)
+		}
 	case entityGlowSquid:
 		if m.glowDark > 0 {
 			return glowDarkMeta(m)

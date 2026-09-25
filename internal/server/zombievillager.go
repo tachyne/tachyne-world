@@ -231,7 +231,7 @@ func (h *hub) finishCure(players map[int32]*tracked, m *mob) {
 	if len(v.offers) == 0 { // a natural zombie villager: fresh trades for its profession
 		h.initVillagerTrades(v, v.profession)
 	}
-	v.setMoveSpeed(0.135)
+	v.setMoveSpeed(vanillaMoveSpeed[entityVillager] * attrToStep)
 	if v.home == (blockPos{}) {
 		v.home = blockPos{floorInt(v.x), floorInt(v.y), floorInt(v.z)}
 	}

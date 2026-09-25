@@ -59,73 +59,70 @@ type mob struct {
 	panicTX         float64  // the random spot it is running to (PanicGoal), when panicHasT
 	panicTZ         float64
 	panicHasT       bool
-	panicLeg        int        // updates spent on the current panic leg
-	hostile         bool       // hunts + attacks players (zombies) rather than grazing
-	burning         bool       // on fire — rendered via entity flags (any ignite source)
-	fireSecs        int        // seconds of afterburn left (lava/fire/daylight); 1 HP/s, water clears
-	submerged       int        // consecutive seconds fully underwater (land mobs drown past maxAir)
-	dryTicks        int        // water animal: ticks out of water (air gone past its cap; a dolphin's moisture)
-	convertIn       int        // zombie/husk: seconds left of the shaking conversion phase (0 = not converting)
-	snowSecs        int        // skeleton: consecutive seconds standing in powder snow (Skeleton.inPowderSnowTime)
-	strayIn         int        // skeleton: seconds left of the freeze conversion into a stray (0 = not converting)
-	ticksFrozen     int        // Entity TICKS_FROZEN: the powder-snow frost clock (mobfreeze.go)
-	airborne        bool       // mid-air on the vertical integrator: a bounce, a bubble column, a web (mobairborne.go)
-	airFall         float64    // …and the fall distance it has built up since the last reset
-	wetHurt         int        // water-sensitive mob: ticks until the wet hurts it again
-	creakActive     bool       // creaking: IS_ACTIVE — awake and hunting since a player looked at it
-	swell           int        // creeper: Creeper.swell, ticks into the fuse (explodes at creeperFuseTicks)
-	swellDir        int8       // creeper: +1 swelling, else unwinding (DATA_SWELL_DIR; 0 reads as -1)
-	swellHold       bool       // creeper: SwellGoal is running, which holds it still (Flag.MOVE)
-	ignited         bool       // creeper: lit by flint and steel or a fire charge — it swells whatever happens
-	anger           int        // spider: mob-updates it stays hostile in daylight after a hit
-	stareTicks      int        // enderman: ticks a distant target has gone unwatched (teleportTowards)
-	settled         int        // enderman: ticks since its target last changed (the daylight flight waits 600)
-	dragonPhase     int        // ender dragon: which phase of the fight it is in
-	dragonPhaseTick int        // ticks spent in the current phase
-	dragonFlames    int        // breaths taken this perch
-	dragonCharge    int        // ticks of fireball aim built up
-	fangNextAt      uint64     // evoker: tick its fang spell comes off cooldown
-	vexNextAt       uint64     // evoker: tick its summon spell comes off cooldown
-	wololoTarget    int32      // evoker: the blue sheep its wololo is aimed at
-	wololoWarm      int        // evoker: wololo warm-up ticks left
-	wololoNextAt    uint64     // evoker: tick the wololo comes off cooldown
-	vexLife         int        // summoned vex: ticks left before it expires (0 = unlimited)
-	hitByPlayer     bool       // died within 100 ticks of a player's hurt: pays XP and player-kill loot (set by killMob)
-	hurtByPlayer    int32      // LivingEntity.lastHurtByPlayer: the player it remembers hurting it (0 = an offline owner)
-	hurtByPlayerTil uint64     // …remembered until this tick (lastHurtByPlayerMemoryTime); 0 = no memory
-	lastAttacker    int32      // eid of the last entity that hurt it (plugin death event)
-	lastDT          dmgType    // the last damage type it took (the killing blow's, for loot conditions)
-	lastDirect      int        // entity type of the projectile that struck the last blow (0 = none)
-	looting         int        // killer's Looting level (stamped per hit, used at drop time)
-	baby            bool       // ageable: half-size, grows up, no drops/XP
-	growLeft        int        // ticks until a baby matures
-	loveTicks       int        // courting window after love-food (hearts)
-	breedTime       int        // BreedGoal.loveTime: ticks this pair has spent together
-	followClock     int        // pet: ticks until FollowOwnerGoal re-decides (timeToRecalcPath)
-	lovedBy         int32      // who fed the love-food (advancement credit)
-	breedCD         int        // ticks before this parent may breed again
-	parent          int32      // baby: the adult it is following (FollowParentGoal), 0 = none
-	parentRecalc    int        // mob updates until the parent search runs again
-	stroll          int        // wander spell: updates left walking before the next rest
-	sheared         bool       // sheep: fleece off (regrows by grazing)
-	color           int8       // sheep: fleece colour (0 white .. 15 black), dyeable
-	collar          int8       // tamed wolf/cat: collar dye (DyeColor ordinal; red when tamed)
-	soundSet        int8       // wolf: which of the seven WolfSoundVariants it was born with
-	stew            int8       // brown mooshroom: the stew flower it was fed (stew.go), 0 = none
-	customName      string     // name-tagged: shown above the mob, and it never despawns
-	fromBucket      bool       // released from a mob bucket: persistent (Bucketable.setFromBucket)
-	persistent      bool       // Mob.persistenceRequired: picked up gear (never despawns)
-	pregnant        bool       // frog: IS_PREGNANT — carrying a clutch until it finds water to lay on
-	aggressive      bool       // Mob.setAggressive: the zombie family's raised arms while it chases
-	drifting        bool       // MoveThroughVillageGoal: walking to a spot in the village, not chasing
-	driftPoi        blockPos   // …the village point it is walking to
-	driftVisited    []blockPos // …and the last sixteen it reached
-	driftNext       uint64     // …and when it may look for a point again after finding none
-	traderWander    blockPos   // wandering trader: WanderToPositionGoal's point
-	traderWandering bool       // …set
-	drownedGoal     bool       // drowned: walking to water (by day) or to the beach (at night)
-	strafeBack      bool       // RangedBowAttackGoal.strafingBackwards: drifting away while circling
-	floatX          float64    // RandomFloatAroundGoal's wanted position (ghast)
+	panicLeg        int          // updates spent on the current panic leg
+	hostile         bool         // hunts + attacks players (zombies) rather than grazing
+	burning         bool         // on fire — rendered via entity flags (any ignite source)
+	fireSecs        int          // seconds of afterburn left (lava/fire/daylight); 1 HP/s, water clears
+	submerged       int          // consecutive seconds fully underwater (land mobs drown past maxAir)
+	dryTicks        int          // water animal: ticks out of water (air gone past its cap; a dolphin's moisture)
+	convertIn       int          // zombie/husk: seconds left of the shaking conversion phase (0 = not converting)
+	snowSecs        int          // skeleton: consecutive seconds standing in powder snow (Skeleton.inPowderSnowTime)
+	strayIn         int          // skeleton: seconds left of the freeze conversion into a stray (0 = not converting)
+	ticksFrozen     int          // Entity TICKS_FROZEN: the powder-snow frost clock (mobfreeze.go)
+	airborne        bool         // mid-air on the vertical integrator: a bounce, a bubble column, a web (mobairborne.go)
+	airFall         float64      // …and the fall distance it has built up since the last reset
+	wetHurt         int          // water-sensitive mob: ticks until the wet hurts it again
+	creakActive     bool         // creaking: IS_ACTIVE — awake and hunting since a player looked at it
+	swell           int          // creeper: Creeper.swell, ticks into the fuse (explodes at creeperFuseTicks)
+	swellDir        int8         // creeper: +1 swelling, else unwinding (DATA_SWELL_DIR; 0 reads as -1)
+	swellHold       bool         // creeper: SwellGoal is running, which holds it still (Flag.MOVE)
+	ignited         bool         // creeper: lit by flint and steel or a fire charge — it swells whatever happens
+	anger           int          // spider: mob-updates it stays hostile in daylight after a hit
+	stareTicks      int          // enderman: ticks a distant target has gone unwatched (teleportTowards)
+	settled         int          // enderman: ticks since its target last changed (the daylight flight waits 600)
+	dragonAI        *dragonState // ender dragon: its phase machine and flight (dragonphase.go)
+	fangNextAt      uint64       // evoker: tick its fang spell comes off cooldown
+	vexNextAt       uint64       // evoker: tick its summon spell comes off cooldown
+	wololoTarget    int32        // evoker: the blue sheep its wololo is aimed at
+	wololoWarm      int          // evoker: wololo warm-up ticks left
+	wololoNextAt    uint64       // evoker: tick the wololo comes off cooldown
+	vexLife         int          // summoned vex: ticks left before it expires (0 = unlimited)
+	hitByPlayer     bool         // died within 100 ticks of a player's hurt: pays XP and player-kill loot (set by killMob)
+	hurtByPlayer    int32        // LivingEntity.lastHurtByPlayer: the player it remembers hurting it (0 = an offline owner)
+	hurtByPlayerTil uint64       // …remembered until this tick (lastHurtByPlayerMemoryTime); 0 = no memory
+	lastAttacker    int32        // eid of the last entity that hurt it (plugin death event)
+	lastDT          dmgType      // the last damage type it took (the killing blow's, for loot conditions)
+	lastDirect      int          // entity type of the projectile that struck the last blow (0 = none)
+	looting         int          // killer's Looting level (stamped per hit, used at drop time)
+	baby            bool         // ageable: half-size, grows up, no drops/XP
+	growLeft        int          // ticks until a baby matures
+	loveTicks       int          // courting window after love-food (hearts)
+	breedTime       int          // BreedGoal.loveTime: ticks this pair has spent together
+	followClock     int          // pet: ticks until FollowOwnerGoal re-decides (timeToRecalcPath)
+	lovedBy         int32        // who fed the love-food (advancement credit)
+	breedCD         int          // ticks before this parent may breed again
+	parent          int32        // baby: the adult it is following (FollowParentGoal), 0 = none
+	parentRecalc    int          // mob updates until the parent search runs again
+	stroll          int          // wander spell: updates left walking before the next rest
+	sheared         bool         // sheep: fleece off (regrows by grazing)
+	color           int8         // sheep: fleece colour (0 white .. 15 black), dyeable
+	collar          int8         // tamed wolf/cat: collar dye (DyeColor ordinal; red when tamed)
+	soundSet        int8         // wolf: which of the seven WolfSoundVariants it was born with
+	stew            int8         // brown mooshroom: the stew flower it was fed (stew.go), 0 = none
+	customName      string       // name-tagged: shown above the mob, and it never despawns
+	fromBucket      bool         // released from a mob bucket: persistent (Bucketable.setFromBucket)
+	persistent      bool         // Mob.persistenceRequired: picked up gear (never despawns)
+	pregnant        bool         // frog: IS_PREGNANT — carrying a clutch until it finds water to lay on
+	aggressive      bool         // Mob.setAggressive: the zombie family's raised arms while it chases
+	drifting        bool         // MoveThroughVillageGoal: walking to a spot in the village, not chasing
+	driftPoi        blockPos     // …the village point it is walking to
+	driftVisited    []blockPos   // …and the last sixteen it reached
+	driftNext       uint64       // …and when it may look for a point again after finding none
+	traderWander    blockPos     // wandering trader: WanderToPositionGoal's point
+	traderWandering bool         // …set
+	drownedGoal     bool         // drowned: walking to water (by day) or to the beach (at night)
+	strafeBack      bool         // RangedBowAttackGoal.strafingBackwards: drifting away while circling
+	floatX          float64      // RandomFloatAroundGoal's wanted position (ghast)
 	floatY          float64
 	floatZ          float64
 	floatSet        bool
@@ -149,11 +146,20 @@ type mob struct {
 	piglinFlee      int           // piglin: ticks left avoiding a zombified piglin, a nemesis or hoglins
 	piglinFleeX     float64       // …and what it is backing away from
 	piglinFleeZ     float64
-	piglinFleeFrom  int32  // …the mob it is avoiding, followed as it moves (0 = a fixed spot)
-	noHunt          bool   // piglin: CannotHunt; hoglin: CannotBeHunted (a bastion's own; persisted)
-	huntedUntil     uint64 // piglin: HUNTED_RECENTLY, the tick it lapses (a reload rolls it afresh)
-	piglinFoe       int32  // piglin: the ATTACK_TARGET it last had (0 = none), for the dead-target rules
-	celebrateUntil  uint64 // piglin: CELEBRATE_LOCATION, the tick it lapses (0 = not celebrating)
+	piglinFleeFrom  int32      // …the mob it is avoiding, followed as it moves (0 = a fixed spot)
+	noHunt          bool       // piglin: CannotHunt; hoglin: CannotBeHunted (a bastion's own; persisted)
+	huntedUntil     uint64     // piglin: HUNTED_RECENTLY, the tick it lapses (a reload rolls it afresh)
+	piglinFoe       int32      // piglin: the ATTACK_TARGET it last had (0 = none), for the dead-target rules
+	celebrateUntil  uint64     // piglin: CELEBRATE_LOCATION, the tick it lapses (0 = not celebrating)
+	rideTarget      int32      // baby piglin: RIDE_TARGET, the baby hoglin it means to ride
+	raidPoi         blockPos   // raider: the home RaiderMoveThroughVillageGoal is walking to
+	raidPoiSet      bool       // …set
+	raidVisited     []blockPos // …the last homes it reached
+	vRaidHide       blockPos   // villager: the HIDING_PLACE of a raid
+	vRaidHideSet    bool       // …set
+	vCelebrate      uint64     // villager: the tick its raid celebration ends
+	rideUntil       uint64     // …the tick that memory lapses
+	rideTicker      int        // …babySometimesRideBabyHoglin's ticker (ticks left)
 	celebratePos    blockPos
 	fightBack       int32     // hoglin: the piglin that hit it and it now fights (ATTACK_TARGET from wasHurtBy)
 	idleWalk        *idleWalk // piglin brute: the walk its idle RunOne picked; piglin: its celebration's (nil = none)
@@ -177,6 +183,8 @@ type mob struct {
 	beeSentAngry    bool       // bee: last synced anger state (red eyes)
 	beeTravel       int        // bee: mob-updates spent on the current trip (give-up timer)
 	beeNoNectar     int        // bee: seconds foraging empty-handed (ticksWithoutNectarSinceExitingHive)
+	beeFlower       blockPos   // bee: the flower it remembers (savedFlowerPos)
+	beeHasFlower    bool       // …set
 	beeStayOut      int        // bee: seconds barred from the hive after a sedated robbery
 	beeLocateCD     int        // bee: seconds until it may look for a hive again
 	beeBanned       []blockPos // bee: hives it could not reach (MAX_BLACKLISTED_TARGETS)
@@ -209,6 +217,7 @@ type mob struct {
 	strafeCW                        bool        // skeleton: current circling direction while shooting
 	retaliates                      bool        // peaceful until hit, then hunts its attacker (wolf/goat)
 	rider                           int32       // player eid riding this mob (0 = none); AI pauses while ridden
+	rider2                          int32       // camel: a second player, on the back seat behind rider
 	standLeft, standNext            int         // horse: ticks left in a rear; RandomStandGoal's counter (horsestand.go)
 	riders                          []int32     // happy ghast: up to 4 rider eids (riders[0] pilots); AI pauses while any aboard
 	mount                           int32       // eid of the MOB this mob rides (raid ravager riders); 0 = none
@@ -300,6 +309,8 @@ type mob struct {
 	allayNoteDim                    int                               // …in this dimension (vanilla keeps a GlobalPos)
 	dupCD                           int                               // allay: ticks until it may duplicate again (6000)
 	dancing                         bool                              // allay: a jukebox plays within earshot; piglin: DANCING (DATA_IS_DANCING)
+	allayJukebox                    blockPos                          // allay: the jukebox it dances to (jukeboxPos)
+	allayHasJukebox                 bool                              // …set
 	frogEaten                       int8                              // slime/magma cube: eaten by a frog of variant-1 (froglight, no slime)
 	sneezeAt                        uint64                            // baby panda: the tick its sneeze lands (0 = not sneezing)
 	pandaFlags                      byte                              // panda: sneeze/roll/sit/on-back flags (DATA_ID_FLAGS)
@@ -378,6 +389,8 @@ type mob struct {
 	glowDark                        int      // glow squid: DATA_DARK_TICKS_REMAINING
 	endermiteLife                   int      // endermite: Lifetime ticks (discarded at 2400 unless persistent)
 	shPeek                          int8     // shulker: DATA_PEEK_ID (0 closed, 30 a glimpse, 100 open)
+	shAttach                        int8     // shulker: DATA_ATTACH_FACE_ID, the face it clings to (0 down … 5 east)
+	shPeekCur                       float64  // shulker: currentPeekAmount, easing toward the peek
 	shPeekTicks                     int      // shulker: ShulkerPeekGoal ticks left
 	shAttack                        int      // shulker: ShulkerAttackGoal attackTime
 	shHurt                          bool     // shulker: hurt since the last update (the teleport roll)
@@ -405,99 +418,101 @@ type mob struct {
 	vexVX, vexVY, vexVZ             float64  // …its per-tick velocity
 	vexOrigin                       blockPos // …the bound origin its drift circles (the summoning evoker)
 	vexHasOrigin                    bool
-	vexOwner                        int32      // vex: the evoker that summoned it (0 = none)
-	vexExpired                      bool       // vex: limited life run out (now taking damage)
-	phantomCatAt                    uint64     // phantom: the tick of the next cat search
-	phantomScared                   bool       // phantom: a cat was within sixteen at the last search
-	wolfPrey                        int32      // wolf: the mob it hunts (0 = none)
-	wolfBiteCD                      int        // wolf: ticks until the next bite
-	goatJumpCD                      int        // goat: LONG_JUMP_COOLDOWN_TICKS
-	goatJumpSet                     bool       // goat: the first cooldown has been rolled (initMemories)
-	goatPrep                        int        // goat: PREPARE_JUMP_DURATION ticks left (crouched)
-	goatJumping                     bool       // goat: LONG_JUMP_MID_JUMP
-	goatJumpX, goatJumpY, goatJumpZ float64    // goat: the chosen landing
-	goatVX, goatVY, goatVZ          float64    // goat: the jump's motion, per tick
-	leaping                         bool       // LeapAtTargetGoal: mid-spring
-	leapVX, leapVY, leapVZ          float64    // the spring's motion, per tick
-	ghastCharge                     int        // ghast: GhastShootFireballGoal chargeTime
-	blazeStep                       int        // blaze: BlazeAttackGoal attackStep
-	blazeTime                       int        // blaze: attackTime
-	blazeCharged                    bool       // blaze: DATA_FLAGS charged
-	villagerHurt                    bool       // villager: hurt since the last update (HurtBySensor)
-	villagerHurtLeft                int        // villager: HURT_BY memory ticks left
-	vHurtBy                         int32      // villager: HURT_BY_ENTITY, until it calms down
-	angryAt                         int32      // provoked animal: the player it holds a grudge against (NeutralMob)
-	llamaDefending                  bool       // trader llama: its target is its trader's attacker, not its own
-	vPanicLeft                      int        // villager: updates before its panic walk target is dropped
-	cbState                         int8       // pillager: CrossbowState (uncharged / charging / charged / ready)
-	cbTicks                         int        // pillager: charge ticks so far, or the aim delay left
-	handActive                      bool       // LivingEntity hand-active flag (a bow drawn, a crossbow loading)
-	witchHealCD                     int        // raid witch: NearestHealableRaiderTargetGoal cooldown (no player attacks meanwhile)
-	witchHealTarget                 int32      // raid witch: the raider that goal made her target
-	raidRecruitAt                   uint64     // PathfindToRaidGoal: the tick its next recruitment sweep is due
-	patrolTarget                    blockPos   // LongDistancePatrolGoal: where the patrol is headed (zero = none)
-	patrolLeg                       blockPos   // …and the ten-block waypoint it is walking to right now
-	patrolling                      bool       // PatrollingMonster.patrolling
-	patrolCooldown                  uint64     // NAVIGATION_FAILED_COOLDOWN: no patrol steering until this tick
-	wardenPose                      int32      // the warden's set-piece animation (0 = none; Pose ids)
-	wardenPoseLeft                  int        // …and the updates left in it
-	wardenSniffCD                   int        // TryToSniff.SNIFF_COOLDOWN, in updates
-	wardenTarget                    int32      // who it last roared at (0 = nobody)
-	wardenClientAnger               int        // CLIENT_ANGER_LEVEL last sent to viewers
-	golemCrack                      int        // iron golem: crack stage last seen, +1 (0 = not yet seen)
-	sulfurTempted                   bool       // sulfur cube: its tempt goal is running
-	snowTarget                      int32      // snow golem: the monster its target goal holds
-	rideMovedAt                     uint64     // ridden mount: tick its rider last moved it horizontally
-	rideDX, rideDZ                  float64    // ridden mount: that last horizontal move
-	batT                            blockPos   // bat: the cell it is flying at
-	batHasT                         bool       // …set
-	batVX, batVY, batVZ             float64    // bat: its own per-tick velocity
-	parrotFollow                    int32      // parrot: the mob FollowMobGoal keeps it with
-	dragonHistY                     [4]float64 // ender dragon: DragonFlightHistory heights, newest first
-	dragonHistYaw                   [4]float32 // …and yaws
-	dragonHistN                     int        // …samples recorded
-	dragonMeleePart                 string     // ender dragon: the part the blow being dealt landed on
-	snowUnseen, snowSeeTime         int        // snow golem: ticks that target has been out of / in sight
-	sulfurCalmUntil                 uint64     // sulfur cube: TemptGoal calmDown — no tempting before this tick
-	wardenDisturb                   blockPos   // warden: DISTURBANCE_LOCATION (where it goes to look)
-	wardenDisturbTil                uint64     // …remembered until this tick
-	wardenTouchTil                  uint64     // warden: TOUCH_COOLDOWN
-	zpHeld                          bool       // zombified piglin: anger held while it has a target
-	homePos                         blockPos   // Mob.homePosition (an elder guardian's monument spot)
-	homeR                           int        // …homeRadius; 0 = no home
-	zpAlertIn                       int        // …updates to its next pack call (ALERT_INTERVAL)
-	zpSoundIn                       int        // …ticks to its first angry grunt (FIRST_ANGER_SOUND_DELAY)
-	playMate                        int32      // baby villager: the child it is chasing (0 = none)
-	playFlee                        bool       // …or running away from one, toward
-	playX, playZ                    float64    // …this spot
-	trusted                         [2]string  // fox: the players it trusts (DATA_TRUSTED_ID_0/1), by name; persisted
-	dolphinSwimmer                  int32      // dolphin: the swimming player it keeps company (0 = none)
-	dolphinPlayEID                  int32      // dolphin: the floating item it is playing with (0 = none)
-	doorPos                         blockPos   // zombie: the door it is beating on (lower half; zero = none)
-	doorTicks                       int        // zombie: ticks spent on it
-	eggPos                          blockPos   // zombie: the turtle-egg clutch it is after (zero = none)
-	eggNext                         int        // zombie: ticks until the next egg search
-	eggTry                          int        // zombie: ticks spent trying to reach the clutch
-	eggStamp                        int        // zombie: ticks spent stamping on it
-	doorStage                       int8       // zombie: the crack stage last shown (-1 = none)
-	hornsGone                       int8       // goat: horns lost to ramming (0-2; one in ten spawns with one gone)
-	ramCD                           int        // goat: ticks before it may ram again
-	ramPhase                        int8       // goat: idle / walking to its start / lowering its head / charging
-	ramStart                        blockPos   // goat: where the charge begins
-	ramTX, ramTZ                    float64    // goat: the target's position when the ram was chosen
-	ramDX, ramDZ                    float64    // goat: the charge direction
-	ramTicks                        int        // goat: ticks in the current phase
-	raidTarget                      blockPos   // rabbit: the farmland it is raiding
-	raidRest                        int        // rabbit: ticks before it looks for a garden again
-	layCounter                      int        // turtle: ticks spent digging the nest
-	inflate, deflate                int        // pufferfish: its inflate and deflate clocks (ticks)
-	stingCD                         int        // pufferfish: ticks before it stings again
-	offhand                         invStack   // piglin: the gold it is admiring (rendered in the off hand)
-	admireUntil                     uint64     // piglin: the tick the admiring ends (0 = not admiring)
-	admireOffUntil                  uint64     // piglin: no admiring until this tick (hit by a player)
-	hoard                           []invStack // piglin: loved items it kept; dropped on death
-	gotFish                         bool       // dolphin: fed a fish, leading to treasure
-	treasureX                       int        // dolphin: the shipwreck it leads to (valid while gotFish)
+	vexOwner                        int32       // vex: the evoker that summoned it (0 = none)
+	vexExpired                      bool        // vex: limited life run out (now taking damage)
+	phantomCatAt                    uint64      // phantom: the tick of the next cat search
+	phantomScared                   bool        // phantom: a cat was within sixteen at the last search
+	wolfPrey                        int32       // wolf: the mob it hunts (0 = none)
+	wolfBiteCD                      int         // wolf: ticks until the next bite
+	goatJumpCD                      int         // goat: LONG_JUMP_COOLDOWN_TICKS
+	goatJumpSet                     bool        // goat: the first cooldown has been rolled (initMemories)
+	goatPrep                        int         // goat: PREPARE_JUMP_DURATION ticks left (crouched)
+	goatJumping                     bool        // goat: LONG_JUMP_MID_JUMP
+	goatJumpX, goatJumpY, goatJumpZ float64     // goat: the chosen landing
+	goatVX, goatVY, goatVZ          float64     // goat: the jump's motion, per tick
+	leaping                         bool        // LeapAtTargetGoal: mid-spring
+	leapVX, leapVY, leapVZ          float64     // the spring's motion, per tick
+	ghastCharge                     int         // ghast: GhastShootFireballGoal chargeTime
+	blazeStep                       int         // blaze: BlazeAttackGoal attackStep
+	blazeTime                       int         // blaze: attackTime
+	blazeCharged                    bool        // blaze: DATA_FLAGS charged
+	villagerHurt                    bool        // villager: hurt since the last update (HurtBySensor)
+	villagerHurtLeft                int         // villager: HURT_BY memory ticks left
+	vHurtBy                         int32       // villager: HURT_BY_ENTITY, until it calms down
+	angryAt                         int32       // provoked animal: the player it holds a grudge against (NeutralMob)
+	llamaDefending                  bool        // trader llama: its target is its trader's attacker, not its own
+	vPanicLeft                      int         // villager: updates before its panic walk target is dropped
+	cbState                         int8        // pillager: CrossbowState (uncharged / charging / charged / ready)
+	cbTicks                         int         // pillager: charge ticks so far, or the aim delay left
+	handActive                      bool        // LivingEntity hand-active flag (a bow drawn, a crossbow loading)
+	witchHealCD                     int         // raid witch: NearestHealableRaiderTargetGoal cooldown (no player attacks meanwhile)
+	witchHealTarget                 int32       // raid witch: the raider that goal made her target
+	raidRecruitAt                   uint64      // PathfindToRaidGoal: the tick its next recruitment sweep is due
+	patrolTarget                    blockPos    // LongDistancePatrolGoal: where the patrol is headed (zero = none)
+	patrolLeg                       blockPos    // …and the ten-block waypoint it is walking to right now
+	patrolling                      bool        // PatrollingMonster.patrolling
+	patrolCooldown                  uint64      // NAVIGATION_FAILED_COOLDOWN: no patrol steering until this tick
+	wardenPose                      int32       // the warden's set-piece animation (0 = none; Pose ids)
+	wardenPoseLeft                  int         // …and the updates left in it
+	wardenSniffCD                   int         // TryToSniff.SNIFF_COOLDOWN, in updates
+	wardenTarget                    int32       // who it last roared at (0 = nobody)
+	wardenClientAnger               int         // CLIENT_ANGER_LEVEL last sent to viewers
+	golemCrack                      int         // iron golem: crack stage last seen, +1 (0 = not yet seen)
+	sulfurTempted                   bool        // sulfur cube: its tempt goal is running
+	snowTarget                      int32       // snow golem: the monster its target goal holds
+	rideMovedAt                     uint64      // ridden mount: tick its rider last moved it horizontally
+	rideDX, rideDZ                  float64     // ridden mount: that last horizontal move
+	batT                            blockPos    // bat: the cell it is flying at
+	batHasT                         bool        // …set
+	batVX, batVY, batVZ             float64     // bat: its own per-tick velocity
+	parrotFollow                    int32       // parrot: the mob FollowMobGoal keeps it with
+	parrotWander                    parrotPoint // parrot: where ParrotWanderGoal is taking it
+	parrotWandering                 bool        // …set
+	parrotWanderLeft                int         // …updates before it gives the point up
+	dragonMeleePart                 string      // ender dragon: the part the blow being dealt landed on
+	dragonHitByPlayer               bool        // …and whether a player is behind it
+	dragonHitArrow                  bool        // …and whether it is an arrow or wind charge (a sitting dragon turns those)
+	snowUnseen, snowSeeTime         int         // snow golem: ticks that target has been out of / in sight
+	sulfurCalmUntil                 uint64      // sulfur cube: TemptGoal calmDown — no tempting before this tick
+	wardenDisturb                   blockPos    // warden: DISTURBANCE_LOCATION (where it goes to look)
+	wardenDisturbTil                uint64      // …remembered until this tick
+	wardenTouchTil                  uint64      // warden: TOUCH_COOLDOWN
+	zpHeld                          bool        // zombified piglin: anger held while it has a target
+	homePos                         blockPos    // Mob.homePosition (an elder guardian's monument spot)
+	homeR                           int         // …homeRadius; 0 = no home
+	zpAlertIn                       int         // …updates to its next pack call (ALERT_INTERVAL)
+	zpSoundIn                       int         // …ticks to its first angry grunt (FIRST_ANGER_SOUND_DELAY)
+	playMate                        int32       // baby villager: the child it is chasing (0 = none)
+	playFlee                        bool        // …or running away from one, toward
+	playX, playZ                    float64     // …this spot
+	trusted                         [2]string   // fox: the players it trusts (DATA_TRUSTED_ID_0/1), by name; persisted
+	dolphinSwimmer                  int32       // dolphin: the swimming player it keeps company (0 = none)
+	dolphinPlayEID                  int32       // dolphin: the floating item it is playing with (0 = none)
+	doorPos                         blockPos    // zombie: the door it is beating on (lower half; zero = none)
+	doorTicks                       int         // zombie: ticks spent on it
+	eggPos                          blockPos    // zombie: the turtle-egg clutch it is after (zero = none)
+	eggNext                         int         // zombie: ticks until the next egg search
+	eggTry                          int         // zombie: ticks spent trying to reach the clutch
+	eggStamp                        int         // zombie: ticks spent stamping on it
+	doorStage                       int8        // zombie: the crack stage last shown (-1 = none)
+	hornsGone                       int8        // goat: horns lost to ramming (0-2; one in ten spawns with one gone)
+	ramCD                           int         // goat: ticks before it may ram again
+	ramPhase                        int8        // goat: idle / walking to its start / lowering its head / charging
+	ramStart                        blockPos    // goat: where the charge begins
+	ramTX, ramTZ                    float64     // goat: the target's position when the ram was chosen
+	ramDX, ramDZ                    float64     // goat: the charge direction
+	ramTicks                        int         // goat: ticks in the current phase
+	raidTarget                      blockPos    // rabbit: the farmland it is raiding
+	raidRest                        int         // rabbit: ticks before it looks for a garden again
+	layCounter                      int         // turtle: ticks spent digging the nest
+	inflate, deflate                int         // pufferfish: its inflate and deflate clocks (ticks)
+	stingCD                         int         // pufferfish: ticks before it stings again
+	offhand                         invStack    // piglin: the gold it is admiring (rendered in the off hand)
+	admireUntil                     uint64      // piglin: the tick the admiring ends (0 = not admiring)
+	admireOffUntil                  uint64      // piglin: no admiring until this tick (hit by a player)
+	hoard                           []invStack  // piglin: loved items it kept; dropped on death
+	gotFish                         bool        // dolphin: fed a fish, leading to treasure
+	treasureX                       int         // dolphin: the shipwreck it leads to (valid while gotFish)
 	treasureZ                       int
 	foxFlags                        uint8      // fox: DATA_FLAGS (sitting 1, crouching 4, interested 8, pouncing 16, sleeping 32, faceplanted 64, defending 128)
 	foxEatTicks                     int        // fox: ticks since it last ate (eats a held food past 600)
@@ -717,7 +732,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		if waterSensitive(m.etype) && h.waterSensitiveTick(players, m) {
 			continue // hurt to death, or an enderman teleported out of the wet
 		}
-		if m.mount != 0 { // riding another mob (raid ravager rider, jockey)
+		h.piglinRideTick(players, m) // a baby piglin's RIDE memory and its dismount checks
+		if m.mount != 0 {            // riding another mob (raid ravager rider, jockey)
 			v := h.mobs[m.mount]
 			if v == nil || v.dying > 0 {
 				m.mount, m.mountDrives, m.navMount = 0, false, nil // vehicle gone — dismount and resume as a normal mob
@@ -869,6 +885,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// charging with the spear lowered, and wheeling off for the next pass.
 		case m.etype == entityPiglin && h.piglinCelebrateStep(players, m):
 			// A piglin going to where its target fell, dancing after a hoglin.
+		case m.etype == entityPiglin && h.piglinRideStep(players, m):
+			// A baby piglin walking to a baby hoglin to ride it (RIDE).
 		case m.etype == entityPiglinBrute && h.bruteIdleStep(m):
 			// An idle brute keeping to its bastion: home, its fellows, a stroll.
 		case (findsWater[m.etype] || m.etype == entityStrider) && h.findWaterStep(m):
@@ -890,6 +908,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A snow golem closing on a monster out of its throwing range.
 		case m.etype == entityVillager && h.villagerPanicStep(players, m):
 			// A villager running from a zombie, a pillager, or whatever hurt it.
+		case m.etype == entityVillager && h.villagerRaidStep(players, m):
+			// A villager in a raid: to the bell before a wave, hiding in a
+			// house during one, out celebrating after a victory.
 		case m.etype == entityVillager && m.baby && h.villagerPlayStep(players, m):
 			// Baby villagers playing tag with the other children. Below panic:
 			// a frightened child runs from the zombie, not after its friend.
@@ -934,6 +955,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		case h.raidPathStep(players, m):
 			// A raider walking back to the raid it belongs to, gathering any
 			// idle raider it passes on the way.
+		case h.raidVillageStep(m):
+			// A raider in the village roaming from house to house
+			// (RaiderMoveThroughVillageGoal).
 		case h.patrolStep(players, m):
 			// A pillager patrol crossing the country toward its distant
 			// target, the captain plotting the legs.
@@ -1031,6 +1055,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A frog in the water making for the nearest bank (TryFindLand).
 		case m.etype == entityFrog && m.croakLeft > 0 && h.frogCroakStep(players, m):
 			// A frog croaking, still, for its sixty ticks (FrogAi's Croak).
+		case m.etype == entityFrog && h.frogJumpStep(players, m):
+			// A frog crouched for, or mid-way through, a long jump (LONG_JUMP).
 		case m.etype == entityAllay && h.allayStep(players, m):
 			// An allay with a job: collecting matching drops, delivering them,
 			// or keeping near the player who handed it its item.
@@ -1044,8 +1070,13 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		case m.etype == entityWanderingTrader && h.traderWanderStep(m):
 			// A wandering trader heading for the bell it was sent to, or back
 			// inside the sixteen blocks about it.
+		case m.etype == entityParrot && h.parrotWanderStep(m):
+			// A parrot flying to a branch, or to a spot above the ground
+			// ahead (ParrotWanderGoal).
 		case m.etype == entityParrot && h.parrotFollowMobStep(m):
 			// A parrot keeping company with a nearby mob (FollowMobGoal).
+		case m.etype == entityParrot && h.parrotSettle(m):
+			// A parrot with nowhere to go settles where it is.
 		case (nautilusKind(m.etype) || m.etype == entityHappyGhast) && h.restrictionHomeStep(m):
 			// A tamed nautilus or a happy ghast with nothing else to do keeps
 			// to its home: its wandering stays inside (checkRestriction).
@@ -1143,7 +1174,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			m.vx, m.vz = 0, 0 // lifted by a geyser: geyserFlights moves it, tick by tick
 		case m.leaping:
 			h.leapFlight(players, m) // LeapAtTargetGoal's spring, gravity and all
-		case m.etype == entityGoat && m.goatJumping:
+		case (m.etype == entityGoat || m.etype == entityFrog) && m.goatJumping:
 			h.goatFlight(players, m) // the long jump's arc
 		case m.etype == entityBreeze && m.brzState == brzJumping:
 			h.breezeFlight(players, m) // the long jump's arc, gravity and all
@@ -1189,6 +1220,11 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				// (BreakDoorGoal) instead of picking a new heading.
 				if m.breaksDoors && m.hasTarget {
 					if door, ok := h.doorAhead(m, nx, nz); ok && h.zombieBeatsDoor(players, m, door) {
+						break
+					}
+				}
+				if m.etype == entityVindicator && h.raiderInActiveRaid(m) {
+					if door, ok := h.doorAhead(m, nx, nz); ok && h.vindicatorAtDoor(players, m, door) {
 						break
 					}
 				}
@@ -1466,7 +1502,9 @@ func (h *hub) bodyFits(m *mob, x, y, z int) bool {
 	w := h.worldFor(m.dim)
 	top := y + max(1, int(math.Ceil(m.box().h))) - 1
 	for cy := y; cy <= top; cy++ {
-		if worldgen.IsFullCube(w.At(x, cy, z)) {
+		// A closed door is a wall to walk into (a door-using mob opens it
+		// before it steps; others stop at it, or break it down).
+		if s := w.At(x, cy, z); worldgen.IsFullCube(s) || worldgen.IsClosedDoor(s) {
 			return false
 		}
 	}
@@ -1490,6 +1528,9 @@ func speedFor(etype int) float64 {
 		return 0.112
 	case entitySpider, entityEnderman: // attr 0.30
 		return 0.135
+	}
+	if v, ok := vanillaMoveSpeed[etype]; ok && stepScaleFor(etype) != 1 {
+		return v * attrToStep // vanilla's attribute; moveSpeed scales it to the tuned step
 	}
 	if d := speciesOf(etype); d != nil { // roster species: from the table
 		return d.stepSpeed()
@@ -1526,6 +1567,12 @@ func (m *mob) hurtBreach(dmg, breachFrac float64) { m.hurtOf(dmg, breachFrac, dt
 func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 	if m.spawnInvuln > 0 {
 		return // wither spawn-charge: immune while it powers up
+	}
+	if m.etype == entityEnderDragon {
+		var ok bool
+		if dmg, ok = m.dragonHurtFilter(dmg, dt); !ok {
+			return
+		}
 	}
 	if m.sulfurHurtGate(dt) {
 		return // a lit sulfur cube, or one whose block shrugs this off (sulfurcube.go)
@@ -1671,7 +1718,7 @@ func (h *hub) broadcastSync(players map[int32]*tracked) {
 		// One-shot mount/pet state re-asserted so a late-joining player sees the
 		// saddle, rider and collar rather than a bare animal.
 		if m.rider != 0 {
-			h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.rider))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.playerPassengers()...))
 		}
 		if len(m.riders) > 0 {
 			h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.riders...))
@@ -2129,9 +2176,9 @@ const babySpeedSource = "baby"
 // scale.
 func (m *mob) moveSpeed() float64 {
 	if v := m.navMount; v != nil {
-		return v.mobAttrs().Value(attr.MovementSpeed) // a driving rider moves at its vehicle's pace
+		return v.mobAttrs().Value(attr.MovementSpeed) * stepScaleFor(v.etype) // a driving rider moves at its vehicle's pace
 	}
-	return m.mobAttrs().Value(attr.MovementSpeed)
+	return m.mobAttrs().Value(attr.MovementSpeed) * stepScaleFor(m.etype)
 }
 
 // setMoveSpeed sets the base MOVEMENT_SPEED, in per-update blocks.

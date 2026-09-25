@@ -59,9 +59,10 @@ func (h *hub) allayStep(players map[int32]*tracked, m *mob) bool {
 			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, metaIndexCanDupe, true)))
 		}
 	}
-	if dancing := h.jukeboxPlayingNear(m); dancing != m.dancing {
-		m.dancing = dancing
-		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, metaIndexDancing, dancing)))
+	// Allay.aiStep: once a second a dancing allay checks it is still
+	// within ten of its jukebox, and that the block is still one.
+	if m.dancing && (h.tick.Load()+uint64(m.eid))%20 < mobMoveInterval && h.allayShouldStopDancing(m) {
+		h.setAllayDancing(players, m, false)
 	}
 	if m.held == 0 || !h.rules.MobGriefing {
 		return false
@@ -188,19 +189,58 @@ func (h *hub) allayThrow(players map[int32]*tracked, m *mob, x, y, z float64) {
 	m.allayPickupCD = allayPickupCD
 }
 
-// jukeboxPlayingNear: a jukebox with a disc running within 16 blocks, in
-// the allay's own dimension — any dimension, as vanilla's JUKEBOX_PLAY
-// game event reaches listeners wherever it plays.
-func (h *hub) jukeboxPlayingNear(m *mob) bool {
-	for pos, jb := range h.jukeboxes {
-		if jb.started == 0 || pos.dim != m.dim {
+// allayJukeboxRange is GameEvent.JUKEBOX_PLAY's notification radius: the
+// allay's JukeboxListener hears a jukebox this close and no further.
+const allayJukeboxRange = 10.0
+
+// allaysHearJukebox is Allay.JukeboxListener: a playing jukebox sends
+// JUKEBOX_PLAY once a second, and stopping sends JUKEBOX_STOP_PLAY; every
+// allay whose eyes are within ten of the jukebox's centre, in its own
+// dimension, hears it (setJukeboxPlaying).
+func (h *hub) allaysHearJukebox(players map[int32]*tracked, dim int, pos blockPos, playing bool) {
+	cx, cy, cz := float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5
+	for _, m := range h.mobs {
+		if m.etype != entityAllay || m.dim != dim || m.dying > 0 {
 			continue
 		}
-		if dist3(float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, m.x, m.y, m.z) <= allayHearRange {
-			return true
+		if dist3sq(cx, cy, cz, m.x, m.y+mobEyeHeight(m), m.z) > allayJukeboxRange*allayJukeboxRange {
+			continue
+		}
+		switch {
+		case playing:
+			if !m.dancing {
+				m.allayJukebox, m.allayHasJukebox = pos, true
+				h.setAllayDancing(players, m, true)
+			}
+		case !m.allayHasJukebox || m.allayJukebox == pos:
+			h.setAllayDancing(players, m, false)
 		}
 	}
-	return false
+}
+
+// allayShouldStopDancing is Allay.shouldStopDancing: no jukebox, one ten
+// or more away, or a block that is no longer a jukebox.
+func (h *hub) allayShouldStopDancing(m *mob) bool {
+	if !m.allayHasJukebox {
+		return true
+	}
+	p := m.allayJukebox
+	if dist3sq(float64(p.x)+0.5, float64(p.y)+0.5, float64(p.z)+0.5, m.x, m.y, m.z) >= allayJukeboxRange*allayJukeboxRange {
+		return true
+	}
+	return !isJukebox(h.worldFor(m.dim).At(p.x, p.y, p.z))
+}
+
+// setAllayDancing is setDancing, and a stop lets the jukebox go.
+func (h *hub) setAllayDancing(players map[int32]*tracked, m *mob, on bool) {
+	if !on {
+		m.allayHasJukebox = false
+	}
+	if m.dancing == on {
+		return
+	}
+	m.dancing = on
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, metaIndexDancing, on)))
 }
 
 // allaysHearNote: a note block played within 16 blocks becomes an allay's

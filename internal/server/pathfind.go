@@ -48,14 +48,22 @@ func (h *hub) pathSteer(m *mob, gx, gz float64) (float64, float64) {
 		math.Hypot(float64(gxi-m.pathGoal[0]), float64(gzi-m.pathGoal[1])) > pathRegoal
 	if stale {
 		var pw pather = h.worldFor(m.dim)
-		if m.usesDoors {
-			pw = doorPather{h.worldFor(m.dim)} // route through closed wooden doors
+		if m.usesDoors || (m.etype == entityVindicator && h.raiderInActiveRaid(m)) {
+			// Route through closed wooden doors: a villager's, or a raiding
+			// vindicator's (setCanOpenDoors(level.isRaided(pos))).
+			pw = doorPather{h.worldFor(m.dim)}
 		}
 		m.path, m.pathReached = findPathLimits(pw, malusFor(m.etype), sxi, szi, gxi, gzi, pathMaxRange, pathMaxNodes)
 		m.pathIdx = 0
 		m.pathGoal = [2]int{gxi, gzi}
 		m.pathAt = now
 	}
+	vx, vz := h.pathSteerOn(m, gx, gz)
+	return h.sunEdgeStop(m, vx, vz)
+}
+
+// pathSteerOn follows the planned path (pathSteer's second half).
+func (h *hub) pathSteerOn(m *mob, gx, gz float64) (float64, float64) {
 	if len(m.path) == 0 {
 		return straightSteer(m, gx, gz, standoffDist) // no route — head straight at it
 	}
@@ -76,6 +84,34 @@ func (h *hub) pathSteer(m *mob, gx, gz float64) (float64, float64) {
 	// one and never advances).
 	wp := m.path[m.pathIdx]
 	return straightSteer(m, float64(wp.x)+0.5, float64(wp.z)+0.5, 0.05)
+}
+
+// avoidsSun is RestrictSunGoal.canUse: a skeleton by day with nothing on
+// its head sets its navigation to avoid the sun (AbstractSkeleton is the
+// only mob that registers the goal).
+func (h *hub) avoidsSun(m *mob) bool {
+	return skeletonKind(m.etype) && m.dim == dimOverworld && h.isDayTime() && m.gear[0].item == 0
+}
+
+// sunEdgeStop is GroundPathNavigation.trimPath with avoidSun: a mob in
+// shade has its route cut at the first node the sky can see, so it walks to
+// the edge of the shade and stops there. The engine's routes are columns,
+// so the cut is taken one block ahead along the way it is about to step; a
+// mob already under the sky is not held.
+func (h *hub) sunEdgeStop(m *mob, vx, vz float64) (float64, float64) {
+	if (vx == 0 && vz == 0) || !h.avoidsSun(m) {
+		return vx, vz
+	}
+	if h.skyExposedAt(floorInt(m.x), floorInt(m.y+0.5), floorInt(m.z)) {
+		return vx, vz
+	}
+	d := math.Hypot(vx, vz)
+	ax, az := floorInt(m.x+vx/d), floorInt(m.z+vz/d)
+	w := h.worldFor(m.dim)
+	if h.skyExposedAt(ax, w.MobFeetFrom(ax, az, floorInt(m.y)), az) {
+		return 0, 0
+	}
+	return vx, vz
 }
 
 // straightSteer is the naive "walk directly at the point" vector, scaled to the

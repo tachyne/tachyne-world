@@ -128,3 +128,32 @@ func TestBurningMobMeltsPowderSnow(t *testing.T) {
 		t.Error("a burning mob melts the powder snow it stands in")
 	}
 }
+
+// ClimbOnTopOfPowderSnowGoal: a snow walker (a fox here) that finds itself
+// inside powder snow with snow or open air above climbs out onto the top,
+// where it walks.
+func TestSnowWalkerClimbsOutOfPowderSnow(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	for x := -3; x <= 3; x++ {
+		for z := -3; z <= 3; z++ {
+			h.world.SetBlock(x, 179, z, worldgen.Stone)
+			for y := 180; y <= 182; y++ {
+				h.world.SetBlock(x, y, z, powderSnowBlock)
+			}
+		}
+	}
+	pl := survPlayer(h)
+	pl.x, pl.y, pl.z = 12.5, 180, 12.5
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	fox := h.spawnSpecies(players, entityFox, 0, 0.5, 180, 0.5)
+	fox.y = 180
+	for i := 0; i < 20; i++ {
+		h.tick.Add(mobMoveInterval)
+		h.updateMobs(players)
+	}
+	if fox.y < 183 {
+		t.Fatalf("a fox buried in powder snow climbs onto it: y %.2f", fox.y)
+	}
+}

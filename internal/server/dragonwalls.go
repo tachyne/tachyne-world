@@ -17,23 +17,12 @@ var (
 // dragonCheckWalls clears the head, neck and body boxes and reports whether
 // any of them met a block it could not break.
 func (h *hub) dragonCheckWalls(players map[int32]*tracked, m *mob, sitting bool) bool {
-	headY := 0.0
-	if sitting {
-		headY = -1 // getHeadYOffset: a perched dragon lowers its head
-	}
 	hit := false
-	for _, p := range dragonPartsOf(m) {
-		up := 0.0
-		switch p.name {
-		case "head", "neck":
-			up = headY
-		case "body":
-		default:
-			continue // the wings and tail pass through terrain
-		}
-		// A part's box is its width centred on it and its height upward.
+	for _, p := range dragonPartsOf(m)[:3] { // head, neck, body: the wings and tail pass through terrain
+		// A part's box is its width centred on it and its height upward
+		// (a sitting dragon's lowered head is in the part's own height).
 		x0, x1 := floorInt(p.x-p.w/2), floorInt(p.x+p.w/2)
-		y0, y1 := floorInt(p.y+up), floorInt(p.y+up+p.h)
+		y0, y1 := floorInt(p.y), floorInt(p.y+p.h)
 		z0, z1 := floorInt(p.z-p.w/2), floorInt(p.z+p.w/2)
 		if h.dragonClearBox(players, m, x0, y0, z0, x1, y1, z1) {
 			hit = true

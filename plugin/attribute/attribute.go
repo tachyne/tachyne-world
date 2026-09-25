@@ -82,6 +82,8 @@ const (
 	CameraDistance               ID = "minecraft:camera_distance"
 	WaypointTransmitRange        ID = "minecraft:waypoint_transmit_range"
 	WaypointReceiveRange         ID = "minecraft:waypoint_receive_range"
+	BelowNameDistance            ID = "minecraft:below_name_distance"
+	NameTagDistance              ID = "minecraft:name_tag_distance"
 	// The 26.3 movement-physics trio a sulfur cube's swallowed block tunes.
 	Bounciness       ID = "minecraft:bounciness"
 	FrictionModifier ID = "minecraft:friction_modifier"

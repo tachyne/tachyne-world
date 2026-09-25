@@ -87,6 +87,12 @@ func (h *hub) throwEye(players map[int32]*tracked, t *tracked) {
 	if slot == nil || slot.item != itemEnderEye || slot.count == 0 {
 		return
 	}
+	// findNearestMapStructure(#eye_of_ender_located) in the thrower's own
+	// dimension: only the overworld has strongholds; elsewhere the eye stays
+	// in the hand.
+	if t.dim != dimOverworld {
+		return
+	}
 	// Nearest stronghold across this cell + neighbours.
 	best, bd := worldgen.Stronghold{}, math.MaxFloat64
 	for dx := -1; dx <= 1; dx++ {
@@ -107,14 +113,13 @@ func (h *hub) throwEye(players map[int32]*tracked, t *tracked) {
 	if t.gamemode != gmCreative {
 		h.consumeUsed(t)
 	}
-	// EnderEyeItem: the eye flies at the structure's locate position (the
-	// start chunk's corner), as /locate reports it — not the portal room.
-	dx, dz := float64(best.LocX)-t.x, float64(best.LocZ)-t.z
-	d := math.Hypot(dx, dz)
-	a := h.launchProjectileIn(players, entityEyeProj, t.dim, t.x, t.y+1.6, t.z,
-		dx/d*0.7, 0.25, dz/d*0.7)
-	a.dmg = 0
-	h.playSoundDim(players, t.dim, "minecraft:entity.ender_eye.launch", sndPlayer, t.x, t.y, t.z, 0.6, 1)
+	// EnderEyeItem: the eye is signalled to the structure's locate position
+	// (the start chunk's corner at y 0), as /locate reports it — not the
+	// portal room. It starts from the thrower's middle.
+	e := h.spawnEye(players, t.dim, t.x, t.y+0.9, t.z, float64(best.LocX), 0, float64(best.LocZ))
+	h.vibAt(t.dim, freqProjectileShoot, e.x, e.y, e.z, t.p.eid)
+	pitch := 0.33 + h.rng.Float32()*(0.5-0.33)
+	h.playSoundDim(players, t.dim, "minecraft:entity.ender_eye.launch", sndNeutral, t.x, t.y, t.z, 1, pitch)
 }
 
 type evInsertEye struct {

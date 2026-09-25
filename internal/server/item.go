@@ -64,7 +64,9 @@ type itemEntity struct {
 	shieldBase    int8        // a decorated shield's banner base (dye + 1)
 	cube          cubeContent // a sulfur cube bucket's cube
 	vx, vy, vz    float64     // motion per tick (tickItem); all 0 at rest
-	born          uint64      // world tick spawned (for despawn)
+	born          uint64      // world tick spawned
+	age           int         // ItemEntity.age: ticks it has lain (despawns at 6000; saved)
+	owner         [16]byte    // ItemEntity.target: only this player may pick it up (zero: anyone)
 	noPickupUntil uint64      // absolute tick pickup unlocks (tosses get a longer hold;
 	//                      NEVER fake this by moving born forward — a future born
 	//                      underflows the unsigned despawn age and vanishes the item)
@@ -177,7 +179,6 @@ func (h *hub) spawnBlockDrop(players map[int32]*tracked, dim int, item int32, co
 // updateItems despawns dropped items past their lifetime and merges nearby
 // identical stacks (vanilla: ground items within ~0.5 blocks combine).
 func (h *hub) updateItems(players map[int32]*tracked) {
-	now := h.tick.Load()
 	type cell struct {
 		dim  int
 		x, z int
@@ -189,7 +190,7 @@ func (h *hub) updateItems(players map[int32]*tracked) {
 	// the stalled tick held back everyone's movement.
 	buckets := map[cell][]int32{}
 	for eid, it := range h.items {
-		if now-it.born >= itemDespawnTicks {
+		if it.age >= itemDespawnTicks {
 			delete(h.items, eid)
 			h.entityGone(players, it.dim, eid)
 			continue
@@ -207,7 +208,7 @@ func (h *hub) updateItems(players map[int32]*tracked) {
 				for _, oid := range buckets[cell{it.dim, cx + dx, cz + dz}] {
 					other := h.items[oid]
 					if oid == eid || other == nil || !sameItemComponents(it.stack(), other.stack()) ||
-						it.count+other.count > stackCap(it.item) {
+						it.count+other.count > stackCap(it.item) || it.owner != other.owner {
 						continue
 					}
 					// Vanilla merges within the item's bbox inflated 0.5 horizontally,
@@ -218,6 +219,9 @@ func (h *hub) updateItems(players map[int32]*tracked) {
 						continue
 					}
 					it.count += other.count // absorb the other into this one
+					// ItemEntity.merge: the longer pickup delay and the younger age.
+					it.noPickupUntil = max(it.noPickupUntil, other.noPickupUntil)
+					it.age = min(it.age, other.age)
 					delete(h.items, oid)
 					h.entityGone(players, other.dim, oid)
 					h.toNearbyEv(players, it.dim, it.x, it.z, metaEv(itemMetadata(eid, it.stack())))

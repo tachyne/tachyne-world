@@ -34,6 +34,8 @@ type savedItem struct {
 	// flight and bursts, and a pot's faces were lost on every restart); they
 	// are only read, for files written then.
 	St    stackRow `json:"st,omitempty"`
+	Age   int      `json:"age,omitempty"`   // ItemEntity Age: ticks lain
+	Owner string   `json:"owner,omitempty"` // ItemEntity Owner: the one player who may pick it up
 	Item  int32    `json:"item,omitempty" mig:"item"`
 	Count int      `json:"count,omitempty"`
 	Dmg   int      `json:"dmg,omitempty"`

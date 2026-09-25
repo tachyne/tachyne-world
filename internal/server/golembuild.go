@@ -105,7 +105,7 @@ func (h *hub) configureVillageMob(players map[int32]*tracked, m *mob) {
 	}
 	switch m.etype {
 	case entityVillager:
-		m.setMoveSpeed(0.135) // villager MOVEMENT_SPEED
+		m.setMoveSpeed(vanillaMoveSpeed[entityVillager] * attrToStep) // villager MOVEMENT_SPEED
 		h.initVillagerTrades(m, profUnemployed)
 		h.sendVillagerData(players, m)
 		m.behavior, m.usesDoors = villagerBehavior{}, true

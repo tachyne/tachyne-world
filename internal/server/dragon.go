@@ -17,14 +17,10 @@ import (
 
 const (
 	dragonHealth  = 200
-	dragonSpeed   = 0.7
-	dragonContact = 10 // EnderDragon.hurt: the body and head
+	dragonContact = 10 // EnderDragon.hurt: the head and neck
 	// The wings reach further and hit softer, but they throw you (knockBack).
-	dragonBodyReach  = 4.0
-	dragonWingReach  = 8.0
 	dragonWingDamage = 5
 	dragonWingPush   = 4.0
-	dragonHealRate   = 2 // HP/s while it has a crystal to heal from (one every 10 ticks)
 	// dragonCrystalReach is how far past its 16×8 box the dragon looks for a
 	// crystal (checkCrystals: the bounding box inflated by 32).
 	dragonCrystalReach = 32.0
@@ -72,6 +68,8 @@ func (h *hub) enterEnd(players map[int32]*tracked, arriving *tracked) {
 	}
 	m.behavior = idleBehavior{} // movement is updateDragon's, not steer()'s
 	h.dragon = m
+	h.setDragonPhase(nil, m, phaseHoldingPattern) // EndDragonFight.createNewDragon
+	m.dragon().lastHealth = m.health
 	// spawnMobIn's broadcast is radius-culled; the boss must reach the whole
 	// island. Skip the arriving player: the dimension-switch view swap sends
 	// them every dim-2 entity exactly once — a duplicate spawn for the same
@@ -79,6 +77,7 @@ func (h *hub) enterEnd(players map[int32]*tracked, arriving *tracked) {
 	for _, t := range players {
 		if t.dim == 2 && t != arriving {
 			t.p.trySendEv(entAdd(m.eid, m.etype, m.uuid, m.x, m.y, m.z, 0, 0))
+			t.p.trySendEv(metaEv(dragonPhaseMeta(m.eid, m.dragon().phase)))
 		}
 	}
 	log.Printf("end: dragon staged eid=%d at (%.0f,%.0f,%.0f)", m.eid, m.x, m.y, m.z)
@@ -96,95 +95,232 @@ func (h *hub) enterEnd(players map[int32]*tracked, arriving *tracked) {
 	}
 }
 
-// updateDragon flies the circuit, swoops, heals, and bites.
+// updateDragon is EnderDragon.aiStep, run every tick: the crystals, the
+// flight record, the phase's tick, the flight toward the phase's target,
+// the parts' contact (the wings shove and nick, the head and neck bite), the
+// terrain the head, neck and body plough through, and the broadcast. A dead
+// dragon runs tickDeath instead.
 func (h *hub) updateDragon(players map[int32]*tracked) {
 	m := h.dragon
-	if m == nil || m.dying > 0 {
+	if m == nil {
+		return
+	}
+	d := m.dragon()
+	if d.dead || m.health <= 0 {
+		h.dragonTickDeath(players, m)
 		return
 	}
 	// Mirror the fight's progress into the settings the world saves, so a
 	// restart resumes where the fight got to rather than healing the dragon.
 	h.rules.DragonHealth = m.health
 	now := h.tick.Load()
-	// The phase machine picks where it is going and whether it is sitting;
-	// the movement below is unchanged, it just follows a smarter target.
-	tx, ty, tz, sitting := h.updateDragonPhase(players, m)
-	speed := dragonSpeed
-	if sitting {
-		speed = 0 // perched and breathing: it stays put
+	// A blow taken while sitting counts toward sittingDamageReceived: past a
+	// quarter of its health it takes off (EnderDragon.hurt).
+	if d.lastHealth > m.health && dragonSitting(d.phase) {
+		if d.sitDamage += float64(d.lastHealth - m.health); d.sitDamage > 0.25*dragonHealth {
+			d.sitDamage = 0
+			h.setDragonPhase(players, m, phaseTakeoff)
+		}
 	}
-	dx, dy, dz := tx-m.x, ty-m.y, tz-m.z
-	d := math.Sqrt(dx*dx + dy*dy + dz*dz)
-	if h.dragonInWall {
-		speed *= 0.8 // EnderDragon.aiStep: move(deltaMovement × 0.8) while inWall
+	h.dragonCheckCrystals(m, now)
+	m.yaw = float32(wrapDegrees(float64(m.yaw)))
+	m.recordDragonFlight()
+	before := d.phase
+	h.dragonPhaseTick(players, m)
+	if d.phase != before {
+		h.dragonPhaseTick(players, m)
 	}
-	if d > 1e-6 && speed > 0 {
-		step := math.Min(speed, d)
-		m.x += dx / d * step
-		m.y += dy / d * step
-		m.z += dz / d * step
-		m.yaw = float32(math.Atan2(dz, dx)*180/math.Pi) - 90
+	if d.hasTarget {
+		h.dragonFly(m, d)
+	}
+	sitting := dragonSitting(d.phase)
+	if !(m.invulnTicks > 10) { // !wasHurtRecently
+		h.dragonContact(players, m, sitting, now)
 	}
 	h.dragonInWall = h.dragonCheckWalls(players, m, sitting)
-	m.recordDragonFlight() // DragonFlightHistory: where the tail follows
-	// Contact damage to End players in reach — only while it is flying. A
-	// perched dragon is the fight's one safe window to hit its head, so it
-	// must not still be grinding anyone who stands next to it. Vanilla has
-	// two contacts: the body and head deal 10, and the WINGS deal 5 with a
-	// hard sideways shove (EnderDragon.hurt and knockBack).
-	for _, t := range players {
-		if sitting {
-			break
+	d.lastHealth = m.health
+	if now%200 == 0 { // ~10s heartbeat while the fight is being debugged
+		log.Printf("end: dragon at (%.1f,%.1f,%.1f) hp=%d phase=%d", m.x, m.y, m.z, m.health, d.phase)
+	}
+	h.dragonBroadcast(players, m)
+}
+
+// dragonFly is aiStep's flight toward the phase's target: climb or dive
+// toward it within the phase's speed, turn toward it with the turn rate
+// easing, thrust along the facing (weaker when facing away), move (slowed
+// in a wall; the dragon passes through terrain, noPhysics), and slide.
+func (h *hub) dragonFly(m *mob, d *dragonState) {
+	xdd, ydd, zdd := d.target[0]-m.x, d.target[1]-m.y, d.target[2]-m.z
+	distSq := xdd*xdd + ydd*ydd + zdd*zdd
+	maxS := dragonFlySpeed(d.phase)
+	if hd := math.Sqrt(xdd*xdd + zdd*zdd); hd > 0 {
+		ydd = clampF(ydd/hd, -maxS, maxS)
+	}
+	m.vy += ydd * 0.01
+	m.yaw = float32(wrapDegrees(float64(m.yaw)))
+	ax, ay, az := d.target[0]-m.x, d.target[1]-m.y, d.target[2]-m.z
+	if l := math.Sqrt(ax*ax + ay*ay + az*az); l > 1e-4 {
+		ax, ay, az = ax/l, ay/l, az/l
+	} else {
+		ax, ay, az = 0, 0, 0
+	}
+	yaw := float64(m.yaw) * math.Pi / 180
+	dx, dy, dz := math.Sin(yaw), m.vy, -math.Cos(yaw)
+	if l := math.Sqrt(dx*dx + dy*dy + dz*dz); l > 1e-4 {
+		dx, dy, dz = dx/l, dy/l, dz/l
+	}
+	dot := math.Max((dx*ax+dy*ay+dz*az+0.5)/1.5, 0)
+	if math.Abs(xdd) > 1e-5 || math.Abs(zdd) > 1e-5 {
+		yRotD := clampF(wrapDegrees(180-math.Atan2(xdd, zdd)*180/math.Pi-float64(m.yaw)), -50, 50)
+		d.yRotA *= 0.8
+		d.yRotA += yRotD * dragonTurnSpeed(m, d.phase)
+		m.yaw += float32(d.yRotA * 0.1)
+	}
+	span := 2 / (distSq + 1)
+	speed := 0.06 * (dot*span + (1 - span))
+	yaw = float64(m.yaw) * math.Pi / 180
+	m.vx += speed * math.Sin(yaw) // moveRelative(speed, (0, 0, -1))
+	m.vz -= speed * math.Cos(yaw)
+	scale := 1.0
+	if h.dragonInWall {
+		scale = 0.8
+	}
+	m.x += m.vx * scale
+	m.y += m.vy * scale
+	m.z += m.vz * scale
+	if l := math.Sqrt(m.vx*m.vx + m.vy*m.vy + m.vz*m.vz); l > 1e-4 {
+		slide := 0.8 + 0.15*((m.vx*dx+m.vy*dy+m.vz*dz)/l+1)/2
+		m.vx, m.vz = m.vx*slide, m.vz*slide
+	}
+	m.vy *= 0.91
+}
+
+// dragonCheckCrystals is checkCrystals: a point of health every ten ticks
+// from the crystal it is bound to, and one tick in ten it looks again for
+// the nearest crystal about it.
+func (h *hub) dragonCheckCrystals(m *mob, now uint64) {
+	if h.dragonCrystal != 0 {
+		if h.crystals[h.dragonCrystal] == nil {
+			h.dragonCrystal = 0
+		} else if now%10 == 0 && m.health < dragonHealth {
+			m.health++
 		}
-		if t.dim != 2 || t.dead || !isSurvival(t.gamemode) || now < t.graceUntil {
+	}
+	if h.rng.Intn(10) == 0 {
+		h.dragonCrystal = h.nearestDragonCrystal(m)
+	}
+}
+
+// dragonContact is aiStep's part contact: anything inside a wing's box
+// grown four across and two up, and lowered two, is shoved away from the
+// body (and, unless the dragon sits, takes five); anything in the head's or
+// neck's box grown by one takes ten.
+func (h *hub) dragonContact(players map[int32]*tracked, m *mob, sitting bool, now uint64) {
+	parts := dragonPartsOf(m)
+	body := parts[2]
+	inBox := func(t *tracked, p dragonPart, gx, gyDown, gyUp float64) bool {
+		minX, maxX := p.x-p.w/2-gx, p.x+p.w/2+gx
+		minZ, maxZ := p.z-p.w/2-gx, p.z+p.w/2+gx
+		minY, maxY := p.y-gyDown, p.y+p.h+gyUp
+		return t.x+0.3 > minX && t.x-0.3 < maxX && t.z+0.3 > minZ && t.z-0.3 < maxZ && t.y+1.8 > minY && t.y < maxY
+	}
+	for _, t := range players {
+		if t.dim != m.dim || t.dead || !isSurvival(t.gamemode) || now < t.graceUntil {
 			continue
 		}
-		d := dist3(t.x, t.y, t.z, m.x, m.y, m.z)
-		switch {
-		case d < dragonBodyReach:
-			h.hurtFrom(players, t, dragonContact, dtMobAttack,
-				deathCause{by: "Ender Dragon"}, fromMob(m.x, m.z))
-			h.knockback(t, m.x, m.z)
-		case d < dragonWingReach:
-			// knockBack: push = (dx/d², 0.2, dz/d²)·4, then five damage.
-			dx, dz := t.x-m.x, t.z-m.z
-			d2 := math.Max(dx*dx+dz*dz, 0.1)
-			t.p.trySendEv(attachproto.Velocity{EID: t.p.eid,
-				VX: dx / d2 * dragonWingPush, VY: 0.2, VZ: dz / d2 * dragonWingPush})
+		for _, wing := range parts[6:8] {
+			if !inBox(t, wing, 4, 4, 0) { // inflate(4, 2, 4).move(0, -2, 0)
+				continue
+			}
+			xd, zd := t.x-body.x, t.z-body.z
+			dd := math.Max(xd*xd+zd*zd, 0.1)
+			t.p.trySendEv(attachproto.Velocity{EID: t.p.eid, VX: xd / dd * dragonWingPush, VY: 0.2, VZ: zd / dd * dragonWingPush})
 			t.spinUntil = now + windBurstGrace
-			h.hurtFrom(players, t, dragonWingDamage, dtMobAttack,
-				deathCause{by: "Ender Dragon"}, fromMob(m.x, m.z))
+			if !sitting {
+				h.hurtFrom(players, t, dragonWingDamage, dtMobAttack, deathCause{by: "Ender Dragon"}, fromMob(m.x, m.z))
+			}
 		}
-	}
-	// Crystal healing (checkCrystals): only from its nearest crystal, one
-	// point every 10 ticks — this runs once a second, so two at a time —
-	// and it looks again for the nearest crystal around it.
-	if h.crystals[h.dragonCrystal] == nil {
-		h.dragonCrystal = 0
-	} else if now%20 == 0 && m.health < dragonHealth {
-		m.health = min(dragonHealth, m.health+dragonHealRate)
-	}
-	h.dragonCrystal = h.nearestDragonCrystal(m)
-	if now%200 == 0 { // ~10s heartbeat while the fight is being debugged
-		log.Printf("end: dragon at (%.1f,%.1f,%.1f) hp=%d players-in-end=%d", m.x, m.y, m.z, m.health, func() (n int) {
-			for _, t := range players {
-				if t.dim == 2 {
-					n++
+		for _, p := range parts[0:2] {
+			if inBox(t, p, 1, 1, 1) {
+				if h.hurtFrom(players, t, dragonContact, dtMobAttack, deathCause{by: "Ender Dragon"}, fromMob(m.x, m.z)) {
+					h.knockback(t, m.x, m.z)
 				}
 			}
-			return
-		}())
+		}
 	}
-	// Broadcast: the same relative-move packets every other mob uses (the only
-	// entity-movement encoding real clients have verified — sync_entity_position
-	// was our sole use of that packet and 26.x clients never rendered a dragon
-	// driven by it). NoSync carries that constraint into the event: renderers
-	// stay relative forever, saturating + converging on any oversized delta.
-	if m.x != m.sx || m.y != m.sy || m.z != m.sz {
-		m.sx, m.sy, m.sz = m.x, m.y, m.z
+}
+
+// dragonBroadcast sends the flight: the same relative-move packets every
+// other mob uses (the only entity-movement encoding real clients have
+// verified — sync_entity_position was our sole use of that packet and 26.x
+// clients never rendered a dragon driven by it). NoSync carries that
+// constraint into the event: renderers stay relative forever, saturating +
+// converging on any oversized delta.
+func (h *hub) dragonBroadcast(players map[int32]*tracked, m *mob) {
+	if m.x != m.sx || m.y != m.sy || m.z != m.sz || m.yaw != m.syaw {
+		m.sx, m.sy, m.sz, m.syaw = m.x, m.y, m.z, m.yaw
 		mv := entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, false)
 		mv.NoSync = true
-		h.toDimEv(players, 2, mv)
+		h.toDimEv(players, m.dim, mv)
+	}
+}
+
+// dragonKillingBlow is die() for the dragon: the kill is credited at once,
+// then handleKillingBlow — a dragon in the air is held at one health and
+// flies home to die (DYING); a sitting one dies where it sits.
+func (h *hub) dragonKillingBlow(players map[int32]*tracked, m *mob) {
+	d := m.dragon()
+	if d.dead || d.phase == phaseDying {
+		return
+	}
+	h.settleKillCredit(players, m)
+	if !dragonSitting(d.phase) {
+		m.health = 1
+		h.setDragonPhase(players, m, phaseDying)
+		return
+	}
+	h.dragonStartDeath(players, m)
+}
+
+// dragonStartDeath is the moment the dragon's health is gone: the client's
+// death sequence starts (entity event 3), and tickDeath runs from here.
+func (h *hub) dragonStartDeath(players map[int32]*tracked, m *mob) {
+	d := m.dragon()
+	if d.dead {
+		return
+	}
+	d.dead, m.health = true, 0
+	m.dying = 1 << 30 // not a target for anything any more; updateDragon ends it
+	h.toDimEv(players, m.dim, entityStatus(m.eid, entityStatusDeath))
+}
+
+// dragonTickDeath is EnderDragon.tickDeath: the death is heard across the
+// End (level event 1028); it rises a tenth of a block a tick; from the
+// 155th tick eight percent of its experience falls every five ticks, and at
+// the 200th the last fifth, the fight is won and it is gone.
+func (h *hub) dragonTickDeath(players map[int32]*tracked, m *mob) {
+	d := m.dragon()
+	if !d.dead {
+		h.dragonStartDeath(players, m)
+	}
+	d.deathTime++
+	xp := 500
+	if h.endGatewaysOpen() == 0 { // !hasPreviouslyKilledDragon
+		xp = 12000
+	}
+	if d.deathTime > 150 && d.deathTime%5 == 0 && h.rules.DoMobLoot {
+		h.spawnXPOrbIn(players, m.dim, int(float64(xp)*0.08), m.x, m.y, m.z)
+	}
+	if d.deathTime == 1 {
+		h.playSoundGlobal(players, dimEnd, "minecraft:entity.ender_dragon.death", sndHostile, m.x, m.y, m.z, 5, 1)
+	}
+	m.y += 0.1
+	h.dragonBroadcast(players, m)
+	if d.deathTime >= 200 {
+		if h.rules.DoMobLoot {
+			h.spawnXPOrbIn(players, m.dim, int(float64(xp)*0.2), m.x, m.y, m.z)
+		}
+		h.despawnMob(players, m) // setDragonKilled + remove
 	}
 }
 
@@ -231,7 +367,13 @@ func (h *hub) nearestDragonCrystal(m *mob) int32 {
 // nearest player's within 64.
 func (h *hub) dragonCrystalDestroyed(players map[int32]*tracked, c *crystal, by *tracked) {
 	m := h.dragon
-	if m == nil || m.dying > 0 || c.eid != h.dragonCrystal {
+	if m == nil || m.dying > 0 {
+		return
+	}
+	if c.eid != h.dragonCrystal {
+		if by != nil && m.dragon().phase == phaseHoldingPattern {
+			h.dragonStrafe(players, m, by) // onCrystalDestroyed, whichever crystal
+		}
 		return
 	}
 	h.dragonCrystal = 0
@@ -252,11 +394,19 @@ func (h *hub) dragonCrystalDestroyed(players map[int32]*tracked, c *crystal, by 
 		h.hurtByPlayerOn(m, by)
 		m.lastAttacker = by.p.eid
 	}
+	m.dragonMeleePart = "head" // hurt(level, this.head, …)
 	m.hurtKind(dragonCrystalLoss, dt)
+	m.dragonMeleePart = ""
 	m.lastDirect = entityEndCrystal
 	h.mobDamageEv(players, m, dtExplosion, 0) // the crystal blast
 	if m.health <= 0 {
 		h.killMob(players, m)
+		return
+	}
+	// DragonHoldingPatternPhase.onCrystalDestroyed: it turns on the player
+	// who did it.
+	if by != nil && m.dragon().phase == phaseHoldingPattern {
+		h.dragonStrafe(players, m, by)
 	}
 }
 
@@ -265,11 +415,6 @@ const endCrystalBlastPower = 6
 
 // dragonDefeated: XP shower, exit portal, the first kill's egg, a gateway.
 func (h *hub) dragonDefeated(players map[int32]*tracked) {
-	if m := h.dragon; m != nil {
-		// EnderDragon.tickDeath: level event 1028, heard across the End (and
-		// everywhere with global_sound_events on).
-		h.playSoundGlobal(players, dimEnd, "minecraft:entity.ender_dragon.death", sndHostile, m.x, m.y, m.z, 5, 1)
-	}
 	h.dragon = nil
 	h.rules.DragonDefeated = true
 	h.rules.DragonHealth = 0 // the fight is over; nothing left to resume
@@ -295,13 +440,10 @@ func (h *hub) dragonDefeated(players map[int32]*tracked) {
 	// opens a gateway, so a standing one means the dragon fell before. The
 	// egg comes only the first time, and the XP is 12000 then, 500 after.
 	// There is no elytra: that is the End ships' loot.
-	firstKill := h.endGatewaysOpen() == 0
-	xp := 500
-	if firstKill {
+	// The experience fell during tickDeath.
+	if h.endGatewaysOpen() == 0 {
 		h.setBlockIn(players, 2, blockPos{0, cy + 1, 0}, worldgen.DragonEgg)
-		xp = 12000
 	}
-	h.spawnXPOrbIn(players, 2, xp, 0.5, float64(cy+1), 0.5)
 	h.spawnNextEndGateway(players)
 	for _, t := range players {
 		t.p.trySendEv(chatEv("The Ender Dragon has fallen!"))
@@ -336,6 +478,7 @@ func (h *hub) onEndRefresh(players map[int32]*tracked, eid int32) {
 	if m := h.dragon; m != nil {
 		t.p.sendEv(entGone(m.eid))
 		t.p.sendEv(entAdd(m.eid, m.etype, m.uuid, m.x, m.y, m.z, m.yaw, 0))
+		t.p.sendEv(metaEv(dragonPhaseMeta(m.eid, m.dragon().phase)))
 	}
 	for _, c := range h.crystals {
 		if c.dim != dimEnd {

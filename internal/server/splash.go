@@ -164,10 +164,11 @@ func (h *hub) applyPotionAoE(players map[int32]*tracked, t *tracked, effs []potE
 
 // spawnBreathCloud lays the dragon's breath: full radius for its whole life,
 // dealing the instant damage vanilla's cloud carries rather than an effect.
-func (h *hub) spawnBreathCloud(dim int, x, y, z float64) {
+func (h *hub) spawnBreathCloud(dim int, x, y, z float64) int32 {
 	eid := h.allocEID()
 	h.clouds[eid] = &effectCloud{eid: eid, dim: dim, x: x, y: y, z: z,
 		radius: breathRadius, ttl: breathTicks, reapplyAt: h.tick.Load(), breath: true}
+	return eid
 }
 
 // spawnPotionCloud drops a lingering-potion cloud at the impact.

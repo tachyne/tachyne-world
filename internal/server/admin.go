@@ -190,7 +190,7 @@ func summonableType(name string) (int, bool) {
 	if et, ok := entityByName[name]; ok && (netherConfigured(et) || et == entitySulfurCube) {
 		return et, true
 	}
-	return 0, false
+	return summonNonLiving(name) // boats, carts, TNT, projectiles, …
 }
 
 func (s *Server) cmdGive(p *player, args []string) {

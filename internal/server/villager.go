@@ -199,7 +199,7 @@ func (h *hub) spawnTemplateVillager(players map[int32]*tracked, v worldgen.Villa
 	if m == nil {
 		return // plugin-cancelled spawn
 	}
-	m.setMoveSpeed(0.135) // villager MOVEMENT_SPEED
+	m.setMoveSpeed(vanillaMoveSpeed[entityVillager] * attrToStep) // MOVEMENT_SPEED 0.5; moveSpeed scales it to villagerStep
 	switch {
 	case vm.Prof == "nitwit":
 		h.initVillagerTrades(m, profNitwit)

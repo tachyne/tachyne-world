@@ -163,6 +163,7 @@ func TestEveryPublicIDHasADefinition(t *testing.T) {
 		api.SneakingSpeed, api.SubmergedMiningSpeed, api.WaterMovementEfficiency,
 		api.SpawnReinforcements, api.FlyingSpeed, api.TemptRange,
 		api.Bounciness, api.FrictionModifier, api.AirDragModifier,
+		api.BelowNameDistance, api.NameTagDistance,
 	}
 	for _, id := range ids {
 		if _, ok := api.Defs[id]; !ok {

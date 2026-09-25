@@ -79,6 +79,8 @@ func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power
 	}
 	knock := map[int32][3]float64{}
 	h.explosionHurtsVehicles(players, dim, cx, cy, cz, power, dt)
+	h.explosionHitsHanging(players, dim, cx, cy, cz, power)
+	h.explosionHitsStands(players, dim, cx, cy, cz, power, dt)
 	if bp := h.blastPlayer(players); bp != nil {
 		cause.byEID = bp.p.eid // the player behind the blast is who its victims remember
 	}
@@ -130,6 +132,7 @@ func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power
 		if om.etype == entityGhast && h.blastSrc.direct == entityLargeFireball && byPlayer != nil {
 			dmg = reflectedFireballDamage // the returned fireball's blast is as deadly to it as the hit
 		}
+		om.dragonHitByPlayer = byPlayer != nil // (a blast always hurts the dragon: #always_hurts_ender_dragons)
 		om.hurtKind(dmg, dt)
 		om.lastDirect = h.blastSrc.direct
 		if byPlayer != nil { // resolvePlayerResponsibleForDamage: the kill is theirs

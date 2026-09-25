@@ -742,7 +742,7 @@ func (h *hub) respawn(t *tracked) {
 	}
 	initSurvival(t)
 	t.loadUntil = h.tick.Load() + clientLoadTimeout // restartClientLoadTimerAfterRespawn
-	dropCommandModifiers(t) // restoreFrom: the bases survive a death, the modifiers do not
+	dropCommandModifiers(t)                         // restoreFrom: the bases survive a death, the modifiers do not
 	sx, sy, sz, sdim := h.respawnPoint(h.playersRef, t)
 	t.x, t.y, t.z = sx, sy, sz
 	t.p.trySendEv(attachproto.Dimension{Dim: int32(t.dim), Gamemode: int32(t.gamemode), Death: h.deathOf(t.p.key())})

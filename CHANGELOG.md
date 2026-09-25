@@ -81,6 +81,20 @@ the public history since the project was open-sourced on 2026-07-10.
   <cause>]` blames an attacker: the death message names them, a mob they
   hurt counts as their kill and turns on them, and the blow knocks the
   target back as a hit does.
+- **Frogs long-jump.** Every five to seven seconds a frog on dry land may
+  crouch and leap up to four blocks across and two up or down to a spot it
+  couldn't walk to, often picking a lily pad or big dripleaf to land on.
+  Goats and frogs that land a jump on the edge of a ledge now stay on it.
+- **/summon makes things that aren't mobs.** Boats, chest boats, rafts,
+  every minecart, primed TNT, end crystals, lightning bolts, firework
+  rockets and the thrown and shot projectiles (arrows, tridents, snowballs,
+  eggs, fireballs, wither skulls, wind charges) can now be summoned, placed
+  exactly where asked.
+- **Baby piglins ride baby hoglins.** Now and then a baby piglin that can
+  see a baby hoglin walks over and climbs on, and other baby piglins climb
+  on top of it, up to three high. They get down after ten to thirty
+  seconds, or sooner if the hoglin grows up, wanders off or anyone in the
+  stack is hurt.
 - **Renamed containers keep their names.** A chest, barrel, shulker box,
   furnace, hopper, dispenser, dropper, brewing stand, enchanting table,
   beacon, copper chest, banner, head or copper golem statue placed from an
@@ -325,6 +339,107 @@ the public history since the project was open-sourced on 2026-07-10.
 - **/attribute changes survive a relog.** A player's changed base values
   and the modifiers `/attribute` added are saved with them, as in vanilla.
   Dying keeps the base values and drops the added modifiers.
+- **Villagers take cover in raids and celebrate a win.** Before a raid's
+  first wave and between waves villagers hurry to the village bell; while
+  a wave is on they run to a bed indoors and stay there; after the village
+  wins they come out under the open sky, cheer and set off fireworks for
+  half a minute.
+- **Raiders search the village.** Once a raid reaches the village, raiders
+  with nobody to fight go from house to house — heading for beds within
+  48 blocks they haven't just visited — instead of milling about the
+  middle.
+- **Closed doors stop mobs, and raiding vindicators get through them.**
+  Mobs no longer walk straight through closed doors. During a raid a
+  vindicator that reaches a closed wooden door opens it and leaves it
+  open, or now and then (on Normal or Hard, with `mobGriefing` on) hacks
+  it down. Evokers and illusioners keep chasing a player they have lost
+  sight of for fifteen seconds instead of three.
+- **Shulkers cling to walls and ceilings.** A shulker whose block goes
+  now turns to hold on to a wall or ceiling beside it, and teleports onto
+  floors, walls or ceilings alike. It fires its bullets away from the face
+  it clings to, and on a floor its shell pushes up as it opens.
+- **Armor stands can be destroyed like vanilla's.** Explosions break them
+  and drop what they wear; arrows, tridents, fireballs and wind charges
+  knock them down in one hit; fire and burning eat them away (lava sets
+  them alight, and they burn once out of it). Players in adventure mode
+  can no longer break them, and a mob's damage does nothing to them with
+  `mobGriefing` off.
+- **Item frames, paintings and lead knots behave like vanilla's.** They
+  now fall when their wall goes whatever removed it — a piston, a blast,
+  flowing water — not only a player. Explosions and any projectile break
+  them (an arrow knocks a framed item out first), unless a mob did it
+  with `mobGriefing` off. Punching a lead knot unties every animal on it.
+  A painting can't be hung over an item frame facing the same way. Framed
+  items drop back whole with their name and everything else, glow item
+  frames make their own sounds, and paintings and dropped leads respect
+  `entityDrops`. A happy ghast can be led from sixteen blocks away.
+- **Eyes of ender fly like vanilla's.** A thrown eye now leaves from your
+  middle, drifts up and toward the stronghold (at most twelve blocks at a
+  time), passes through whatever is in the way instead of sticking in it
+  or hitting players, and after four seconds either drops back as an item
+  (four times in five) or shatters. It can no longer be thrown in the
+  Nether or the End, where there is no stronghold to find.
+- **Mobs report their real speed.** Turtles, frogs, fish, squid,
+  axolotls, dolphins, guardians, nautiluses, bats, parrots, allays, bees,
+  happy ghasts, phantoms, vexes, ghasts, the wither, villagers and
+  wandering traders now tell the client vanilla's movement speed instead
+  of a made-up one, so a ridden nautilus or happy ghast moves at the right
+  pace and `/attribute` shows the right value. How fast they move on the
+  server is unchanged.
+- **The ender dragon fights like the real one.** It now flies every tick
+  instead of once a second, along vanilla's ring of flight points, turning
+  and swooping as it should, and faces the way it flies. It strafes the
+  player nearest the portal with fireballs, charges players from its
+  perch, lands on the portal to look around, roar and breathe four times
+  before it takes off, and takes off early if hit hard while perched —
+  arrows just bounce off it there. Its head and neck bite and its wings
+  shove whoever they touch, and the neck now takes full damage like the
+  head. Struck down in the air it flies back to the portal to die, rising
+  as it dissolves and dropping its experience over the last few seconds.
+- **Camels carry two players.** A second player can climb onto a camel
+  behind the first. The one in front steers, the one behind rides along,
+  and if the front rider gets off the other moves forward. A player who
+  leaves the game while riding a horse, camel or other mount now leaves
+  it free to walk again.
+- **Boats seat two players and drift when nobody rows.** A second player
+  can climb into a boat behind the first; the one in front steers, and if
+  they get out the other moves up to the paddles. An empty boat, chest
+  boat or raft — or one with only a mob in front — now floats on the
+  water, is carried along by currents, settles to the surface when dropped
+  in, falls when there is nothing under it, and throws its passengers out
+  after three seconds under water.
+- **Dropped items keep their age, float on lava and stay yours.** A
+  dropped item's five minutes now count its own ticks and carry over a
+  server restart instead of starting again. Netherite and other
+  fire-proof drops rise through lava and ride its surface, as in water.
+  What `/give` cannot fit in a full inventory is dropped for that player
+  alone, to be picked up at once.
+- **Skeletons keep to the shade by day.** A skeleton, stray or bogged
+  standing in shade in daylight with nothing on its head no longer walks
+  out into the sun, even after a player; it stops at the edge of the
+  shadow. Out of bow range, skeletons now find their way around obstacles
+  toward their target instead of walking straight at it.
+- **Bees remember their flower.** A bee keeps the flower it last worked,
+  and after thirty seconds out of the hive with no nectar it flies back to
+  it, even from beyond its own flower search. The flower goes into the hive
+  with the bee and comes back out with it, bees that knew none learn their
+  hive's, and a bee's hive, flower and nectar survive a restart. An angry
+  bee now chases at its own quicker attack pace.
+- **Parrots perch in trees.** A parrot now flies up to sit on the leaves or
+  logs of a nearby tree, and otherwise flutters to a spot a little above
+  the ground ahead of it. Between flights it settles where it is instead
+  of hanging in the air.
+- **Allays dance only to a jukebox they can hear.** An allay starts
+  dancing within ten blocks of a playing jukebox, not sixteen, and stops
+  when the song ends, when it wanders ten blocks away, or when the jukebox
+  is broken.
+- **26.3's new attributes reach the client.** Bounciness, friction, air
+  drag and the name-tag distances set with `/attribute` now show on 26.3
+  clients as they do in vanilla; 26.2 clients, which lack them, are left
+  out.
+- **Wandering traders remember where they were going.** A trader still
+  walking to its meeting bell keeps heading there after a server restart
+  instead of forgetting the point.
 - **Blazes float.** A blaze rises toward a target above it, bobbing at a
   height it re-picks every few seconds, and sinks slowly instead of
   dropping when it has nothing to climb to.

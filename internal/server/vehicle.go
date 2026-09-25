@@ -90,6 +90,13 @@ type vehicle struct {
 	x, y, z float64
 	yaw     float32
 	rider   int32 // player eid, 0 when empty
+	rider2  int32 // a boat's second player, in the back seat behind rider (0 when none)
+	// An unsteered boat's own motion (boatdrift.go): AbstractBoat's
+	// deltaMovement, status, lastYd and outOfControlTicks.
+	boatVX, boatVY, boatVZ float64
+	boatStatus             int
+	lastYd                 float64
+	boatOutOfControl       int
 	// movedAt is the tick a rider last moved the boat horizontally, and
 	// moveDX/DZ the step it took (Entity.lastKnownSpeed): what a dolphin
 	// following the boat reads (FollowPlayerRiddenEntityGoal).
@@ -195,6 +202,12 @@ func (h *hub) spawnVehicleFacing(players map[int32]*tracked, dim, etype, bx, by,
 	if !ok {
 		return false
 	}
+	h.addVehicle(players, dim, etype, x, y, z, yaw)
+	return true
+}
+
+// addVehicle makes a cart or boat exactly at (x, y, z).
+func (h *hub) addVehicle(players map[int32]*tracked, dim, etype int, x, y, z float64, yaw float32) *vehicle {
 	v := &vehicle{eid: h.allocEID(), dim: dim, etype: etype, x: x, y: y, z: z, sx: x, sy: y, sz: z}
 	if !cartTypes[etype] {
 		v.yaw, v.syaw, v.yawO = yaw, yaw, yaw
@@ -206,7 +219,7 @@ func (h *hub) spawnVehicleFacing(players map[int32]*tracked, dim, etype, bx, by,
 	initCartKind(v)
 	h.vehicles[v.eid] = v
 	h.toNearbyEv(players, dim, x, z, entAdd(v.eid, etype, v.uuid, x, y, z, v.yaw, 0))
-	return true
+	return v
 }
 
 // vehicleSpawnPos is where a cart or boat aimed at a cell goes: a cart on
@@ -334,10 +347,18 @@ func (h *hub) placeVehicle(players map[int32]*tracked, t *tracked, e evPlaceVehi
 
 // mountVehicle seats a player (interact with an empty vehicle).
 func (h *hub) mountVehicle(players map[int32]*tracked, t *tracked, v *vehicle) {
-	if !v.rideable() || v.rider != 0 || v.aboard() >= v.seats() || !vehicleInReach(t, v) {
+	if !v.rideable() || v.aboard() >= v.seats() || !vehicleInReach(t, v) ||
+		v.rider == t.p.eid || v.rider2 == t.p.eid {
 		return
 	}
-	v.rider = t.p.eid
+	switch {
+	case v.rider == 0:
+		v.rider = t.p.eid
+	case v.isBoat() && v.rider2 == 0 && v.mobRider == 0:
+		v.rider2 = t.p.eid // AbstractBoat: a second player takes the back seat
+	default:
+		return
+	}
 	t.ridingEID = v.eid
 	h.vibAt(v.dim, freqMount, v.x, v.y, v.z, t.p.eid)
 	h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid, v.passengers()...))
@@ -347,10 +368,10 @@ func (h *hub) mountVehicle(players map[int32]*tracked, t *tracked, v *vehicle) {
 // dismount stands the rider up beside the vehicle.
 func (h *hub) dismount(players map[int32]*tracked, t *tracked) {
 	for _, v := range h.vehicles {
-		if v.rider != t.p.eid {
+		if v.rider != t.p.eid && v.rider2 != t.p.eid {
 			continue
 		}
-		v.rider = 0
+		v.leaveSeat(t.p.eid)
 		t.ridingEID = 0
 		v.mobFirst = v.mobRider != 0 // whoever stays aboard has the front seat
 		h.vibAt(v.dim, freqDismount, v.x, v.y, v.z, t.p.eid)
@@ -424,16 +445,41 @@ func (v *vehicle) tickVehicleHurt() {
 	}
 }
 
+// ejectPlayers stands every player aboard up (ejectPassengers).
+func (h *hub) ejectPlayers(players map[int32]*tracked, v *vehicle) {
+	for _, id := range []int32{v.rider2, v.rider} {
+		if id == 0 {
+			continue
+		}
+		if t := players[id]; t != nil {
+			h.dismount(players, t)
+		}
+		v.leaveSeat(id)
+	}
+}
+
+// leaveSeat takes a player off the vehicle; the back-seat player moves up
+// to the front, as the passenger list closes up, and a mob left aboard
+// keeps the front seat when no player is.
+func (v *vehicle) leaveSeat(eid int32) {
+	switch eid {
+	case v.rider:
+		v.rider, v.rider2 = v.rider2, 0
+	case v.rider2:
+		v.rider2 = 0
+	default:
+		return
+	}
+	if v.rider == 0 {
+		v.mobFirst = v.mobRider != 0
+	}
+}
+
 // discardVehicle is a creative player's blow (Entity.discard): the vehicle
 // goes without its item, though a container's cargo still spills
 // (remove(DISCARDED) drops the contents).
 func (h *hub) discardVehicle(players map[int32]*tracked, v *vehicle) {
-	if v.rider != 0 {
-		if t := players[v.rider]; t != nil {
-			h.dismount(players, t)
-		}
-		v.rider = 0
-	}
+	h.ejectPlayers(players, v)
 	h.releaseCartMob(players, v)
 	delete(h.vehicles, v.eid)
 	h.entityGone(players, v.dim, v.eid)
@@ -463,12 +509,7 @@ func (h *hub) breakVehicle(players map[int32]*tracked, v *vehicle) {
 		h.lightBrokenCart(players, v, 0)
 		return
 	}
-	if v.rider != 0 {
-		if t := players[v.rider]; t != nil {
-			h.dismount(players, t)
-		}
-		v.rider = 0
-	}
+	h.ejectPlayers(players, v)
 	h.releaseCartMob(players, v)
 	delete(h.vehicles, v.eid)
 	h.entityGone(players, v.dim, v.eid)
@@ -485,10 +526,13 @@ func (h *hub) breakVehicle(players map[int32]*tracked, v *vehicle) {
 func (h *hub) applyVehicleMove(players map[int32]*tracked, t *tracked, e evVehicleMove) {
 	var v *vehicle
 	for _, c := range h.vehicles {
-		if c.rider == e.eid {
+		if c.rider == e.eid || c.rider2 == e.eid {
 			v = c
 			break
 		}
+	}
+	if v != nil && v.isBoat() && h.boatController(v) != e.eid {
+		return // only the controlling passenger (the front seat) steers
 	}
 	if v == nil || !v.isBoat() {
 		return // a minecart is server-driven: its rider's client has no say
@@ -504,8 +548,11 @@ func (h *hub) applyVehicleMove(players map[int32]*tracked, t *tracked, e evVehic
 		v.movedAt, v.moveDX, v.moveDZ = h.tick.Load(), dx, dz
 	}
 	v.x, v.y, v.z, v.yaw = e.x, e.y, e.z, e.yaw
-	// The rider rides along: hub position drives chunk streaming + interest.
+	// The riders ride along: hub position drives chunk streaming + interest.
 	t.x, t.y, t.z = e.x, e.y+0.6, e.z
+	if o := players[v.rider2]; o != nil {
+		o.x, o.y, o.z = e.x, e.y+0.6, e.z
+	}
 	if e.x != v.sx || e.y != v.sy || e.z != v.sz {
 		move := entMove(v.eid, v.x, v.y, v.z, v.yaw, 0, true)
 		cx, cz := chunkFloor(v.x), chunkFloor(v.z)
@@ -530,6 +577,7 @@ func (h *hub) updateVehicles(players map[int32]*tracked) {
 			h.tickMinecart(players, v)
 		} else {
 			h.tickBoatPaddles(players, v)
+			h.tickBoatDrift(players, v)
 			h.boatPickup(players, v)
 			h.boatCrushesLilyPads(players, v)
 		}

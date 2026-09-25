@@ -131,6 +131,10 @@ func (m *mob) box() mobBox {
 		// (a cow's 0.9x1.4 becomes exactly 0.45x0.7).
 		b.w, b.h = b.w/2, b.h/2
 	}
+	if m.etype == entityShulker && m.shAttach == 0 {
+		// makeBoundingBox: clinging to the floor, the box rises with the peek.
+		b.h += shulkerPhysicalPeek(m.shPeekCur)
+	}
 	// LivingEntity.getDimensions: the default box scaled by SCALE.
 	if s := m.scale(); s != 1 {
 		b.w, b.h = b.w*s, b.h*s

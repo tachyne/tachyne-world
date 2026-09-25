@@ -485,6 +485,7 @@ type hub struct {
 	seededChunks map[[2]int32]bool
 	fluidPrimed  map[int]map[[2]int32]bool // per dimension: chunks whose generated fluid has been ticked
 	hives        map[simPos][]hiveOccupant // known hives (by dimension) and their occupants
+	hiveFlower   map[simPos]blockPos       // a hive's savedFlowerPos, taught to bees that come out knowing none
 	hivestore    *hiveStore                // hives.json persistence
 
 	// waves enables the NON-VANILLA cosmetic ocean-wave overlay (-waves): a thin
@@ -593,6 +594,7 @@ type hub struct {
 	clouds        map[int32]*effectCloud  // lingering-potion area-effect clouds
 	orbs          map[int32]*xpOrb        // experience orbs awaiting pickup
 	rockets       map[int32]*rocketEntity // firework rockets in the air
+	eyes          map[int32]*eyeEntity    // eyes of ender in flight (eyeofender.go)
 
 	bobbers map[int32]*bobberEntity // live fishing bobbers, keyed by OWNER eid (one per player)
 	rng     *rand.Rand              // hub-goroutine-only randomness (mob behaviour, drops)
@@ -799,7 +801,11 @@ func newHerd(x, z float64) *herd { return &herd{x: x, z: z, hx: x, hz: z} }
 func (h *hub) snapshotItems() []savedItem {
 	out := make([]savedItem, 0, len(h.items))
 	for _, it := range h.items {
-		out = append(out, savedItem{Dim: it.dim, X: it.x, Y: it.y, Z: it.z, St: packStack(it.stack())})
+		si := savedItem{Dim: it.dim, X: it.x, Y: it.y, Z: it.z, St: packStack(it.stack()), Age: it.age}
+		if it.owner != ([16]byte{}) {
+			si.Owner = uuidString(it.owner)
+		}
+		out = append(out, si)
 	}
 	return out
 }
@@ -813,6 +819,10 @@ func (h *hub) restoreItems(saved []savedItem) {
 			st := unpackStack(si.St)
 			if it := h.spawnItemIn(none, si.Dim, st.item, st.count, si.X, si.Y, si.Z); it != nil {
 				it.setFrom(st)
+				it.age = si.Age
+				if u, ok := parseUUIDString(si.Owner); ok {
+					it.owner = u
+				}
 			}
 			continue
 		}
@@ -1193,21 +1203,25 @@ func (h *hub) run() {
 			if age%traderTickDelay == 0 {
 				h.traderSpawnerTick(players) // WanderingTraderSpawner: the twenty-minute roll
 			}
-			h.tickItems(players)          // item physics: gravity, sliding, floating, currents
-			h.publishBodies(players)      // the boxes a block placement must not overlap
-			h.tickShulkerLids(players)    // shulker box lids: neighbour updates and the push
-			h.pickupItems(players)        // collect dropped items into survival inventories
-			h.tickDigCracks(players)      // the cracks other players see on a dig
-			h.updateOrbs(players)         // collect experience orbs / expire old ones
-			h.updateRockets(players)      // firework rockets climb, boost gliders, pop
-			h.tickGliding(players)        // elytra wear: a point a second, and the glide ends with the wing
-			h.tickBoosts(players)         // a food-on-a-stick sprint runs down while its mount is ridden
-			h.expireSpyglass(players)     // a scope held to its full duration drops
-			h.updateEating(players)       // apply finished eat-holds (32-tick chew)
-			h.tickSpearCharges(players)   // lowered spears strike what they run into
-			h.borderDamage(players)       // outside the world border hurts (players only)
-			h.updateSleep(players)        // turn the night once everyone's slept ~5s
-			h.dismountUnderwater(players) // dismounts_underwater: riders with their eyes in water get off
+			h.updateDragon(players)        // EnderDragon.aiStep: the fight's phases and flight, every tick
+			h.tickItems(players)           // item physics: gravity, sliding, floating, currents
+			h.publishBodies(players)       // the boxes a block placement must not overlap
+			h.tickShulkerLids(players)     // shulker box lids: neighbour updates and the push
+			h.pickupItems(players)         // collect dropped items into survival inventories
+			h.tickDigCracks(players)       // the cracks other players see on a dig
+			h.updateOrbs(players)          // collect experience orbs / expire old ones
+			h.updateRockets(players)       // firework rockets climb, boost gliders, pop
+			h.updateEyes(players)          // eyes of ender drift toward their stronghold
+			h.hangingSurvivalTick(players) // frames, paintings, knots: survives() every hundred ticks
+			h.tickStands(players)          // armor stands: lava, fire and burning
+			h.tickGliding(players)         // elytra wear: a point a second, and the glide ends with the wing
+			h.tickBoosts(players)          // a food-on-a-stick sprint runs down while its mount is ridden
+			h.expireSpyglass(players)      // a scope held to its full duration drops
+			h.updateEating(players)        // apply finished eat-holds (32-tick chew)
+			h.tickSpearCharges(players)    // lowered spears strike what they run into
+			h.borderDamage(players)        // outside the world border hurts (players only)
+			h.updateSleep(players)         // turn the night once everyone's slept ~5s
+			h.dismountUnderwater(players)  // dismounts_underwater: riders with their eyes in water get off
 			for _, t := range players {
 				t.refreshGearIfChanged()   // vanilla updateEquipmentAttributes: on equipment CHANGE, not per tick
 				t.updatePlayerAttributes() // the creative reach modifiers
@@ -1258,8 +1272,7 @@ func (h *hub) run() {
 				h.updateStructureSpawners(players)
 				h.updateEndPortalContact(players)
 				h.updateEndGateways(players) // step into a gateway → the outer islands
-				h.updateDragon(players)
-				h.updateCameras(players) // spectators ride along with their camera entity
+				h.updateCameras(players)     // spectators ride along with their camera entity
 				h.tickDragonRespawn(players)
 				if age%20 == 0 {
 					h.updateDragonBar(players)
@@ -2848,13 +2861,16 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 		h.rbstore.save(p.key(), t)
 	}
 	for _, v := range h.vehicles { // a leaver stands up first
-		if v.rider == p.eid {
-			v.rider = 0
-			v.mobFirst = v.mobRider != 0 // a mob left aboard keeps its seat
+		if v.rider == p.eid || v.rider2 == p.eid {
+			v.leaveSeat(p.eid) // a mob left aboard keeps its seat; the back seat moves up
 			h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid, v.passengers()...))
 		}
 	}
-	for _, m := range h.mobs { // a leaver aboard a happy ghast steps off
+	for _, m := range h.mobs { // a leaver aboard a happy ghast, a horse or a camel steps off
+		if m.rider == p.eid || m.rider2 == p.eid {
+			m.leavePlayerSeat(p.eid)
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.playerPassengers()...))
+		}
 		for i, r := range m.riders {
 			if r == p.eid {
 				m.riders = append(m.riders[:i], m.riders[i+1:]...)
@@ -3037,7 +3053,11 @@ func (h *hub) giveTo(players map[int32]*tracked, t *tracked, item int32, count i
 		h.sendSlot(t, sl)
 	}
 	if left > 0 {
-		h.spawnItemIn(players, t.dim, item, left, t.x, t.y, t.z)
+		// GiveCommand: what does not fit is dropped for that player alone,
+		// with no pickup delay (setNoPickUpDelay, setTarget).
+		if it := h.spawnItemIn(players, t.dim, item, left, t.x, t.y, t.z); it != nil {
+			it.owner, it.noPickupUntil = t.p.uuid, h.tick.Load()
+		}
 	}
 }
 

@@ -170,3 +170,99 @@ func TestTossArcsForward(t *testing.T) {
 		t.Fatalf("toss should land a block or two ahead on the floor, got (%v,%v,%v)", it.x, it.y, it.z)
 	}
 }
+
+// ItemEntity.setUnderLavaMovement: a fire-resistant drop in lava is lifted
+// as in water (it does not sink to the bottom) and rides the surface.
+func TestNetheriteFloatsUpThroughLava(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	x, y, z := 1000, 180, 1000
+	flatFloor(h.world, x, y, z, 2)
+	for dy := 0; dy < 3; dy++ {
+		h.world.SetBlock(x, y+dy, z, worldgen.LavaBase)
+	}
+	it := h.spawnItemAt(players, 0, itemByName["netherite_ingot"], 1, float64(x)+0.5, float64(y)+1.5, float64(z)+0.5, 0, 0, 0)
+	for i := 0; i < 600; i++ {
+		h.tickItems(players)
+	}
+	if h.items[it.eid] == nil {
+		t.Fatal("netherite does not burn")
+	}
+	if it.y < float64(y)+3-1e-9 {
+		t.Fatalf("netherite in lava rises to the surface: y=%.3f (surface %d)", it.y, y+3)
+	}
+}
+
+// ItemEntity.age: a drop's age is its own and is saved, so a restart does
+// not give it a fresh five minutes; merging keeps the younger age.
+func TestDroppedItemAgeSurvivesRestart(t *testing.T) {
+	h := newHub(world.New(1))
+	none := map[int32]*tracked{}
+	it := h.spawnItemIn(none, 0, itemByName["cobblestone"], 1, 10, 70, 10)
+	it.age = 5900
+	saved := h.snapshotItems()
+	h2 := newHub(world.New(1))
+	h2.restoreItems(saved)
+	var back *itemEntity
+	for _, e := range h2.items {
+		back = e
+	}
+	if back == nil || back.age != 5900 {
+		t.Fatalf("the restored drop keeps its age: %+v", back)
+	}
+	back.age = itemDespawnTicks
+	h2.updateItems(none)
+	if len(h2.items) != 0 {
+		t.Fatal("a drop past its six thousand ticks despawns")
+	}
+	// Merging: the younger age wins.
+	a := h.spawnItemIn(none, 0, itemByName["dirt"], 1, 30.5, 70, 30.5)
+	b := h.spawnItemIn(none, 0, itemByName["dirt"], 1, 30.6, 70, 30.5)
+	a.y, b.y = 70, 70
+	a.age, b.age = 4000, 100
+	h.updateItems(none)
+	var left *itemEntity
+	for _, e := range h.items {
+		if e.item == int32(itemByName["dirt"]) {
+			left = e
+		}
+	}
+	if left == nil || left.count != 2 || left.age != 100 {
+		t.Fatalf("merged drop: %+v", left)
+	}
+}
+
+// GiveCommand: what does not fit is dropped at once for the receiver alone
+// (ItemEntity.target); another player cannot pick it up.
+func TestGiveOverflowIsTheReceiversAlone(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	flatFloor(h.world, 0, 180, 0, 3)
+	a, b := survPlayer(h), survPlayer(h)
+	a.p.eid, b.p.eid = 101, 102
+	a.p.uuid[15], b.p.uuid[15] = 1, 2
+	a.x, a.y, a.z = 0.5, 180, 0.5
+	b.x, b.y, b.z = 0.5, 180, 0.5
+	players := map[int32]*tracked{a.p.eid: a, b.p.eid: b}
+	stone := int32(itemByName["stone"])
+	for i := range a.inv.slots[:36] {
+		a.inv.slots[i] = invStack{item: int32(itemByName["dirt"]), count: 64}
+	}
+	h.giveTo(players, a, stone, 5)
+	var drop *itemEntity
+	for _, it := range h.items {
+		drop = it
+	}
+	if drop == nil || drop.owner != a.p.uuid {
+		t.Fatalf("the overflow is dropped for the receiver: %+v", drop)
+	}
+	h.pickupItems(map[int32]*tracked{b.p.eid: b})
+	if h.items[drop.eid] == nil {
+		t.Fatal("another player picked up the receiver's overflow")
+	}
+	a.inv.slots[0] = invStack{}
+	h.pickupItems(players)
+	if h.items[drop.eid] != nil {
+		t.Fatal("the receiver picks it up at once")
+	}
+}
