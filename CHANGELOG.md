@@ -23,6 +23,11 @@ the public history since the project was open-sourced on 2026-07-10.
   press a button in a map or minigame.
 
 ### Fixed
+- **Hiding from the locator bar.** As in vanilla, a player who is
+  invisible, wears a carved pumpkin or a mob head, or is in spectator mode
+  no longer shows on other players' locator bars, and reappears when that
+  ends. A player who changes dimension now leaves the bars of those left
+  behind.
 - **Sculk catalysts leave your builds alone.** A catalyst's bloom now turns
   only natural ground (stone, dirt, sand, gravel, and the rest vanilla
   lists) into sculk. Before, it could turn any solid block near a death

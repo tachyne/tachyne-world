@@ -382,10 +382,11 @@ type tracked struct {
 	viewChest *chest
 	viewBin   *bin // a hopper cart's slots while its window is open
 	// The player's OWN ender-chest storage: the block is just a door onto it.
-	ender   *chest
-	winPos2 simPos      // the RIGHT half of an open double chest (winPos = LEFT)
-	frozen  int         // vanilla TICKS_FROZEN: powder snow counts it up, the open air thaws it
-	armor   [4]invStack // window-0 armor slots — worn, applied, persisted
+	ender     *chest
+	winPos2   simPos         // the RIGHT half of an open double chest (winPos = LEFT)
+	frozen    int            // vanilla TICKS_FROZEN: powder snow counts it up, the open air thaws it
+	armor     [4]invStack    // window-0 armor slots — worn, applied, persisted
+	wpTracked map[int32]bool // the transmitters this player's locator bar is showing
 	// lastArmor is what the attribute pipeline last saw; refreshGearIfChanged
 	// compares against it so gear attributes recompute on change, not per tick.
 	lastArmor [4]invStack
@@ -1181,6 +1182,7 @@ func (h *hub) run() {
 			h.phases.lap(phaseEntities)
 			if age%survivalTickN == 0 {
 				h.survivalTick(players)       // health regen, hunger, starvation, void
+				h.waypointTick(players)       // locator bar: effects, heads, modes change who shows
 				h.tickWardenTrackers(players) // WardenSpawnTracker: warning cooldown + decay
 				h.syncAttributes(players)     // changed attributes reach their viewers (sendChanges)
 				h.updateHostiles(players)     // night mob spawning + daylight burn

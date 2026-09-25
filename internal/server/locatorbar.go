@@ -21,32 +21,73 @@ func waypointFor(t *tracked, op int8) attachproto.Waypoint {
 		X: int32(t.x), Y: int32(t.y), Z: int32(t.z)}
 }
 
-// waypointOnJoin cross-registers the joiner with everyone already present.
-func (h *hub) waypointOnJoin(players map[int32]*tracked, nt *tracked) {
-	if !h.rules.LocatorBar {
-		return
+// waypointHideHeads are the items Waypoint.addHideAttribute marks: worn on
+// the head, they take the wearer off everyone's locator bar.
+var waypointHideHeads = func() map[int32]bool {
+	m := map[int32]bool{}
+	for _, n := range []string{"carved_pumpkin", "skeleton_skull", "wither_skeleton_skull", "player_head",
+		"zombie_head", "creeper_head", "dragon_head", "piglin_head"} {
+		if id, ok := itemByName[n]; ok {
+			m[int32(id)] = true
+		}
 	}
-	mine := waypointFor(nt, waypointTrack)
+	return m
+}()
+
+// waypointTransmits is isTransmittingWaypoint: WAYPOINT_TRANSMIT_RANGE above
+// zero. Invisibility and a hiding head each multiply it by zero, and a
+// spectator never transmits (doesSourceIgnoreReceiver).
+func waypointTransmits(t *tracked) bool {
+	return !t.dead && t.gamemode != gmSpectator && t.hasEffect(effInvisibility) == 0 &&
+		!waypointHideHeads[t.armor[0].item]
+}
+
+// waypointSync brings every receiver's view of transmitter t up to date:
+// a track when t shows (always re-sent when it moved), an untrack when it
+// stopped showing or left the receiver's dimension.
+func (h *hub) waypointSync(players map[int32]*tracked, t *tracked, moved bool) {
+	shows := h.rules.LocatorBar && waypointTransmits(t)
 	for _, o := range players {
-		if o.p.eid == nt.p.eid || o.dim != nt.dim {
+		if o.p.eid == t.p.eid {
 			continue
 		}
-		o.p.trySendEv(mine)
-		nt.p.trySendEv(waypointFor(o, waypointTrack))
+		had := o.wpTracked[t.p.eid]
+		switch want := shows && o.dim == t.dim; {
+		case want && (moved || !had):
+			if o.wpTracked == nil {
+				o.wpTracked = map[int32]bool{}
+			}
+			o.wpTracked[t.p.eid] = true
+			o.p.trySendEv(waypointFor(t, waypointTrack))
+		case !want && had:
+			delete(o.wpTracked, t.p.eid)
+			o.p.trySendEv(attachproto.Waypoint{Op: waypointUntrack, UUID: t.p.uuid})
+		}
+	}
+}
+
+// waypointOnJoin cross-registers the joiner with everyone already present.
+func (h *hub) waypointOnJoin(players map[int32]*tracked, nt *tracked) {
+	h.waypointSync(players, nt, true)
+	for _, o := range players {
+		if o != nt {
+			h.waypointSync(map[int32]*tracked{nt.p.eid: nt}, o, true)
+		}
 	}
 }
 
 // waypointOnMove re-tracks a mover whose block position changed.
 func (h *hub) waypointOnMove(players map[int32]*tracked, t *tracked, moved bool) {
-	if !h.rules.LocatorBar || !moved {
-		return
+	if moved {
+		h.waypointSync(players, t, true)
 	}
-	f := waypointFor(t, waypointTrack)
-	for _, o := range players {
-		if o.p.eid == t.p.eid || o.dim != t.dim {
-			continue
-		}
-		o.p.trySendEv(f)
+}
+
+// waypointTick re-checks every transmitter once a second, catching what
+// changes without a move: an effect, a head put on, a game mode, the rule.
+func (h *hub) waypointTick(players map[int32]*tracked) {
+	for _, t := range players {
+		h.waypointSync(players, t, false)
 	}
 }
 
@@ -54,6 +95,7 @@ func (h *hub) waypointOnMove(players map[int32]*tracked, t *tracked, moved bool)
 func (h *hub) waypointOnLeave(players map[int32]*tracked, p *player) {
 	f := attachproto.Waypoint{Op: waypointUntrack, UUID: p.uuid}
 	for _, o := range players {
+		delete(o.wpTracked, p.eid)
 		o.p.trySendEv(f)
 	}
 }
