@@ -17,6 +17,7 @@ import (
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 	"github.com/tachyne/tachyne-world/plugin"
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
 // The hub is the central authority: one goroutine owns the player registry and
@@ -228,6 +229,10 @@ type tracked struct {
 	// ServerPlayer.seenCredits (saved) and wonGame (the credits are showing:
 	// the player waits in the End until their client asks to respawn).
 	seenCredits, wonGame bool
+	// cmdMods is the modifiers /attribute added (AttributeInstance's
+	// permanent modifiers, by attribute): the ones the player's data keeps,
+	// as against the transient ones gear and effects re-assert.
+	cmdMods map[attr.ID]map[string]bool
 	// WardenSpawnTracker: warning level toward a Warden, the cooldown between
 	// warnings and the quiet time since the last one (all in ticks).
 	wardenWarn     int

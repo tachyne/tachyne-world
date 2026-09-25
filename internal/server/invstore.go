@@ -80,6 +80,8 @@ type savedInv struct {
 
 	// Scoreboard tags (/tag): vanilla keeps them in the player's data.
 	Tags []string `json:"tags,omitempty"`
+	// Attributes: the base values and permanent modifiers (AttributeMap.save).
+	Attributes []savedAttribute `json:"attributes,omitempty"`
 }
 
 func (s *savedInv) UnmarshalJSON(b []byte) error {
@@ -205,6 +207,7 @@ func (s *invStore) loadInto(t *tracked, name string) {
 	t.tags = tagSet(saved.Tags)
 	restoreSavedEffects(t, saved.Effects)
 	t.shoulders = saved.Shoulders
+	restoreSavedAttributes(t, saved.Attributes)
 }
 
 // restoreSavedEffects is savedEffectsOf's other half.
@@ -267,7 +270,7 @@ func (s *invStore) record(name string, t *tracked) {
 	snap := &savedInv{Offhand: packStack(t.offhand),
 		XPLevel: int32(t.xpLevel), XPPoints: int32(t.xpPoints), EnchSeed: t.enchSeed,
 		WardenWarn: t.wardenWarn, WardenCool: t.wardenCool, WardenSince: t.wardenSince, SeenCredits: t.seenCredits,
-		Effects: savedEffectsOf(t), Tags: sortedTags(t.tags), Shoulders: t.shoulders,
+		Effects: savedEffectsOf(t), Tags: sortedTags(t.tags), Shoulders: t.shoulders, Attributes: savedAttributesOf(t),
 		X: t.x, Y: t.y, Z: t.z, Yaw: t.yaw, Pitch: t.pitch, Dim: int32(t.dim), HasPos: true}
 	if old := s.m[name]; old != nil && old.HasDeath { // the death location outlives the loadout
 		snap.DeathDim, snap.DeathPos, snap.HasDeath = old.DeathDim, old.DeathPos, true

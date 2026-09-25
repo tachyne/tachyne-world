@@ -132,6 +132,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **/attribute changes survive a relog.** A player's changed base values
+  and the modifiers `/attribute` added are saved with them, as in vanilla.
+  Dying keeps the base values and drops the added modifiers.
 - **Blazes float.** A blaze rises toward a target above it, bobbing at a
   height it re-picks every few seconds, and sinks slowly instead of
   dropping when it has nothing to climb to.
