@@ -1,6 +1,8 @@
 package server
 
 import (
+	"strconv"
+
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -27,8 +29,27 @@ var hConnectDirs = []struct {
 // current neighbours: boolean sides for fences/panes/bars, the none/low/tall
 // enum + post for walls (walls.go). A non-connector state is returned as-is.
 func (s *Server) connectState(w *world.World, x, y, z int, state uint32) uint32 {
+	return connectStateAt(w, x, y, z, state)
+}
+
+// connectStateAt is connectState for any caller: the world is all it reads,
+// so the hub's shape updates (shapeupdate.go) use it too.
+func connectStateAt(w *world.World, x, y, z int, state uint32) uint32 {
 	info, ok := worldgen.InfoForState(state)
 	if !ok {
+		return state
+	}
+	if isTripwire(state) {
+		// TripWireBlock.shouldConnectTo: more tripwire, or a hook facing back
+		// at it — never a solid block, which the fence rule below would take.
+		for _, d := range hConnectDirs {
+			nb := w.Block(x+d.dx, y, z+d.dz)
+			v := isTripwire(nb)
+			if isTripwireHook(nb) {
+				v = stateFacing(nb) == oppositeFacing(d.name)
+			}
+			state = worldgen.SetProperty(info, state, d.name, strconv.FormatBool(v))
+		}
 		return state
 	}
 	if worldgen.IsWallConnector(info) {

@@ -28,6 +28,7 @@ const (
 	shapePotentSulfur           // PotentSulfurBlock: dry, wet or a geyser by the water above and the block below
 	shapeCampfire               // CampfireBlock: a signal fire over a hay bale (isSmokeSource)
 	shapeBell                   // BellBlock: between two walls, or on one when the other goes
+	shapeConnect                // fences, panes, bars, walls, stairs, tripwire: their connections
 )
 
 // shapeKinds maps every state of the families above to its kind — one map
@@ -57,6 +58,14 @@ var shapeKinds = func() map[uint32]shapeKind {
 	add("campfire", shapeCampfire)
 	add("soul_campfire", shapeCampfire)
 	for _, n := range worldgen.AllBlockNames() {
+		if lo, _, ok := worldgen.BlockRangeOK(n); ok {
+			if info, ok := worldgen.InfoForState(lo); ok {
+				_, stair := stairInfo(lo)
+				if worldgen.IsHorizontalConnector(info) || worldgen.IsWallConnector(info) || stair {
+					add(n, shapeConnect)
+				}
+			}
+		}
 		if strings.HasSuffix(n, "_fence_gate") {
 			add(n, shapeGate)
 		}
@@ -84,6 +93,11 @@ func shapeUpdated(w *world.World, n blockPos, st uint32, d [3]int) (uint32, bool
 	}
 	nb := w.At(n.x+d[0], n.y+d[1], n.z+d[2])
 	switch k {
+	case shapeConnect:
+		// FenceBlock / IronBarsBlock / WallBlock / StairBlock / TripWireBlock
+		// .updateShape: any neighbour change, whoever made it, re-reads the
+		// connections — not only a player's edit.
+		return connectStateAt(w, n.x, n.y, n.z, st), true
 	case shapeBell:
 		// BellBlock.updateShape, along the facing's axis: a double-wall bell
 		// that loses one wall hangs on from the other; a single-wall bell that

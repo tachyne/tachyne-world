@@ -21,6 +21,8 @@ func TestTripwire(t *testing.T) {
 	onHub(t, h, func() {
 		a := blockPos{0, 70, 0}
 		b := blockPos{4, 70, 0}
+		w.SetBlock(a.x-1, a.y, a.z, worldgen.Stone) // the walls the hooks hang on
+		w.SetBlock(b.x+1, b.y, b.z, worldgen.Stone)
 		w.SetBlock(a.x, a.y, a.z, hookFacing(t, "east")) // faces along +x toward b
 		w.SetBlock(b.x, b.y, b.z, hookFacing(t, "west")) // faces back toward a
 		for x := 1; x <= 3; x++ {

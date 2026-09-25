@@ -422,3 +422,36 @@ func isBellState(s uint32) bool {
 	lo, hi, _ := worldgen.BlockRangeOK("bell")
 	return s >= lo && s <= hi
 }
+
+// A fence re-reads its connections when the world changes beside it (an
+// explosion, a piston: setBlockAt), not only on a player's edit; tripwire
+// connects to tripwire and hooks, never to a solid block.
+func TestConnectorsFollowEngineChanges(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	players := map[int32]*tracked{}
+	w := h.world
+	fence := worldgen.BlockBase("oak_fence")
+	info, _ := worldgen.InfoForState(fence)
+	w.SetBlock(5, 180, 5, worldgen.Stone)
+	w.SetBlock(6, 180, 5, connectStateAt(w, 6, 180, 5, fence))
+	if worldgen.GetProperty(info, w.At(6, 180, 5), "west") != "true" {
+		t.Fatal("a fence beside stone did not connect")
+	}
+	h.setBlockAt(players, 0, blockPos{5, 180, 5}, worldgen.Air) // blown away
+	if worldgen.GetProperty(info, w.At(6, 180, 5), "west") != "false" {
+		t.Fatal("the fence kept its connection to stone that is gone")
+	}
+
+	wire := worldgen.BlockBase("tripwire")
+	wi, _ := worldgen.InfoForState(wire)
+	w.SetBlock(9, 180, 5, worldgen.Stone)
+	got := connectStateAt(w, 10, 180, 5, wire)
+	if worldgen.GetProperty(wi, got, "west") != "false" {
+		t.Fatal("tripwire connected to a solid block")
+	}
+	w.SetBlock(9, 180, 5, wire)
+	if got := connectStateAt(w, 10, 180, 5, wire); worldgen.GetProperty(wi, got, "west") != "true" {
+		t.Fatal("tripwire did not connect to tripwire")
+	}
+}

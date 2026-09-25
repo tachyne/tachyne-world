@@ -87,6 +87,12 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Fences, walls and panes reconnect whatever changes beside them.**
+  Fences, walls, glass panes, iron bars and stairs now re-join (or let go of)
+  their neighbours when an explosion, a piston or anything else changes the
+  block next to them, as in vanilla — not only when a player builds or
+  breaks. Tripwire now connects only to tripwire and hooks, not to any
+  solid block beside it.
 - **Wall bells stay up.** A bell hung on one wall was checked against the
   wrong side and fell the first time anything next to it changed. It now
   hangs on the wall it faces. A bell between two walls that loses one keeps
