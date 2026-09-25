@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Drowned come up at night.** A drowned deep underwater now swims up
+  toward the surface after dark, as in vanilla, which is how it reaches the
+  shore to come after you; before, one on the seabed stayed there.
 - **Forgiving the dead no longer tames zombified piglins and endermen.**
   With the forgive-dead-players rule on, a zombified piglin or enderman
   that had been after a player who died became a harmless wanderer for

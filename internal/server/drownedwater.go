@@ -41,6 +41,12 @@ func (h *hub) drownedWaterStep(players map[int32]*tracked, m *mob) bool {
 		return false
 	}
 	inWater := h.inWater(m.dim, m.x, m.y+0.2, m.z)
+	// DrownedSwimUpGoal: after dark, one deep in the water with nothing to
+	// chase makes for a spot a little under the surface (sea level - 1),
+	// which is where GoToBeach can pick it up.
+	if !h.isDayTime() && inWater && !m.hasTarget && m.y < float64(worldgen.SeaLevel-2) {
+		m.vy = math.Min(m.moveSpeed(), float64(worldgen.SeaLevel-1)-m.y)
+	}
 	if m.drownedGoal && math.Hypot(m.x-m.tx, m.z-m.tz) > drownedArrive {
 		return true // still walking to the spot it picked
 	}
