@@ -123,6 +123,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Skeletons keep to the shade by day.** A skeleton, stray or bogged
+  standing in shade in daylight with nothing on its head no longer walks
+  out into the sun, even after a player; it stops at the edge of the
+  shadow. Out of bow range, skeletons now find their way around obstacles
+  toward their target instead of walking straight at it.
 - **Bees remember their flower.** A bee keeps the flower it last worked,
   and after thirty seconds out of the hive with no nectar it flies back to
   it, even from beyond its own flower search. The flower goes into the hive
