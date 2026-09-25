@@ -156,6 +156,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Currents push mobs as in vanilla.** A mob is now carried by the flow
+  of every water cell its body touches, not just the one at its feet, lava
+  has a current too (stronger in the Nether), and fish, squid, dolphins,
+  axolotls, turtles, frogs and nautiluses are no longer pushed around.
 - **Force-loaded chunks keep their mobs going.** Mobs in chunks kept
   loaded with `/forceload` now stay loaded and keep moving, even with
   nobody online, and mobs are no longer despawned just because no player
