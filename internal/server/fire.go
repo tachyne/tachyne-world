@@ -421,7 +421,7 @@ func (h *hub) lightBlastFires(players map[int32]*tracked, dim int, cleared []blo
 		if h.rng.Intn(3) != 0 {
 			continue
 		}
-		if w.At(pos.x, pos.y, pos.z) != worldgen.Air || !fullCube(w.At(pos.x, pos.y-1, pos.z)) {
+		if w.At(pos.x, pos.y, pos.z) != worldgen.Air || !isSolidRender(w.At(pos.x, pos.y-1, pos.z)) {
 			continue
 		}
 		// Explosion.createFire: BaseFireBlock.getState — soul fire over soul
@@ -892,3 +892,12 @@ func (h *hub) canSpreadFireAround(players map[int32]*tracked, pos blockPos) bool
 	}
 	return false
 }
+
+// isSolidRender is BlockState.isSolidRender: an occluding full cube. Across
+// every 26.3 state it is exactly the opaque full cubes except tinted glass,
+// which blocks light but is not solid-render.
+func isSolidRender(state uint32) bool {
+	return fullCube(state) && state != tintedGlass
+}
+
+var tintedGlass = worldgen.BlockBase("tinted_glass")

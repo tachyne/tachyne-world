@@ -97,3 +97,33 @@ func TestBlastFireOverSoulSoil(t *testing.T) {
 		t.Fatalf("over soul soil a blast lit %d soul fires and %d plain ones", soul, plain)
 	}
 }
+
+// ServerExplosion.createFire needs a solid-render block below: tinted glass
+// blocks light but is not one, so a blast over it lights nothing; stone
+// takes fire.
+func TestBlastFireNeedsSolidRender(t *testing.T) {
+	for _, tc := range []struct {
+		floor string
+		lit   bool
+	}{{"tinted_glass", false}, {"stone", true}} {
+		w := world.New(1)
+		w.ForceLoad(0, 0, 1)
+		h := newHub(w)
+		var cleared []blockPos
+		for x := 0; x < 30; x++ {
+			w.SetBlock(x, 180, 0, worldgen.BlockBase(tc.floor))
+			w.SetBlock(x, 181, 0, worldgen.Air)
+			cleared = append(cleared, blockPos{x, 181, 0})
+		}
+		h.lightBlastFires(map[int32]*tracked{}, 0, cleared)
+		fires := 0
+		for x := 0; x < 30; x++ {
+			if isFire(w.At(x, 181, 0)) {
+				fires++
+			}
+		}
+		if (fires > 0) != tc.lit {
+			t.Errorf("over %s a blast lit %d fires", tc.floor, fires)
+		}
+	}
+}
