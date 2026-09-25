@@ -258,3 +258,48 @@ func TestRainGameEventIDs(t *testing.T) {
 			gameEventBeginRain, gameEventEndRain)
 	}
 }
+
+// LightningBolt.clearCopperOnLightningStrike: an oxidized lightning rod the
+// bolt strikes is bare again afterwards, and oxidized copper around it is
+// cleaned a stage at a time; a waxed block struck keeps its wax.
+func TestLightningCleansCopper(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.world.ForceLoad(0, 0, 1)
+	ox := worldgen.BlockBase("oxidized_copper")
+	for x := -2; x <= 2; x++ {
+		for z := -2; z <= 2; z++ {
+			for y := 176; y <= 179; y++ {
+				h.world.SetBlock(x, y, z, ox)
+			}
+			h.world.SetBlock(x, 180, z, worldgen.Air)
+			h.world.SetBlock(x, 181, z, worldgen.Air)
+		}
+	}
+	rod := worldgen.BlockID("oxidized_lightning_rod")
+	h.world.SetBlock(0, 180, 0, rod)
+	h.strikeLightning(players, 0.5, 181, 0.5, false)
+	if got, _ := worldgen.StateName(h.world.At(0, 180, 0)); got != "minecraft:lightning_rod" && got != "lightning_rod" {
+		t.Fatalf("the struck rod should be bare copper again, got %s", got)
+	}
+	cleaned := 0
+	for x := -2; x <= 2; x++ {
+		for z := -2; z <= 2; z++ {
+			for y := 176; y <= 179; y++ {
+				if h.world.At(x, y, z) != ox {
+					cleaned++
+				}
+			}
+		}
+	}
+	if cleaned == 0 {
+		t.Fatal("the walks should clean some of the copper round the rod")
+	}
+
+	waxed := worldgen.BlockBase("waxed_oxidized_copper")
+	h.world.SetBlock(0, 180, 0, waxed)
+	h.strikeLightning(players, 0.5, 181, 0.5, false)
+	if h.world.At(0, 180, 0) != waxed {
+		t.Fatal("a waxed block keeps its wax and its stage")
+	}
+}

@@ -397,7 +397,9 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 	if visualOnly {
 		return
 	}
-	h.rodStruck(players, blockPos{int(math.Floor(x)), int(math.Floor(y - 1e-6)), int(math.Floor(z))})
+	struckPos := blockPos{int(math.Floor(x)), int(math.Floor(y - 1e-6)), int(math.Floor(z))}
+	h.rodStruck(players, struckPos)
+	h.clearCopperOnStrike(players, struckPos) // LightningBolt.clearCopperOnLightningStrike
 
 	// Entity.thunderHit: eight seconds alight (unless already burning), then
 	// the five of damage.
