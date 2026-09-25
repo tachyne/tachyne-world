@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/locate biome.** `/locate biome <id>` finds the nearest biome of that
+  kind — cave biomes included — within 6400 blocks, searching the way
+  vanilla does.
 - **/clear an item.** `/clear [targets] [item] [maxCount]` takes only that
   item, up to the count given, or with a count of 0 just says how many there
   are, as in vanilla; it used to empty the whole inventory.

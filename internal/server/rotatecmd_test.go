@@ -3,7 +3,9 @@ package server
 import (
 	"math"
 	"strconv"
+	"strings"
 	"testing"
+	"time"
 )
 
 // /rotate through the dispatcher: an absolute rotation, then facing a
@@ -96,5 +98,31 @@ func TestSummonAtExactPosition(t *testing.T) {
 	}
 	if !hasLine(linesBetween(logs["alice"], "", "U1"), "Unknown entity: not_a_mob") {
 		t.Errorf("alice's replies: %q", linesBetween(logs["alice"], "", "U1"))
+	}
+}
+
+// /locate biome: the biome underfoot is found where you stand; a name that
+// never generates searches out to 6400 blocks and says so.
+func TestLocateBiome(t *testing.T) {
+	s, h, ps, logs, _ := eventServer(t, "")
+	alice := ps["alice"]
+	here := h.world.Gen().CaveBiomeAt(int(math.Floor(alice.x)), int(math.Floor(alice.y)), int(math.Floor(alice.z)))
+	s.handleCommand(alice, "locate biome "+here)
+	start := time.Now()
+	s.handleCommand(alice, "locate biome minecraft:not_a_biome")
+	t.Logf("a full miss took %v", time.Since(start))
+	settle(t, h, logs, "L1")
+	a := linesBetween(logs["alice"], "", "L1")
+	found := false
+	for _, l := range a {
+		if strings.HasPrefix(l, "The nearest "+here+" is at [") && strings.HasSuffix(l, "(0 blocks away)") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("the biome underfoot was not found at 0 blocks: %q", a)
+	}
+	if !hasLine(a, `Could not find a biome of type "minecraft:not_a_biome" within reasonable distance`) {
+		t.Errorf("no miss message: %q", a)
 	}
 }
