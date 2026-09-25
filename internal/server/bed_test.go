@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -18,6 +19,13 @@ func bedSetup(t *testing.T) (*hub, map[int32]*tracked, *tracked) {
 	// A WHOLE bed: foot at 4,70,4 facing north, head one block north of it.
 	// Half a bed cannot be slept in — see TestHalfABedCannotBeSleptIn.
 	info, _ := worldgen.InfoForState(tWhiteBed)
+	for x := 1; x <= 7; x++ { // a room around it: a floor, and air to stand up in
+		for z := 0; z <= 7; z++ {
+			h.world.SetBlock(x, 69, z, worldgen.Stone)
+			h.world.SetBlock(x, 70, z, worldgen.Air)
+			h.world.SetBlock(x, 71, z, worldgen.Air)
+		}
+	}
 	h.world.SetBlock(4, 70, 4, tWhiteBed)
 	h.world.SetBlock(4, 70, 3, worldgen.SetProperty(info, tWhiteBed, "part", "head"))
 	pl.x, pl.y, pl.z = 4.5, 70, 4.5
@@ -40,8 +48,12 @@ func TestBedClaimsRespawnPoint(t *testing.T) {
 	// Death now returns to the bed, not world spawn.
 	h.damageOf(players, pl, 25, dtGeneric)
 	h.respawn(pl)
-	if pl.x != 4.5 || pl.z != float64(tBedHead.z)+0.5 {
-		t.Fatalf("respawn should return to the bed head, got (%v,%v)", pl.x, pl.z)
+	// …standing up beside it (BedBlock.findStandUpPosition), not on it.
+	if math.Abs(pl.x-4.5) > 2 || math.Abs(pl.z-float64(tBedHead.z)-0.5) > 2.5 || pl.y != 70 {
+		t.Fatalf("respawn should stand up beside the bed, got (%v,%v,%v)", pl.x, pl.y, pl.z)
+	}
+	if st := h.world.Block(int(math.Floor(pl.x)), 70, int(math.Floor(pl.z))); isBedBlock(st) {
+		t.Fatalf("respawned standing in the bed at (%v,%v)", pl.x, pl.z)
 	}
 }
 
@@ -277,5 +289,25 @@ func TestBedRefusalsFollowVanilla(t *testing.T) {
 	h.handleUseBed(players, pl, blockPos{4, 70, 4})
 	if !pl.sleeping {
 		t.Fatal("a creative player sleeps with a monster nearby")
+	}
+}
+
+// A bed walled in on every side is obstructed: the respawn goes to the world
+// spawn, as ServerPlayer.findRespawnAndUseSpawnBlock finds no stand-up spot.
+func TestWalledInBedIsObstructed(t *testing.T) {
+	h, players, pl := bedSetup(t)
+	h.spawns.set(pl.p.key(), tBedHead, dimOverworld)
+	for x := 2; x <= 6; x++ {
+		for z := 1; z <= 6; z++ {
+			for y := 70; y <= 71; y++ {
+				if st := h.world.Block(x, y, z); !isBedBlock(st) {
+					h.world.SetBlock(x, y, z, worldgen.Stone)
+				}
+			}
+		}
+	}
+	x, _, z, _ := h.respawnPointCharging(players, pl, false)
+	if math.Abs(x-4.5) < 3 && math.Abs(z-3.5) < 3 {
+		t.Fatalf("respawned at %v,%v beside a walled-in bed", x, z)
 	}
 }

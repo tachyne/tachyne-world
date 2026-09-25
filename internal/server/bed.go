@@ -178,7 +178,23 @@ func (h *hub) wakePlayer(players map[int32]*tracked, t *tracked) {
 // is tried in a fixed order that starts on whichever side the sleeper is
 // already facing, then the bed's own two cells as a last resort.
 func (h *hub) bedStandUp(t *tracked, bed blockPos) (float64, float64, float64, bool) {
-	w := h.worldFor(t.dim)
+	if x, y, z, ok := h.bedStandUpIn(t.dim, t.yaw, bed); ok {
+		return x, y, z, true
+	}
+	if w := h.worldFor(t.dim); w == nil {
+		return 0, 0, 0, false
+	} else if info, ok := worldgen.InfoForState(w.Block(bed.x, bed.y, bed.z)); !ok || !isBed(info) {
+		return 0, 0, 0, false
+	}
+	// Vanilla's fallback when waking: on top of the bed, just clear of the mattress.
+	return float64(bed.x) + 0.5, float64(bed.y) + 1.1, float64(bed.z) + 0.5, true
+}
+
+// bedStandUpIn is BedBlock.findStandUpPosition proper, in any dimension and
+// for any facing: ok false when every cell around the bed is blocked — which
+// is what makes a respawn at that bed "obstructed".
+func (h *hub) bedStandUpIn(dim int, yaw float32, bed blockPos) (float64, float64, float64, bool) {
+	w := h.worldFor(dim)
 	if w == nil {
 		return 0, 0, 0, false
 	}
@@ -191,7 +207,7 @@ func (h *hub) bedStandUp(t *tracked, bed blockPos) (float64, float64, float64, b
 	// The clockwise neighbour, flipped to the far side when the sleeper is
 	// already looking that way (Direction.isFacingAngle).
 	sx, sz := -dz, dx // facing.getClockWise()
-	rad := float64(t.yaw) * math.Pi / 180
+	rad := float64(yaw) * math.Pi / 180
 	if float64(sx)*-math.Sin(rad)+float64(sz)*math.Cos(rad) > 0 {
 		sx, sz = -sx, -sz
 	}
@@ -203,12 +219,29 @@ func (h *hub) bedStandUp(t *tracked, bed blockPos) (float64, float64, float64, b
 	}
 	for _, o := range offsets {
 		x, z := bed.x+o[0], bed.z+o[1]
-		if h.bedStandable(t.dim, x, bed.y, z) {
+		if h.bedStandable(dim, x, bed.y, z) {
 			return float64(x) + 0.5, float64(bed.y), float64(z) + 0.5, true
 		}
 	}
-	// Vanilla's fallback: on top of the bed, just clear of the mattress.
-	return float64(bed.x) + 0.5, float64(bed.y) + 1.1, float64(bed.z) + 0.5, true
+	return 0, 0, 0, false
+}
+
+// anchorStandUp is RespawnAnchorBlock.findStandUpPosition: the eight cells
+// around the anchor at its level, then a level down, then a level up, then
+// on top of it.
+func (h *hub) anchorStandUp(dim int, a blockPos) (float64, float64, float64, bool) {
+	ring := [8][2]int{{0, -1}, {-1, 0}, {0, 1}, {1, 0}, {-1, -1}, {1, -1}, {-1, 1}, {1, 1}}
+	for _, dy := range []int{0, -1, 1} {
+		for _, o := range ring {
+			if x, y, z := a.x+o[0], a.y+dy, a.z+o[1]; h.bedStandable(dim, x, y, z) {
+				return float64(x) + 0.5, float64(y), float64(z) + 0.5, true
+			}
+		}
+	}
+	if h.bedStandable(dim, a.x, a.y+1, a.z) {
+		return float64(a.x) + 0.5, float64(a.y + 1), float64(a.z) + 0.5, true
+	}
+	return 0, 0, 0, false
 }
 
 // bedStandable reports whether a player fits stood up in this cell. Looser
@@ -469,14 +502,21 @@ func (h *hub) respawnPointCharging(players map[int32]*tracked, t *tracked, spend
 			w := h.worldFor(dim)
 			if w != nil {
 				state := w.Block(pos.x, pos.y, pos.z)
+				// ServerPlayer.findRespawnAndUseSpawnBlock: stand up beside the
+				// bed or anchor (findStandUpPosition); with nowhere free around
+				// it the spawn point is obstructed and the world spawn is used.
 				if info, ok2 := worldgen.InfoForState(state); ok2 && isBed(info) && bedWorks(dim) {
-					return float64(pos.x) + 0.5, float64(pos.y) + 0.6, float64(pos.z) + 0.5, dim
+					if x, y, z, ok := h.bedStandUpIn(dim, t.yaw, pos); ok {
+						return x, y, z, dim
+					}
 				}
 				if charge := anchorCharge(state); charge > 0 && anchorWorks(dim) {
-					if spend { // a death costs the anchor a charge; a walk out of the End does not
-						h.setBlockAt(players, dim, pos, anchorWithCharge(state, charge-1))
+					if x, y, z, ok := h.anchorStandUp(dim, pos); ok {
+						if spend { // a death costs the anchor a charge; a walk out of the End does not
+							h.setBlockAt(players, dim, pos, anchorWithCharge(state, charge-1))
+						}
+						return x, y, z, dim
 					}
-					return float64(pos.x) + 0.5, float64(pos.y) + 1, float64(pos.z) + 0.5, dim
 				}
 			}
 			t.p.trySendEv(chatEv("You have no home bed or charged respawn anchor, or it was obstructed"))

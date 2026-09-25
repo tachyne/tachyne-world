@@ -140,6 +140,13 @@ func TestEndExitGoesToYourRespawnPoint(t *testing.T) {
 	h.spawns = newSpawnStore(t.TempDir() + "/spawns.json")
 	// A bed claimed far from the origin.
 	bed := blockPos{900, 70, -400}
+	for x := bed.x - 3; x <= bed.x+3; x++ { // room to stand up beside it
+		for z := bed.z - 3; z <= bed.z+3; z++ {
+			ow.SetBlock(x, bed.y-1, z, worldgen.Stone)
+			ow.SetBlock(x, bed.y, z, worldgen.Air)
+			ow.SetBlock(x, bed.y+1, z, worldgen.Air)
+		}
+	}
 	ow.SetBlock(bed.x, bed.y, bed.z, bedHeadState(t))
 	h.spawns.set(pl.p.name, bed, dimOverworld)
 
@@ -150,10 +157,10 @@ func TestEndExitGoesToYourRespawnPoint(t *testing.T) {
 	if !pl.p.pendingDestOK {
 		t.Fatal("the exit should name a destination, not fall back to the origin")
 	}
-	// switchDimensionTo lands at dest + (0.5, 0, 1.5), so dest is the bed
-	// with one taken off z.
-	if want := (blockPos{bed.x, bed.y, bed.z - 1}); pl.p.pendingDest != want {
-		t.Fatalf("exit destination = %v, want %v (the claimed bed)", pl.p.pendingDest, want)
+	// It stands you up beside the bed (findStandUpPosition); switchDimensionTo
+	// lands at dest + (0.5, 0, 1.5), so dest is within a step or two of it.
+	if d := pl.p.pendingDest; abs(d.x-bed.x) > 2 || abs(d.z-bed.z) > 3 || d.y != bed.y {
+		t.Fatalf("exit destination = %v, want beside the claimed bed %v", d, bed)
 	}
 }
 

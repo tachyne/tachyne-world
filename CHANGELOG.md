@@ -87,6 +87,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Respawn beside your bed, not on it.** Respawning at a bed or respawn
+  anchor now stands you up in a free spot next to it, as in vanilla,
+  instead of on top of it. A bed or anchor walled in with nowhere to stand
+  counts as obstructed, and you respawn at the world spawn.
 - **Fiery blasts light soul fire on soul blocks.** A fiery explosion — a
   bed going off in the Nether, a ghast fireball — now lights blue soul fire
   on soul sand and soul soil, as in vanilla.
