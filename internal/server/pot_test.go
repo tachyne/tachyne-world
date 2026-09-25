@@ -18,7 +18,7 @@ func TestFlowerPotGivesThePlantBack(t *testing.T) {
 	w.SetBlock(x, y, z, poppy)
 
 	p.setHotbarSlot(0, itemByName["dandelion"]) // pottable: the pot keeps its poppy
-	p.held = 0
+	selectSlot(p, 0)
 	s.usePot(p, false, x, y, z, w.Block(x, y, z), 1)
 	if w.Block(x, y, z) != poppy {
 		t.Fatalf("a filled pot clicked with a pottable plant changed: %d", w.Block(x, y, z))

@@ -19,7 +19,7 @@ func TestFenceGateSwingsAwayFromThePlayer(t *testing.T) {
 	gate = setBoolProp(setBoolProp(gate, "open", false), "powered", false)
 	w.SetBlock(x, y, z, gate)
 	p.setHotbarSlot(0, 0)
-	p.held = 0
+	selectSlot(p, 0)
 	p.yaw = 0 // looking south, at the gate's back
 	s.tryUseBlock(p, false, x, y, z, 1, 2, 0.5, 0.5, 0.5)
 	got := w.Block(x, y, z)

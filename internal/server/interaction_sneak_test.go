@@ -19,7 +19,7 @@ func TestSneakPlacesAgainstUsableBlocks(t *testing.T) {
 	p.sneaking = true
 
 	p.setHotbarSlot(0, itemByName["stone"])
-	p.held = 0
+	selectSlot(p, 0)
 	s.handlePlace(p, placeBody(x, y, z, 1))
 	if w.Block(x, y, z) != trap {
 		t.Error("a sneaking player holding stone operated the trapdoor")

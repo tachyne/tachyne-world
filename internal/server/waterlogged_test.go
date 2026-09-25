@@ -88,7 +88,7 @@ func TestPlacingIntoFlowingWaterStaysDry(t *testing.T) {
 	w := h.world
 	slab := itemByName["oak_slab"]
 	p.setHotbarSlot(0, int32(slab))
-	p.held = 0
+	selectSlot(p, 0)
 	for i, c := range []struct {
 		fluid uint32
 		want  bool

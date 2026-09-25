@@ -14,7 +14,7 @@ func holdItem(t *testing.T, p *player, name string) {
 		t.Fatalf("no item %q", name)
 	}
 	p.setHotbarSlot(0, int32(id))
-	p.held = 0
+	selectSlot(p, 0)
 }
 
 // CrafterBlock.getStateForPlacement: the front faces the player along the

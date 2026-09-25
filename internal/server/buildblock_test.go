@@ -15,7 +15,7 @@ func TestPlacementRefusedIntoAMob(t *testing.T) {
 	s, h, p := breakPlaceServer(t)
 	w := s.world
 	p.setHotbarSlot(0, itemByName["stone"])
-	p.held = 0
+	selectSlot(p, 0)
 	y := 70
 	for x := 1; x <= 8; x++ {
 		for z := 1; z <= 5; z++ {

@@ -132,3 +132,11 @@ func TestHubBlockBroadcast(t *testing.T) {
 		// good: nothing echoed back
 	}
 }
+
+// selectSlot sets a player's hotbar selection the way the session does,
+// under its lock: a live hub reads it every tick.
+func selectSlot(p *player, slot int) {
+	p.hmu.Lock()
+	p.held = slot
+	p.hmu.Unlock()
+}

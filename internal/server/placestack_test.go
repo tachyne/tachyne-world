@@ -33,7 +33,7 @@ func TestSlabDoublesByClick(t *testing.T) {
 	bottom := withProps(t, slab, map[string]string{"type": "bottom", "waterlogged": "false"})
 	double := withProps(t, slab, map[string]string{"type": "double", "waterlogged": "false"})
 	p.setHotbarSlot(0, itemByName["oak_slab"])
-	p.held = 0
+	selectSlot(p, 0)
 
 	w.SetBlock(x, y, z, bottom)
 	s.handlePlace(p, placeBodyAt(x, y, z, 1, 1.0)) // top face
@@ -76,7 +76,7 @@ func TestCountStackingLeverAndHopper(t *testing.T) {
 	one := withProps(t, candle, map[string]string{"candles": "1", "lit": "false", "waterlogged": "false"})
 	w.SetBlock(x, y, z, one)
 	p.setHotbarSlot(0, itemByName["candle"])
-	p.held = 0
+	selectSlot(p, 0)
 	s.handlePlace(p, placeBodyAt(x, y, z, 1, 1.0))
 	if got := w.Block(x, y, z); propOf(t, got, "candles") != "2" {
 		t.Fatalf("a candle on a candle should make two, got %d", got)

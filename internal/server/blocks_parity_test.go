@@ -73,7 +73,7 @@ func TestPlacedLeavesArePersistent(t *testing.T) {
 	s, _, p := breakPlaceServer(t)
 	w := s.world
 	p.setHotbarSlot(0, itemByName["oak_leaves"])
-	p.held = 0
+	selectSlot(p, 0)
 	x, y, z := 3, 70, 3
 	w.SetBlock(x, y, z, worldgen.BlockBase("stone"))
 	w.SetBlock(x, y+1, z, worldgen.Air)

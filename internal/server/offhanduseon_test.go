@@ -29,7 +29,7 @@ func offhandOnRig(t *testing.T) (*Server, *hub, *player) {
 	t.Helper()
 	s, h, p := breakPlaceServer(t)
 	s.modes.set(p.name, gmSurvival)
-	p.held = 0
+	selectSlot(p, 0)
 	onHub(t, h, func() {
 		tr := h.playersRef[p.eid]
 		tr.gamemode = gmSurvival

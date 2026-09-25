@@ -140,7 +140,7 @@ func TestHandlePlaceAliasesAndWallTorch(t *testing.T) {
 	w.SetBlock(x, y-1, z, worldgen.Stone)
 
 	p.setHotbarSlot(0, itemByName["redstone"])
-	p.held = 0
+	selectSlot(p, 0)
 	s.handlePlace(p, placeBody(x, y-1, z, 1)) // click the floor's top
 	if got := w.Block(x, y, z); !isWire(got) || propOf(t, got, "power") != "0" {
 		t.Fatalf("redstone item should lay unpowered dust, got %d", got)

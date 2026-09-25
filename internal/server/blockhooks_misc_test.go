@@ -287,7 +287,7 @@ func TestNoteBlockLetsHeadOntoItsTop(t *testing.T) {
 	s.world.SetBlock(x, y, z, noteBlockBase)
 	head := itemByName["zombie_head"]
 	p.setHotbarSlot(0, head)
-	p.held = 0
+	selectSlot(p, 0)
 	if s.tryUseBlock(p, false, x, y, z, 0, 1, 0.5, 1, 0.5) {
 		t.Fatal("a head on the top face should pass through to placement")
 	}

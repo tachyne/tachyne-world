@@ -20,7 +20,7 @@ func TestHoeTillsThroughHandlePlace(t *testing.T) {
 		t.Fatal("iron_hoe missing from the item table")
 	}
 	p.setHotbarSlot(0, hoe)
-	p.held = 0
+	selectSlot(p, 0)
 
 	// Every tillable, clicked on its top face with clear sky above.
 	cases := []struct{ from, want string }{
@@ -52,7 +52,7 @@ func TestHoeTillsNonDefaultBlockStates(t *testing.T) {
 	w := s.world
 
 	p.setHotbarSlot(0, itemByName["iron_hoe"])
-	p.held = 0
+	selectSlot(p, 0)
 
 	lo, hi := worldgen.BlockRange("grass_block")
 	if hi <= lo {
@@ -78,7 +78,7 @@ func TestHoeRespectsAirAbove(t *testing.T) {
 	w := s.world
 
 	p.setHotbarSlot(0, itemByName["iron_hoe"])
-	p.held = 0
+	selectSlot(p, 0)
 
 	// Covered by stone: no till.
 	x, y, z := 6, 70, 6
@@ -109,7 +109,7 @@ func TestSeedsPlantThroughHandlePlace(t *testing.T) {
 		t.Fatal("wheat_seeds missing from the item table")
 	}
 	p.setHotbarSlot(0, seeds)
-	p.held = 0
+	selectSlot(p, 0)
 
 	x, y, z := 9, 70, 9
 	w.SetBlock(x, y, z, farmlandMin)
@@ -140,7 +140,7 @@ func TestShovelFlattensThroughHandlePlace(t *testing.T) {
 	w := s.world
 
 	p.setHotbarSlot(0, itemByName["iron_shovel"])
-	p.held = 0
+	selectSlot(p, 0)
 
 	path := worldgen.BlockBase("dirt_path")
 	col := 0
@@ -187,7 +187,7 @@ func TestShovelDowsesCampfire(t *testing.T) {
 	w := s.world
 
 	p.setHotbarSlot(0, itemByName["iron_shovel"])
-	p.held = 0
+	selectSlot(p, 0)
 
 	lit := setBoolProp(worldgen.BlockBase("campfire"), "lit", true)
 	if !boolProp(lit, "lit") {

@@ -88,7 +88,7 @@ func TestPlaceSoundReachesOthersNotThePlacer(t *testing.T) {
 	waitJoined(t, h, "bystander")
 
 	p.setHotbarSlot(0, itemByName["oak_planks"])
-	p.held = 0
+	selectSlot(p, 0)
 	x, y, z := int(p.x), int(p.y)-1, int(p.z)+2 // beside the placer: not into their own feet
 	s.world.SetBlock(x, y, z, worldgen.BlockBase("stone"))
 	s.world.SetBlock(x, y+1, z, worldgen.Air)

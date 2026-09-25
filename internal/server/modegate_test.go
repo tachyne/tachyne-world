@@ -13,7 +13,7 @@ func TestAdventureAndSpectatorCannotBuild(t *testing.T) {
 	w := s.world
 	stone := worldgen.BlockBase("stone")
 	p.setHotbarSlot(0, int32(itemByName["stone"]))
-	p.held = 0
+	selectSlot(p, 0)
 
 	for _, mode := range []int{gmAdventure, gmSpectator} {
 		s.modes.set(p.name, mode)
