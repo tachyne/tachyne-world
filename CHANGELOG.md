@@ -146,6 +146,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Riders are thrown off underwater.** A player or mob riding a horse,
+  donkey, mule, camel, llama, pig, strider, spider, chicken, ravager,
+  zombie horse or happy ghast now gets off once their head goes under
+  water, as in vanilla. A bubble column does not count.
 - **Locator bar ranges.** Crouching now takes a player off everyone
   else's locator bar, as in vanilla, and the waypoint transmit and receive
   range attributes decide how far away a player shows up.
