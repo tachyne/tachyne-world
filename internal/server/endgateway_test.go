@@ -37,11 +37,10 @@ func TestGatewayThrowsYouOutAndBringsYouBack(t *testing.T) {
 	g := endGatewayRingPos(0)
 	pl.x, pl.y, pl.z = float64(g.x)+0.5, float64(g.y), float64(g.z)+0.5
 	h.updateEndGateways(players)
-	out := math.Hypot(pl.x, pl.z)
-	if out < endGatewayCast {
-		t.Fatalf("stepping into a gateway should throw you at least 1024 blocks out, got %.0f", out)
+	if out := math.Hypot(pl.x, pl.z); out < endGatewayCast-16*16 {
+		t.Fatalf("stepping into a gateway should throw you out to the islands, got r=%.0f", out)
 	}
-	if h.end.At(int(pl.x), int(pl.y)-1, int(pl.z)) == worldgen.Air {
+	if !worldgen.IsFullCube(h.end.At(int(math.Floor(pl.x)), int(pl.y)-1, int(math.Floor(pl.z)))) {
 		t.Fatal("landed on nothing — the gateway must leave somewhere to stand")
 	}
 	// The cooldown holds you in place for a moment.
@@ -51,16 +50,31 @@ func TestGatewayThrowsYouOutAndBringsYouBack(t *testing.T) {
 		t.Fatal("the gateway took the player again inside its cooldown")
 	}
 
-	// The gateway home sits beside the landing and returns you to the island.
-	back := blockPos{x: int(math.Floor(pl.x)) + 2, y: int(pl.y), z: int(math.Floor(pl.z))}
-	if h.end.At(back.x, back.y, back.z) != endGatewayState {
-		t.Fatalf("no gateway home at %v", back)
+	// The far gateway hangs over the island and the two are a pair.
+	far, _, ok := h.gatewayExitOf(g)
+	if !ok || h.end.At(far.x, far.y, far.z) != endGatewayState {
+		t.Fatalf("no far gateway recorded/built for %v (got %v ok=%v)", g, far, ok)
 	}
-	// The cooldown lives on the GATEWAY now, so clear the far one's.
+	if back, _, ok := h.gatewayExitOf(far); !ok || back != g {
+		t.Fatalf("the far gateway leads to %v, want the ring gateway %v", back, g)
+	}
+	if math.Abs(pl.x-float64(far.x)) > 6 || math.Abs(pl.z-float64(far.z)) > 6 {
+		t.Fatalf("landed at %.0f,%.0f, not beside the far gateway %v", pl.x, pl.z, far)
+	}
+	// Through it again, you come out at the ring gateway you left by, not
+	// at the centre of the main island.
 	h.gatewayCool = map[simPos]uint64{}
-	pl.x, pl.y, pl.z = float64(back.x)+0.5, float64(back.y), float64(back.z)+0.5
+	pl.x, pl.y, pl.z = float64(far.x)+0.5, float64(far.y), float64(far.z)+0.5
 	h.updateEndGateways(players)
-	if r := math.Hypot(pl.x, pl.z); r > 4 {
-		t.Fatalf("the way home should land you on the main island, got r=%.0f", r)
+	if math.Abs(pl.x-float64(g.x)) > 6 || math.Abs(pl.z-float64(g.z)) > 6 {
+		t.Fatalf("the way home landed at %.0f,%.0f, want beside the ring gateway %v", pl.x, pl.z, g)
+	}
+	// A second trip out goes to the same far gateway: nothing new is built.
+	h.gatewayCool = map[simPos]uint64{}
+	n := len(h.rules.EndGateways)
+	pl.x, pl.y, pl.z = float64(g.x)+0.5, float64(g.y), float64(g.z)+0.5
+	h.updateEndGateways(players)
+	if len(h.rules.EndGateways) != n || math.Abs(pl.x-float64(far.x)) > 6 {
+		t.Fatalf("second trip: %d links (was %d), landed %.0f,%.0f", len(h.rules.EndGateways), n, pl.x, pl.z)
 	}
 }

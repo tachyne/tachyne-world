@@ -55,8 +55,8 @@ func TestPortalDwellFlagsSwitch(t *testing.T) {
 	}
 	pl.x, pl.y, pl.z = float64(x)+0.5, float64(y), float64(z)+0.5
 	players := map[int32]*tracked{1: pl}
-	// The dwell pass runs once a second: 80 ticks → 4 passes in survival.
-	for i := 0; i < portalDwellTicks/survivalTickN-1; i++ {
+	// Counted every tick: the portal takes you on the tick after 80 in it.
+	for i := 0; i < portalDwellTicks; i++ {
 		h.updatePortalDwell(players)
 	}
 	if pl.p.pendingDim.Load() != -1 {
@@ -66,12 +66,23 @@ func TestPortalDwellFlagsSwitch(t *testing.T) {
 	if pl.p.pendingDim.Load() != 1 {
 		t.Fatalf("dwell complete should flag the nether, got %d", pl.p.pendingDim.Load())
 	}
-	// Stepping out resets the count.
+	// Stepping out drains the wait four ticks a tick (decayTick), so a
+	// quick step out and back keeps most of it.
 	pl.p.pendingDim.Store(-1)
+	for i := 0; i < 40; i++ {
+		h.updatePortalDwell(players)
+	}
 	pl.x += 5
 	h.updatePortalDwell(players)
+	h.updatePortalDwell(players)
+	if pl.portalTicks != 32 {
+		t.Fatalf("two ticks out of a 40-tick wait left %d, want 32", pl.portalTicks)
+	}
+	for i := 0; i < 10; i++ {
+		h.updatePortalDwell(players)
+	}
 	if pl.portalTicks != 0 {
-		t.Fatal("leaving the portal must reset the dwell")
+		t.Fatalf("the wait should drain to 0, got %d", pl.portalTicks)
 	}
 }
 
@@ -104,7 +115,7 @@ func TestPortalLatchStopsBounce(t *testing.T) {
 		t.Fatal("stepping off must clear the latch")
 	}
 	pl.x -= 5
-	for i := 0; i < portalDwellTicks/survivalTickN; i++ {
+	for i := 0; i <= portalDwellTicks; i++ {
 		h.updatePortalDwell(players)
 	}
 	if pl.p.pendingDim.Load() != 1 {
@@ -204,7 +215,7 @@ func TestPortalLinkRegistryRoundTrip(t *testing.T) {
 	pl.gamemode = gmCreative
 	pl.x, pl.y, pl.z = 500.5, 80, 500.5
 	players := map[int32]*tracked{1: pl}
-	h.updatePortalDwell(players) // creative: fires next pass
+	h.updatePortalDwell(players) // creative: a delay of 0 fires on the first tick
 	if pl.p.pendingDim.Load() != 1 || !pl.p.pendingDestOK {
 		t.Fatalf("linked travel should carry the destination: dim=%d ok=%v",
 			pl.p.pendingDim.Load(), pl.p.pendingDestOK)

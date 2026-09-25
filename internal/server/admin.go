@@ -66,9 +66,10 @@ type worldRules struct {
 	// The dragon is not in mobs.json (bosses are not persisted), so without
 	// this a restart mid-fight handed it back its full health. Zero means "no
 	// fight in progress"; a live fight writes what it has left.
-	DragonHealth int          `json:"dragonHealth,omitempty"`
-	Weather      *weatherSave `json:"weather,omitempty"`
-	Border       *worldBorder `json:"border,omitempty"`
+	DragonHealth int           `json:"dragonHealth,omitempty"`
+	Weather      *weatherSave  `json:"weather,omitempty"`
+	Border       *worldBorder  `json:"border,omitempty"`
+	EndGateways  []gatewayExit `json:"endGateways,omitempty"` // each gateway's remembered exit
 	// SpawnerMobs are the spawners a spawn egg was used on: "dim,x,y,z" → the
 	// entity name they spawn instead of their dungeon's (SpawnEggItem.useOn).
 	SpawnerMobs map[string]string `json:"spawnerMobs,omitempty"`
@@ -147,7 +148,7 @@ func defaultRules() worldRules {
 		BlockDropDecay: true, MobDropDecay: true, TNTDropDecay: false,
 		MaxCramming: maxEntityCramming, RespawnRadius: 10, MaxSnowHeight: 1,
 		FireSpreadRadius: defaultFireSpreadRadius,
-		AllowNether:      true, PortalDelay: portalDwellTicks, PortalDelayCreate: 1,
+		AllowNether:      true, PortalDelay: portalDwellTicks, PortalDelayCreate: 0,
 		ProjectilesBreak: true, GlobalSounds: true,
 		SendCommandFeedback: true, LogAdminCommands: true}
 }

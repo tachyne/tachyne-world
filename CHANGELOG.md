@@ -14,6 +14,25 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Shearing a hive drops the honeycomb.** Shears on a full beehive or nest
+  now pop the three honeycomb out of the hive, as vanilla does, instead of
+  putting them straight into your inventory. Filling your last glass bottle
+  leaves the honey bottle in the same hand. Both make a noise that sculk
+  sensors hear, and count as using the item in your statistics.
+- **End gateways come in pairs.** The first trip through a gateway in the
+  ring now finds the near edge of the outer islands along its bearing,
+  hangs a return gateway ten blocks over the island's highest point, and
+  lands you on the ground beside it. The two stay linked: going back
+  through the far gateway brings you out at the ring gateway you left by,
+  not the middle of the main island, and later trips reuse the same pair.
+  Where no island can be found, a small one is made, as in vanilla.
+- **Nether portals keep time like vanilla.** The wait in a portal is now
+  counted every tick instead of once a second, so the portal delay rules
+  are exact. Stepping out drains the wait four times as fast as it built
+  up, rather than wiping it. Creative players go through at once, as the
+  creative delay's vanilla default of 0 asks.
+- **Adventure mode can't rewrite signs.** Right-clicking a sign in
+  adventure mode no longer opens the editor, or dyes, glows or waxes it.
 - **/attribute moves a player's fall damage.** A player's falls now read
   the safe-fall-distance and fall-damage-multiplier attributes, as vanilla
   does, so changing either with /attribute or a plugin takes effect. Jump

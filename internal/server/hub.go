@@ -1204,7 +1204,6 @@ func (h *hub) run() {
 				h.updateOutposts(players)         // populate pillager outposts on approach
 				// The strongholds' silverfish and the mineshafts' cave spiders.
 				h.updateStructureSpawners(players)
-				h.updatePortalDwell(players)
 				h.updateEndPortalContact(players)
 				h.updateEndGateways(players) // step into a gateway → the outer islands
 				h.updateDragon(players)
@@ -1256,6 +1255,7 @@ func (h *hub) run() {
 			}
 			h.updateVehicles(players)
 			h.updateItemSpawners(players)
+			h.updatePortalDwell(players) // nether portal wait, counted every tick
 			if age%survivalTickN == 0 {
 				h.runNPCs(players) // LLM NPCs: throttled perceive → decide → act
 				h.advTick(players) // polled advancement criteria (inventory, biome)

@@ -140,7 +140,7 @@ type evPortalLinked struct {
 
 func (evPortalLinked) isHubEvent() {}
 
-// updatePortalDwell runs each hub tick: players standing in portal blocks
+// updatePortalDwell runs every hub tick: players standing in portal blocks
 // accumulate contact; at the threshold the connection is flagged to switch.
 func (h *hub) updatePortalDwell(players map[int32]*tracked) {
 	for _, t := range players {
@@ -156,11 +156,10 @@ func (h *hub) updatePortalDwell(players map[int32]*tracked) {
 			continue
 		}
 		if !isPortalBlock(feet) {
-			if t.portalTicks > 0 {
-				log.Printf("portal: %q left the portal after %d dwell ticks (feet=%d dim=%d at %.1f,%.1f,%.1f)",
-					t.p.name, t.portalTicks, feet, t.dim, t.x, t.y, t.z)
-			}
-			t.portalTicks = 0
+			// PortalProcessor.decayTick: out of the portal the wait drains
+			// four ticks for every one, so a step out and back in keeps most
+			// of it.
+			t.portalTicks = max(t.portalTicks-4, 0)
 			continue
 		}
 		// ServerLevel.isAllowedToEnterPortal: the rule gates the way IN to the
@@ -170,19 +169,17 @@ func (h *hub) updatePortalDwell(players map[int32]*tracked) {
 			t.portalTicks = 0
 			continue
 		}
-		t.portalTicks++
-		// players_nether_portal_default_delay / _creative_delay: how long you
-		// stand in a portal before it takes you. The dwell pass runs once a
-		// second, so the tick count is divided down; a delay under a second
-		// still costs one pass, which is what the creative default asks for.
+		// players_nether_portal_default_delay / _creative_delay
+		// (NetherPortalBlock.getPortalTransitionTime): the ticks you stand in
+		// a portal before it takes you, counted every tick; the portal fires
+		// on the tick the count has reached the delay (portalTime++ >= delay).
 		delay := h.rules.PortalDelay
 		if t.gamemode == gmCreative {
 			delay = h.rules.PortalDelayCreate
 		}
-		need := max(1, delay/survivalTickN)
-		log.Printf("portal: %q dwell %d/%d (dim=%d gm=%d pending=%d)",
-			t.p.name, t.portalTicks, need, t.dim, t.gamemode, t.p.pendingDim.Load())
-		if t.portalTicks >= need && t.p.pendingDim.Load() < 0 {
+		ready := t.portalTicks >= delay
+		t.portalTicks++
+		if ready && t.p.pendingDim.Load() < 0 {
 			t.portalTicks = 0
 			from := dimPos{t.dim, portalBaseKey(h.worldFor(t.dim), floorInt(t.x), floorInt(t.y+0.05), floorInt(t.z))}
 			t.p.pendingFrom = from

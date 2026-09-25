@@ -120,8 +120,8 @@ func TestPortalProjectileAndSoundRules(t *testing.T) {
 	if !h.rules.AllowNether || !h.rules.ProjectilesBreak || !h.rules.GlobalSounds {
 		t.Error("the three booleans default on, as vanilla's do")
 	}
-	if h.rules.PortalDelay != 80 || h.rules.PortalDelayCreate != 1 {
-		t.Errorf("portal delays are %d/%d, want vanilla's 80 and 1",
+	if h.rules.PortalDelay != 80 || h.rules.PortalDelayCreate != 0 {
+		t.Errorf("portal delays are %d/%d, want vanilla's 80 and 0",
 			h.rules.PortalDelay, h.rules.PortalDelayCreate)
 	}
 	// Every one of them is settable under its vanilla name.
