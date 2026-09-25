@@ -139,15 +139,24 @@ func TestSimRadiusIsConfigurable(t *testing.T) {
 func TestBeetrootGrowsTwoThirdsAsOften(t *testing.T) {
 	h := newHub(world.New(1))
 	players := map[int32]*tracked{}
+	// Moist farmland all round makes growth frequent (speed ~10), so a few
+	// thousand ticks settle the ratio; the crop is reset only when it grew,
+	// since every block write re-lights the area.
+	x, y, z := 5, 200, 5
+	for dx := -1; dx <= 1; dx++ {
+		for dz := -1; dz <= 1; dz++ {
+			h.world.SetBlock(x+dx, y-1, z+dz, farmlandMin+7)
+		}
+	}
 	grows := func(name string) int {
-		x, y, z := 5, 200, 5
 		base := worldgen.BlockBase(name)
+		h.world.SetBlock(x, y, z, base)
 		n := 0
-		for i := 0; i < 40000; i++ {
-			h.world.SetBlock(x, y, z, base)
+		for i := 0; i < 4000; i++ {
 			h.tickCrop(players, 0, x, y, z, base)
 			if h.world.At(x, y, z) != base {
 				n++
+				h.world.SetBlock(x, y, z, base)
 			}
 		}
 		return n
