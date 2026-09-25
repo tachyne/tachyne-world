@@ -123,6 +123,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Parrots perch in trees.** A parrot now flies up to sit on the leaves or
+  logs of a nearby tree, and otherwise flutters to a spot a little above
+  the ground ahead of it. Between flights it settles where it is instead
+  of hanging in the air.
 - **Allays dance only to a jukebox they can hear.** An allay starts
   dancing within ten blocks of a playing jukebox, not sixteen, and stops
   when the song ends, when it wanders ten blocks away, or when the jukebox

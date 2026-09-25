@@ -177,7 +177,7 @@ func parrotPitch(h *hub) float32 { return (h.rng.Float32()-h.rng.Float32())*0.2 
 // better to do keeps company with the nearest mob that is not a parrot
 // within seven blocks (its box grown by seven), flying in to three blocks
 // and backing off when closer than √3, re-deciding every ten ticks. Its
-// wander (priority 2) outranks it; that is left to the ordinary stroll.
+// wander (priority 2) outranks it (parrotWanderStep).
 // It reports whether it holds the parrot.
 func (h *hub) parrotFollowMobStep(m *mob) bool {
 	if m.sitting || m.leash != 0 || (m.tamed && m.hasTarget) {
