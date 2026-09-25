@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Fox kits follow their parents.** As in vanilla, a baby fox now trots
+  after the nearest grown fox. A baby happy ghast now drifts right up to
+  three blocks from an adult before it stops.
 - **Angry animals calm down.** A wolf, polar bear, panda, dolphin or llama
   you hit used to stay hostile for good, going after any player it saw.
   As in vanilla, it now goes only after the player who hit it. A wolf or
