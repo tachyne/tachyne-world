@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Wardens charge faster and wander slower.** A warden coming for you
+  now moves at vanilla's fighting pace, a fifth faster than its walk, and
+  when it has nobody to hunt it ambles about at half speed.
 - **Wardens go to see what they heard, and mind being bumped.** A warden
   that hears something it is not yet angry about now walks over to where
   the sound came from, as in vanilla, instead of only standing and

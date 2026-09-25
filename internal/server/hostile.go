@@ -170,6 +170,9 @@ func chaseSpeedMod(m *mob) float64 {
 	if (skeletonKind(m.etype) || m.etype == entityWitherSkeleton) && m.held != itemBow {
 		return 1.2
 	}
+	if m.etype == entityWarden {
+		return wardenFightMod // FIGHT: SetWalkTargetFromAttackTargetIfTargetOutOfReach(1.2)
+	}
 	return 1
 }
 

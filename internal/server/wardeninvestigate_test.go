@@ -81,3 +81,21 @@ func TestWardenBumpedIntoGetsAngry(t *testing.T) {
 		t.Error("a creative player bumping it is nothing to it")
 	}
 }
+
+// FIGHT walks after the target at 1.2 of the warden's pace, and it idles at
+// half.
+func TestWardenFightAndIdleSpeeds(t *testing.T) {
+	h, players, m, pl := wardenFightFixture(t, 11.5, 180, 0.5)
+	_ = pl
+	stepWarden(h, players, m, wardenRoarUpd+2) // the roar first
+	top := stepWarden(h, players, m, 16)
+	if !m.hasTarget {
+		t.Fatal("after its roar the warden should be after the player")
+	}
+	if want := m.moveSpeed() * wardenFightMod; top < want*0.9 || top > want*1.01 {
+		t.Errorf("the warden fights at up to %.3f, want %.3f", top, want)
+	}
+	if got := strollSpeed(m); got != 0.5 {
+		t.Errorf("the warden strolls at %.2f, want 0.5", got)
+	}
+}

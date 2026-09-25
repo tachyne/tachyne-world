@@ -15,6 +15,7 @@ const (
 	wardenInvestigateMod  = 0.7 // SPEED_MULTIPLIER_WHEN_INVESTIGATING
 	wardenInvestigateNear = 2.0 // GoToTargetLocation closeEnoughDist
 	wardenTouchCooldown   = 20  // TOUCH_COOLDOWN
+	wardenFightMod        = 1.2 // SPEED_MULTIPLIER_WHEN_FIGHTING
 )
 
 // wardenMaxAnger is AngerManagement's active anger: the strongest grudge
