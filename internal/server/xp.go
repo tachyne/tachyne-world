@@ -355,13 +355,22 @@ func isInfested(state uint32) bool {
 
 // dropDeathXP scatters a dying player's experience at the death spot (7×level,
 // capped) and zeroes their bar — the other half of the survival stake.
+//
+// A sculk catalyst within eight blocks takes the death as it would a mob's:
+// it blooms, and the experience becomes its charge instead of an orb.
 func (h *hub) dropDeathXP(players map[int32]*tracked, t *tracked) {
+	xp := min(deathXPLevel*t.xpLevel, deathXPCap)
+	if h.catalystHears(players, t.dim, t.x, t.y, t.z, xp) {
+		xp = 0
+	}
 	if t.xpLevel == 0 && t.xpPoints == 0 {
 		return
 	}
 	// In the dimension the player died in — the overworld default dropped a
 	// Nether or End death's XP into a world the player was not in.
-	h.spawnXPOrbIn(players, t.dim, min(deathXPLevel*t.xpLevel, deathXPCap), t.x, t.y, t.z)
+	if xp > 0 {
+		h.spawnXPOrbIn(players, t.dim, xp, t.x, t.y, t.z)
+	}
 	t.xpLevel, t.xpPoints = 0, 0
 	h.sendExperience(t)
 }

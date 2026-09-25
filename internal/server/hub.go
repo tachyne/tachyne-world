@@ -646,6 +646,9 @@ type hub struct {
 	bins         map[simPos]*bin         // dispenser/dropper/hopper storage
 	binFire      map[simPos]uint64       // scheduled dispenser/dropper ejections (due tick) — vanilla's 4-tick delay
 
+	// Per-catalyst sculk charge cursors (SculkSpreader); not saved.
+	sculkSpread map[simPos]*sculkSpreader
+
 	// blastSrc is the explosion being resolved (set around explodeHurt): who
 	// is behind it, for the vehicles it may spare and the kills it credits.
 	blastSrc blastCfg
@@ -856,6 +859,7 @@ func newHub(w *world.World) *hub {
 		fireAge:       map[simPos]int{},
 		sculkList:     map[simPos]bool{},
 		catalysts:     map[simPos]bool{},
+		sculkSpread:   map[simPos]*sculkSpreader{},
 		sculkVib:      map[simPos]sculkPending{},
 		vibQuiet:      map[simPos]uint64{},
 		sculkDue:      map[simPos]uint64{},

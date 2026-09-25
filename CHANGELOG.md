@@ -65,6 +65,15 @@ the public history since the project was open-sourced on 2026-07-10.
   only natural ground (stone, dirt, sand, gravel, and the rest vanilla
   lists) into sculk. Before, it could turn any solid block near a death
   into sculk, planks and bricks included.
+- **Sculk spreads the way it does in vanilla.** When something dies near
+  a sculk catalyst, its experience now creeps outward over the next few
+  seconds instead of appearing as a patch all at once: veins run across
+  the ground, each point of experience turns one block of natural ground
+  into sculk, and charge that crosses older sculk can sprout sculk sensors
+  and shriekers (a shrieker grown this way never calls a Warden). Players
+  who die near a catalyst feed it too, and the catalyst blooms with its
+  soul particles and sound. Charge still travelling when the server
+  restarts is lost.
 - **Snow layers need a proper floor.** A placed snow layer now follows
   vanilla's rule: it can't sit on ice, packed ice or a barrier, always sits
   on honey, soul sand or mud, and otherwise needs a full top face. Snow

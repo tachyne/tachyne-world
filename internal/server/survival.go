@@ -622,6 +622,8 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 		if !h.rules.KeepInventory { // gamerule: keepInventory skips the stake
 			h.dropInventory(players, t)
 			h.dropDeathXP(players, t) // 7×level as an orb at the death spot, bar zeroed
+		} else {
+			h.catalystHears(players, t.dim, t.x, t.y, t.z, 0) // no experience to give, but a catalyst still blooms
 		}
 		t.p.trySendEv(attachproto.Death{EID: t.p.eid, Message: h.combatDeathMessage(t)})
 		if h.rules.ImmediateResp { // gamerule doImmediateRespawn skips the death screen
