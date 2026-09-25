@@ -48,6 +48,10 @@ func (h *hub) followParentStep(m *mob) bool {
 	if !ok {
 		return false
 	}
+	if m.etype == entityFox && m.foxFlags&foxFlagDefending != 0 {
+		m.parent = 0
+		return false // FoxFollowParentGoal: never while it is defending
+	}
 	stop := followParentStop
 	if followAdultBrain[m.etype] {
 		stop = followAdultStop

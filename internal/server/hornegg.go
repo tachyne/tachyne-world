@@ -62,6 +62,10 @@ func speciesStateMeta(m *mob) []byte {
 		if m.screaming || m.hornsGone > 0 {
 			return goatMeta(m)
 		}
+	case entityFox:
+		if m.foxFlags != 0 {
+			return foxFlagsMeta(m.eid, m.foxFlags) // asleep, sat, crouched, face down…
+		}
 	case entityTurtle:
 		if m.hasEgg {
 			return turtleMeta(m)

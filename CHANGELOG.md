@@ -116,6 +116,21 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Nether lava runs fast.** Lava in the Nether now flows three times as
   fast as the overworld's and spreads as far as water (seven blocks), as in
   vanilla; it used to behave like overworld lava.
+- **Turtles roam the sea.** A turtle in the water now keeps swimming,
+  stretch after stretch, toward far-off points as in vanilla, instead of
+  standing about; ashore it sets off on a stroll a little more often.
+- **Foxes act like vanilla foxes.** A fox now walks in upright on a
+  chicken or rabbit until it is close, crouches, and pounces from the
+  crouch — and a pounce that comes down in snow leaves it head-first in the
+  drift for a couple of seconds. By day it leaves the open sky for cover
+  (at once in a thunderstorm), and it only sleeps somewhere sheltered — on
+  grass or in good light — with nothing alive close by, not just no
+  players. It picks ripe sweet berries and glow berries and keeps one in
+  its mouth, sits down now and then to look about, wanders in toward a
+  village at night, and watches players from 24 blocks. A fox defending a
+  player it trusts no longer runs from other players, wolves or bears, or
+  panics when hit, and a sleeping, sitting or crouched fox now looks that
+  way to players who arrive later.
 - **Placing pointed dripstone.** Pointed dripstone now hangs from a ceiling
   or stands on a floor depending on where you look, as in vanilla, and a
   column keeps its proper taper — tip, frustum, middle, base — as pieces are
