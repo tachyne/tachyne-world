@@ -14,6 +14,16 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **Beached shipwrecks.** Wrecks now also lie run aground on beaches, half
+  buried in the sand with their chests, as in vanilla (upright or on their
+  side, never upside down). `/locate structure shipwreck_beached` finds
+  them, and dolphins lead you to them too. They skip any spot you have
+  built in.
+- **Ice spikes, boulders and blue ice.** The ice spikes biome finally has
+  its spikes: packed-ice spires, the odd one raised high on a pillar, and
+  packed ice patches in the snow. Old-growth taigas are strewn with mossy
+  cobblestone boulders, and blue ice grows on the undersides of the frozen
+  oceans' icebergs. None of them appears where you have built.
 - **/rotate.** Operators can turn a player or mob to a rotation (`~` for
   relative), or make it face a position or another entity's feet or eyes.
 - **/trigger.** Scoreboard objectives can use the `trigger` criteria, and
@@ -75,6 +85,19 @@ the public history since the project was open-sourced on 2026-07-10.
   no longer shows on other players' locator bars, and reappears when that
   ends. A player who changes dimension now leaves the bars of those left
   behind.
+- **The Nether has its bedrock roof.** Above the caverns the Nether is now
+  solid netherrack up to vanilla's bedrock roof at y=127, ragged on its
+  underside, with open air over it; before, the top of the caverns gave
+  onto an endless dark void. Anywhere you built at y=115 or higher, the
+  void stays open over your build and two blocks around it.
+- **Sandstone under the sand, and no sand over caves.** Deserts now have
+  sandstone under their sand, reaching up to thirty blocks down, and
+  beaches and warm oceans a few blocks of it, as in vanilla. Sand, red
+  sand or gravel with a cave straight under it generates as sandstone,
+  red sandstone or stone, so a cave roof no longer pours sand on you when
+  you open it. Frozen ocean floors have vanilla's small bare-stone dips,
+  and flooded badlands are floored with orange terracotta. Only
+  untouched ground changes; anything you placed or dug stays as it is.
 - **Sculk catalysts leave your builds alone.** A catalyst's bloom now turns
   only natural ground (stone, dirt, sand, gravel, and the rest vanilla
   lists) into sculk. Before, it could turn any solid block near a death

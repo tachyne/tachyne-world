@@ -24,6 +24,11 @@ type owRegion struct {
 	gridCols     [regionSpan * regionSpan]*column
 	gridCarved   [regionSpan * regionSpan][]uint32
 	biomeChecks  map[string]int8 // chunkHasCaveBiome answers, per biome
+	// capture, when set, makes the region a scratch view: every set lands
+	// in it unclipped, reads see it first and then pure terrain even inside
+	// the chunk, and ch is not touched (it may be nil). Every chunk pass
+	// then sees the same features the same way (blueice in surfacefeatures.go).
+	capture map[[3]int]uint32
 }
 
 const regionSpan = 48 // 16 + 16 either side
@@ -37,11 +42,15 @@ func (r *owRegion) gridIndex(x, z int) int {
 }
 
 func (r *owRegion) read(x, y, z int) uint32 {
-	if y < MinY || y >= MinY+len(r.ch.Sections)*16 {
+	if y < MinY || y >= MinY+r.cells() {
 		return Air
 	}
 	lx, lz := x-r.baseX, z-r.baseZ
-	if lx >= 0 && lx < 16 && lz >= 0 && lz < 16 {
+	if r.capture != nil {
+		if s, ok := r.capture[[3]int{x, y, z}]; ok {
+			return s
+		}
+	} else if lx >= 0 && lx < 16 && lz >= 0 && lz < 16 {
 		return sectionBlockAt(r.ch, lx, y, lz)
 	}
 	var col []uint32
@@ -52,7 +61,7 @@ func (r *owRegion) read(x, y, z int) uint32 {
 		col = r.carved[[2]int{x, z}]
 	}
 	if col == nil { // a column of unknowns, carved cell by cell as the features look
-		n := len(r.ch.Sections) * 16
+		n := r.cells()
 		col = make([]uint32, n)
 		for i := range col {
 			col[i] = unknownCell
@@ -74,6 +83,15 @@ func (r *owRegion) read(x, y, z int) uint32 {
 }
 
 const unknownCell = ^uint32(0)
+
+// cells is the region's column height: its chunk's, or the generator's for
+// a scratch view without one.
+func (r *owRegion) cells() int {
+	if r.ch != nil {
+		return len(r.ch.Sections) * 16
+	}
+	return r.g.sections * 16
+}
 
 // col is the column model at (x, z), cached: the cave features ask for the
 // height and biome of thousands of columns per chunk.
@@ -163,6 +181,12 @@ func itoaSmall(n int) string {
 }
 
 func (r *owRegion) set(x, y, z int, s uint32) {
+	if r.capture != nil {
+		if y >= MinY && y < MinY+r.cells() {
+			r.capture[[3]int{x, y, z}] = s
+		}
+		return
+	}
 	lx, lz := x-r.baseX, z-r.baseZ
 	if lx < 0 || lx >= 16 || lz < 0 || lz >= 16 || y < MinY || y >= MinY+len(r.ch.Sections)*16 {
 		return
@@ -179,24 +203,28 @@ func (g *Generator) stampIcebergs(ch *Chunk, cx, cz int32) {
 	reg := &owRegion{g: g, ch: ch, baseX: int(cx) * 16, baseZ: int(cz) * 16, cols: map[[2]int]column{}}
 	for dcx := int32(-1); dcx <= 1; dcx++ {
 		for dcz := int32(-1); dcz <= 1; dcz++ {
-			ncx, ncz := cx+dcx, cz+dcz
-			ox, oz := int(ncx)*16, int(ncz)*16
-			if !isFrozenOcean(g.resolveBiome(ox+8, oz+8).Name) {
-				continue
-			}
-			r := newTreeRNG(g.seed^0x1CEB, ox, oz)
-			if r.Intn(16) == 0 { // ICEBERG_PACKED
-				x, z := ox+r.Intn(16), oz+r.Intn(16)
-				if isFrozenOcean(g.resolveBiome(x, z).Name) {
-					g.iceberg(r, x, z, PackedIce, reg)
-				}
-			}
-			if r.Intn(200) == 0 { // ICEBERG_BLUE
-				x, z := ox+r.Intn(16), oz+r.Intn(16)
-				if isFrozenOcean(g.resolveBiome(x, z).Name) {
-					g.iceberg(r, x, z, BlueIce, reg)
-				}
-			}
+			g.icebergsOf(cx+dcx, cz+dcz, reg)
+		}
+	}
+}
+
+// icebergsOf places chunk (ncx, ncz)'s own iceberg draws through reg.
+func (g *Generator) icebergsOf(ncx, ncz int32, reg *owRegion) {
+	ox, oz := int(ncx)*16, int(ncz)*16
+	if !isFrozenOcean(g.resolveBiome(ox+8, oz+8).Name) {
+		return
+	}
+	r := newTreeRNG(g.seed^0x1CEB, ox, oz)
+	if r.Intn(16) == 0 { // ICEBERG_PACKED
+		x, z := ox+r.Intn(16), oz+r.Intn(16)
+		if isFrozenOcean(g.resolveBiome(x, z).Name) {
+			g.iceberg(r, x, z, PackedIce, reg)
+		}
+	}
+	if r.Intn(200) == 0 { // ICEBERG_BLUE
+		x, z := ox+r.Intn(16), oz+r.Intn(16)
+		if isFrozenOcean(g.resolveBiome(x, z).Name) {
+			g.iceberg(r, x, z, BlueIce, reg)
 		}
 	}
 }

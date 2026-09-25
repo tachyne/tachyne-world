@@ -63,4 +63,22 @@ package worldgen
 // land, its rock banded with sulfur and cinnabar, with sulfur spikes,
 // sulfur pools and rooted sulfur springs. The underground of every chunk in
 // that climate changes (and dripstone/lush caves there give way to it).
-const GenVersion = 22
+//
+// v23: vanilla's missing overworld features and the Nether roof, all behind
+// the build guard (buildguard.go), which from this version reads the edits
+// as they stood when the version first booted (world/guardsnap.go):
+//   - the vegetal step's surface patches — tall grass, large ferns,
+//     sunflowers, lily pads, leaf litter, bushes, firefly bushes, dry grass,
+//     wildflowers, standalone pale moss and the jungles' vines — none on a
+//     player's floor or under a player's roof;
+//   - ravines (the canyon carver), lava lakes on the surface and below,
+//     dirt, gravel and (lush caves) clay pockets — each left out whole
+//     where a build lies in its box;
+//   - sandstone deep under desert and beach sand, sandstone or stone over a
+//     cave's ceiling, frozen-ocean floor holes, orange flooded badlands;
+//     ice spikes and patches, old-growth taiga boulders, blue ice under the
+//     icebergs, beached shipwrecks;
+//   - the Nether's bedrock roof at y=127 over netherrack from 121, left open
+//     over any build at y>=115 and two columns round it.
+// Nearly every chunk generates differently.
+const GenVersion = 23

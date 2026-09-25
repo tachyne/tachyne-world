@@ -62,11 +62,14 @@ func (n *netherNoises) patchAt(x, z int) bool { // PATCH -5 > -0.012
 // terrain (netherBlock) with every netherrack cell near a floor or ceiling
 // dressed for its biome. Pure in (x, z), so chunk generation and the
 // decorators' out-of-chunk reads agree.
-func (g *Generator) netherColumn(x, z int) []uint32 {
+func (g *Generator) netherColumn(x, z int) []uint32 { return g.netherColumnRoof(x, z, true) }
+
+// netherColumnRoof is netherColumn with the roof optional (netherCell).
+func (g *Generator) netherColumnRoof(x, z int, roof bool) []uint32 {
 	n := g.sections * 16
 	col := make([]uint32, n)
 	for i := range col {
-		col[i] = g.netherBlock(x, MinY+i, z)
+		col[i] = g.netherCell(x, MinY+i, z, roof)
 	}
 	biome := g.netherBiome(x, z)
 	nn := g.netherN

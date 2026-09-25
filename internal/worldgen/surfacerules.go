@@ -16,6 +16,7 @@ type surfaceNoises struct {
 	surface, powder, packedIce, ice, calcite, gravel, swamp *Perlin
 	frozenA, frozenB                                        *Perlin // the frozen oceans' open-water patches
 	smallPatch                                              *Perlin // SMALL_PATCH (26.3): the dappled forest's coarse dirt
+	secondary                                               *Perlin // SURFACE_SECONDARY: how far the sandstone reaches under the sand
 }
 
 func newSurfaceNoises(seed int64) *surfaceNoises {
@@ -30,6 +31,7 @@ func newSurfaceNoises(seed int64) *surfaceNoises {
 		frozenA:    NewPerlin(seed ^ 0x5F08),
 		frozenB:    NewPerlin(seed ^ 0x5F09),
 		smallPatch: NewPerlin(seed ^ 0x5F0A),
+		secondary:  NewPerlin(seed ^ 0x5F0B),
 	}
 }
 
@@ -68,6 +70,27 @@ func (n *surfaceNoises) gravelIn(x, z int, lo, hi float64) bool { // GRAVEL -8
 func (n *surfaceNoises) smallPatchAbove(x, z int, t float64) bool {
 	return n.smallPatch.Noise2(float64(x)/8, float64(z)/8) >= t/6.67
 }
+
+// secondaryDepth is the stone-depth condition's secondary range: the
+// SURFACE_SECONDARY noise (-6, amplitudes 1 1 0 1) mapped from [-1, 1] onto
+// [0, span].
+func (n *surfaceNoises) secondaryDepth(x, z, span int) int {
+	v := n.secondary.FBm(float64(x)/64, float64(z)/64, 4, 2, 1) / 2.1
+	d := int((v + 1) / 2 * float64(span))
+	return clampInt(d, 0, span)
+}
+
+// hole is SurfaceRules.hole: the column's surface depth has run out
+// (vanilla's depth is SURFACE × 2.75 + 3, so its noise below about -0.75,
+// the far low tail). This noise is narrower than vanilla's — its 1.5%
+// quantile is about -0.18 — so the threshold is set for the tail's share of
+// columns rather than its value: patches a few blocks across, about one
+// column in seventy. Such a column has a floor and nothing under it — and in
+// the frozen oceans not even the floor.
+func (n *surfaceNoises) hole(x, z int) bool {
+	return n.surface.FBm(float64(x)/64, float64(z)/64, 3, 2, 1)/2.1 < -0.18
+}
+
 func (n *surfaceNoises) swampAbove(x, z int, t float64) bool { // SWAMP -2
 	return n.swamp.Noise2(float64(x)/4, float64(z)/4) > t
 }
@@ -79,6 +102,27 @@ var Calcite = blockBase("calcite")
 type surface struct {
 	top, under uint32
 	badlands   bool
+	// deep is what lies under the under-floor, down to deepN more blocks
+	// (DEEP_UNDER_FLOOR / VERY_DEEP_UNDER_FLOOR): the sandstone under a
+	// desert's or a beach's sand. Zero for none.
+	deep  uint32
+	deepN int
+}
+
+// ceilingSwap is the ON_CEILING half of the sand and gravel rules
+// (sand_or_sandstone_if_ceiling, gravel_or_stone_if_ceiling and the
+// badlands' red sand): a surface cell with a cave straight under it is laid
+// as the block that does not fall.
+func ceilingSwap(s uint32) uint32 {
+	switch s {
+	case Sand:
+		return Sandstone
+	case RedSand:
+		return RedSandstone
+	case Gravel:
+		return Stone
+	}
+	return s
 }
 
 // steep is SurfaceRules.steep: the ground climbs four or more from north to
@@ -106,6 +150,17 @@ func (g *Generator) surfaceFor(b *Biome, x, z, h int) surface {
 		grassOrDirt = GrassBlock
 	}
 	s := surface{top: grassOrDirt, under: Dirt}
+	if isFrozenOcean(b.Name) && notUnderDeep && n.hole(x, z) {
+		// A hole in the frozen oceans takes the floor block itself: air
+		// where the floor is dry, water where it lies shallow, and bare
+		// stone under it (the depth that ran out is the under-floor's). A
+		// deep floor keeps its gravel.
+		s.top, s.under = Water, Stone
+		if notUnderwater {
+			s.top = Air
+		}
+		return s
+	}
 	switch b.Name {
 	case "minecraft:frozen_peaks":
 		switch {
@@ -222,8 +277,14 @@ func (g *Generator) surfaceFor(b *Biome, x, z, h int) surface {
 		s.top = Mycelium
 	case "minecraft:desert":
 		s.top, s.under = Sand, Sand
+		if notUnderDeep { // VERY_DEEP_UNDER_FLOOR: up to thirty more of sandstone
+			s.deep, s.deepN = Sandstone, n.secondaryDepth(x, z, 30)
+		}
 	case "minecraft:beach", "minecraft:snowy_beach", "minecraft:warm_ocean":
 		s.top, s.under = Sand, Sand
+		if notUnderDeep { // DEEP_UNDER_FLOOR: up to six more of sandstone
+			s.deep, s.deepN = Sandstone, n.secondaryDepth(x, z, 6)
+		}
 	case "minecraft:lukewarm_ocean", "minecraft:deep_lukewarm_ocean":
 		s.top, s.under = Sand, Sand
 	case "minecraft:dripstone_caves":
@@ -247,6 +308,8 @@ func (g *Generator) surfaceFor(b *Biome, x, z, h int) surface {
 			}
 		case notUnderwater:
 			s.top = RedSand
+		case !n.hole(x, z): // under water the floor is orange terracotta, but for a hole
+			s.top = OrangeTerracotta
 		case notUnderDeep:
 			s.top = WhiteTerracotta
 		default:

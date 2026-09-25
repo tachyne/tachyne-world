@@ -132,6 +132,13 @@ func (h *hub) structureChestTable(pos blockPos) (string, bool) {
 			}
 		}
 	}
+	if s := g.BeachedShipwreckIn(pos.x, pos.z); s.Exists {
+		for _, c := range s.Chests {
+			if pos.x == c.X && pos.y == c.Y && pos.z == c.Z {
+				return c.Table, true
+			}
+		}
+	}
 	if r := g.OceanRuinsIn(pos.x, pos.z); r.Exists {
 		for _, p := range r.Pieces {
 			for _, c := range p.Chests {

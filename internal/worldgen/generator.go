@@ -361,7 +361,11 @@ func (g *Generator) columnAt(wx, wz int) column {
 // terrainCell is a column's generated block at y before any feature: the
 // noise fill, carved, with the sulfur caves' underground bands laid in.
 func (g *Generator) terrainCell(c column, x, y, z int) uint32 {
-	return g.sulfurBand(g.carve(c.block(y), x, y, z, c.h), c, x, y, z)
+	b := g.carve(c.block(y), x, y, z, c.h)
+	if c.h-1-y <= 3 && ceilingSwap(b) != b && g.carve(c.block(y-1), x, y-1, z, c.h) == Air {
+		b = ceilingSwap(b) // ON_CEILING: sand over a cave is sandstone (surfacerules.go)
+	}
+	return g.sulfurBand(b, c, x, y, z)
 }
 
 // top/sub read the biome's surface blocks (badlands bands its terracotta).
@@ -405,6 +409,8 @@ func (c column) block(y int) uint32 {
 			return c.topBlock()
 		case d <= 3:
 			return c.subBlock(y)
+		case d <= 3+c.surf.deepN && c.surf.deep != 0:
+			return c.surf.deep
 		case y < 0:
 			return Deepslate
 		default:
@@ -456,7 +462,11 @@ func (g *Generator) supportSurface(ch *Chunk, cx, cz int32) {
 			// Undercut only if the block directly beneath the surface is air
 			// (a fluid below means shoreline/seabed — leave it).
 			if get(lx, y-1, lz) == Air {
-				set(lx, y-1, lz, col.subBlock(y-1))
+				fill := col.subBlock(y - 1)
+				if y-2 > MinY && get(lx, y-2, lz) == Air {
+					fill = ceilingSwap(fill) // the fill is a cave's ceiling in turn
+				}
+				set(lx, y-1, lz, fill)
 			}
 		}
 	}
@@ -576,6 +586,8 @@ func (g *Generator) GenerateChunk(cx, cz int32) *Chunk {
 	g.placeLavaLakes(ch, cx, cz) // lake_lava_surface / lake_lava_underground
 	g.placeOres(ch, cx, cz)      // after carving: veins only in surviving stone
 	g.placeGeodes(ch, cx, cz)    // amethyst geodes (may straddle chunk borders)
+	// Forest rocks, ice spikes and ice patches, before the plants.
+	g.decorateSurface(ch, cx, cz)
 	g.decorate(ch, cx, cz)
 	removeFloatingFragments(ch) // delete terrain a cave severed from the ground —
 	//                               BEFORE structures, so it never culls a structure's
