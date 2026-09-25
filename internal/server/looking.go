@@ -86,6 +86,15 @@ func (h *hub) idleLook(players map[int32]*tracked, m *mob) {
 	if m.hasTarget {
 		return // hunting: the chase already points it where it is going
 	}
+	// InteractGoal(Player, 3, 1.0): a wandering trader always looks at a
+	// player within three blocks.
+	if m.etype == entityWanderingTrader {
+		if t := h.nearestPlayerIn(players, m.dim, m.x, m.z, 3); t != nil {
+			m.lookEID = t.p.eid
+			m.lookTicks = int32(lookPlayerTicksMin + h.rng.Intn(lookPlayerTicksMax-lookPlayerTicksMin))
+			return
+		}
+	}
 	// LookAtPlayerGoal first, as vanilla adds it first at the same priority.
 	if t := h.nearestPlayerIn(players, m.dim, m.x, m.z, d); t != nil && !foxBusy && h.rng.Float64() < lookChance {
 		m.lookEID = t.p.eid

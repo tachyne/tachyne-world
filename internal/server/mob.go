@@ -119,6 +119,8 @@ type mob struct {
 	driftPoi        blockPos   // …the village point it is walking to
 	driftVisited    []blockPos // …and the last sixteen it reached
 	driftNext       uint64     // …and when it may look for a point again after finding none
+	traderWander    blockPos   // wandering trader: WanderToPositionGoal's point
+	traderWandering bool       // …set
 	drownedGoal     bool       // drowned: walking to water (by day) or to the beach (at night)
 	strafeBack      bool       // RangedBowAttackGoal.strafingBackwards: drifting away while circling
 	floatX          float64    // RandomFloatAroundGoal's wanted position (ghast)
@@ -1029,6 +1031,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		case m.etype == entityFox && h.foxIdleStep(players, m):
 			// A fox walking in toward a village at night, after berries,
 			// after a dropped item, or sat looking about.
+		case m.etype == entityWanderingTrader && h.traderWanderStep(m):
+			// A wandering trader heading for the bell it was sent to, or back
+			// inside the sixteen blocks about it.
 		case m.etype == entityParrot && h.parrotFollowMobStep(m):
 			// A parrot keeping company with a nearby mob (FollowMobGoal).
 		case (nautilusKind(m.etype) || m.etype == entityHappyGhast) && h.restrictionHomeStep(m):

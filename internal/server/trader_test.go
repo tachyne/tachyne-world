@@ -215,3 +215,47 @@ func TestTraderLlamaTargets(t *testing.T) {
 		t.Fatalf("a mob that hurts the trader becomes its llamas' target, got %d", l.llamaWolf)
 	}
 }
+
+// WanderingTraderSpawner sends the trader to the nearest bell (setWanderTarget)
+// and homes it there (setHomeTo 16); WanderToPositionGoal walks it over at
+// 0.35 until within two, and MoveTowardsRestrictionGoal brings it back
+// inside its home.
+func TestTraderWandersToTheBell(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	pl.p.eid = 500
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	h.world.ForceLoad(0, 0, 3)
+	bell := blockPos{20, int(h.world.SurfaceY(20, 0)), 0}
+	h.world.SetBlock(bell.x, bell.y, bell.z, bellDefault)
+	pl.x, pl.y, pl.z = 0.5, float64(h.world.SurfaceY(0, 0)), 0.5
+	var tr *mob
+	for i := 0; i < 500 && tr == nil; i++ {
+		if h.traderSpawn(players) {
+			for _, m := range h.mobs {
+				if m.etype == entityWanderingTrader {
+					tr = m
+				}
+			}
+		}
+	}
+	if tr == nil {
+		t.Skip("no spawnable ground about the fixture")
+	}
+	if !tr.traderWandering || tr.traderWander != bell || tr.homePos != bell || tr.homeR != traderHomeRadius {
+		t.Fatalf("the trader is sent to and homed at the bell: wander %v (%v) home %v r%d", tr.traderWander, tr.traderWandering, tr.homePos, tr.homeR)
+	}
+	tr.x, tr.z = float64(bell.x)-10.5, float64(bell.z)+0.5
+	if !h.traderWanderStep(tr) || tr.vx <= 0 {
+		t.Fatalf("it walks toward the bell: vx %v", tr.vx)
+	}
+	tr.x, tr.y, tr.z = float64(bell.x)+0.5, float64(bell.y), float64(bell.z)+1.5
+	if h.traderWanderStep(tr) || tr.traderWandering {
+		t.Fatal("within two of the bell it lets the point go")
+	}
+	tr.x = float64(bell.x) + 30.5
+	if !h.traderWanderStep(tr) || tr.vx >= 0 {
+		t.Fatal("outside its home it walks back in")
+	}
+}

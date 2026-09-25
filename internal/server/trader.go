@@ -1,6 +1,6 @@
 package server
 
-import "math"
+import "github.com/tachyne/tachyne-world/internal/world"
 
 // The wandering trader (WanderingTraderSpawner, WanderingTrader, and the
 // wandering_trader trade sets): every twenty minutes the world
@@ -77,7 +77,16 @@ func (h *hub) traderSpawn(players map[int32]*tracked) bool {
 	if t.dim != 0 {
 		return false
 	}
-	x, z, ok := h.traderSpawnPosNear(int(math.Floor(t.x)), int(math.Floor(t.z)), traderSpawnRange)
+	// The reference point is the nearest meeting bell within 48 of the
+	// player, else the player's own spot: the trader spawns near it, heads
+	// for it and keeps within sixteen of it (setWanderTarget, setHomeTo).
+	ref := blockPos{floorInt(t.x), floorInt(t.y), floorInt(t.z)}
+	if w := h.poiWorld(dimOverworld); w != nil {
+		if bells := w.POIsNear(ref.x, ref.y, ref.z, traderSpawnRange, func(p world.POI) bool { return p.Kind == poiKindMeeting }); len(bells) > 0 {
+			ref = blockPos{bells[0].X, bells[0].Y, bells[0].Z}
+		}
+	}
+	x, z, ok := h.traderSpawnPosNear(ref.x, ref.z, traderSpawnRange)
 	if !ok {
 		return false
 	}
@@ -87,6 +96,8 @@ func (h *hub) traderSpawn(players map[int32]*tracked) bool {
 	}
 	h.rollTraderOffers(m)
 	m.traderDespawn = traderDespawnTicks
+	m.traderWander, m.traderWandering = ref, true
+	m.homePos, m.homeR = ref, traderHomeRadius
 	for i := 0; i < 2; i++ {
 		if lx, lz, ok := h.traderSpawnPosNear(x, z, traderLlamaRange); ok {
 			if l := h.spawnSpecies(players, entityTraderLlama, 0, float64(lx)+0.5, float64(h.world.SurfaceY(lx, lz)), float64(lz)+0.5); l != nil {
@@ -176,3 +187,38 @@ func (h *hub) traderStep(players map[int32]*tracked, m *mob) bool {
 	}
 	return false
 }
+
+const traderHomeRadius = 16 // WanderingTraderSpawner: setHomeTo(referencePos, 16)
+
+// traderWanderStep is the trader's WanderToPositionGoal(2.0, 0.35) and
+// MoveTowardsRestrictionGoal(0.35): it walks to the point it was sent to
+// (ten blocks at a time along the way) until within two of it, then lets
+// the point go; after that, outside its home it walks back in. It reports
+// whether it holds the trader.
+func (h *hub) traderWanderStep(m *mob) bool {
+	if m.traderWandering {
+		tx, tz := float64(m.traderWander.x)+0.5, float64(m.traderWander.z)+0.5
+		if dist3(tx, float64(m.traderWander.y)+0.5, tz, m.x, m.y, m.z) >= 2 {
+			m.vx, m.vz = straightSteer(m, tx, tz, 0)
+			m.vx, m.vz = m.vx*traderWalkSpeed, m.vz*traderWalkSpeed
+			m.rest = 0
+			return true
+		}
+		m.traderWandering = false // stop(): setWanderTarget(null)
+	}
+	if m.homeR == 0 {
+		return false
+	}
+	dx := float64(floorInt(m.x) - m.homePos.x)
+	dy := float64(floorInt(m.y) - m.homePos.y)
+	dz := float64(floorInt(m.z) - m.homePos.z)
+	if r := float64(m.homeR); dx*dx+dy*dy+dz*dz < r*r { // isWithinHome
+		return false
+	}
+	m.vx, m.vz = straightSteer(m, float64(m.homePos.x)+0.5, float64(m.homePos.z)+0.5, 0)
+	m.vx, m.vz = m.vx*traderWalkSpeed, m.vz*traderWalkSpeed
+	m.rest = 0
+	return true
+}
+
+const traderWalkSpeed = 0.35 // both goals' speed modifier

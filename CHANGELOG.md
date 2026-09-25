@@ -195,6 +195,9 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Zombies prowl real villages.** At night a zombie now walks from one
   villager's bed, workplace or bell to the next, as in vanilla, so villages
   players build draw them too, and a generated village left empty does not.
+- **Wandering traders come to the village bell.** A wandering trader now
+  turns up near the nearest village bell, walks over to it and keeps within
+  sixteen blocks of it, as in vanilla, and looks at you when you are close.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in
