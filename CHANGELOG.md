@@ -28,6 +28,9 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Lava lakes.** Pools of lava ringed with stone now form on the surface
   (rarely) and underground (often, from y=0 up), as in vanilla. They too
   keep clear of your builds.
+- **Dirt, gravel and clay pockets underground.** Stone now holds pockets of
+  dirt and gravel everywhere, and lush caves pockets of clay, as in
+  vanilla — never in the stone around a build.
 
 ### Fixed
 - **Sculk catalysts leave your builds alone.** A catalyst's bloom now turns
