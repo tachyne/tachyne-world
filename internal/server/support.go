@@ -198,6 +198,26 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 		sky, blk := w.LightAt(pos.x, pos.y, pos.z)
 		return max(sky, blk) < 13 && worldgen.IsSolidFull(b)
 	}
+	if isCarpetBlock(state) {
+		// CarpetBlock.canSurvive: !isEmptyBlock(below) — anything but air
+		// holds a carpet: a torch, a flower, a fence, water.
+		b := below()
+		return b != worldgen.Air && b != caveAirState && b != voidAirState
+	}
+	if isFire(state) && state != soulFire {
+		// FireBlock.canSurvive, which its updateShape asks on every
+		// neighbour change: a sturdy floor, or something beside it that can
+		// burn — a fire left with neither goes out at once.
+		if holdsBlock(below()) {
+			return true
+		}
+		for _, d := range sixDirs {
+			if isFlammable(w.At(pos.x+d.x, pos.y+d.y, pos.z+d.z)) {
+				return true
+			}
+		}
+		return false
+	}
 	if state == soulFire { // SoulFireBlock.canSurvive: its soul block below
 		return soulFireBase(below())
 	}
@@ -277,10 +297,19 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 			return holdsBlock(behind())
 		}
 	case worldgen.SupportAttached:
-		// Amethyst points away from the face it grew on. Lichen and sculk vein
-		// carry a boolean per face instead of a facing, so any neighbour that
-		// can hold them counts — this must not be read as "needs a floor", or
-		// every lichen on a cave wall comes down.
+		// AmethystClusterBlock.canSurvive: the block it points away from —
+		// below a bud facing up, above one facing down, behind one on a wall.
+		// (Lichen and sculk vein share this class but are multiface blocks,
+		// answered above; this is left for anything else it may hold.)
+		if st, f := amethystStage(state); st >= 0 && f != "" {
+			switch f {
+			case "up":
+				return holdsBlock(below())
+			case "down":
+				return holdsBlock(above())
+			}
+			return holdsBlock(behind())
+		}
 		if holdsBlock(behind()) {
 			return true
 		}
@@ -346,9 +375,12 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 		rooted := (worldgen.SupportFor(b) == worldgen.SupportStem && !isBigDripleaf(b)) || supportsBigDripleaf[b]
 		return rooted && worldgen.SupportFor(above()) == worldgen.SupportStem // a stem or the leaf above
 	case worldgen.SupportSpawn:
-		// FrogspawnBlock.mayPlaceOn: water under it, and not under water
-		// itself — a clutch floats ON the surface.
-		return worldgen.IsWater(below()) && !worldgen.IsWater(state) && !worldgen.IsWater(above())
+		// FrogspawnBlock.mayPlaceOn: the fluid under it is #supports_frogspawn
+		// — a water SOURCE, which a waterlogged block or a bed of seagrass
+		// holds too, and running water does not — and the clutch's own cell
+		// holds no fluid. What lies above it does not matter.
+		b := below()
+		return worldgen.IsFluidSource(b, worldgen.WaterBase) || (worldgen.HoldsWater(b) && !worldgen.IsWater(b))
 	case worldgen.SupportHangable:
 		if prop("hanging") == "true" {
 			return holdsBlock(above())
@@ -562,7 +594,7 @@ func (h *hub) dropUnsupported(players map[int32]*tracked, dim int, pos blockPos)
 				queue = append(queue, n)
 				continue
 			}
-			if (worldgen.SupportFor(st) == worldgen.SupportNone && !isBedBlock(st)) || supported(h.worldFor(dim), n, st) {
+			if (worldgen.SupportFor(st) == worldgen.SupportNone && !isBedBlock(st) && !isFire(st)) || supported(h.worldFor(dim), n, st) {
 				continue
 			}
 			// A stalactite does not break when its grip goes — it FALLS, whole,

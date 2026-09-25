@@ -95,6 +95,13 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **What holds a block, as in vanilla.** Carpet stays on anything that is
+  not air — a torch, a flower, even water — where it used to fall off.
+  Amethyst buds and clusters point out of the face you set them on (up,
+  down or sideways) and drop when that block goes. A fire whose floor goes,
+  with nothing beside it to burn, goes out at once. Frogspawn needs still
+  water under it (running water no longer holds it) and no longer minds
+  water above it.
 - **Cut plants grow on, and hanging moss holds together.** Cutting the top
   off a kelp stalk or snapping a vine now leaves a fresh tip that keeps
   growing, as in vanilla; before, the cut end never grew again. Bamboo
