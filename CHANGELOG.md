@@ -175,6 +175,9 @@ the public history since the project was open-sourced on 2026-07-10.
   players every few seconds in a tall column around it and goes for the
   highest one it can see, and its circling drifts up and down and widens
   over time instead of holding one fixed ring.
+- **Bats flit like bats.** A flying bat now darts from point to point near
+  it, up and down as well as around, as in vanilla, instead of drifting at
+  a fixed height, and a hanging bat turns its head now and then.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in

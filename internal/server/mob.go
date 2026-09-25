@@ -442,6 +442,9 @@ type mob struct {
 	snowTarget                      int32      // snow golem: the monster its target goal holds
 	rideMovedAt                     uint64     // ridden mount: tick its rider last moved it horizontally
 	rideDX, rideDZ                  float64    // ridden mount: that last horizontal move
+	batT                            blockPos   // bat: the cell it is flying at
+	batHasT                         bool       // …set
+	batVX, batVY, batVZ             float64    // bat: its own per-tick velocity
 	snowUnseen, snowSeeTime         int        // snow golem: ticks that target has been out of / in sight
 	sulfurCalmUntil                 uint64     // sulfur cube: TemptGoal calmDown — no tempting before this tick
 	wardenDisturb                   blockPos   // warden: DISTURBANCE_LOCATION (where it goes to look)

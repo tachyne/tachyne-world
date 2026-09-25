@@ -73,6 +73,9 @@ func (h *hub) batStep(players map[int32]*tracked, m *mob) bool {
 			return false
 		}
 		m.vx, m.vy, m.vz = 0, 0, 0
+		if h.rng.Intn(200/mobMoveInterval) == 0 { // hanging, it looks about now and then
+			m.headYaw = float32(h.rng.Intn(360))
+		}
 		return true
 	}
 	if solidAbove && h.rng.Intn(batRestOdds/mobMoveInterval) == 0 {
@@ -80,7 +83,57 @@ func (h *hub) batStep(players map[int32]*tracked, m *mob) bool {
 		m.vx, m.vy, m.vz = 0, 0, 0
 		return true
 	}
-	return false
+	h.batFly(m)
+	return true
+}
+
+// batFly is the flying half of Bat.customServerAiStep: a target cell up to
+// six blocks off sideways and two below to three above, re-picked when it
+// stops being air, one tick in thirty, or once the bat is within two of it;
+// each tick the velocity closes a tenth of the way on 0.5 a tick along each
+// axis toward it (0.7 up or down), under the air's 0.91 drag and the bat's
+// 0.6 vertical damping. Two ticks make one mob update.
+func (h *hub) batFly(m *mob) {
+	w := h.worldFor(m.dim)
+	if m.batHasT && (!isAirState(w.At(m.batT.x, m.batT.y, m.batT.z)) || m.batT.y <= worldgen.MinY) {
+		m.batHasT = false
+	}
+	cx, cy, cz := float64(m.batT.x)+0.5, float64(m.batT.y)+0.5, float64(m.batT.z)+0.5
+	if !m.batHasT || h.rng.Intn(30/mobMoveInterval) == 0 || dist3(cx, cy, cz, m.x, m.y, m.z) < 2 {
+		m.batT = blockPos{
+			floorInt(m.x + float64(h.rng.Intn(7)-h.rng.Intn(7))),
+			floorInt(m.y + float64(h.rng.Intn(6)) - 2),
+			floorInt(m.z + float64(h.rng.Intn(7)-h.rng.Intn(7))),
+		}
+		m.batHasT = true
+	}
+	sign := func(v float64) float64 {
+		switch {
+		case v > 0:
+			return 1
+		case v < 0:
+			return -1
+		}
+		return 0
+	}
+	x, y, z := m.x, m.y, m.z
+	for i := 0; i < mobMoveInterval; i++ {
+		dx := float64(m.batT.x) + 0.5 - x
+		dy := float64(m.batT.y) + 0.1 - y
+		dz := float64(m.batT.z) + 0.5 - z
+		m.batVX += (sign(dx)*0.5 - m.batVX) * 0.1
+		m.batVY += (sign(dy)*0.7 - m.batVY) * 0.1
+		m.batVZ += (sign(dz)*0.5 - m.batVZ) * 0.1
+		x, y, z = x+m.batVX, y+m.batVY, z+m.batVZ
+		m.batVX, m.batVZ = m.batVX*0.91, m.batVZ*0.91
+		m.batVY *= 0.98 * 0.6
+	}
+	m.vx, m.vz = x-m.x, z-m.z
+	m.flyAim(h.tick.Load(), y)
+	if m.vx != 0 || m.vz != 0 {
+		m.yaw = float32(math.Atan2(-m.vx, m.vz) * 180 / math.Pi)
+	}
+	m.rest = 0
 }
 
 // parrotImitateTick is the ambient mimicry.
