@@ -387,3 +387,25 @@ func TestStopsoundReachesTheTarget(t *testing.T) {
 		}
 	}
 }
+
+// TeleportCommand: `facing <pos>` turns the target to look at the point from
+// its destination, and a target in another dimension is moved into the
+// destination's.
+func TestTeleportFacingAndAcrossDimensions(t *testing.T) {
+	h := newHub(world.New(1))
+	me, you := survPlayer(h), survPlayer(h)
+	you.p.eid = me.p.eid + 1
+	you.p.name = "you"
+	players := map[int32]*tracked{me.p.eid: me, you.p.eid: you}
+	h.playersRef = players
+	h.onTeleportTargets(players, evTeleportTargets{by: me.p.eid, targets: "@a[name=you]",
+		x: 10.5, y: 80, z: 10.5, face: true, fx: 20.5, fy: 80 + you.eyeHeight(), fz: 10.5})
+	if you.x != 10.5 || you.yaw < -90.5 || you.yaw > -89.5 || you.pitch < -0.5 || you.pitch > 0.5 {
+		t.Fatalf("facing +x from 10.5: at %.1f yaw %.1f pitch %.1f", you.x, you.yaw, you.pitch)
+	}
+	you.dim = dimNether
+	h.onTeleportTargets(players, evTeleportTargets{by: me.p.eid, targets: "@a[name=you]", x: 5.5, y: 70, z: 5.5})
+	if you.p.pendingDim.Load() != int32(dimOverworld) || !you.p.pendingDestOK {
+		t.Fatalf("a Nether target was not sent to the overworld: pending %d", you.p.pendingDim.Load())
+	}
+}

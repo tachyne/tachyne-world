@@ -412,6 +412,12 @@ type evTeleportTargets struct {
 	x, y, z    float64
 	rot        bool
 	yaw, pitch float32
+	// facing: look at a point (face) or at an entity (faceEntity, its eyes
+	// or its feet) from the destination (TeleportCommand LookAt).
+	face       bool
+	fx, fy, fz float64
+	faceEntity string
+	faceEyes   bool
 }
 
 func (evTeleportTargets) isHubEvent() {}
@@ -438,13 +444,43 @@ func (h *hub) onTeleportTargets(players map[int32]*tracked, e evTeleportTargets)
 			return
 		}
 	}
+	if e.faceEntity != "" {
+		fs := h.commandTargets(players, e.by, e.faceEntity)
+		ms := h.commandMobs(players, e.by, e.faceEntity)
+		switch {
+		case len(fs) > 0:
+			e.face, e.fx, e.fy, e.fz = true, fs[0].x, fs[0].y, fs[0].z
+			if e.faceEyes {
+				e.fy += fs[0].eyeHeight()
+			}
+		case len(ms) > 0:
+			e.face, e.fx, e.fy, e.fz = true, ms[0].x, ms[0].y, ms[0].z
+			if e.faceEyes {
+				e.fy += ms[0].box().h * 0.85
+			}
+		default:
+			me.p.tell("No entity was found")
+			return
+		}
+	}
 	moved, name := 0, ""
 	for _, t := range ts {
-		if t.dim != dim {
-			continue // across dimensions is a portal's job here
-		}
 		if e.rot {
 			t.yaw, t.pitch = e.yaw, e.pitch
+		}
+		if e.face { // LookAt from the eyes at the destination
+			yaw, pitch := lookAngles(x, y+t.eyeHeight(), z, e.fx, e.fy, e.fz)
+			t.yaw, t.pitch = float32(yaw), float32(pitch)
+		}
+		if t.dim != dim {
+			// TeleportCommand moves the target into the destination's level:
+			// the connection's dimension switch lands them on the spot.
+			t.p.pendingFrom = dimPos{}
+			t.p.pendingDest = blockPos{floorInt(x), floorInt(y), floorInt(z) - 1}
+			t.p.pendingDestOK = true
+			t.p.pendingDim.Store(int32(dim))
+			moved, name = moved+1, t.p.name
+			continue
 		}
 		h.teleportPlayer(players, t, x, y, z)
 		moved, name = moved+1, t.p.name
@@ -456,6 +492,10 @@ func (h *hub) onTeleportTargets(players map[int32]*tracked, e evTeleportTargets)
 		m.x, m.y, m.z = x, y, z
 		if e.rot {
 			m.yaw = e.yaw
+		}
+		if e.face {
+			yaw, _ := lookAngles(x, y+m.box().h*0.85, z, e.fx, e.fy, e.fz)
+			m.yaw = float32(yaw)
 		}
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, false))
 		moved, name = moved+1, mobDisplayName(m.etype)

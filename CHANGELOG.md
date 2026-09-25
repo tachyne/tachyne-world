@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/tp … facing.** `/tp <targets> <x y z> facing <x y z>` and
+  `facing entity <target> [eyes|feet]` turn whoever is moved to look at the
+  point, and `/tp` now takes a player into another dimension, as in vanilla.
 - **/tellraw.** `/tellraw <targets> <message>` sends a JSON text message
   with its colours, styles, click and hover actions, as in vanilla. Score
   and selector parts are filled in for each reader. Bedrock players get the

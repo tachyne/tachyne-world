@@ -372,6 +372,31 @@ func (s *Server) cmdTeleport(p *player, args []string) {
 	// /tp <targets> <destination> and /tp <targets> <x> <y> <z> [<yaw> <pitch>]:
 	// someone else goes (TeleportCommand's targets forms). Positions and
 	// rotations are relative to the one running the command.
+	// /tp <targets> <x y z> facing <x y z> | facing entity <target> [eyes|feet].
+	if len(args) >= 6 && args[4] == "facing" {
+		x, y, z, ok := parsePosition(args[1:4], p.x, p.y, p.z, p.yaw, p.pitch)
+		if !ok {
+			p.tell("Usage: /tp <targets> <x> <y> <z> facing <x> <y> <z> | facing entity <target> [eyes|feet]")
+			return
+		}
+		e := evTeleportTargets{by: p.eid, targets: args[0], x: x, y: y, z: z}
+		switch {
+		case args[5] == "entity" && (len(args) == 7 || len(args) == 8):
+			e.faceEntity, e.faceEyes = args[6], len(args) == 7 || args[7] == "eyes"
+		case len(args) == 8:
+			fx, fy, fz, ok := parsePosition(args[5:8], p.x, p.y, p.z, p.yaw, p.pitch)
+			if !ok {
+				p.tell("Usage: /tp <targets> <x> <y> <z> facing <x> <y> <z>")
+				return
+			}
+			e.face, e.fx, e.fy, e.fz = true, fx, fy, fz
+		default:
+			p.tell("Usage: /tp <targets> <x> <y> <z> facing <x> <y> <z> | facing entity <target> [eyes|feet]")
+			return
+		}
+		s.hub.post(e)
+		return
+	}
 	if len(args) == 2 || len(args) == 4 || len(args) == 6 {
 		e := evTeleportTargets{by: p.eid, targets: args[0]}
 		if len(args) == 2 {
