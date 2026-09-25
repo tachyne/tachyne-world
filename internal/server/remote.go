@@ -264,6 +264,8 @@ func (r *remotePlayer) Action(v any) {
 		h.post(evStatsReq{eid: p.eid})
 	case attachproto.PlayerAbilities:
 		h.post(evAbilities{eid: p.eid, flying: e.Flying})
+	case attachproto.SuggestReq:
+		h.post(evSuggest{eid: p.eid, id: e.ID, text: e.Text})
 	case attachproto.TeleportToEntity:
 		h.post(evTeleportToEntity{eid: p.eid, uuid: e.UUID})
 	case attachproto.PlayerLoaded:
@@ -405,6 +407,8 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgBundleOpen, attachproto.BundleMark{})
 	case bundleClose:
 		send(attachproto.MsgBundleClose, attachproto.BundleMark{})
+	case attachproto.Suggestions:
+		send(attachproto.MsgSuggestions, ev)
 	case attachproto.PostEffects:
 		send(attachproto.MsgPostEffects, ev)
 	case attachproto.GhostRecipe:

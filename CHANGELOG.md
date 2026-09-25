@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **Tab completion for command arguments.** While typing a command, the
+  game rule names, effects, enchantments, mobs, blocks, particles,
+  structures, biomes, boss bar ids, sub-commands and online players now
+  complete, as they do in vanilla.
+- **Server resource packs.** A server can offer (or require) a resource
+  pack while players join, as vanilla's `resource-pack` settings do.
 - **/posteffect (26.3).** Operators can add, remove, clear and list screen
   post effects on players. They're kept with the player across relogs.
 - **/tick.** Operators can query the tick rate, change it, freeze the game,

@@ -94,6 +94,12 @@ func decodeCommandTree(t *testing.T, body []byte) ([]treeNode, int32) {
 					}
 				}
 			}
+			if err == nil && f&0x10 != 0 { // custom suggestions: an identifier after the properties
+				var sug string
+				if sug, err = protocol.ReadString(r); err == nil && sug != "minecraft:ask_server" {
+					t.Fatalf("node %d suggests %q", i, sug)
+				}
+			}
 		default:
 			t.Fatalf("node %d has an unknown type in flags %#x", i, f)
 		}

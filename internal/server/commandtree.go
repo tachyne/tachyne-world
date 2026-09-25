@@ -52,6 +52,7 @@ type cmdNode struct {
 	parser   int32
 	props    []byte
 	exec     bool
+	suggest  bool // ask_server: the client asks the world for completions here
 	children []cmdNode
 }
 
@@ -68,10 +69,14 @@ func argEntity(name string, flags byte, exec bool, kids ...cmdNode) cmdNode {
 	return argN(name, parserEntity, []byte{flags}, exec, kids...)
 }
 func argWord(name string, exec bool, kids ...cmdNode) cmdNode {
-	return argN(name, parserString, protocol.AppendVarInt(nil, stringPropWord), exec, kids...)
+	n := argN(name, parserString, protocol.AppendVarInt(nil, stringPropWord), exec, kids...)
+	n.suggest = true
+	return n
 }
 func argGreedy(name string, exec bool, kids ...cmdNode) cmdNode {
-	return argN(name, parserString, protocol.AppendVarInt(nil, stringPropGreedy), exec, kids...)
+	n := argN(name, parserString, protocol.AppendVarInt(nil, stringPropGreedy), exec, kids...)
+	n.suggest = true
+	return n
 }
 func argInt(name string, min, max int32, exec bool, kids ...cmdNode) cmdNode {
 	// brigadier:integer properties: a flags byte (0x01 has min, 0x02 has max)

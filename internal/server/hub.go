@@ -1618,6 +1618,8 @@ func (h *hub) run() {
 						}
 					}
 				}
+			case evSuggest:
+				h.onSuggest(players, e)
 			case evTeleportToEntity:
 				h.teleportToEntity(players, players[e.eid], e.uuid)
 			case evClientLoaded:

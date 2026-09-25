@@ -91,6 +91,9 @@ func encodeCommandTree(roots []cmdNode) []byte {
 		if f.n != nil && f.n.exec {
 			flags |= 0x04
 		}
+		if f.n != nil && f.n.lit == "" && f.n.suggest {
+			flags |= 0x10 // custom suggestions follow the properties
+		}
 		b = protocol.AppendU8(b, flags)
 		b = protocol.AppendVarInt(b, int32(len(f.kids)))
 		for _, k := range f.kids {
@@ -106,6 +109,9 @@ func encodeCommandTree(roots []cmdNode) []byte {
 		b = protocol.AppendString(b, f.n.arg)
 		b = protocol.AppendVarInt(b, f.n.parser)
 		b = append(b, f.n.props...)
+		if f.n.suggest {
+			b = protocol.AppendString(b, "minecraft:ask_server")
+		}
 	}
 	return protocol.AppendVarInt(b, 0) // root index
 }
