@@ -102,6 +102,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Small redstone and TNT rules.** Bats no longer press pressure plates or
+  trip tripwire, while armour stands now do; a player in adventure mode
+  can no longer light TNT with flint and steel or a flaming arrow, and a
+  mob's flaming arrow lights TNT only when mob griefing is on, as in
+  vanilla.
 - **Fire burns whatever it touches.** Players and mobs now catch fire when
   any part of their body is in a fire's block, as in vanilla, not only
   when the fire is right at their feet or head.

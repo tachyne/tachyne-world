@@ -191,3 +191,25 @@ func TestDaylightDetectorFollowsSun(t *testing.T) {
 		t.Fatalf("inverted noon should read 0 at once, got %d", p)
 	}
 }
+
+// Entity.isIgnoringBlockTriggers: a bat over a stone plate leaves it up; an
+// armour stand, a LivingEntity, presses it.
+func TestPlateIgnoresBatsFeelsArmorStands(t *testing.T) {
+	h, w, _, x, y, z := redSetup(t)
+	w.SetBlock(x, y, z, stonePlateOff)
+	players := map[int32]*tracked{}
+	bat := h.spawnMob(players, entityBat, float64(x)+0.5, float64(y)+0.06, float64(z)+0.5)
+	bat.vy = 0
+	h.updatePlates(players)
+	stepTicks(h, players, 4)
+	if w.At(x, y, z) != stonePlateOff {
+		t.Fatal("a bat pressed a stone plate")
+	}
+	h.removeMob(players, bat)
+	h.armorStands[999] = &armorStand{eid: 999, x: float64(x) + 0.5, y: float64(y), z: float64(z) + 0.5}
+	h.updatePlates(players)
+	stepTicks(h, players, 4)
+	if w.At(x, y, z) != stonePlateOn {
+		t.Fatal("an armour stand should press a stone plate")
+	}
+}

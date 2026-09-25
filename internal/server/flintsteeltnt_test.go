@@ -41,6 +41,14 @@ func TestFlintAndSteelWearsLightingTNT(t *testing.T) {
 	if pl.inv.slots[0].dmg != 1 {
 		t.Errorf("lighting TNT wore the flint and steel %d, want 1", pl.inv.slots[0].dmg)
 	}
+	// TntBlock.prime: an adventure player's lighter has no can_break for
+	// TNT, so nothing is lit.
+	h.tnt = nil
+	pl.gamemode = gmAdventure
+	light()
+	if len(h.tnt) != 0 || w.At(0, 180, 0) != worldgen.BlockBase("tnt") {
+		t.Fatal("an adventure player lit TNT")
+	}
 }
 
 // Fire lit over soul sand or soul soil is soul fire (BaseFireBlock.getState),

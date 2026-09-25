@@ -436,9 +436,14 @@ func (h *hub) updatePlatesIn(players map[int32]*tracked, dim int) {
 		}
 	}
 	for _, m := range h.mobs {
-		if m.dim == dim && m.dying == 0 {
+		if m.dim == dim && m.dying == 0 && !ignoresBlockTriggers(m) {
 			b := m.box()
 			ents = append(ents, plateToucher{m.x, m.y, m.z, b.w / 2, b.h, true})
+		}
+	}
+	for _, st := range h.armorStands { // a (non-marker) armour stand is a LivingEntity on a plate
+		if st.dim == dim {
+			ents = append(ents, plateToucher{st.x, st.y, st.z, 0.25, 1.975, true})
 		}
 	}
 	for _, it := range h.items {

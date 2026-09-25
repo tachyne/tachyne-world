@@ -181,6 +181,9 @@ func (evPrimeTNT) isHubEvent() {}
 // told why.
 func (h *hub) onPrimeTNT(players map[int32]*tracked, e evPrimeTNT) {
 	t := players[e.by]
+	if t != nil && t.gamemode == gmAdventure && h.rules.TNTExplodes {
+		return // TntBlock.prime: in adventure the lighter must be allowed to break TNT (can_break), and none is
+	}
 	if h.primeTNTBy(players, e.dim, e.x, e.y, e.z, tntFuseTicks, e.by) == nil {
 		if t != nil && e.item != 0 && !h.rules.TNTExplodes {
 			t.p.trySendEv(actionBarEv("TNT explosions are disabled")) // block.minecraft.tnt.disabled
