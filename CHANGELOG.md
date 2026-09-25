@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Spear zombies charge villagers and golems too.** A zombie, husk,
+  zombie villager or zombified piglin carrying a spear used to charge only
+  players and just bite anything else. As in vanilla, it now lowers its
+  spear and charges whatever it is hunting, and a villager it kills that
+  way can rise as a zombie villager.
 - **Wardens charge faster and wander slower.** A warden coming for you
   now moves at vanilla's fighting pace, a fifth faster than its walk, and
   when it has nobody to hunt it ambles about at half speed.

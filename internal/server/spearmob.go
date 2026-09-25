@@ -50,28 +50,41 @@ func spearWielder(m *mob) bool {
 	return false
 }
 
-// spearQuarry is the goal's target: the hunted player, when the mob has one.
-// A piglin's is the one its brain would pick — nobody in gold, and nobody at
+// spearQuarry is the goal's target (getTarget): the hunted player, or the
+// villager, golem or turtle it is after when no player is about. A
+// piglin's is the one its brain would pick — nobody in gold, and nobody at
 // all while it admires an ingot.
-func (h *hub) spearQuarry(players map[int32]*tracked, m *mob) *tracked {
-	if !m.hasTarget || m.preyTarget != 0 || m.dying > 0 {
-		return nil
+func (h *hub) spearQuarry(players map[int32]*tracked, m *mob) (quarry, bool) {
+	if !m.hasTarget || m.dying > 0 {
+		return quarry{}, false
 	}
 	if m.etype == entityPiglin {
 		if m.admireUntil != 0 {
-			return nil
+			return quarry{}, false
 		}
-		return h.piglinTarget(players, m, m.followRange())
+		if t := h.piglinTarget(players, m, m.followRange()); t != nil {
+			return quarry{t: t, x: t.x, y: t.y, z: t.z}, true
+		}
+		return quarry{}, false
 	}
-	return h.nearestHuntable(players, m.dim, m.x, m.z, m.followRange())
+	return h.rangedQuarry(players, m, m.followRange())
+}
+
+// quarryEyeY is the height the mob looks at on its target: a player's eyes,
+// or a mob's.
+func quarryEyeY(q quarry) float64 {
+	if q.t != nil {
+		return playerEyeY(q.t)
+	}
+	return q.o.y + mobEyeHeight(q.o)
 }
 
 // spearGoalStep runs SpearUseGoal for one mob update. Returns whether the
 // goal holds the mob's movement this update.
 func (h *hub) spearGoalStep(players map[int32]*tracked, m *mob) bool {
-	target := h.spearQuarry(players, m)
+	target, ok := h.spearQuarry(players, m)
 	sp := spearOf(m.held)
-	if target == nil || sp == nil {
+	if !ok || sp == nil {
 		h.spearGoalStop(players, m)
 		return false
 	}
@@ -99,7 +112,7 @@ func (h *hub) spearGoalStep(players map[int32]*tracked, m *mob) bool {
 	if g.engage > 0 {
 		if g.engage--; g.engage == 0 {
 			h.mobSpearRaise(players, m)
-			g.awayX, g.awayZ, g.hasAway = h.spearPosAway(m, target, math.Max(0, 9+mount-d), math.Max(1, 11+mount-d))
+			g.awayX, g.awayZ, g.hasAway = h.spearPosAway(m, target.x, target.z, math.Max(0, 9+mount-d), math.Max(1, 11+mount-d))
 			g.flee = 1
 		}
 	}
@@ -123,7 +136,7 @@ func (h *hub) spearGoalStep(players map[int32]*tracked, m *mob) bool {
 		default:
 			h.steerTo(m, target.x, target.z, speed)
 			if d < spearInRangeDist {
-				g.awayX, g.awayZ, g.hasAway = h.spearPosAway(m, target, 6+mount-d, 7+mount-d)
+				g.awayX, g.awayZ, g.hasAway = h.spearPosAway(m, target.x, target.z, 6+mount-d, 7+mount-d)
 			}
 		}
 	}
@@ -151,7 +164,7 @@ func (h *hub) mobSpearRaise(players map[int32]*tracked, m *mob) {
 // spearPosAway is LandRandomPos.getPosAway: a standable spot between minD and
 // maxD blocks from the mob, within a quarter turn of straight away from the
 // target.
-func (h *hub) spearPosAway(m *mob, target *tracked, minD, maxD float64) (float64, float64, bool) {
+func (h *hub) spearPosAway(m *mob, tx, tz, minD, maxD float64) (float64, float64, bool) {
 	if maxD < minD {
 		maxD = minD
 	}
@@ -159,7 +172,7 @@ func (h *hub) spearPosAway(m *mob, target *tracked, minD, maxD float64) (float64
 	if w == nil {
 		return 0, 0, false
 	}
-	ax, az := m.x-target.x, m.z-target.z
+	ax, az := m.x-tx, m.z-tz
 	if n := math.Hypot(ax, az); n > 1e-6 {
 		ax, az = ax/n, az/n
 	} else {
@@ -203,8 +216,8 @@ func (h *hub) mobSpearTick(players map[int32]*tracked, m *mob) {
 	ey := m.y + mobEyeHeight(m)
 	// The mob looks at its target (the goal's lookAt); with none, ahead.
 	lx, ly, lz := lookVector(m.yaw, 0)
-	if t := h.spearQuarry(players, m); t != nil {
-		dx, dy, dz := t.x-m.x, playerEyeY(t)-ey, t.z-m.z
+	if q, ok := h.spearQuarry(players, m); ok {
+		dx, dy, dz := q.x-m.x, quarryEyeY(q)-ey, q.z-m.z
 		if n := math.Sqrt(dx*dx + dy*dy + dz*dz); n > 1e-6 {
 			lx, ly, lz = dx/n, dy/n, dz/n
 		}
@@ -215,13 +228,22 @@ func (h *hub) mobSpearTick(players map[int32]*tracked, m *mob) {
 	base := m.mobAttrs().Get(attr.AttackDamage).Base()
 	affected := false
 	for _, tg := range h.spearLine(players, m.dim, m.x, ey, m.z, lx, ly, lz,
-		spearMinReach*spearMobReach, spearMaxReach*spearMobReach, along, m.eid, m.mount, false) {
-		v := tg.p
-		if at, ok := m.spearHits[v.p.eid]; ok && now-at < spearContactCooldown {
+		spearMinReach*spearMobReach, spearMaxReach*spearMobReach, along, m.eid, m.mount, true) {
+		// Players, and the creatures its kind hunts (villagers, golems,
+		// baby turtles); its own kind and bystanders are left alone.
+		if tg.m != nil && !h.preyOf(m, tg.m) {
 			continue
 		}
-		m.spearHits[v.p.eid] = now
-		tx, ty, tz := h.knownMove(v)
+		if at, ok := m.spearHits[tg.eid()]; ok && now-at < spearContactCooldown {
+			continue
+		}
+		m.spearHits[tg.eid()] = now
+		var tx, ty, tz float64
+		if tg.p != nil {
+			tx, ty, tz = h.knownMove(tg.p)
+		} else {
+			tx, ty, tz = h.mobMotion(tg.m)
+		}
 		rel := math.Max(0, attacker-(tx*lx+ty*ly+tz*lz)*20)
 		b := spearBlow{
 			dismount: sp.dismount.test(used, attacker, rel, spearMobAction),
@@ -232,13 +254,60 @@ func (h *hub) mobSpearTick(players map[int32]*tracked, m *mob) {
 			continue
 		}
 		b.dmg = base + math.Floor(rel*sp.mult)
-		if h.stabPlayerByMob(players, m, v, b) {
+		if tg.p != nil && h.stabPlayerByMob(players, m, tg.p, b) {
+			affected = true
+		}
+		if tg.m != nil && h.stabMobByMob(players, m, tg.m, b) {
 			affected = true
 		}
 	}
 	if affected {
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusKineticHit))
 	}
+}
+
+// stabMobByMob is LivingEntity.stabAttack from a mob onto a creature it
+// hunts: the blow, the shove and the dismount, and a zombie's kill of a
+// villager infects it as a bite's would (Zombie.killedEntity).
+func (h *hub) stabMobByMob(players map[int32]*tracked, m, v *mob, b spearBlow) bool {
+	if v.dying > 0 {
+		return false
+	}
+	landed := false
+	if b.damage {
+		dmg := b.dmg + float64(mobSharpness(m))
+		if plugin.Has[*plugin.EntityDamageByEntityEvent](h.plugins) {
+			dev := &plugin.EntityDamageByEntityEvent{AttackerEID: m.eid, VictimEID: v.eid, Damage: dmg}
+			if !h.plugins.Fire(dev) {
+				return false
+			}
+			dmg = math.Max(0, dev.Damage)
+		}
+		hp := v.health
+		v.hurtKind(dmg, dtSpear)
+		v.lastAttacker = m.eid
+		landed = v.health < hp
+	}
+	if b.knock && v.kbScale() > 0 && v.health > 0 {
+		h.mobKnockFrom(players, v, m.x, m.z)
+	}
+	dismounted := b.dismount && h.unseatMob(players, v)
+	if !landed && !b.knock && !dismounted {
+		return false
+	}
+	if v.health <= 0 {
+		if zombieKind(m.etype) && v.etype == entityVillager {
+			h.zombieKilledVillager(players, m, v)
+		} else {
+			h.killMob(players, v)
+		}
+		if m.preyTarget == v.eid {
+			m.preyTarget = 0
+		}
+	} else if !v.hostile && panicsAt(v, dtMobAttack) {
+		v.panic, v.fleeX, v.fleeZ, v.reroute = h.panicFor(v), m.x, m.z, 0
+	}
+	return true
 }
 
 // stabPlayerByMob is LivingEntity.stabAttack from a mob onto a player.
