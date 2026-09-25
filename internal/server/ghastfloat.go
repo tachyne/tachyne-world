@@ -33,8 +33,8 @@ func (floatAroundBehavior) steer(h *hub, m *mob) (float64, float64) {
 		dx, dy, dz = m.floatX-m.x, m.floatY-m.y, m.floatZ-m.z
 		d2 = dx*dx + dy*dy + dz*dz
 	}
-	// A flyer's vertical drift rides on hover/step elsewhere; the steering
-	// pair is horizontal, as it is for every other behaviour.
+	// The steering pair is horizontal, as for every behaviour; flyMove
+	// climbs or sinks toward floatY.
 	d := math.Sqrt(d2)
 	if d < 1e-6 {
 		return 0, 0

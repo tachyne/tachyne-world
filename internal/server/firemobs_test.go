@@ -82,4 +82,13 @@ func TestGhastFloatsAndIgnoresHeight(t *testing.T) {
 	if d := math.Hypot(g.floatX-g.x, g.floatZ-g.z); d > ghastFloatRange*1.5 {
 		t.Errorf("the spot should be within about sixteen blocks, got %v", d)
 	}
+	// …in three dimensions: a spot above it, the ghast climbs to it.
+	start := g.y
+	g.floatX, g.floatY, g.floatZ, g.floatSet = g.x, g.y+12, g.z, true
+	for i := 0; i < 40; i++ {
+		h.flyMove(g, g.x, g.z, int(math.Floor(g.x)), int(math.Floor(g.z)))
+	}
+	if g.y < start+3 {
+		t.Errorf("a ghast drifting to a spot twelve above rose only %.1f", g.y-start)
+	}
 }

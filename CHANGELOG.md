@@ -52,6 +52,14 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Phantoms circle higher.** A phantom now circles 20 to 40 blocks above
+  its target, picking a fresh height before each swoop, and never below sea
+  level, as in vanilla.
+- **Endermen blink away from harm.** Hurt by something that isn't a
+  creature — fire, a cactus, a fall — an enderman teleports away nine
+  times in ten, as in vanilla.
+- **Ghasts drift up and down.** A ghast now floats to its chosen point in
+  three dimensions instead of holding one height.
 - **Horses rear.** Horses, donkeys, mules and skeleton and zombie horses
   now rear up now and then with a whinny, as in vanilla, and rear when
   angered or bucking an untamed rider — the engine never sent the rearing

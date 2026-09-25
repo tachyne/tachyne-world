@@ -52,6 +52,11 @@ func (h *hub) flyMove(m *mob, nx, nz float64, fnx, fnz int) {
 		want = y
 	} else if y, ok := m.flyAimed(h.tick.Load()); ok { // led somewhere: a tempting player, a ghastling's player
 		want = y
+	} else if _, floats := m.behavior.(floatAroundBehavior); floats && m.floatSet {
+		// RandomFloatAroundGoal wants a point in three dimensions: the ghast
+		// rises and sinks to it rather than holding one height (and never
+		// dives at what it shoots).
+		want = math.Max(m.floatY, ground+1)
 	} else if m.hasTarget && m.ty != 0 { // diving on prey: aim at the target's level
 		want = m.ty + m.hover*0.3
 	}
