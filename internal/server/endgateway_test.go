@@ -7,15 +7,19 @@ import (
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
+// EndDragonFight.spawnNewGateway: one gateway per kill, from the shuffled
+// ring, until all twenty stand.
 func TestDragonDeathBuildsTheGatewayRing(t *testing.T) {
 	h, pl, players := endHub(t)
 	pl.dim = 2
-	h.dragonDefeated(players)
+	for kill := 1; kill <= endGatewayCount+1; kill++ {
+		h.dragonDefeated(players)
+		if want := min(kill, endGatewayCount); h.endGatewaysOpen() != want {
+			t.Fatalf("after kill %d: %d gateways, want %d", kill, h.endGatewaysOpen(), want)
+		}
+	}
 	for i := 0; i < endGatewayCount; i++ {
 		p := endGatewayRingPos(i)
-		if got := h.end.At(p.x, p.y, p.z); got != endGatewayState {
-			t.Fatalf("gateway %d missing at %v: state %d", i, p, got)
-		}
 		if r := math.Hypot(float64(p.x), float64(p.z)); r < 95 || r > 97 {
 			t.Fatalf("gateway %d off the ring: r=%.1f", i, r)
 		}
@@ -29,12 +33,18 @@ func TestDragonDeathBuildsTheGatewayRing(t *testing.T) {
 	}
 }
 
+// firstGateway is the ring position the first kill opened.
+func firstGateway(h *hub) blockPos {
+	o := h.endGatewayOrder()
+	return endGatewayRingPos(o[len(o)-1])
+}
+
 func TestGatewayThrowsYouOutAndBringsYouBack(t *testing.T) {
 	h, pl, players := endHub(t)
 	pl.dim = 2
 	h.dragonDefeated(players)
 
-	g := endGatewayRingPos(0)
+	g := firstGateway(h)
 	pl.x, pl.y, pl.z = float64(g.x)+0.5, float64(g.y), float64(g.z)+0.5
 	h.updateEndGateways(players)
 	if out := math.Hypot(pl.x, pl.z); out < endGatewayCast-16*16 {

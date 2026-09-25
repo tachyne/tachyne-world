@@ -38,12 +38,35 @@ func endGatewayRingPos(i int) blockPos {
 	}
 }
 
-// spawnEndGateways builds the whole ring. Vanilla hands out one gateway per
-// dragon kill; tachyne's dragon is a one-off, so there is no second fight to
-// dole them out over — the ring goes up at once.
-func (h *hub) spawnEndGateways(players map[int32]*tracked) {
+// endGatewayOrder is the order the ring opens in: vanilla shuffles the
+// twenty positions once per world (EndDragonFight's gateways list, from the
+// world seed) and takes one off the end per kill.
+func (h *hub) endGatewayOrder() []int {
+	return rand.New(rand.NewSource(h.world.Seed() ^ 0x3E6DA7E)).Perm(endGatewayCount)
+}
+
+// endGatewaysOpen counts the ring's gateways already standing.
+func (h *hub) endGatewaysOpen() int {
+	n := 0
 	for i := 0; i < endGatewayCount; i++ {
-		h.buildEndGateway(players, endGatewayRingPos(i))
+		if p := endGatewayRingPos(i); h.end.At(p.x, p.y, p.z) == endGatewayState {
+			n++
+		}
+	}
+	return n
+}
+
+// spawnNextEndGateway is EndDragonFight.spawnNewGateway: one more gateway
+// per dragon kill, taken from the end of the shuffled list, until all
+// twenty stand. The world itself records which are open.
+func (h *hub) spawnNextEndGateway(players map[int32]*tracked) {
+	order := h.endGatewayOrder()
+	for k := len(order) - 1; k >= 0; k-- {
+		p := endGatewayRingPos(order[k])
+		if h.end.At(p.x, p.y, p.z) != endGatewayState {
+			h.buildEndGateway(players, p)
+			return
+		}
 	}
 }
 

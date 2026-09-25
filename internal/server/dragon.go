@@ -13,7 +13,7 @@ import (
 // standard grounded mob physics): it circles the pillar ring, periodically
 // swoops at a player, and heals while any end crystal survives. Crystals sit
 // on the pillar tops and detonate when hit. Killing the dragon showers XP,
-// opens the exit portal (with the egg), and drops the elytra beside it.
+// opens the exit portal (with the egg on the first kill) and a gateway.
 
 const (
 	dragonHealth  = 200
@@ -256,7 +256,7 @@ func (h *hub) dragonCrystalDestroyed(players map[int32]*tracked, c *crystal, by 
 // endCrystalBlastPower is EndCrystal's level.explode radius.
 const endCrystalBlastPower = 6
 
-// dragonDefeated: XP shower, exit portal + egg, the elytra, eternal glory.
+// dragonDefeated: XP shower, exit portal, the first kill's egg, a gateway.
 func (h *hub) dragonDefeated(players map[int32]*tracked) {
 	h.dragon = nil
 	h.rules.DragonDefeated = true
@@ -279,10 +279,18 @@ func (h *hub) dragonDefeated(players map[int32]*tracked) {
 		}
 	}
 	h.setBlockIn(players, 2, blockPos{0, cy, 0}, worldgen.Bedrock)
-	h.setBlockIn(players, 2, blockPos{0, cy + 1, 0}, worldgen.DragonEgg)
-	h.spawnXPOrbIn(players, 2, 1500, 2.5, float64(cy+1), 0.5)
-	h.spawnItemIn(players, 2, itemElytra, 1, 3.5, float64(cy+1), 3.5)
-	h.spawnEndGateways(players) // the ring out to the outer islands
+	// EndDragonFight.setDragonKilled / EnderDragon.tickDeath: every kill
+	// opens a gateway, so a standing one means the dragon fell before. The
+	// egg comes only the first time, and the XP is 12000 then, 500 after.
+	// There is no elytra: that is the End ships' loot.
+	firstKill := h.endGatewaysOpen() == 0
+	xp := 500
+	if firstKill {
+		h.setBlockIn(players, 2, blockPos{0, cy + 1, 0}, worldgen.DragonEgg)
+		xp = 12000
+	}
+	h.spawnXPOrbIn(players, 2, xp, 0.5, float64(cy+1), 0.5)
+	h.spawnNextEndGateway(players)
 	for _, t := range players {
 		t.p.trySendEv(chatEv("The Ender Dragon has fallen!"))
 	}

@@ -66,7 +66,10 @@ func TestCrystalsHealAndDie(t *testing.T) {
 	}
 }
 
-func TestDragonDeathOpensExitAndDropsElytra(t *testing.T) {
+// EndDragonFight.setDragonKilled / EnderDragon.tickDeath: the first kill
+// leaves the egg and 12000 XP, a later one 500 XP and no new egg; no kill
+// drops an elytra (that is the End ships' loot).
+func TestDragonDeathOpensExitEggAndXP(t *testing.T) {
 	h, pl, players := endHub(t)
 	h.onDimSwitch(players, pl, evDim{eid: 1, dim: 2, x: 100.5, y: 49, z: 0.5})
 	m := h.dragon
@@ -77,24 +80,49 @@ func TestDragonDeathOpensExitAndDropsElytra(t *testing.T) {
 	if h.dragon != nil || !h.rules.DragonDefeated {
 		t.Fatal("defeat not recorded")
 	}
-	// Exit portal blocks exist near the origin.
-	found := false
-	for y := worldgen.EndSurfaceY - 2; y < worldgen.EndSurfaceY+10 && !found; y++ {
-		if h.end.At(1, y, 0) == worldgen.EndPortalBlock {
-			found = true
+	// Exit portal blocks exist near the origin, the egg on top.
+	portalY, egg := 0, false
+	for y := worldgen.EndSurfaceY - 2; y < worldgen.EndSurfaceY+10; y++ {
+		if h.end.At(1, y, 0) == worldgen.EndPortalBlock && portalY == 0 {
+			portalY = y
+		}
+		if h.end.At(0, y, 0) == worldgen.DragonEgg {
+			egg = true
 		}
 	}
-	if !found {
-		t.Fatal("exit portal missing")
+	if portalY == 0 || !egg {
+		t.Fatalf("exit portal at %d, egg %v", portalY, egg)
 	}
-	elytra := false
+	orbXP := func() int {
+		n := 0
+		for id, o := range h.orbs {
+			n += o.value * max(o.count, 1)
+			delete(h.orbs, id)
+		}
+		return n
+	}
+	if got := orbXP(); got != 12000 {
+		t.Fatalf("the first kill gave %d XP, want 12000", got)
+	}
 	for _, it := range h.items {
-		if it.item == itemElytra && it.dim == 2 {
-			elytra = true
+		if it.item == itemElytra {
+			t.Fatal("the dragon dropped an elytra")
 		}
 	}
-	if !elytra {
-		t.Fatal("the elytra should drop at the exit portal")
+	// A second fight: 500 XP, and the egg is not set again.
+	for y := worldgen.EndSurfaceY - 2; y < worldgen.EndSurfaceY+10; y++ {
+		if h.end.At(0, y, 0) == worldgen.DragonEgg {
+			h.end.SetBlock(0, y, 0, worldgen.Air) // someone took it
+		}
+	}
+	h.dragonDefeated(players)
+	if got := orbXP(); got != 500 {
+		t.Fatalf("a second kill gave %d XP, want 500", got)
+	}
+	for y := worldgen.EndSurfaceY - 2; y < worldgen.EndSurfaceY+10; y++ {
+		if h.end.At(0, y, 0) == worldgen.DragonEgg {
+			t.Fatal("a second kill set another egg")
+		}
 	}
 	// A rejoin must not respawn the dragon.
 	h.enterEnd(players, nil)

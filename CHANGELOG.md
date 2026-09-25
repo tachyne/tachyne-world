@@ -102,6 +102,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **The dragon's rewards are vanilla's.** Killing the Ender Dragon no
+  longer drops an elytra (those come from End ships). The first kill gives
+  12000 XP and the dragon egg; later kills give 500 XP and no new egg. Each
+  kill opens one more End gateway instead of all twenty at once.
 - **Potion swirls.** Players and mobs under an effect now give off its
   coloured swirls, as in vanilla — faint for a beacon's or a conduit's,
   none for an effect given with hidden particles, and Oozing, Weaving,
