@@ -175,3 +175,29 @@ func TestHeartOutputTellsComparator(t *testing.T) {
 		t.Errorf("the reading (%d) should reach the comparator, scheduled %v", link.outSig, h.hasScheduledTick(cpos))
 	}
 }
+
+// Level.destroyBlock: a block knocked out by the world (a ravager's
+// trample, a breached door) shows its break to those near and sends sculk a
+// BLOCK_DESTROY.
+func TestBreakBlockDropShowsTheBreak(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	pl := testTracked()
+	pl.x, pl.y, pl.z = 0.5, 180, 3.5
+	players[1] = pl
+	w := h.worldFor(0)
+	w.SetBlock(0, 179, 0, worldgen.BlockBase("farmland"))
+	wheat := cropRanges[0][0] + 3
+	w.SetBlock(0, 180, 0, wheat)
+	h.breakBlockDrop(players, 0, blockPos{0, 180, 0}, wheat)
+	saw := false
+	for _, fx := range drainFX(pl) {
+		if fx.Event == worldEventBlockBreak && fx.Data == int32(wheat) {
+			saw = true
+		}
+	}
+	if !saw {
+		t.Error("the trampled wheat should show its break (levelEvent 2001)")
+	}
+}
