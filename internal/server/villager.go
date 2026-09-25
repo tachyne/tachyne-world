@@ -328,9 +328,8 @@ func (h *hub) golemMelee(players map[int32]*tracked, m *mob) {
 			h.mobKnockVelocity(players, o)
 		}
 		h.playSoundDim(players, m.dim, "minecraft:entity.iron_golem.attack", sndNeutral, m.x, m.y, m.z, 1, 1)
-		// vanilla IronGolem.doHurtTarget: ATTACK_DAMAGE 15 → 15/2 + nextInt(15)
-		// = 7.5–21.5 per punch. Golem punches respect the target's armor.
-		o.hurt(7.5 + float64(h.rng.Intn(15)))
+		// Golem punches respect the target's armor.
+		o.hurt(h.golemPunchDamage(m))
 		if o.health <= 0 {
 			h.killMob(players, o)
 		}
@@ -656,4 +655,43 @@ func (h *hub) tradeMoveItems(t *tracked, m *mob, idx int) {
 	}
 	gather(0, o.trade.inItem)
 	gather(1, o.cost2Item)
+}
+
+// golemPunchDamage is IronGolem.doHurtTarget's roll: half its ATTACK_DAMAGE
+// plus nextInt of the whole (7.5–21.5 at the base 15), read from the
+// attribute so Strength and Weakness count.
+func (h *hub) golemPunchDamage(m *mob) float64 {
+	a := m.attackDamage()
+	if int(a) <= 0 {
+		return a
+	}
+	return a/2 + float64(h.rng.Intn(int(a)))
+}
+
+// golemCrackLevel is Crackiness.GOLEM.byFraction: 0 none, 1 low (under
+// three quarters), 2 medium (under half), 3 high (under a quarter).
+func golemCrackLevel(m *mob) int {
+	f := float32(m.health) / float32(m.maxHP())
+	switch {
+	case f < 0.25:
+		return 3
+	case f < 0.5:
+		return 2
+	case f < 0.75:
+		return 1
+	}
+	return 0
+}
+
+// golemCrackSound is IronGolem.hurtServer's IRON_GOLEM_DAMAGE: a blow that
+// moves the golem to a new crack stage plays it. Healing moves the stage
+// back silently (the ingot has its own repair sound). golemCrack holds the
+// stage last seen plus one, so a golem restored from disk is only observed
+// the first time.
+func (h *hub) golemCrackSound(players map[int32]*tracked, m *mob) {
+	lvl := golemCrackLevel(m) + 1
+	if m.golemCrack != 0 && lvl > m.golemCrack && m.health > 0 {
+		h.playSoundDim(players, m.dim, "minecraft:entity.iron_golem.damage", sndNeutral, m.x, m.y, m.z, 1, 1)
+	}
+	m.golemCrack = lvl
 }

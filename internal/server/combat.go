@@ -119,6 +119,8 @@ func meleeDamageFor(etype int) float64 {
 		return 5 // ZombifiedPiglin.createAttributes; the golden sword adds its +3
 	case entityBlaze:
 		return 6 // Blaze.createAttributes ATTACK_DAMAGE (it fell through to the zombie's 3)
+	case entityIronGolem:
+		return 15 // IronGolem.createAttributes ATTACK_DAMAGE (it fell through to the zombie's 3)
 	}
 	if d := speciesOf(etype); d != nil { // roster species: from the table
 		return float64(d.damage)

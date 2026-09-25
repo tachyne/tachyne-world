@@ -434,6 +434,7 @@ type mob struct {
 	wardenSniffCD                   int        // TryToSniff.SNIFF_COOLDOWN, in updates
 	wardenTarget                    int32      // who it last roared at (0 = nobody)
 	wardenClientAnger               int        // CLIENT_ANGER_LEVEL last sent to viewers
+	golemCrack                      int        // iron golem: crack stage last seen, +1 (0 = not yet seen)
 	wardenDisturb                   blockPos   // warden: DISTURBANCE_LOCATION (where it goes to look)
 	wardenDisturbTil                uint64     // …remembered until this tick
 	wardenTouchTil                  uint64     // warden: TOUCH_COOLDOWN
@@ -1264,7 +1265,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			continue // the dragon flies on its own update (updateDragon)
 		}
 		if m.etype == entityIronGolem {
-			h.golemMelee(players, m) // the guardian punches hostiles (not hostile itself)
+			h.golemCrackSound(players, m) // a blow that cracks it further clanks
+			h.golemMelee(players, m)      // the guardian punches hostiles (not hostile itself)
 		}
 		if m.etype == entityEnderman {
 			h.endermanCarry(players, m) // pick up / put down blocks (even while neutral)

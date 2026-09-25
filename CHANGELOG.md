@@ -124,6 +124,10 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Allays dance everywhere.** An allay near a playing jukebox now dances
   in the Nether and the End too, and a jukebox in another dimension no
   longer sets it dancing.
+- **Iron golems clank as they crack.** An iron golem now makes its damage
+  sound when a blow cracks it further, and its punch follows its attack
+  strength, so Strength and Weakness change it as in vanilla. The evoker's
+  and the giant's attributes now match vanilla's too.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in
