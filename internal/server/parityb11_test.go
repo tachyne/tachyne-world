@@ -89,3 +89,32 @@ func TestWetSpongeDriesInTheNether(t *testing.T) {
 		t.Fatal("a wet sponge in the overworld must stay wet")
 	}
 }
+
+// SpongeBlock.removeWaterBreadthFirstSearch: a waterlogged block is a
+// BucketPickup — the sponge drains it (it stays, dry) and reaches the
+// water beyond it.
+func TestSpongeDrainsWaterloggedBlocks(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	w := h.worldFor(0)
+	w.ForceLoad(0, 0, 1)
+	for x := -3; x <= 3; x++ {
+		for y := 179; y <= 181; y++ {
+			for z := -3; z <= 3; z++ {
+				w.SetBlock(x, y, z, worldgen.Stone)
+			}
+		}
+	}
+	slab := withWaterlogged(withProp(worldgen.BlockBase("oak_slab"), "type", "bottom"), true)
+	w.SetBlock(0, 180, 0, spongeState)
+	w.SetBlock(1, 180, 0, slab)
+	w.SetBlock(2, 180, 0, worldgen.WaterBase)
+	h.soakSponge(players, 0, blockPos{0, 180, 0})
+	if got := w.At(1, 180, 0); got != withWaterlogged(slab, false) {
+		t.Fatalf("the slab should be drained and stay: %d", got)
+	}
+	if w.At(2, 180, 0) != worldgen.Air || w.At(0, 180, 0) != wetSpongeState {
+		t.Fatal("the sponge should reach the water past the slab and turn wet")
+	}
+}

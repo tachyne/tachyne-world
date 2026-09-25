@@ -44,6 +44,7 @@ var (
 type crystal struct {
 	eid     int32
 	uuid    [16]byte
+	dim     int // placed crystals live in any dimension; the fight's are the End's
 	x, y, z float64
 }
 
@@ -83,7 +84,7 @@ func (h *hub) enterEnd(players map[int32]*tracked, arriving *tracked) {
 	for i := 0; i < worldgen.EndPillars; i++ {
 		px := worldgen.EndPillarRing * cosTurn(float64(i)/worldgen.EndPillars)
 		pz := worldgen.EndPillarRing * sinTurn(float64(i)/worldgen.EndPillars)
-		c := &crystal{eid: h.allocEID(), x: px + 0.5, y: float64(worldgen.EndPillarTop(i)), z: pz + 0.5}
+		c := &crystal{eid: h.allocEID(), dim: dimEnd, x: px + 0.5, y: float64(worldgen.EndPillarTop(i)), z: pz + 0.5}
 		binary.BigEndian.PutUint32(c.uuid[12:], uint32(c.eid))
 		h.crystals[c.eid] = c
 		for _, t := range players {
@@ -195,12 +196,12 @@ func (h *hub) hitCrystal(players map[int32]*tracked, eid int32, by *tracked) boo
 		return false
 	}
 	delete(h.crystals, eid)
-	h.toDimEv(players, 2, entGone(eid))
+	h.toDimEv(players, c.dim, entGone(eid))
 	name, cause := "", func(*blastCfg) {}
 	if by != nil {
 		name, cause = h.blastCauseOf(players, by.p.eid)
 	}
-	h.explodeBy(players, dimEnd, c.x, c.y, c.z, endCrystalBlastPower, endCrystalBlastPower, blastBlock, name,
+	h.explodeBy(players, c.dim, c.x, c.y, c.z, endCrystalBlastPower, endCrystalBlastPower, blastBlock, name,
 		withBlastDirect(entityEndCrystal), cause)
 	h.dragonCrystalDestroyed(players, c, by) // onDestroyedBy, after the blast
 	return true
@@ -211,7 +212,7 @@ func (h *hub) hitCrystal(players map[int32]*tracked, eid int32, by *tracked) boo
 func (h *hub) nearestDragonCrystal(m *mob) int32 {
 	best, bestD := int32(0), math.MaxFloat64
 	for eid, c := range h.crystals {
-		if math.Abs(c.x-m.x) > 8+dragonCrystalReach || math.Abs(c.z-m.z) > 8+dragonCrystalReach ||
+		if c.dim != m.dim || math.Abs(c.x-m.x) > 8+dragonCrystalReach || math.Abs(c.z-m.z) > 8+dragonCrystalReach ||
 			c.y < m.y-dragonCrystalReach || c.y > m.y+8+dragonCrystalReach {
 			continue
 		}
@@ -335,6 +336,9 @@ func (h *hub) onEndRefresh(players map[int32]*tracked, eid int32) {
 		t.p.sendEv(entAdd(m.eid, m.etype, m.uuid, m.x, m.y, m.z, m.yaw, 0))
 	}
 	for _, c := range h.crystals {
+		if c.dim != dimEnd {
+			continue
+		}
 		t.p.sendEv(entGone(c.eid))
 		t.p.sendEv(entAdd(c.eid, entityEndCrystal, c.uuid, c.x, c.y, c.z, 0, 0))
 	}

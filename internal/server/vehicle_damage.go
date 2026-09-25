@@ -95,6 +95,11 @@ func (h *hub) destroyVehicle(players map[int32]*tracked, v *vehicle, src vehHit)
 		h.lightBrokenCart(players, v, src.causer)
 		return
 	}
+	if v.chest != nil && h.rules.EntityDrops && src.by != nil && src.proj == nil {
+		// ContainerEntity.chestVehicleDestroyed: a player who broke it by
+		// hand angers the piglins that see them.
+		h.angerNearbyPiglins(players, src.by, true)
+	}
 	h.breakVehicle(players, v)
 }
 

@@ -381,7 +381,10 @@ func (h *hub) ejectTrialReward(players map[int32]*tracked, ts *trialSpawner) {
 			if st.item == 0 || st.count <= 0 {
 				continue
 			}
-			h.spawnItemIn(players, dimOverworld, st.item, st.count, ts.fx(), ts.fy()+1, ts.fz())
+			if it := h.spawnItemIn(players, dimOverworld, st.item, st.count, ts.fx(), ts.fy()+1, ts.fz()); it != nil {
+				it.setFrom(st) // an ominous potion keeps its effect
+				h.refreshItemMeta(players, it)
+			}
 		}
 	}
 	h.playSoundDim(players, dimOverworld, "minecraft:block.trial_spawner.eject_item", sndBlock,

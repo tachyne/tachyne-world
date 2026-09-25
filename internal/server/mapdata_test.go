@@ -6,6 +6,7 @@ import (
 	"time"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 func TestSnapCenter(t *testing.T) {
@@ -50,8 +51,9 @@ func TestMapCreateScanAndPersist(t *testing.T) {
 	// Hand the player an empty map and use it.
 	onHub(t, h, func() {
 		tr := h.playersRef[p.eid]
+		tr.gamemode = gmSurvival
 		tr.inv.slots[tr.p.heldSlot()] = invStack{item: itemEmptyMap, count: 2}
-		h.mapCreateFilled(h.playersRef, tr)
+		h.mapCreateFilled(h.playersRef, tr, tr.p.heldSlot())
 		st := heldStack(tr)
 		if st.item == itemEmptyMap && st.count != 1 {
 			t.Errorf("empty map not consumed: %+v", st)
@@ -161,4 +163,40 @@ func TestMapCloneAndZoomRecipes(t *testing.T) {
 			t.Error("scale-4 map zoomed")
 		}
 	})
+}
+
+// EmptyMapItem.use: from the offhand a last empty map becomes the filled
+// map in that hand; with more left and a full inventory the new map drops;
+// creative keeps the empty map.
+func TestEmptyMapUseHandsAndOverflow(t *testing.T) {
+	h := newHub(world.New(1))
+	h.maps = newMapStore("")
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	pl.offhand = invStack{item: itemEmptyMap, count: 1}
+	h.mapCreateFilled(players, pl, offhandSlot)
+	if pl.offhand.item != itemFilledMap || pl.offhand.mapID == 0 {
+		t.Fatalf("the last empty map should turn into the filled one in the offhand: %+v", pl.offhand)
+	}
+	for i := range pl.inv.slots {
+		pl.inv.slots[i] = invStack{item: itemByName["dirt"], count: 64}
+	}
+	pl.inv.slots[0] = invStack{item: itemEmptyMap, count: 3}
+	pl.p.setHotbarSlot(0, itemEmptyMap)
+	h.mapCreateFilled(players, pl, 0)
+	dropped := false
+	for _, it := range h.items {
+		if it.item == itemFilledMap && it.mapID != 0 {
+			dropped = true
+		}
+	}
+	if !dropped || pl.inv.slots[0].count != 2 {
+		t.Fatalf("with a full inventory the new map drops (dropped %v, %d empty left)", dropped, pl.inv.slots[0].count)
+	}
+	pl.gamemode = gmCreative
+	h.mapCreateFilled(players, pl, 0)
+	if pl.inv.slots[0].count != 2 {
+		t.Fatalf("creative keeps its empty map: %d", pl.inv.slots[0].count)
+	}
 }

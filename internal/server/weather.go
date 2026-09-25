@@ -397,7 +397,9 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 	if visualOnly {
 		return
 	}
-	h.rodStruck(players, blockPos{int(math.Floor(x)), int(math.Floor(y - 1e-6)), int(math.Floor(z))})
+	strikePos := blockPos{int(math.Floor(x)), int(math.Floor(y - 1e-6)), int(math.Floor(z))}
+	h.rodStruck(players, strikePos)
+	h.clearCopperOnLightningStrike(players, dimOverworld, strikePos)
 
 	// Entity.thunderHit: eight seconds alight (unless already burning), then
 	// the five of damage.
@@ -446,8 +448,8 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 			break
 		}
 	}
-	for _, t := range players { // LightningBolt.tick: every player within 256 of the bolt
-		if t.dim == 0 && dist3(t.x, t.y, t.z, x, y, z) < 256 {
+	for _, t := range players {
+		if t.dim == dimOverworld && dist3(t.x, t.y, t.z, x, y, z) < 256 { // LightningBolt.tick: distanceTo < 256 in its level
 			h.advance(players, t, "lightning_strike", advMatch{bystander: villagerBy, noFire: !lit})
 		}
 	}

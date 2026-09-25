@@ -431,31 +431,41 @@ func (h *hub) mapsTick(players map[int32]*tracked) {
 	}
 }
 
-// mapCreateFilled handles using an empty map: consume it, allocate a fresh
-// map centred on the player (vanilla EmptyMapItem.use → MapItem.create).
-func (h *hub) mapCreateFilled(players map[int32]*tracked, t *tracked) {
+// mapCreateFilled is EmptyMapItem.use from the hand that used it: one empty
+// map is spent (none in creative), the ITEM_USED stat and the cartography
+// table's take sound go out, and a fresh map centred on the player
+// (MapItem.create) replaces a last empty map in the hand, or goes into the
+// inventory — dropped at the player's feet when it does not fit.
+func (h *hub) mapCreateFilled(players map[int32]*tracked, t *tracked, slot int) {
 	if h.maps == nil || t.inv == nil {
 		return
 	}
-	slot := t.p.heldSlot()
-	st := t.inv.slots[slot]
-	if st.item != itemEmptyMap || st.count <= 0 {
+	hs := t.handStack(slot)
+	if hs == nil || hs.item != itemEmptyMap || hs.count <= 0 {
 		return
 	}
-	st.count--
-	if st.count == 0 {
-		st = invStack{}
+	if t.gamemode != gmCreative { // ItemStack.consume(1, player): infinite materials keep it
+		if hs.count--; hs.count == 0 {
+			*hs = invStack{}
+		}
 	}
-	t.inv.slots[slot] = st
-	h.sendSlot(t, slot)
-
+	h.incStat(t, attachproto.StatUsed, itemEmptyMap, 1)
+	h.playSoundDim(players, t.dim, "minecraft:ui.cartography_table.take_result", sndPlayer, t.x, t.y, t.z, 1, 1)
 	md := h.maps.create(int(math.Floor(t.x)), int(math.Floor(t.z)), 0, t.dim)
-	give := invStack{item: itemFilledMap, count: 1, mapID: md.ID}
-	changed, left := t.inv.addStack(give)
+	filled := invStack{item: itemFilledMap, count: 1, mapID: md.ID}
+	if hs.item == 0 { // heldItemTransformedTo: the last empty map becomes the new one
+		*hs = filled
+		h.sendHandSlot(t, slot)
+		return
+	}
+	h.sendHandSlot(t, slot)
+	changed, left := t.inv.addStack(filled)
 	for _, sl := range changed {
 		h.sendSlot(t, sl)
 	}
-	_ = left // a full inventory drops nothing in v1; the empty map refunds
+	if left > 0 { // player.drop(map, false)
+		h.tossItem(players, t, filled)
+	}
 }
 
 // --- map crafting (vanilla's special recipes) ---

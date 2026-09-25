@@ -258,7 +258,7 @@ func (h *hub) contactDamage(players map[int32]*tracked, t *tracked) {
 		}
 	}
 	// Fire blocks: contact damage + a shorter afterburn.
-	dmg := fireContactDamage(h.worldFor(t.dim).At(fx, feet, fz), h.worldFor(t.dim).At(fx, feet+1, fz))
+	dmg := h.fireInBox(t.dim, t.x, t.y, t.z, t.halfWidth(), playerHeight(t))
 	if dmg > 0 && t.frozen > 0 { // BaseFireBlock.entityInside: CLEAR_FREEZE, whatever the fire_damage rule
 		t.frozen = 0
 		t.p.trySendEv(metaEv(frozenMetadata(t.p.eid, 0)))

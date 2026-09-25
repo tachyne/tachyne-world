@@ -27,6 +27,9 @@ func (h *hub) updateSpawners(players map[int32]*tracked) {
 	now := h.tick.Load()
 	done := map[blockPos]bool{}
 	for _, t := range players {
+		if t.dim != dimOverworld {
+			continue // BaseSpawner.isNearPlayer asks the spawner's own level: dungeons are overworld
+		}
 		px, pz := int(t.x), int(t.z)
 		for dx := -1; dx <= 1; dx++ {
 			for dz := -1; dz <= 1; dz++ {
@@ -55,24 +58,7 @@ func (h *hub) updateSpawners(players map[int32]*tracked) {
 					continue
 				}
 				h.spawnerNext[key] = now + spawnerMinDelay + uint64(h.rng.Intn(spawnerDelaySpan))
-				near := 0
-				for _, m := range h.mobs {
-					if m.hostile && dist3(m.x, m.y, m.z, float64(d.X), float64(d.Y), float64(d.Z)) < 9 {
-						near++
-					}
-				}
-				if near >= spawnerMobCap {
-					continue
-				}
-				for i := 0; i < spawnerCount; i++ { // vanilla: 4 spawn attempts per cycle
-					sx := float64(d.X-d.W) + h.rng.Float64()*float64(2*d.W) + 0.5
-					sz := float64(d.Z-d.D) + h.rng.Float64()*float64(2*d.D) + 0.5
-					h.spawnHostileYIn(players, etype, dimOverworld, sx, float64(d.Y), sz)
-				}
-				h.levelEvent(players, 0, worldEventSpawnerSpawn, d.X, d.Y, d.Z, 0) // the smoke and flames
-				h.spawnerReset(players, 0, pos)                                    // …and the caged mob starts its turn again
-				h.playSoundDim(players, dimOverworld, "minecraft:block.fire.ambient", sndHostile,
-					float64(d.X)+0.5, float64(d.Y)+0.5, float64(d.Z)+0.5, 0.6, 0.8)
+				h.spawnerCycle(players, pos, etype)
 			}
 		}
 	}
@@ -80,3 +66,58 @@ func (h *hub) updateSpawners(players map[int32]*tracked) {
 
 // (Structure chest loot is now data-driven — see structloot.go/chestloot.go.
 // The old hand-rolled dungeonLoot + hash01ServerSeed lived here.)
+
+// spawnerCycle is one BaseSpawner.serverTick spawn round at an overworld
+// cage: nothing when maxNearbyEntities of the same type already stand in
+// the cage's cell inflated by spawnRange; otherwise four attempts, each at
+// x/z ±spawnRange (triangular) and y −1..+1 around the cage, where the
+// mob's box is clear of colliding blocks (noCollision), then the spawn
+// particles and the caged mob's turn reset.
+func (h *hub) spawnerCycle(players map[int32]*tracked, pos blockPos, etype int) {
+	near := 0
+	lo := [3]float64{float64(pos.x) - spawnerSpawnRange, float64(pos.y) - spawnerSpawnRange, float64(pos.z) - spawnerSpawnRange}
+	hi := [3]float64{float64(pos.x) + 1 + spawnerSpawnRange, float64(pos.y) + 1 + spawnerSpawnRange, float64(pos.z) + 1 + spawnerSpawnRange}
+	for _, m := range h.mobs {
+		if m.dim != dimOverworld || m.etype != etype || m.dying > 0 {
+			continue
+		}
+		b := m.box()
+		if m.x+b.w/2 > lo[0] && m.x-b.w/2 < hi[0] && m.y+b.h > lo[1] && m.y < hi[1] && m.z+b.w/2 > lo[2] && m.z-b.w/2 < hi[2] {
+			near++
+		}
+	}
+	if near >= spawnerMobCap {
+		return
+	}
+	box, ok := mobBoxes[etype]
+	if !ok {
+		box = defaultMobBox
+	}
+	for i := 0; i < spawnerCount; i++ {
+		sx := float64(pos.x) + (h.rng.Float64()-h.rng.Float64())*spawnerSpawnRange + 0.5
+		sz := float64(pos.z) + (h.rng.Float64()-h.rng.Float64())*spawnerSpawnRange + 0.5
+		sy := float64(pos.y + h.rng.Intn(3) - 1)
+		if !h.spawnBoxClear(dimOverworld, sx, sy, sz, box.w, box.h) {
+			continue
+		}
+		h.spawnHostileYIn(players, etype, dimOverworld, sx, sy, sz)
+	}
+	h.levelEvent(players, 0, worldEventSpawnerSpawn, pos.x, pos.y, pos.z, 0) // the smoke and flames
+	h.spawnerReset(players, 0, pos)                                          // …and the caged mob starts its turn again
+}
+
+// spawnBoxClear is level.noCollision(type.getSpawnAABB(x, y, z)) against
+// blocks: no colliding block in any cell the box reaches.
+func (h *hub) spawnBoxClear(dim int, x, y, z, w, ht float64) bool {
+	wd := h.worldFor(dim)
+	for bx := floorInt(x - w/2); bx <= floorInt(x+w/2-1e-9); bx++ {
+		for by := floorInt(y); by <= floorInt(y+ht-1e-9); by++ {
+			for bz := floorInt(z - w/2); bz <= floorInt(z+w/2-1e-9); bz++ {
+				if worldgen.Collides(wd.At(bx, by, bz)) {
+					return false
+				}
+			}
+		}
+	}
+	return true
+}

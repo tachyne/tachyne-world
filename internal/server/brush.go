@@ -204,7 +204,10 @@ func (h *hub) finishBrush(players map[int32]*tracked, t *tracked, pos blockPos, 
 	ctx := &lootCtx{rng: r.Intn, randf: r.Float64}
 	for _, s := range h.evalChestStacks(tbl, ctx, 0) {
 		if s.count > 0 {
-			h.spawnItemIn(players, t.dim, s.item, s.count, ox, oy, oz)
+			if it := h.spawnItemIn(players, t.dim, s.item, s.count, ox, oy, oz); it != nil {
+				it.setFrom(s) // the desert well's suspicious stew keeps its effect
+				h.refreshItemMeta(players, it)
+			}
 		}
 	}
 	h.advance(players, t, "player_generates_container_loot", advMatch{lootTable: name})

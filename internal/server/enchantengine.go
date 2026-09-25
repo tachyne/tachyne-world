@@ -329,3 +329,22 @@ func enchRandomly(r enchRand, item int32) enchList {
 func enchWithLevels(r enchRand, item int32, levels int) enchList {
 	return enchApplyList(enchSelect(r, item, levels, enchLootAllowed))
 }
+
+// enchUpgrade is ItemEnchantments.Mutable.upgrade: the enchantment at the higher
+// of its present level and lvl, added in the first free place if absent
+// (dropped when the list is full).
+func enchUpgrade(l enchList, id, lvl int8) enchList {
+	for i := range l {
+		if l[i].lvl != 0 && l[i].id == id {
+			l[i].lvl = max(l[i].lvl, lvl)
+			return l
+		}
+	}
+	for i := range l {
+		if l[i].lvl == 0 {
+			l[i] = enchApply{id: id, lvl: lvl}
+			return l
+		}
+	}
+	return l
+}

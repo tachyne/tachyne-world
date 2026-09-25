@@ -120,7 +120,7 @@ func (h *hub) tickDragonRespawn(players map[int32]*tracked) {
 			// The spike goes up in a blast and is set again (Feature.END_SPIKE):
 			// its old crystal, if any, goes with it.
 			for eid, c := range h.crystals {
-				if int(math.Floor(c.x)) == px && int(math.Floor(c.z)) == pz && c.y >= float64(top-1) {
+				if c.dim == dimEnd && int(math.Floor(c.x)) == px && int(math.Floor(c.z)) == pz && c.y >= float64(top-1) {
 					delete(h.crystals, eid)
 					h.toDimEv(players, 2, entGone(eid))
 				}

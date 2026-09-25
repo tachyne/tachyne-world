@@ -10,8 +10,9 @@ package server
 // (Mob.checkDespawn honours requiresCustomPersistence/persistenceRequired,
 // which setFromBucket sets on every Bucketable).
 //
-// The bucket carries the mob's variant (an axolotl's colour) and a baby's
-// age; its Health is not carried, so a released mob comes out at full health.
+// The bucket carries the mob's variant (an axolotl's colour), a baby's age,
+// its Health and its name (Bucketable.saveDefaultDataToBucketTag), so a
+// released mob comes out as it went in.
 
 // mobBucketOf maps a bucketable species to its bucket item and the two
 // sounds (getPickupSound / MobBucketItem.emptySound).
@@ -71,6 +72,8 @@ func (h *hub) tryBucketMob(players map[int32]*tracked, t *tracked, m *mob) bool 
 	if m.baby {
 		filled.cube.age = -int32(max(1, m.growLeft))
 	}
+	filled.cube.health = int32(m.health) + 1 // saveDefaultDataToBucketTag: Health
+	filled.name = m.customName               // bucket.copyFrom(CUSTOM_NAME, entity)
 	h.giveFilledStack(players, t, int32(t.p.heldSlot()), filled)
 	h.advance(players, t, "filled_bucket", advMatch{item: mb.item})
 	h.dropLeash(players, m, true) // Leashable.dropLeash: the lead pops out
@@ -81,7 +84,8 @@ func (h *hub) tryBucketMob(players map[int32]*tracked, t *tracked, m *mob) bool 
 // releaseBucketMob is MobBucketItem.checkExtraContent: after the bucket's
 // water has been poured (or boiled off), spawn the mob in the cell with the
 // bucket's empty sound in place of the water one.
-func (h *hub) releaseBucketMob(players map[int32]*tracked, dim int, item int32, data cubeContent, x, y, z int) {
+func (h *hub) releaseBucketMob(players map[int32]*tracked, dim int, bucket invStack, x, y, z int) {
+	item, data := bucket.item, bucket.cube
 	etype := speciesByMobBucket[item]
 	mb := mobBucketBySpecies[etype]
 	m := h.spawnSpecies(players, etype, dim, float64(x)+0.5, float64(y), float64(z)+0.5)
@@ -97,6 +101,13 @@ func (h *hub) releaseBucketMob(players map[int32]*tracked, dim int, item int32, 
 		if data.age < 0 && !m.baby {
 			m.baby, m.growLeft = true, int(-data.age)
 			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
+		}
+		if data.health > 0 { // loadDefaultDataFromBucketTag: setHealth, clamped to the maximum
+			m.health = min(int(data.health-1), m.maxHP())
+		}
+		if bucket.name != "" { // the bucket's custom_name names the mob (EntityType.appendCustomNameConfig)
+			m.customName = bucket.name
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(nameMeta(m.eid, m.customName)))
 		}
 	}
 	h.playSoundDim(players, dim, mb.empty, sndNeutral, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)

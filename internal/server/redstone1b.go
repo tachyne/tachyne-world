@@ -375,6 +375,9 @@ func (h *hub) observerTick(players map[int32]*tracked, pos blockPos, state uint3
 // detector reads the raw sky value back to front, which is why it fires at
 // dusk rather than tracking the night's curve.
 func (h *hub) updateDaylight(players map[int32]*tracked, pos blockPos, state uint32) {
+	if h.rsDim != dimOverworld {
+		return // dimensionType().hasSkyLight(): the Nether and the End have none, so the power stays put
+	}
 	sky, _ := h.rsWorld().LightAt(pos.x, pos.y, pos.z)
 	n := int(sky) - h.skyDarken()
 	if daylightInverted(state) {
@@ -433,9 +436,14 @@ func (h *hub) updatePlatesIn(players map[int32]*tracked, dim int) {
 		}
 	}
 	for _, m := range h.mobs {
-		if m.dim == dim && m.dying == 0 {
+		if m.dim == dim && m.dying == 0 && !ignoresBlockTriggers(m) {
 			b := m.box()
 			ents = append(ents, plateToucher{m.x, m.y, m.z, b.w / 2, b.h, true})
+		}
+	}
+	for _, st := range h.armorStands { // a (non-marker) armour stand is a LivingEntity on a plate
+		if st.dim == dim {
+			ents = append(ents, plateToucher{st.x, st.y, st.z, 0.25, 1.975, true})
 		}
 	}
 	for _, it := range h.items {

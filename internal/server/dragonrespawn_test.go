@@ -26,7 +26,7 @@ func TestDragonRespawnCeremony(t *testing.T) {
 	}
 	h.end.SetBlock(1, cy, 0, worldgen.EndPortalBlock) // an open portal cell
 	for _, d := range [4][2]int{{2, 0}, {-2, 0}, {0, 2}, {0, -2}} {
-		c := &crystal{eid: h.allocEID(), x: float64(d[0]) + 0.5, y: float64(cy), z: float64(d[1]) + 0.5}
+		c := &crystal{eid: h.allocEID(), dim: dimEnd, x: float64(d[0]) + 0.5, y: float64(cy), z: float64(d[1]) + 0.5}
 		binary.BigEndian.PutUint32(c.uuid[12:], uint32(c.eid))
 		h.crystals[c.eid] = c
 	}

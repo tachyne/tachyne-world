@@ -110,14 +110,20 @@ func TestReelDuringNibbleLandsLoot(t *testing.T) {
 	if h.bobbers[pl.p.eid] != nil {
 		t.Fatal("reeling should discard the bobber")
 	}
-	got := false
+	// FishingHook.retrieve: the catch leaves the hook as an item flung
+	// towards the angler, not straight into the inventory.
 	for i := 1; i < len(pl.inv.slots); i++ {
 		if pl.inv.slots[i].count > 0 {
-			got = true
+			t.Fatal("the catch went straight into the inventory")
 		}
 	}
-	if !got {
-		t.Fatal("reeling a nibble should land loot in the inventory")
+	var catch *itemEntity
+	for _, it := range h.items {
+		catch = it
+	}
+	if catch == nil || catch.x != b.x || catch.z != b.z || catch.vy <= 0 ||
+		(pl.x-b.x)*catch.vx < 0 || (pl.z-b.z)*catch.vz < 0 {
+		t.Fatalf("the catch should leave the hook flying at the angler: %+v", catch)
 	}
 	if pl.inv.slots[0].dmg != 1 {
 		t.Fatalf("a catch should cost the rod 1 durability, got %d", pl.inv.slots[0].dmg)

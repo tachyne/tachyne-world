@@ -187,3 +187,19 @@ func isHalloween(now time.Time) bool {
 
 // isPumpkinHead reports the Halloween heads, which never drop.
 func isPumpkinHead(item int32) bool { return item == itemCarvedPumpkin || item == itemJackOLantern }
+
+// enchantPillagerCrossbow is Pillager.enchantSpawnedWeapon on the crossbow
+// its finalizeSpawn hands it: Mob's roll first (mob_spawn_equipment at
+// 0.25×f, the usual cost formula), then one spawn in 300 gets the
+// pillager_spawn_crossbow provider's Piercing I on top (upgrade: an
+// existing higher level stays).
+func (h *hub) enchantPillagerCrossbow(m *mob) {
+	f := h.specialMultiplier()
+	if h.rng.Float64() < 0.25*f {
+		cost := 5 + h.rng.Intn(int(math.Floor(f*17))+1)
+		m.heldEnch = enchApplyList(enchSelect(h.rng, m.held, cost, enchMobAllowed))
+	}
+	if h.rng.Intn(300) == 0 && m.held == itemCrossbow {
+		m.heldEnch = enchUpgrade(m.heldEnch, enchPiercing, 1)
+	}
+}

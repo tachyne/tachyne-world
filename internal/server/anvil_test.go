@@ -194,3 +194,27 @@ func TestAnvilBlankNameAndValidation(t *testing.T) {
 		t.Fatal("a 51-character name was accepted")
 	}
 }
+
+// GrindstoneMenu's take pays its orbs at the grindstone's centre, not at
+// the player.
+func TestGrindstoneOrbsAtTheGrindstone(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	pl := testTracked()
+	players := map[int32]*tracked{1: pl}
+	pl.x, pl.y, pl.z = 0.5, 181, 0.5
+	h.world.SetBlock(10, 179, 10, worldgen.Stone)
+	h.world.SetBlock(10, 180, 10, grindstoneStateMin)
+	pl.winID = 0
+	h.openGrindstone(pl, blockPos{10, 180, 10})
+	pl.anvil[0] = invStack{item: tDiamondSword, count: 1, ench: enchList{{id: enchSharpness, lvl: 5}}}
+	h.takeTwoSlotResult(players, pl, 0)
+	if len(h.orbs) == 0 {
+		t.Fatal("no refund")
+	}
+	for _, o := range h.orbs {
+		if o.x != 10.5 || o.z != 10.5 {
+			t.Fatalf("an orb at (%.1f, %.1f), want the grindstone's centre (10.5, 10.5)", o.x, o.z)
+		}
+	}
+}

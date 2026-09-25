@@ -56,9 +56,12 @@ func (h *hub) updateTripwires(players map[int32]*tracked) {
 		}
 	}
 	for _, m := range h.mobs {
-		if m.dying == 0 {
+		if m.dying == 0 && !ignoresBlockTriggers(m) {
 			mark(m.dim, m.x, m.y, m.z)
 		}
+	}
+	for _, st := range h.armorStands {
+		mark(st.dim, st.x, st.y, st.z)
 	}
 	for _, it := range h.items {
 		mark(it.dim, it.x, it.y, it.z)
@@ -197,3 +200,7 @@ func (h *hub) hookEmitState(players map[int32]*tracked, pos blockPos, attached, 
 	h.rsSound(players, snd, sndBlock, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.4, pitch)
 	h.vib(h.rsDim, freq, pos.x, pos.y, pos.z, 0)
 }
+
+// ignoresBlockTriggers is Entity.isIgnoringBlockTriggers for a mob: a bat
+// flutters over pressure plates and tripwire without setting them off.
+func ignoresBlockTriggers(m *mob) bool { return m.etype == entityBat }

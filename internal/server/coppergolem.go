@@ -95,7 +95,7 @@ func (h *hub) copperGolemToStatue(players map[int32]*tracked, m *mob, x, y, z in
 	}
 	h.setBlockAt(players, m.dim, blockPos{x, y, z}, state)
 	h.despawnMob(players, m)
-	h.playSoundDim(players, m.dim, "minecraft:entity.copper_golem.become_statue", sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.playSoundDim(players, m.dim, "minecraft:entity.copper_golem_become_statue", sndNeutral, m.x, m.y, m.z, 1, 1)
 }
 
 // tryCopperGolem: honeycomb waxes the golem (stops oxidation); an axe un-waxes or

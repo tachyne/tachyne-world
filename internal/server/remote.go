@@ -168,7 +168,7 @@ func (r *remotePlayer) Action(v any) {
 		case itemEnderEye:
 			h.post(evThrowEye{eid: p.eid, off: off})
 		case itemEmptyMap:
-			h.post(evUseMap{eid: p.eid})
+			h.post(evUseMap{eid: p.eid, slot: slot})
 		case itemWrittenBook, itemWritableBook:
 			r.emitEvNow(attachproto.OpenBook{Hand: 0}) // the reader/editor UI is client-side
 		default:

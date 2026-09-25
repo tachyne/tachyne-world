@@ -104,7 +104,13 @@ func (h *hub) projectileHitBlock(players map[int32]*tracked, a *arrowEntity, pos
 			h.inDim(a.dim, func() { h.pressButton(players, pos, state) })
 		}
 	case isTNT(state): // TntBlock.onProjectileHit: a burning projectile primes it
-		if a.fire {
+		// projectile.mayInteract: a mob's shot needs mob_griefing; prime's
+		// adventure rule turns away an adventure shooter (no can_break on
+		// an empty stack).
+		owner, isPlayer := players[a.shooter]
+		allowed := (isPlayer && owner.gamemode != gmAdventure) ||
+			(!isPlayer && (h.mobs[a.shooter] == nil || h.rules.MobGriefing))
+		if a.fire && allowed {
 			h.primeTNTBy(players, a.dim, pos.x, pos.y, pos.z, 80, a.shooter) // the shooter owns it
 		}
 	case isCampfireBlock(state): // CampfireBlock.onProjectileHit: a burning projectile lights it

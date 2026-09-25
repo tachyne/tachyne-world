@@ -123,3 +123,65 @@ func TestSpreadNeedsLight(t *testing.T) {
 		t.Error("grass spread in the dark")
 	}
 }
+
+// SpreadingSnowyBlock.canStayAlive / canPropagate: grass dies under a bottom
+// slab, water or two snow layers but lives under one; it spreads onto dirt
+// only where it could live and no water sits on top, and the new grass is
+// snowy when snow covers it.
+func TestSpreadRulesVanilla(t *testing.T) {
+	x, y, z := 260, 70, 260
+	bottomSlab := withProp(worldgen.BlockBase("stone_slab"), "type", "bottom")
+	bottomSlab = withWaterlogged(bottomSlab, false)
+	snow := func(n string) uint32 { return withProp(worldgen.BlockBase("snow"), "layers", n) }
+	for _, c := range []struct {
+		name  string
+		above uint32
+		dies  bool
+	}{
+		{"bottom slab", bottomSlab, true},
+		{"water", worldgen.WaterBase, true},
+		{"two snow layers", snow("2"), true},
+		{"one snow layer", snow("1"), false},
+		{"top slab", withProp(bottomSlab, "type", "top"), false},
+		{"glass", worldgen.BlockBase("glass"), false},
+	} {
+		h, players := spreadHub(t, worldgen.GrassBlock, x, y, z)
+		h.world.SetBlock(x, y+1, z, c.above)
+		h.tickSpread(players, 0, x, y, z, h.world.At(x, y, z))
+		if died := h.world.At(x, y, z) == worldgen.Dirt; died != c.dies {
+			t.Errorf("grass under %s: died %v, want %v", c.name, died, c.dies)
+		}
+	}
+	// Spread: every dirt around carries snow (→ snowy grass) except one
+	// under water, which never turns.
+	h, players := spreadHub(t, worldgen.GrassBlock, x, y, z)
+	for dx := -1; dx <= 1; dx++ {
+		for dz := -1; dz <= 1; dz++ {
+			if dx != 0 || dz != 0 {
+				h.world.SetBlock(x+dx, y+1, z+dz, snow("1"))
+			}
+		}
+	}
+	h.world.SetBlock(x+1, y+1, z, worldgen.WaterBase)
+	for i := 0; i < 400; i++ {
+		h.tickSpread(players, 0, x, y, z, h.world.At(x, y, z))
+	}
+	if h.world.At(x+1, y, z) != worldgen.Dirt {
+		t.Error("grass spread under water")
+	}
+	gi, _ := worldgen.InfoForState(worldgen.GrassBlock)
+	grown := 0
+	for dx := -1; dx <= 1; dx++ {
+		for dz := -1; dz <= 1; dz++ {
+			if s := h.world.At(x+dx, y, z+dz); (dx != 0 || dz != 0) && s != worldgen.Dirt {
+				if worldgen.GetProperty(gi, s, "snowy") != "true" {
+					t.Errorf("grass spread under snow is not snowy")
+				}
+				grown++
+			}
+		}
+	}
+	if grown == 0 {
+		t.Error("grass never spread")
+	}
+}

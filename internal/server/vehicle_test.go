@@ -223,3 +223,39 @@ func TestBoatNeedsSomethingToLandOn(t *testing.T) {
 		t.Fatal("the boat item must not be spent")
 	}
 }
+
+// BoatItem.use: level.noCollision(boat, box) — no boat goes down where its
+// box would overlap another boat, a player or a colliding block.
+func TestBoatNeedsRoom(t *testing.T) {
+	h, pl, players, x, y, z := vehSetup(t)
+	h.world.SetBlock(x+2, y, z, worldgen.Water)
+	boat := itemByName["oak_boat"]
+	place := func() { h.placeVehicle(players, pl, evPlaceVehicle{eid: 1, item: boat, x: x + 2, y: y, z: z, slot: 0}) }
+	place()
+	place()
+	if len(h.vehicles) != 1 {
+		t.Fatalf("a boat went down inside another: %d boats", len(h.vehicles))
+	}
+	for eid := range h.vehicles {
+		delete(h.vehicles, eid)
+	}
+	other := testTracked()
+	other.p.eid = 2
+	other.x, other.y, other.z = float64(x+2)+0.5, float64(y), float64(z)+0.5
+	players[2] = other
+	place()
+	if len(h.vehicles) != 0 {
+		t.Fatal("a boat went down inside a player")
+	}
+	delete(players, 2)
+	h.world.SetBlock(x+3, y, z, worldgen.Stone)
+	place()
+	if len(h.vehicles) != 0 {
+		t.Fatal("a boat went down overlapping a stone block")
+	}
+	h.world.SetBlock(x+3, y, z, worldgen.Air)
+	place()
+	if len(h.vehicles) != 1 {
+		t.Fatal("with room the boat goes down")
+	}
+}

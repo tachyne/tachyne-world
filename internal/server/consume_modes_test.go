@@ -152,7 +152,7 @@ func TestAxolotlBucketKeepsItsColour(t *testing.T) {
 	if back := unpackStack(packStack(st)); back != st {
 		t.Errorf("the bucket did not survive a save: %+v vs %+v", back, st)
 	}
-	h.releaseBucketMob(players, 0, st.item, st.cube, 3, 200, 3)
+	h.releaseBucketMob(players, 0, st, 3, 200, 3)
 	for _, m := range h.mobs {
 		if m.etype == entityAxolotl && (m.variant != axolotlBlue || !m.variantSet) {
 			t.Errorf("the axolotl came back variant %d", m.variant)
@@ -323,5 +323,42 @@ func TestHappyGhastBrain(t *testing.T) {
 	}
 	if y, ok := g.flyAimed(h.tick.Load()); !ok || y != 190 {
 		t.Errorf("the ghastling is not coming to the player's height (%v %v)", y, ok)
+	}
+}
+
+// BucketItem.use clips OUTLINE shapes from the real eye: grass in front of
+// the water stops the scoop, and a crouched player's lower eye reaches water
+// a standing player's ray passes over.
+func TestBucketFillRayOutlineAndEye(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	for z := 0; z <= 8; z++ {
+		for y := 199; y <= 203; y++ {
+			h.world.SetBlock(0, y, z, worldgen.Air)
+		}
+	}
+	pl.x, pl.y, pl.z = 0.5, 199.5, 0.5
+	pl.yaw, pl.pitch = 0, 0 // level, towards +z
+	h.world.SetBlock(0, 201, 3, worldgen.WaterBase)
+	h.world.SetBlock(0, 201, 2, worldgen.BlockBase("short_grass"))
+	pl.inv.slots[pl.p.heldSlot()] = invStack{item: itemBucket, count: 1}
+	h.bucketFill(players, pl, int32(pl.p.heldSlot()))
+	if h.world.At(0, 201, 3) != worldgen.WaterBase {
+		t.Fatal("the bucket scooped water through the grass in front of it")
+	}
+	h.world.SetBlock(0, 201, 2, worldgen.Air)
+	h.world.SetBlock(0, 201, 3, worldgen.Air)
+	h.world.SetBlock(0, 200, 3, worldgen.WaterBase) // below a standing eye, level with a crouched one
+	h.bucketFill(players, pl, int32(pl.p.heldSlot()))
+	if h.world.At(0, 200, 3) != worldgen.WaterBase {
+		t.Fatal("a standing player's level ray should pass over the water")
+	}
+	pl.p.sneaking = true
+	h.bucketFill(players, pl, int32(pl.p.heldSlot()))
+	if h.world.At(0, 200, 3) == worldgen.WaterBase || pl.inv.slots[pl.p.heldSlot()].item != itemBucketH2O {
+		t.Fatal("a crouched player's lower eye should scoop it")
 	}
 }

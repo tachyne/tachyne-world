@@ -170,6 +170,10 @@ type savedFurnace struct {
 	Cook     int         `json:"cook,omitempty"`
 	CookMax  int         `json:"cookMax,omitempty"`
 	Speed    float32     `json:"speed,omitempty"` // the lit fuel's speed multiplier
+	// Stacks are the three slots in full (components and all); Slots stays
+	// for older saves, which load from it when Stacks is empty.
+	Stacks [3]stackRow `json:"stacks"`
+	Used   [][2]int32  `json:"used,omitempty" mig:"item0"` // recipesUsed: (result item, count)
 }
 
 // savedStand is one placed armor stand (equipment rows = the stack pack).
@@ -180,6 +184,7 @@ type savedStand struct {
 	Z     float64     `json:"z"`
 	Yaw   float32     `json:"yaw"`
 	Equip [6]stackRow `json:"equip"`
+	Name  string      `json:"name,omitempty"` // custom_name
 }
 
 // recordLecterns / loadLecterns persist lectern books + pages.
@@ -248,7 +253,7 @@ func (s *containerStore) recordStands(stands map[int32]*armorStand) {
 	defer s.mu.Unlock()
 	s.m.Stands = s.m.Stands[:0]
 	for _, st := range stands {
-		sv := savedStand{Dim: st.dim, X: st.x, Y: st.y, Z: st.z, Yaw: st.yaw}
+		sv := savedStand{Dim: st.dim, X: st.x, Y: st.y, Z: st.z, Yaw: st.yaw, Name: st.name}
 		for i, e := range st.equip {
 			sv.Equip[i] = packStack(e)
 		}
@@ -262,7 +267,7 @@ func (s *containerStore) loadStands(alloc func() int32) map[int32]*armorStand {
 	defer s.mu.Unlock()
 	out := map[int32]*armorStand{}
 	for _, sv := range s.m.Stands {
-		st := &armorStand{eid: alloc(), dim: sv.Dim, x: sv.X, y: sv.Y, z: sv.Z, yaw: sv.Yaw}
+		st := &armorStand{eid: alloc(), dim: sv.Dim, x: sv.X, y: sv.Y, z: sv.Z, yaw: sv.Yaw, name: sv.Name}
 		for i, r := range sv.Equip {
 			st.equip[i] = unpackStack(r)
 		}
@@ -365,8 +370,18 @@ func (s *containerStore) loadFurnaces() map[simPos]*furnace {
 		if f.cookMax == 0 {
 			f.cookMax = 200
 		}
+		full := sf.Stacks[0][0] != 0 || sf.Stacks[1][0] != 0 || sf.Stacks[2][0] != 0
 		for i, row := range sf.Slots {
 			f.slots[i] = invStack{item: row[0], count: int(row[1]), dmg: int(row[2])}
+			if full {
+				f.slots[i] = unpackStack(sf.Stacks[i])
+			}
+		}
+		for _, u := range sf.Used {
+			if f.used == nil {
+				f.used = map[int32]int{}
+			}
+			f.used[u[0]] += int(u[1])
 		}
 		out[pos] = f
 	}
@@ -542,6 +557,10 @@ func (s *containerStore) recordFurnaces(furnaces map[simPos]*furnace) {
 		sf := savedFurnace{BurnLeft: f.burnLeft, BurnMax: f.burnMax, Cook: f.cook, CookMax: f.cookMax, Speed: f.speed}
 		for i, st := range f.slots {
 			sf.Slots[i] = [3]int32{st.item, int32(st.count), int32(st.dmg)}
+			sf.Stacks[i] = packStack(st)
+		}
+		for item, n := range f.used {
+			sf.Used = append(sf.Used, [2]int32{item, int32(n)})
 		}
 		snap[simKey(pos)] = sf
 	}

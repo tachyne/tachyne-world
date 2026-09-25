@@ -1,6 +1,10 @@
 package server
 
-import "github.com/tachyne/tachyne-world/internal/worldgen"
+import (
+	"strings"
+
+	"github.com/tachyne/tachyne-world/internal/worldgen"
+)
 
 // Random-tick growth — the "living world" simulation. Vanilla picks a few random
 // blocks per chunk-section per tick and ticks whatever is there; growable blocks
@@ -661,31 +665,74 @@ func init() {
 	}
 }
 
-// tickSpread ports SpreadingSnowyBlock.randomTick.
-//
-// Three things the grass-only version got wrong, all fixed here: vanilla makes
-// FOUR spread attempts per tick (not one), the vertical offset is nextInt(5)-3
-// (-3..+1, so it creeps down slopes) rather than -1..+1, and spreading is
-// gated on brightness >= 9 at the block above.
+// tickSpread ports SpreadingSnowyBlock.randomTick: a block that cannot
+// stay alive (canStayAlive) turns to dirt; one in light 9+ above makes four
+// tries at dirt within x/z ±1, y −3..+1 that could live and has no water
+// over it (canPropagate), each becoming the spreading block with its snowy
+// flag set by what sits on that dirt.
 func (h *hub) tickSpread(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
 	base, ok := spreaders[state]
 	if !ok {
 		return false
 	}
-	if h.opaqueAbove(dim, x, y, z) {
+	w := h.worldFor(dim)
+	if !spreadCanStayAlive(w.At(x, y+1, z)) {
 		h.setBlockAt(players, dim, blockPos{x, y, z}, base) // smothered → dirt
 		return true
 	}
 	if h.plantBrightness(dim, x, y+1, z, -1) < 9 {
 		return true // alive, but too dark to spread
 	}
+	info, _ := worldgen.InfoForState(state)
 	for i := 0; i < 4; i++ {
 		tx := x + h.rng.Intn(3) - 1
 		ty := y + h.rng.Intn(5) - 3
 		tz := z + h.rng.Intn(3) - 1
-		if h.worldFor(dim).At(tx, ty, tz) == base && !h.opaqueAbove(dim, tx, ty, tz) {
-			h.setBlockAt(players, dim, blockPos{tx, ty, tz}, state)
+		if w.At(tx, ty, tz) != base {
+			continue
 		}
+		above := w.At(tx, ty+1, tz)
+		if !spreadCanStayAlive(above) || worldgen.IsWater(above) || isWaterlogged(above) { // canPropagate
+			continue
+		}
+		snowy := "false" // isSnowySetting: #snow on top
+		if inRanges2(above, snowTagStates) {
+			snowy = "true"
+		}
+		h.setBlockAt(players, dim, blockPos{tx, ty, tz}, worldgen.SetProperty(info, state, "snowy", snowy))
+	}
+	return true
+}
+
+// spreadCanStayAlive is SpreadingSnowyBlock.canStayAlive for the block on
+// top: a single snow layer is fine; a full fluid (a source, falling fluid or
+// a waterlogged block) kills; otherwise the light passing into the top face
+// must be under 15 — an opaque cube, or a bottom slab, a bottom-half stair,
+// two or more snow layers, farmland or a path whose full bottom face
+// occludes it, kills.
+func spreadCanStayAlive(above uint32) bool {
+	info, ok := worldgen.InfoForState(above)
+	name, _ := worldgen.StateName(above)
+	if name == "snow" && ok && worldgen.GetProperty(info, above, "layers") == "1" {
+		return true
+	}
+	if worldgen.IsBubbleColumn(above) || isWaterlogged(above) {
+		return false
+	}
+	full := func(base uint32) bool { l := worldgen.FluidLevel(above, base); return l == 0 || l >= 8 }
+	if worldgen.IsWater(above) && full(worldgen.WaterBase) || worldgen.IsLava(above) && full(worldgen.LavaBase) {
+		return false // FluidState.isFull: a source or falling fluid
+	}
+	if worldgen.SkyOpacity(above) >= worldgen.Opaque {
+		return false
+	}
+	switch {
+	case name == "snow", name == "farmland", name == "dirt_path":
+		return false // useShapeForLightOcclusion: a full bottom face
+	case ok && info.HasProperty("type") && info.HasProperty("waterlogged") && !info.HasProperty("facing"): // a slab
+		return worldgen.GetProperty(info, above, "type") == "top"
+	case ok && info.HasProperty("shape") && info.HasProperty("half") && strings.HasSuffix(name, "_stairs"):
+		return worldgen.GetProperty(info, above, "half") == "top"
 	}
 	return true
 }

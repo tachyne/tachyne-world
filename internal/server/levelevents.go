@@ -8,29 +8,31 @@ import attachproto "github.com/tachyne/tachyne-common/attach"
 // approximated several by hand (a particle burst here, a sound there) and
 // skipped the rest; these are the ids it now fires where vanilla does.
 const (
-	worldEventDispenserSmoke = 2000 // PARTICLES_SHOOT_SMOKE, data: the facing's 3D index
-	worldEventSpawnerSpawn   = 2004 // PARTICLES_MOBBLOCK_SPAWN
-	worldEventPotionSplash   = 2002 // PARTICLES_SPELL_POTION_SPLASH, data: the liquid's rgb
-	worldEventInstantSplash  = 2007 // PARTICLES_INSTANT_POTION_SPLASH, data: the liquid's rgb
-	worldEventSplashSound    = 1053 // SOUND_SPELL_POTION_SPLASH: the bottle breaking (2002 is silent)
-	worldEventInstantSound   = 1054 // SOUND_INSTANT_POTION_SPLASH: the same, for an instant brew
-	worldEventBeeGrowth      = 2011 // PARTICLES_BEE_GROWTH, data: particle count
-	worldEventTurtleEggPlace = 2012 // PARTICLES_TURTLE_EGG_PLACEMENT
-	worldEventBoneMeal       = 1505 // PARTICLES_AND_SOUND_PLANT_GROWTH, data: count
-	worldEventAnvilBroken    = 1029 // SOUND_ANVIL_BROKEN
-	worldEventAnvilUsed      = 1030 // SOUND_ANVIL_USED
-	worldEventChorusGrow     = 1033 // SOUND_CHORUS_GROW
-	worldEventChorusDeath    = 1034 // SOUND_CHORUS_DEATH
-	worldEventDragonFireball = 1017 // SOUND_DRAGON_FIREBALL
-	worldEventBrushDone      = 3008 // PARTICLES_AND_SOUND_BRUSH_BLOCK_COMPLETE, data: block state
-	worldEventEggCrack       = 3009 // PARTICLES_EGG_CRACK
-	worldEventTrialSpawn     = 3011 // PARTICLES_TRIAL_SPAWNER_SPAWN, data: 1 when ominous
-	worldEventTrialEject     = 3014 // ANIMATION_TRIAL_SPAWNER_EJECT_ITEM
-	worldEventVaultActivate  = 3015 // ANIMATION_VAULT_ACTIVATE
-	worldEventVaultDeactive  = 3016 // ANIMATION_VAULT_DEACTIVATE
-	worldEventVaultEject     = 3017 // ANIMATION_VAULT_EJECT_ITEM
-	worldEventCobweb         = 3018 // ANIMATION_SPAWN_COBWEB
-	worldEventSkelToStray    = 1048 // SOUND_SKELETON_TO_STRAY
+	worldEventDispenserSmoke  = 2000 // PARTICLES_SHOOT_SMOKE, data: the facing's 3D index
+	worldEventSpawnerSpawn    = 2004 // PARTICLES_MOBBLOCK_SPAWN
+	worldEventPotionSplash    = 2002 // PARTICLES_SPELL_POTION_SPLASH, data: the liquid's rgb
+	worldEventInstantSplash   = 2007 // PARTICLES_INSTANT_POTION_SPLASH, data: the liquid's rgb
+	worldEventSplashSound     = 1053 // SOUND_SPELL_POTION_SPLASH: the bottle breaking (2002 is silent)
+	worldEventInstantSound    = 1054 // SOUND_INSTANT_POTION_SPLASH: the same, for an instant brew
+	worldEventBeeGrowth       = 2011 // PARTICLES_BEE_GROWTH, data: particle count
+	worldEventTurtleEggPlace  = 2012 // PARTICLES_TURTLE_EGG_PLACEMENT
+	worldEventBoneMeal        = 1505 // PARTICLES_AND_SOUND_PLANT_GROWTH, data: count
+	worldEventAnvilBroken     = 1029 // SOUND_ANVIL_BROKEN
+	worldEventAnvilUsed       = 1030 // SOUND_ANVIL_USED
+	worldEventGrindstoneUse   = 1042 // SOUND_GRINDSTONE_USED
+	worldEventSnifferEggBoost = 3009 // PARTICLES_EGG_CRACK: a sniffer egg set on moss
+	worldEventChorusGrow      = 1033 // SOUND_CHORUS_GROW
+	worldEventChorusDeath     = 1034 // SOUND_CHORUS_DEATH
+	worldEventDragonFireball  = 1017 // SOUND_DRAGON_FIREBALL
+	worldEventBrushDone       = 3008 // PARTICLES_AND_SOUND_BRUSH_BLOCK_COMPLETE, data: block state
+	worldEventEggCrack        = 3009 // PARTICLES_EGG_CRACK
+	worldEventTrialSpawn      = 3011 // PARTICLES_TRIAL_SPAWNER_SPAWN, data: 1 when ominous
+	worldEventTrialEject      = 3014 // ANIMATION_TRIAL_SPAWNER_EJECT_ITEM
+	worldEventVaultActivate   = 3015 // ANIMATION_VAULT_ACTIVATE
+	worldEventVaultDeactive   = 3016 // ANIMATION_VAULT_DEACTIVATE
+	worldEventVaultEject      = 3017 // ANIMATION_VAULT_EJECT_ITEM
+	worldEventCobweb          = 3018 // ANIMATION_SPAWN_COBWEB
+	worldEventSkelToStray     = 1048 // SOUND_SKELETON_TO_STRAY
 )
 
 // levelEvent fires one at a block position for everyone near it.

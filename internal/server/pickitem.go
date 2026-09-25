@@ -164,7 +164,7 @@ func (h *hub) entityPickResult(players map[int32]*tracked, t *tracked, eid int32
 		}
 	case h.crystals[eid] != nil:
 		c := h.crystals[eid]
-		if in(dimEnd, c.x, c.y, c.z, 2, 2) {
+		if in(c.dim, c.x, c.y, c.z, 2, 2) {
 			return invStack{item: itemByName["end_crystal"]}
 		}
 	}

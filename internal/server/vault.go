@@ -265,8 +265,9 @@ func (h *hub) ejectVaultReward(players map[int32]*tracked, v *vaultRecord) {
 		}
 		it := h.spawnItemIn(players, dimOverworld, st.item, st.count,
 			float64(v.pos.x)+0.5, float64(v.pos.y)+1, float64(v.pos.z)+0.5)
-		if it != nil {
-			it.dmg, it.ench = st.dmg, st.ench
+		if it != nil { // the whole stack: a tipped arrow keeps its potion
+			it.setFrom(st)
+			h.refreshItemMeta(players, it)
 		}
 	}
 	h.playSoundDim(players, dimOverworld, "minecraft:block.vault.eject_item", sndBlock,

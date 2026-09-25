@@ -1,6 +1,7 @@
 package server
 
 import (
+	"slices"
 	"strings"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
@@ -410,7 +411,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			if !worldgen.IsWater(ts) {
 				h.setBlockAt(players, pos.dim, front, worldgen.WaterBase)
 			}
-			h.releaseBucketMob(players, pos.dim, item, st.cube, front.x, front.y, front.z)
+			h.releaseBucketMob(players, pos.dim, *st, front.x, front.y, front.z)
 			st.item, st.count = itemBucket, 1
 		}
 	case dispense && item == int32(itemByName["chest"]) && h.dispenseChest(players, pos.dim, front):
@@ -528,9 +529,12 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 				yaw = 270
 			}
 			sd := &armorStand{eid: h.allocEID(), dim: pos.dim,
-				x: float64(front.x) + 0.5, y: float64(front.y), z: float64(front.z) + 0.5, yaw: yaw}
+				x: float64(front.x) + 0.5, y: float64(front.y), z: float64(front.z) + 0.5, yaw: yaw, name: st.name}
 			h.armorStands[sd.eid] = sd
 			h.toNearbyEv(players, sd.dim, sd.x, sd.z, h.standAddEv(sd))
+			if sd.name != "" {
+				h.toNearbyEv(players, sd.dim, sd.x, sd.z, metaEv(nameMeta(sd.eid, sd.name)))
+			}
 			h.rsSound(players, "minecraft:entity.armor_stand.place", sndBlock, sd.x, sd.y, sd.z, 0.75, 0.8)
 		} else if it := h.spawnItemIn(players, h.rsDim, item, 1, fx, fy, fz); it != nil {
 			it.dmg, it.ench = st.dmg, st.ench
@@ -904,14 +908,11 @@ func (h *hub) hopperTakeItems(players map[int32]*tracked, pos simPos, c *bin, ab
 	x0, x1 := float64(pos.x), float64(pos.x)+1
 	y0, y1 := float64(pos.y)+11.0/16, float64(pos.y)+2
 	z0, z1 := float64(pos.z), float64(pos.z)+1
-	for eid, it := range h.items {
-		if it.dim != pos.dim || it.x+half <= x0 || it.x-half >= x1 || it.z+half <= z0 || it.z-half >= z1 ||
-			it.y+2*half <= y0 || it.y >= y1 {
-			continue
-		}
-		if !aboveToo && floorInt(it.y) != pos.y {
-			continue // entityInside: the item is in the hopper's own cell
-		}
+	for _, eid := range h.itemsInOrder(func(it *itemEntity) bool {
+		return it.dim == pos.dim && it.x+half > x0 && it.x-half < x1 && it.z+half > z0 && it.z-half < z1 &&
+			it.y+2*half > y0 && it.y < y1 && (aboveToo || floorInt(it.y) == pos.y) // entityInside: its own cell
+	}) {
+		it := h.items[eid]
 		st := it.stack()
 		left := binInsert(c.slots, st)
 		if left == 0 {
@@ -1210,4 +1211,18 @@ func (h *hub) canTakeFromBelow(src simPos, slot int, item int32) bool {
 		}
 	}
 	return true
+}
+
+// itemsInOrder is the item entities a pick accepts, in the order they came
+// into the world — the order a hopper's getEntitiesOfClass meets them in,
+// where the item map alone would hand them over at random.
+func (h *hub) itemsInOrder(pick func(*itemEntity) bool) []int32 {
+	var eids []int32
+	for eid, it := range h.items {
+		if pick(it) {
+			eids = append(eids, eid)
+		}
+	}
+	slices.Sort(eids)
+	return eids
 }

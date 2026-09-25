@@ -227,3 +227,40 @@ func TestFallingBlockSurvivesARestart(t *testing.T) {
 		t.Fatalf("the restored sand should have landed: %d entities, floor %d", len(h2.fallingBlocks), h2.world.At(x, y, z))
 	}
 }
+
+// ScaffoldingBlock.tick: a scaffold set at distance 7 with nothing holding
+// it comes loose as a falling block the next tick and settles on the floor
+// as scaffolding again; one that loses its support from a lower distance
+// breaks and drops instead.
+func TestUnsupportedScaffoldingFalls(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	lo, _ := worldgen.BlockRange("scaffolding")
+	si, _ := worldgen.InfoForState(lo)
+	scaf := worldgen.SetProperty(si, worldgen.SetProperty(si, lo, "waterlogged", "false"), "distance", "7")
+	dropFrom(h, players, x, y, z, 6, scaf)
+	stepTicks(h, players, 2)
+	if w.At(x, y+6, z) != worldgen.Air || len(h.fallingBlocks) != 1 {
+		t.Fatalf("the scaffold should be falling: cell %d, %d falling", w.At(x, y+6, z), len(h.fallingBlocks))
+	}
+	stepTicks(h, players, 60)
+	if !isScaffolding(w.At(x, y, z)) {
+		t.Fatalf("the scaffold should land on the floor, got %d", w.At(x, y, z))
+	}
+	if d := scaffoldDist(w.At(x, y, z)); d != 0 {
+		t.Fatalf("the landed scaffold stands on stone: distance %d", d)
+	}
+}
+
+// WebBlock.entityInside → makeStuckInBlock: an anvil that falls through a
+// cobweb loses its fall there, so the cow under it is not hurt.
+func TestFallingAnvilCaughtByCobweb(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	cow := h.spawnMob(players, entityCow, float64(x)+0.5, float64(y), float64(z)+0.5)
+	hp := cow.health
+	dropFrom(h, players, x, y, z, 8, worldgen.BlockBase("anvil"))
+	w.SetBlock(x, y+2, z, cobwebState)
+	stepTicks(h, players, 400)
+	if lost := hp - cow.health; lost != 0 {
+		t.Fatalf("an anvil whose fall a cobweb reset cost the cow %d", lost)
+	}
+}

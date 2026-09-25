@@ -40,10 +40,11 @@ func (h *hub) snifferHatchBoost(dim, x, y, z int) bool {
 // scheduleSnifferEgg books the next crack. Vanilla schedules a third of the
 // hatch time plus a jitter, and re-schedules from onPlace each time the state
 // changes — so each of the three stages waits its own third.
-func (h *hub) scheduleSnifferEgg(dim, x, y, z int) {
+func (h *hub) scheduleSnifferEgg(players map[int32]*tracked, dim, x, y, z int) {
 	total := snifferHatchTicks
 	if h.snifferHatchBoost(dim, x, y, z) {
 		total = snifferHatchBoosted
+		h.levelEvent(players, dim, worldEventSnifferEggBoost, x, y, z, 0) // SnifferEggBlock.onPlace: the moss's green sparkle
 	}
 	delay := uint64(total/snifferEggHatchStages + h.rng.Intn(snifferHatchJitter))
 	if h.snifferEggs == nil {
@@ -68,7 +69,7 @@ func (h *hub) tickSnifferEgg(players map[int32]*tracked, dim, x, y, z int, state
 	if !known {
 		// First time we have seen this egg — start its clock. Lazy rather than
 		// on-place so eggs already sitting in a loaded world also hatch.
-		h.scheduleSnifferEgg(dim, x, y, z)
+		h.scheduleSnifferEgg(players, dim, x, y, z)
 		return true
 	}
 	if now < due {
@@ -89,7 +90,7 @@ func (h *hub) tickSnifferEgg(players map[int32]*tracked, dim, x, y, z int, state
 		h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.SetProperty(info, state, "hatch", next))
 		// The new state's onPlace: a BLOCK_PLACE, and the next crack booked.
 		h.vib(dim, freqBlockPlace, x, y, z, 0)
-		h.scheduleSnifferEgg(dim, x, y, z)
+		h.scheduleSnifferEgg(players, dim, x, y, z)
 		return true
 	}
 	// SnifferEggBlock.tick: the hatch sound, then Level.destroyBlock without

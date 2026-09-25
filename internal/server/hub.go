@@ -130,8 +130,8 @@ type evPopItem struct { // pop a SPECIFIC item into the world (not a loot roll)
 
 func (evPopItem) isHubEvent() {}
 
-type evRespawn struct{ eid int32 } // player clicked Respawn after dying
-type evUseMap struct{ eid int32 }  // player right-clicked an empty map
+type evRespawn struct{ eid int32 }      // player clicked Respawn after dying
+type evUseMap struct{ eid, slot int32 } // player right-clicked an empty map (slot: hotbar or offhandSlot)
 type evEat struct {
 	eid  int32
 	slot int
@@ -584,7 +584,8 @@ type hub struct {
 	furnaces map[simPos]*furnace // active furnace states (hub-goroutine-only)
 	chests   map[simPos]*chest   // chest storage (hub-goroutine-only)
 	// Every placed conduit, so none has to be found by scanning blocks.
-	conduits map[simPos]bool
+	conduits    map[simPos]bool
+	conduitRuns map[simPos]*conduitRun // live conduit block-entity state (conduit.go)
 	// Potent sulfur block entities (potentsulfur.go): registered when a chunk
 	// first loads or a cell changes, ticked in loaded chunks. geyserFliers are
 	// the mobs a geyser has lifted, moved each tick until they come down.
@@ -1934,7 +1935,7 @@ func (h *hub) run() {
 				h.onEquipHeld(players, e)
 			case evUseMap:
 				if t := players[e.eid]; t != nil {
-					h.mapCreateFilled(players, t)
+					h.mapCreateFilled(players, t, int(e.slot))
 				}
 			case evStopEat:
 				if t := players[e.eid]; t != nil {
@@ -2158,7 +2159,7 @@ func (h *hub) run() {
 				}
 			case evOpenGrind:
 				if t := players[e.eid]; t != nil {
-					h.openGrindstone(t)
+					h.openGrindstone(t, blockPos{int(e.x), int(e.y), int(e.z)})
 					h.incCustom(t, "interact_with_grindstone", 1)
 				}
 			case evOpenCarto:
@@ -2618,6 +2619,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 	h.sendPaintingsTo(nt)
 	h.sendFramesTo(nt)
 	h.sendStandsTo(nt)
+	h.sendCrystalsTo(nt)
 	h.sendLeashesTo(nt)
 	h.waypointOnJoin(players, nt)
 	h.bossbarsOnJoin(nt) // the custom bars this player is on (bossbar.go)
@@ -2785,6 +2787,9 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 // onBlock relays an applied edit to every other player tracking that chunk, so
 // builds appear for everyone (the editor already saw its own prediction).
 func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
+	if t := players[e.by]; t != nil && e.broken != 0 && guardedByPiglins[e.broken] {
+		h.angerNearbyPiglins(players, t, false) // Block.playerWillDestroy: #guarded_by_piglins, sight not needed
+	}
 	bcx, bcz := chunkFloor(float64(e.x)), chunkFloor(float64(e.z))
 	body := blockSetEv(e.x, e.y, e.z, e.state)
 	for eid, t := range players {

@@ -6,7 +6,9 @@ import "github.com/tachyne/tachyne-world/internal/worldgen"
 // to 64 blocks, breadth-first, never more than 6 cells away — and turns wet.
 //
 // Vanilla's search takes the water-logged plants with it (kelp and seagrass
-// drop rather than being stranded), and stops at anything that is not water,
+// drop rather than being stranded), drains waterlogged blocks (they stay,
+// dry, and the search goes on through them), and stops at anything that is
+// not water,
 // so a sponge cannot reach round a corner it has no water path to.
 
 var (
@@ -65,6 +67,10 @@ func (h *hub) absorbWater(players map[int32]*tracked, dim int, pos blockPos) boo
 			switch {
 			case worldgen.IsWater(st):
 				h.setBlockAt(players, dim, np, worldgen.Air)
+			case waterloggable(st) && isWaterlogged(st):
+				// BucketPickup.pickupBlock: a waterlogged slab, stair or
+				// fence gives up its water and stays, dry.
+				h.setBlockAt(players, dim, np, withWaterlogged(st, false))
 			case spongeDrains[st]:
 				h.setBlockAt(players, dim, np, worldgen.Air)
 				h.dropLoose(players, dim, np, st)

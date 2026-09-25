@@ -49,6 +49,15 @@ func containerSound(st uint32, open bool) string {
 	case isBarrel(st):
 		return "minecraft:block.barrel." + oc
 	}
+	if stage, _, _, ok := copperChestOf(st); ok { // CopperChestBlock: its weathering's own voice, waxed or not
+		switch stage {
+		case 2:
+			return "minecraft:block.copper_chest_weathered." + oc
+		case 3:
+			return "minecraft:block.copper_chest_oxidized." + oc
+		}
+		return "minecraft:block.copper_chest." + oc
+	}
 	return "minecraft:block.chest." + oc
 }
 

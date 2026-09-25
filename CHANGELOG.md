@@ -181,6 +181,123 @@ the public history since the project was open-sourced on 2026-07-10.
 - **E opens your mount's inventory.** Pressing the inventory key while
   riding a tamed horse, donkey, mule, llama, camel or nautilus opens its
   saddle and armour screen, and on a chest boat its chest, as in vanilla.
+- **Small redstone and TNT rules.** Bats no longer press pressure plates or
+  trip tripwire, while armour stands now do; a player in adventure mode
+  can no longer light TNT with flint and steel or a flaming arrow, and a
+  mob's flaming arrow lights TNT only when mob griefing is on, as in
+  vanilla.
+- **Fire burns whatever it touches.** Players and mobs now catch fire when
+  any part of their body is in a fire's block, as in vanilla, not only
+  when the fire is right at their feet or head.
+- **Hoppers pick up items in order.** A hopper, or a hopper minecart, now
+  takes the items lying on it oldest first, as in vanilla, instead of in a
+  random order.
+- **The warden's warning grows closer.** After each shriek the unseen
+  warden now answers with its close, closer, closest and then angry growl
+  as the warning level rises, from somewhere around the shrieker, as in
+  vanilla; it always used the same growl.
+- **Sniffer eggs on moss sparkle; cobwebs catch falling blocks.** A sniffer
+  egg set on moss shows its green sparkle, as in vanilla. Sand, gravel or
+  an anvil falling through a cobweb (or powder snow) is slowed and loses
+  its fall there, so an anvil caught by a web no longer hurts what is
+  under it.
+- **Furnaces keep the experience they owe.** The experience from smelting
+  is now saved with the furnace across restarts, pops out of the furnace
+  when it is broken, and is no longer lost when the furnace is emptied by
+  a hopper; fractions round up by chance as in vanilla instead of being
+  carried. Items left in a furnace keep their names and enchantments
+  across restarts, and furnaces in the Nether and the End no longer come
+  back from a restart glowing.
+- **Conduits sound and hunt as in vanilla.** A conduit now plays its
+  activation, deactivation and ambient hums; it keeps attacking the same
+  monster until that one dies or leaves, with the attack sound at the
+  monster; it only counts real monsters; and its power reaches a player
+  on land only where rain actually falls on them, not anywhere during a
+  storm. It works at vanilla's pace, so its attacks come half as often as
+  before.
+- **Dungeon spawners behave like vanilla spawners.** A player in the Nether
+  standing at a dungeon's overworld coordinates no longer wakes it; the
+  spawner counts only its own kind of mob in the space around the cage,
+  and it spawns within four blocks of the cage, a block up or down, only
+  where the mob fits. Fortress, stronghold and mineshaft spawners share
+  the same, now box-shaped, count.
+- **Shift-clicking a trade trades in bulk.** Shift-clicking the result of a
+  villager or wandering trader trade now keeps trading while you can pay
+  and have room, as in vanilla, instead of trading once.
+- **Daylight detectors in the Nether and the End stay put.** With no sky
+  there, a detector no longer reads darkness, so an inverted one no
+  longer gives full power, as in vanilla.
+- **Grindstone experience comes out of the grindstone.** The experience
+  from disenchanting now pops out of the grindstone itself, with its use
+  sound there, as in vanilla, rather than at your feet.
+- **Copper chests sound like copper.** Copper chests now open and close
+  with their own sounds, creakier as they weather, as in vanilla, instead
+  of a wooden chest's.
+- **Camp maps have names.** The maps in abandoned camp chests are named
+  for the camp they lead to ("Bamboo Camp Map" and so on), as in vanilla.
+- **Piglins guard their gold.** Breaking gold blocks, gold ore, chests,
+  barrels and the other blocks piglins guard now angers the piglins
+  around you, and so does opening a chest minecart or chest boat or
+  breaking one by hand, as in vanilla.
+- **Frogs leave a slime ball.** A small slime eaten by a frog now drops a
+  slime ball, as in vanilla; it used to vanish without a trace.
+- **Tall grass drops seeds from either half.** Breaking the top half of
+  tall grass or a large fern can now drop wheat seeds too, as in vanilla;
+  a plant whose two halves come down together still rolls only once.
+- **Loose scaffolding falls.** Scaffolding set down with nothing holding
+  it (by a command or a structure) now drops like sand and settles on the
+  ground as scaffolding, as in vanilla.
+- **Grass and mycelium spread and die as in vanilla.** Grass now dies
+  under water, a bottom slab, a lower stair or deep snow (a single snow
+  layer is fine), no longer spreads onto dirt that is under water, and
+  grass that spreads under snow comes up snowy.
+- **Sponges dry out waterlogged blocks.** A sponge now drains waterlogged
+  slabs, stairs, fences and the like (they stay, dry) and soaks up the
+  water beyond them, as in vanilla.
+- **Boats need room.** A boat can no longer be placed inside another boat,
+  a player, a mob or a wall, as in vanilla.
+- **Buckets scoop what you are looking at.** An empty bucket no longer
+  reaches through grass, flowers or a torch to the water behind them, it
+  aims from your real eye height (lower when you crouch), and it can
+  scoop a bubble column, as in vanilla.
+- **Spawn eggs make babies of more mobs.** Using a spawn egg on a
+  villager, squid, glow squid, dolphin, zombie, husk, drowned, zombie
+  villager, zombified piglin, piglin or zoglin now spawns a baby of it, as
+  in vanilla. A baby villager takes its parent's or the biome's type and
+  starts unemployed.
+- **Empty maps work as in vanilla.** An empty map works from the offhand
+  too, a last empty map turns into the new map right in your hand, a full
+  inventory drops the new map instead of losing it, creative no longer
+  uses up the empty map, and filling one plays the cartography sound and
+  counts as a use in your statistics.
+- **Fishing catches fly to you.** A catch now leaves the bobber as an item
+  that arcs towards you, as in vanilla, instead of appearing straight in
+  your inventory, and keeps every detail of what was caught.
+- **Drops keep everything on them.** Gear a mob picked up, vault and
+  trial-spawner rewards, archaeology finds and trade items that no longer
+  fit your inventory now drop whole: names, dye, potions on tipped arrows
+  and ominous bottles, and the desert well's suspicious stew effect are
+  no longer stripped.
+- **Named armour stands.** A name tag now names an armour stand, a renamed
+  armour-stand item places a stand with that name (by hand or from a
+  dispenser), the name is kept across restarts, and breaking the stand
+  drops a named item. The armour it wore drops whole — dyed leather,
+  custom names and banner patterns on a head are no longer lost.
+- **Bucketed mobs keep their health and name.** A hurt fish, axolotl or
+  tadpole scooped into a bucket comes back out just as hurt, and a named
+  one's bucket carries the name and names the mob again when poured, as in
+  vanilla.
+- **Copper golems sound their age.** A weathered or oxidized copper golem
+  now hurts, dies and steps with its own creakier voice, as in vanilla, and
+  a golem turning into a statue plays its sound again (it had been silent).
+- **End crystals go down anywhere.** An end crystal can be placed on
+  obsidian or bedrock in any dimension, as in vanilla, not only in the End;
+  only the cell above has to be clear, and any mob, item or crystal in the
+  way stops it. Struck, it blows up where it stands.
+- **Lightning cleans copper.** A bolt that strikes copper turns it back to
+  fresh copper and scrapes the oxidation off copper blocks around it, with
+  a spark on each, as in vanilla. Lightning advancements now count every
+  player within 256 blocks of the bolt, not just those within 30.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in

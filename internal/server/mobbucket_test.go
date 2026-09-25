@@ -83,3 +83,41 @@ func TestMobBucketReleasesMob(t *testing.T) {
 		t.Error("a bucket-released mob despawned; it must be persistent")
 	}
 }
+
+// Bucketable.saveDefaultDataToBucketTag: a hurt, named fish goes into its
+// bucket with its Health and name, survives a save, and comes back out of a
+// poured bucket hurt and named.
+func TestBucketKeepsHealthAndName(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	fish := h.spawnMob(players, entitySalmon, 0.5, 200, 0.5)
+	fish.health = 1
+	fish.customName = "Gill"
+	slot := pl.p.heldSlot()
+	pl.inv.slots[slot] = invStack{item: itemBucketH2O, count: 1}
+	if !h.tryBucketMob(players, pl, fish) {
+		t.Fatal("the salmon was not scooped")
+	}
+	st := pl.inv.slots[slot]
+	if st.cube.health != 2 || st.name != "Gill" {
+		t.Fatalf("the bucket carries health %d name %q", st.cube.health, st.name)
+	}
+	st = unpackStack(packStack(st))
+	pl.inv.slots[slot] = st
+	for y := 199; y < 203; y++ {
+		h.world.SetBlock(3, y, 3, worldgen.Air)
+	}
+	h.bucketEmpty(players, pl, int32(slot), 3, 200, 3, 3, 199, 3)
+	var out *mob
+	for _, m := range h.mobs {
+		if m.etype == entitySalmon {
+			out = m
+		}
+	}
+	if out == nil || out.health != 1 || out.customName != "Gill" {
+		t.Fatalf("the released salmon: %+v", out)
+	}
+}

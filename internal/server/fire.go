@@ -62,6 +62,26 @@ func fireContactDamage(a, b uint32) float64 {
 	return 0
 }
 
+// fireInBox is BaseFireBlock.entityInside reached through checkInsideBlocks:
+// a fire's inside shape is its whole cell, so any fire in a cell the box
+// (half-width hw, height ht, deflated by 1e-5) overlaps touches it; the
+// damage is the hottest one's (soul fire 2, fire 1), 0 when none.
+func (h *hub) fireInBox(dim int, x, y, z, hw, ht float64) float64 {
+	const eps = 1e-5
+	w := h.worldFor(dim)
+	dmg := 0.0
+	for bx := floorInt(x - hw + eps); bx <= floorInt(x+hw-eps); bx++ {
+		for by := floorInt(y + eps); by <= floorInt(y+ht-eps); by++ {
+			for bz := floorInt(z - hw + eps); bz <= floorInt(z+hw-eps); bz++ {
+				if d := fireContactDamage(w.At(bx, by, bz), worldgen.Air); d > dmg {
+					dmg = d
+				}
+			}
+		}
+	}
+	return dmg
+}
+
 // soulFireBase is #soul_fire_base_blocks: fire lit over it is soul fire,
 // and soul fire lasts only while it stays (BaseFireBlock.getState,
 // SoulFireBlock.canSurvive).
@@ -161,6 +181,9 @@ func (evPrimeTNT) isHubEvent() {}
 // told why.
 func (h *hub) onPrimeTNT(players map[int32]*tracked, e evPrimeTNT) {
 	t := players[e.by]
+	if t != nil && t.gamemode == gmAdventure && h.rules.TNTExplodes {
+		return // TntBlock.prime: in adventure the lighter must be allowed to break TNT (can_break), and none is
+	}
 	if h.primeTNTBy(players, e.dim, e.x, e.y, e.z, tntFuseTicks, e.by) == nil {
 		if t != nil && e.item != 0 && !h.rules.TNTExplodes {
 			t.p.trySendEv(actionBarEv("TNT explosions are disabled")) // block.minecraft.tnt.disabled
@@ -846,6 +869,9 @@ func (h *hub) tickBurning(players map[int32]*tracked, t *tracked) {
 // survival per item. Blocks without a table keep the old roller with the
 // decay applied to the block as a whole.
 func (h *hub) dropExploded(players map[int32]*tracked, dim int, pos blockPos, st uint32, radius int, kind blastKind) {
+	if h.doublePlantDropBlocked(dim, pos, st) {
+		return
+	}
 	ctx := lootCtx{state: st, rng: h.rng.Intn, randf: h.rng.Float64}
 	if h.dropDecay(kind) {
 		ctx.explosion = float64(max(1, radius))

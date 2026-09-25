@@ -570,9 +570,8 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 			// FurnaceResultSlot.checkTakeAchievements: onCraftedBy counts
 			// what was taken as crafted.
 			h.incStat(t, attachproto.StatCrafted, ptr.item, int32(ptr.count-ch.st.count))
-			if f := h.furnaces[t.winPos]; f != nil && f.xpBank >= 1 {
-				h.spawnXPOrbIn(players, t.dim, int(f.xpBank), t.x, t.y, t.z)
-				f.xpBank -= float64(int(f.xpBank))
+			if f := h.furnaces[t.winPos]; f != nil { // FurnaceResultSlot.checkTakeAchievements: at the player
+				h.popFurnaceXP(players, f, t.dim, t.x, t.y, t.z)
 			}
 		}
 		*ptr = placed[i]

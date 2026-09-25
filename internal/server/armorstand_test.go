@@ -89,3 +89,56 @@ func TestArmorStandFlow(t *testing.T) {
 		}
 	})
 }
+
+// NameTagItem names an armour stand like any living entity; a named
+// armour-stand item places a named stand; the name is saved, and breaking
+// the stand drops a named item and its gear with every component.
+func TestArmorStandNames(t *testing.T) {
+	_, h, p := breakPlaceServer(t)
+	var st *armorStand
+	onHub(t, h, func() {
+		tr := h.playersRef[p.eid]
+		tr.gamemode = gmSurvival
+		bx, bz, by := int(tr.x)+2, int(tr.z), int(tr.y)
+		tr.inv.slots[tr.p.heldSlot()] = invStack{item: itemArmorStand, count: 1, name: "Sentry"}
+		h.onPlaceStand(h.playersRef, evPlaceStand{eid: p.eid, x: bx, y: by, z: bz})
+		for _, s := range h.armorStands {
+			st = s
+		}
+		tr.inv.slots[tr.p.heldSlot()] = invStack{item: int32(itemByName["name_tag"]), count: 1, name: "Guard"}
+	})
+	if st == nil || st.name != "Sentry" {
+		t.Fatalf("a named item places a named stand: %+v", st)
+	}
+	h.post(evInteractMob{eid: p.eid, target: st.eid}) // the UseEntity path
+	onHub(t, h, func() {})
+	onHub(t, h, func() {
+		tr := h.playersRef[p.eid]
+		if st.name != "Guard" || tr.inv.slots[tr.p.heldSlot()].item != 0 {
+			t.Errorf("a name tag renames the stand and is spent: %q %+v", st.name, tr.inv.slots[tr.p.heldSlot()])
+		}
+		cs := newContainerStore("")
+		cs.recordStands(map[int32]*armorStand{st.eid: st})
+		for _, l := range cs.loadStands(func() int32 { return 999 }) {
+			if l.name != "Guard" {
+				t.Errorf("the name did not survive a save: %q", l.name)
+			}
+		}
+		st.equip[attachproto.EquipHead] = invStack{item: int32(itemByName["leather_helmet"]), count: 1, color: 0x123456, name: "Cap"}
+		h.hitStand(h.playersRef, tr, st)
+		h.hitStand(h.playersRef, tr, st)
+		var standName, capName string
+		var capColor int32
+		for _, it := range h.items {
+			switch it.item {
+			case itemArmorStand:
+				standName = it.name
+			case int32(itemByName["leather_helmet"]):
+				capName, capColor = it.name, it.color
+			}
+		}
+		if standName != "Guard" || capName != "Cap" || capColor != 0x123456 {
+			t.Errorf("drops: stand %q cap %q colour %x", standName, capName, capColor)
+		}
+	})
+}

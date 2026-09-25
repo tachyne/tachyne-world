@@ -192,7 +192,7 @@ func TestPillagerCrossbowSometimesPierces(t *testing.T) {
 	pierce, n := 0, 6000
 	for i := 0; i < n; i++ {
 		m := &mob{etype: entityPillager, held: itemCrossbow}
-		h.pillagerCrossbowEnchant(m)
+		h.enchantPillagerCrossbow(m)
 		for _, e := range m.heldEnch {
 			if e.id == enchPiercing && e.lvl > 0 {
 				pierce++

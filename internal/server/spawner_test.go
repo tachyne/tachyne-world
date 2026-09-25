@@ -46,8 +46,11 @@ func TestSpawnerSpawnsWhenPlayerNear(t *testing.T) {
 		if m.etype != want {
 			t.Fatalf("spawner mob type %d, want %d", m.etype, want)
 		}
-		if m.y != float64(d.Y) {
-			t.Fatalf("mob should spawn on the dungeon floor y=%d, got %v", d.Y, m.y)
+		if m.y < float64(d.Y) || m.y > float64(d.Y+1) {
+			t.Fatalf("mob should spawn in the room, y %d..%d (BaseSpawner: y ±1, clear of blocks), got %v", d.Y, d.Y+1, m.y)
+		}
+		if dx, dz := m.x-float64(d.X)-0.5, m.z-float64(d.Z)-0.5; dx < -4 || dx > 4 || dz < -4 || dz > 4 {
+			t.Fatalf("mob spawned %.1f,%.1f from the cage, past spawnRange 4", dx, dz)
 		}
 	}
 	// Cooldown: an immediate second pass must not double-spawn.
@@ -63,6 +66,26 @@ func TestSpawnerSpawnsWhenPlayerNear(t *testing.T) {
 	h.updateSpawners(players)
 	if len(h.mobs) != before {
 		t.Fatal("a mined spawner must not spawn")
+	}
+}
+
+// BaseSpawner.isNearPlayer asks the spawner's own level: a player in the
+// Nether at a dungeon's overworld coordinates does not wake it.
+func TestDungeonSpawnerIgnoresOtherDimensions(t *testing.T) {
+	w := world.New(7)
+	h := newHub(w)
+	d, ok := findDungeon(w)
+	if !ok {
+		t.Skip("no dungeon near origin for this seed")
+	}
+	pl := testTracked()
+	pl.dim = dimNether
+	pl.x, pl.y, pl.z = float64(d.X)+2, float64(d.Y), float64(d.Z)
+	players := map[int32]*tracked{1: pl}
+	w.At(d.X, d.Y, d.Z)
+	h.updateSpawners(players)
+	if len(h.mobs) != 0 {
+		t.Fatal("a Nether player woke an overworld dungeon spawner")
 	}
 }
 

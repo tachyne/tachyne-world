@@ -171,7 +171,8 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 		fx, fy, fz := int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z))
 		feet, head := w.At(fx, fy, fz), w.At(fx, int(math.Floor(m.y+mobEyeHeight(m))), fz) // the head is where the eyes are: a floater's clear the water
 		inLava := worldgen.IsLava(feet) || worldgen.IsLava(head)
-		inFire := isFire(feet) || isFire(head)
+		b := m.box()
+		inFire := h.fireInBox(m.dim, m.x, m.y, m.z, b.w/2, b.h) > 0
 		if fireImmune[m.etype] { // striders/blazes/etc. bathe unharmed
 			inLava, inFire = false, false
 		}
@@ -296,7 +297,9 @@ func (h *hub) mobContactTick(players map[int32]*tracked) {
 		fx, fy, fz := int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z))
 		feet, head := w.At(fx, fy, fz), w.At(fx, int(math.Floor(m.y+mobEyeHeight(m))), fz)
 		inLava := worldgen.IsLava(feet) || worldgen.IsLava(head)
-		inFire := isFire(feet) || isFire(head)
+		b := m.box()
+		fireDmg := h.fireInBox(m.dim, m.x, m.y, m.z, b.w/2, b.h) // any fire the box touches
+		inFire := fireDmg > 0
 		if fireImmune[m.etype] {
 			inLava, inFire = false, false
 		}
@@ -308,7 +311,7 @@ func (h *hub) mobContactTick(players map[int32]*tracked) {
 			}
 		} else if inFire {
 			m.ignite(fireAfterburn)
-			h.hurtMobOf(players, m, fireContactDamage(feet, head), dtInFire) // soul fire burns 2
+			h.hurtMobOf(players, m, fireDmg, dtInFire) // soul fire burns 2
 			if m.health <= 0 {
 				continue
 			}

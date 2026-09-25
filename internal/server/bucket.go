@@ -61,7 +61,7 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 		h.releaseSulfurBucket(players, t.dim, st, x, y, z)
 		return
 	}
-	mobData := hs.cube // the bucketed mob's variant and age, read before the swap
+	mobData := *hs // the bucketed mob's variant, age, health and name, read before the swap
 	// LiquidBlockContainer: a water bucket emptied onto a slab, stair, fence,
 	// sign or any other waterloggable block fills THAT block instead of the
 	// cell beside it. Without this the water went next door and the slab
@@ -95,7 +95,7 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 			float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 0.5, 2.6+(h.rng.Float32()-h.rng.Float32())*0.8)
 		h.swapBucket(t, slot, itemBucket)
 		if mobBucket {
-			h.releaseBucketMob(players, t.dim, held, mobData, x, y, z)
+			h.releaseBucketMob(players, t.dim, mobData, x, y, z)
 		}
 		return
 	}
@@ -109,19 +109,25 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 	}
 	h.swapBucket(t, slot, itemBucket)
 	if mobBucket {
-		h.releaseBucketMob(players, t.dim, held, mobData, x, y, z)
+		h.releaseBucketMob(players, t.dim, mobData, x, y, z)
 	}
 }
 
-// bucketFill scoops with an empty bucket: walk the look ray to the first
-// fluid SOURCE (flowing fluid is passed through, a solid stops the ray).
+// bucketFill scoops with an empty bucket: walk the look ray from the eyes
+// (lower when crouching) to the first fluid SOURCE; flowing fluid is passed
+// through, and any block with an outline shape — grass, a torch, a flower,
+// not only a solid — stops the ray (getPlayerPOVHitResult clips OUTLINE).
 func (h *hub) bucketFill(players map[int32]*tracked, t *tracked, slot int32) {
 	if s := t.handStack(int(slot)); s == nil || s.item != itemBucket {
 		return // BucketItem.use scoops with the bucket in the hand used
 	}
 	h.vibAt(t.dim, freqFluidPickup, t.x, t.y, t.z, t.p.eid)
 	dx, dy, dz := lookVector(t.yaw, t.pitch)
-	ox, oy, oz := t.x, t.y+1.5, t.z
+	eye := playerEyeStand
+	if t.p.sneaking {
+		eye = playerEyeSneak
+	}
+	ox, oy, oz := t.x, t.y+eye*t.scale(), t.z
 	w := h.worldFor(t.dim)
 	last := blockPos{int(math.Floor(ox)), int(math.Floor(oy)), int(math.Floor(oz))}
 	for d := 0.0; d <= bucketReach; d += 0.1 {
@@ -132,7 +138,7 @@ func (h *hub) bucketFill(players map[int32]*tracked, t *tracked, slot int32) {
 		last = p
 		st := w.At(p.x, p.y, p.z)
 		switch {
-		case st == worldgen.WaterBase: // a source — scoop it
+		case st == worldgen.WaterBase || worldgen.IsBubbleColumn(st): // a source (BubbleColumnBlock is a BucketPickup too) — scoop it
 			h.setBlockLive(players, t.dim, p.x, p.y, p.z, worldgen.Air)
 			h.playSoundDim(players, t.dim, "minecraft:item.bucket.fill", sndBlock,
 				float64(p.x)+0.5, float64(p.y)+0.5, float64(p.z)+0.5, 1, 1)
@@ -162,11 +168,24 @@ func (h *hub) bucketFill(players map[int32]*tracked, t *tracked, slot int32) {
 				float64(p.x)+0.5, float64(p.y)+0.5, float64(p.z)+0.5, 1, 1)
 			h.giveFilled(players, t, slot, itemBucketH2O)
 			return
-		case worldgen.Collides(st):
-			return // hit a solid before any source
+		case !outlineEmpty(st):
+			return // hit a block's outline before any source
 		}
 		// air / flowing fluid: the source-only ray passes through
 	}
+}
+
+// outlineEmpty reports whether a state has no outline shape, so an OUTLINE
+// clip passes through its cell: air, liquid blocks, and the light block.
+func outlineEmpty(st uint32) bool {
+	if st == worldgen.Air || worldgen.IsFluid(st) {
+		return true
+	}
+	switch name, _ := worldgen.StateName(st); name {
+	case "air", "cave_air", "void_air", "light":
+		return true
+	}
+	return false
 }
 
 // swapBucket replaces a (non-stacking, count-1) full bucket with its result.

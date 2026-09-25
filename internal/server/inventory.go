@@ -83,6 +83,7 @@ type cubeContent struct {
 	item    int32 // the swallowed block (0 = none)
 	age     int32 // AgeableMob age: negative for a baby
 	variant int32 // any bucketed mob's variant + 1 (bucket_entity_data Variant); 0 = none
+	health  int32 // a bucketed mob's Health + 1 (bucket_entity_data Health); 0 = none recorded
 }
 
 // bannerLayer is one loom-applied pattern layer (wire encoding: id+1, dye).

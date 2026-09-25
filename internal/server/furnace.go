@@ -1,10 +1,11 @@
 package server
 
 import (
-	attachproto "github.com/tachyne/tachyne-common/attach"
 	"log"
 	"math"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -110,7 +111,11 @@ type furnace struct {
 	cook     int         // progress toward the current smelt
 	cookMax  int         // the current recipe's cook time, at the fuel's speed
 	speed    float32     // the lit fuel's speed multiplier (0 = as written)
-	xpBank   float64     // smelting XP owed, paid out when the output is taken
+	// used is AbstractFurnaceBlockEntity.recipesUsed, keyed by the result:
+	// how many of each were smelted since a player last took the output. The
+	// experience is worked out from it when a player takes the output or
+	// the furnace breaks (getRecipesToAwardAndPopExperience).
+	used map[int32]int
 	// viewers are the players with the window open, each with the bar values
 	// last sent to them (a bar is sent only when it changes). Every open
 	// AbstractFurnaceMenu shares the one dataAccess and broadcasts its own
@@ -206,7 +211,10 @@ func (h *hub) updateFurnaces(players map[int32]*tracked) {
 				f.cook = 0
 				f.slots[furnaceOutput].item = out.Out
 				f.slots[furnaceOutput].count++
-				f.xpBank += smeltXP(out.Out) // banked until a player takes the output
+				if f.used == nil {
+					f.used = map[int32]int{}
+				}
+				f.used[out.Out]++ // setRecipeUsed: paid out when a player takes the output
 				if f.slots[furnaceInput].count--; f.slots[furnaceInput].count == 0 {
 					f.slots[furnaceInput].item = 0
 				}
@@ -230,7 +238,7 @@ func (h *hub) updateFurnaces(players map[int32]*tracked) {
 			}
 		}
 		// Idle, empty, unlit, unwatched furnaces are dropped from the tick set.
-		if f.burnLeft == 0 && f.cook == 0 && len(f.viewers) == 0 &&
+		if f.burnLeft == 0 && f.cook == 0 && len(f.viewers) == 0 && len(f.used) == 0 &&
 			f.slots[0].item == 0 && f.slots[1].item == 0 && f.slots[2].item == 0 {
 			delete(h.furnaces, pos)
 			continue
@@ -259,8 +267,23 @@ func (h *hub) updateFurnaces(players map[int32]*tracked) {
 // (lit is the fast-varying state bit: even offset = lit.)
 func (h *hub) reconcileFurnaceBlocks() {
 	out, relit := 0, 0
-	for _, c := range h.world.EditedChunks() {
-		for _, e := range h.world.EditedBlocks(c[0], c[1]) {
+	for dim := dimOverworld; dim <= dimEnd; dim++ {
+		w := h.worldFor(dim)
+		if dim != dimOverworld && w == h.world {
+			continue // no such dimension loaded
+		}
+		o, r := h.reconcileFurnaceBlocksIn(dim, w)
+		out, relit = out+o, relit+r
+	}
+	if out > 0 || relit > 0 {
+		log.Printf("furnace boot sweep: %d extinguished, %d relit from persisted burn state", out, relit)
+	}
+}
+
+// reconcileFurnaceBlocksIn is the boot sweep over one dimension's edits.
+func (h *hub) reconcileFurnaceBlocksIn(dim int, w *world.World) (out, relit int) {
+	for _, c := range w.EditedChunks() {
+		for _, e := range w.EditedBlocks(c[0], c[1]) {
 			kind, ok := furnaceKindOf(e.State)
 			if !ok {
 				continue
@@ -273,25 +296,23 @@ func (h *hub) reconcileFurnaceBlocks() {
 				base = smokerStateMin
 			}
 			wx, wz := int(c[0])*16+e.LX, int(c[1])*16+e.LZ
-			f := h.furnaces[simPos{blockPos: blockPos{wx, e.Y, wz}}] // this pass walks the overworld only
+			f := h.furnaces[simPos{dim: dim, blockPos: blockPos{wx, e.Y, wz}}]
 			if f != nil {
 				f.kind = kind // persisted furnaces re-learn their block's kind
 			}
 			burning := f != nil && f.burnLeft > 0
 			if lit := (e.State-base)%2 == 0; lit != burning {
 				if burning {
-					h.world.SetBlock(wx, e.Y, wz, e.State-1) // same facing, lit=true
+					w.SetBlock(wx, e.Y, wz, e.State-1) // same facing, lit=true
 					relit++
 				} else {
-					h.world.SetBlock(wx, e.Y, wz, e.State+1) // same facing, lit=false
+					w.SetBlock(wx, e.Y, wz, e.State+1) // same facing, lit=false
 					out++
 				}
 			}
 		}
 	}
-	if out > 0 || relit > 0 {
-		log.Printf("furnace boot sweep: %d extinguished, %d relit from persisted burn state", out, relit)
-	}
+	return out, relit
 }
 
 // setFurnaceLit flips the furnace block's lit property and broadcasts it.
@@ -374,3 +395,19 @@ var smeltXPByOutput = func() map[int32]float64 {
 	}
 	return out
 }()
+
+// popFurnaceXP is getRecipesToAwardAndPopExperience: every recipe used since
+// the last payout pays createExperience at (x, y, z) — its count times the
+// recipe's experience, the whole part as orbs and the fraction as the
+// chance of one more — and the tally starts again.
+func (h *hub) popFurnaceXP(players map[int32]*tracked, f *furnace, dim int, x, y, z float64) {
+	for out, n := range f.used {
+		total := float64(n) * smeltXP(out)
+		xp := int(math.Floor(total))
+		if frac := total - float64(xp); frac != 0 && h.rng.Float64() < frac {
+			xp++
+		}
+		h.spawnXPOrbIn(players, dim, xp, x, y, z)
+	}
+	f.used = nil
+}
