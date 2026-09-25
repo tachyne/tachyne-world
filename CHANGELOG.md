@@ -140,6 +140,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Shriekers show their shriek.** A sculk shrieker's shriek now sends out
+  its rings of particles along with the sound.
+- **Bedrock: falling blocks and their sounds.** Falling sand, gravel and
+  anvils show the right block on Bedrock, and anvils and dripstone make
+  their landing sounds.
 - **Recipe ghosts.** Clicking a recipe in the book that you don't have the
   ingredients for shows it as greyed-out ghosts in the crafting grid.
 - **Sounds follow the animal.** Shearing, a frog's tongue and eating, a

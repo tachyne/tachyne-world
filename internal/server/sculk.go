@@ -578,9 +578,13 @@ func (h *hub) shriek(players map[int32]*tracked, pos simPos, s uint32, by int32)
 	}
 	h.setBlockAt(players, pos.dim, pos.blockPos, shriekerWith(s, true))
 	h.sculkDue[pos] = h.tick.Load() + shriekingTicks
-	h.playSoundDim(players, pos.dim, "minecraft:block.sculk_shrieker.shriek", sndBlock,
-		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 2, 1)
+	// SculkShriekerBlockEntity.shriek: level event 3007 — the client draws
+	// the shriek particles and plays the sound itself.
+	h.levelEvent(players, pos.dim, worldEventShriek, pos.x, pos.y, pos.z, 0)
 }
+
+// worldEventShriek is LevelEvent.PARTICLES_SCULK_SHRIEK.
+const worldEventShriek = 3007
 
 // wardenReplySounds is SculkShriekerBlockEntity.SOUND_BY_LEVEL.
 var wardenReplySounds = map[int]string{
