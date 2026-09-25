@@ -301,6 +301,17 @@ func (p *player) heldSlot() int {
 	return p.held
 }
 
+// setHeldSlot is a server-side hotbar selection (a middle-click pick);
+// the caller tells the client with HeldSync.
+func (p *player) setHeldSlot(slot int) {
+	if slot < 0 || slot > 8 {
+		return
+	}
+	p.hmu.Lock()
+	p.held = slot
+	p.hmu.Unlock()
+}
+
 // setHotbarSlot records a hotbar slot's item — from the creative client (Set
 // Creative Mode Slot) or the hub mirroring the survival inventory.
 func (p *player) setHotbarSlot(slot int, item int32) {

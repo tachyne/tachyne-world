@@ -105,6 +105,8 @@ func (r *remotePlayer) Command(cmd string) { r.s.handleCommand(r.p, cmd) }
 func (r *remotePlayer) Action(v any) {
 	p, h := r.p, r.s.hub
 	switch e := v.(type) {
+	case attachproto.PickItem:
+		h.post(evPickItem{eid: p.eid, e: e})
 	case attachproto.SwingAction:
 		h.post(evArmSwing{eid: p.eid, hand: e.Hand}) // handleAnimate → LivingEntity.swing
 	case attachproto.UseItem:

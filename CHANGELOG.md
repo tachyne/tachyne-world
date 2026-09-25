@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **Middle-click pick block.** Middle-clicking a block or an entity now
+  works as in vanilla, in survival too: it selects the matching stack in
+  your hotbar, or swaps it in from the rest of your inventory. In creative
+  you get a fresh one if you have none. Crops pick their seeds, wall torches
+  and signs pick the standing item, a potted plant picks the plant, a mob
+  picks its spawn egg and an item frame picks what it holds. The server had
+  been ignoring the click since 1.21.4, when the game moved picking to the
+  server.
 - **/particle by name.** `/particle minecraft:flame ~ ~1 ~ 0.5 0.5 0.5 0.1
   20` works as in vanilla for every particle that takes no extra options
   (colours, blocks and items are not supported yet); it used to want a

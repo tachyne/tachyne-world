@@ -1619,6 +1619,11 @@ func (h *hub) run() {
 				}
 			case evXP:
 				h.onXPCommand(players, e)
+			case evPickItem:
+				if t := players[e.eid]; t != nil {
+					h.pickItem(players, t, e.e)
+					h.broadcastEquipment(players, t) // the new item in hand
+				}
 			case evArmSwing:
 				h.onArmSwing(players, e)
 			case evDigStart:
