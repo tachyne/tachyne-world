@@ -485,3 +485,27 @@ func TestPoweredTNTStaysWhenTNTCannotExplode(t *testing.T) {
 		t.Error("with tnt_explodes off the TNT block should stay, unlit")
 	}
 }
+
+// TripWireHookBlock.emitState: a hook that becomes attached clicks and is a
+// BLOCK_ATTACH (frequency 10) for sculk.
+func TestSculkHearsAHookAttach(t *testing.T) {
+	f := sculkHears(t, func(h *hub, players map[int32]*tracked, pl *tracked) {
+		w := h.world
+		a, b := blockPos{7, 180, 1}, blockPos{7, 180, 5}
+		w.SetBlock(a.x, a.y, a.z-1, worldgen.Stone)
+		w.SetBlock(b.x, b.y, b.z+1, worldgen.Stone)
+		w.SetBlock(a.x, a.y, a.z, withProps(t, tripwireHookMin, map[string]string{"facing": "south", "attached": "false", "powered": "false"}))
+		w.SetBlock(b.x, b.y, b.z, withProps(t, tripwireHookMin, map[string]string{"facing": "north", "attached": "false", "powered": "false"}))
+		for z := 2; z <= 4; z++ {
+			w.SetBlock(7, 180, z, tripwireDefaultState())
+		}
+		drainOut(pl.p)
+		h.inDim(0, func() { h.calcHook(players, a, w.At(a.x, a.y, a.z)) })
+		if !heardSound(pl.p, "minecraft:block.tripwire.attach") {
+			t.Error("an attaching hook should click")
+		}
+	})
+	if f != freqBlockActivate {
+		t.Errorf("the sensor heard %d, want BLOCK_ATTACH %d", f, freqBlockActivate)
+	}
+}

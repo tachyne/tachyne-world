@@ -126,6 +126,30 @@ func (h *hub) calcHook(players map[int32]*tracked, pos blockPos, state uint32) {
 	ns := setBoolProp(setBoolProp(state, "attached", attached), "powered", powered)
 	if ns != state {
 		h.rsSet(players, pos, ns)
+		h.hookEmitState(players, pos, attached, powered, boolProp(state, "attached"), boolProp(state, "powered"))
 		h.scheduleSignalAround(players, pos) // a powered hook drives its neighbours (TripWireHookBlock.notifyNeighbors)
 	}
+}
+
+// hookEmitState is TripWireHookBlock.emitState: the click and the game event
+// for the one change that matters most — powered on, powered off, attached,
+// detached.
+func (h *hub) hookEmitState(players map[int32]*tracked, pos blockPos, attached, powered, wasAttached, wasPowered bool) {
+	var snd string
+	var pitch float32
+	var freq int
+	switch {
+	case powered && !wasPowered:
+		snd, pitch, freq = "minecraft:block.tripwire.click_on", 0.6, freqBlockActivate
+	case !powered && wasPowered:
+		snd, pitch, freq = "minecraft:block.tripwire.click_off", 0.5, freqBlockDeactivate
+	case attached && !wasAttached:
+		snd, pitch, freq = "minecraft:block.tripwire.attach", 0.7, freqBlockActivate // BLOCK_ATTACH: 10
+	case !attached && wasAttached:
+		snd, pitch, freq = "minecraft:block.tripwire.detach", 1.2/(h.rng.Float32()*0.2+0.9), freqBlockDeactivate // BLOCK_DETACH: 9
+	default:
+		return
+	}
+	h.rsSound(players, snd, sndBlock, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.4, pitch)
+	h.vib(h.rsDim, freq, pos.x, pos.y, pos.z, 0)
 }
