@@ -616,7 +616,9 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 		if h.rules.ShowDeathMsgs { // gamerule showDeathMessages
 			body := chatEv(h.combatDeathMessage(t))
 			for _, o := range players {
-				o.p.trySendEv(body)
+				if h.deathMessageReaches(t.p.name, o.p.name) { // the team's deathMessageVisibility
+					o.p.trySendEv(body)
+				}
 			}
 		}
 		if !h.rules.KeepInventory { // gamerule: keepInventory skips the stake

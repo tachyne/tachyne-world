@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **Two more team options.** `/team modify` takes `seeFriendlyInvisibles`
+  and `deathMessageVisibility` — a team's deaths can be announced to
+  everyone, only the team, everyone but the team, or nobody, as in vanilla.
 - **More scoreboard criteria.** Objectives can track `food`, `air`,
   `armor`, `xp` and `level` as well as `health`, kept up to date by the
   game and read-only to `/scoreboard players set`, as in vanilla. The death

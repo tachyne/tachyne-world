@@ -185,3 +185,31 @@ func TestScoreboardGaugeCriteria(t *testing.T) {
 		t.Errorf("a read-only gauge was set to %d", got)
 	}
 }
+
+// deathMessageVisibility: hideForOtherTeams keeps a death to the team,
+// hideForOwnTeam keeps it from them, never from everyone.
+func TestTeamDeathMessageVisibility(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	players := map[int32]*tracked{1: pl}
+	cmd := func(args ...string) { h.cmdTeam(players, evTeamCmd{p: pl.p, args: args}) }
+	cmd("add", "red")
+	cmd("join", "red", "ann")
+	cmd("join", "red", "ben")
+	for _, c := range []struct {
+		vis            string
+		mate, outsider bool
+	}{{"always", true, true}, {"hideForOtherTeams", true, false}, {"hideForOwnTeam", false, true}, {"never", false, false}} {
+		cmd("modify", "red", "deathMessageVisibility", c.vis)
+		if got := h.deathMessageReaches("ann", "ben"); got != c.mate {
+			t.Errorf("%s: a teammate reads it %v, want %v", c.vis, got, c.mate)
+		}
+		if got := h.deathMessageReaches("ann", "cal"); got != c.outsider {
+			t.Errorf("%s: an outsider reads it %v, want %v", c.vis, got, c.outsider)
+		}
+	}
+	cmd("modify", "red", "seeFriendlyInvisibles", "true")
+	if !h.sb.Teams["red"].SeeInvisible {
+		t.Error("seeFriendlyInvisibles was not set")
+	}
+}

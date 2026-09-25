@@ -34,6 +34,7 @@ type sbTeam struct {
 	SeeInvisible bool            `json:"seeinvis,omitempty"`
 	Visibility   int32           `json:"vis,omitempty"`
 	Collision    int32           `json:"coll,omitempty"`
+	DeathVis     int32           `json:"deathvis,omitempty"` // deathMessageVisibility: 0 always, 1 never, 2 hide for other teams, 3 hide for own team
 	Members      map[string]bool `json:"members,omitempty"`
 }
 
@@ -478,6 +479,16 @@ func (h *hub) cmdTeam(players map[int32]*tracked, e evTeamCmd) {
 				return
 			}
 			t.Visibility = v
+		case "seefriendlyinvisibles", "seeFriendlyInvisibles":
+			t.SeeInvisible = val == "true"
+		case "deathmessagevisibility", "deathMessageVisibility":
+			vis := map[string]int32{"always": 0, "never": 1, "hideForOtherTeams": 2, "hideForOwnTeam": 3}
+			v, ok := vis[val]
+			if !ok {
+				tell("always|never|hideForOtherTeams|hideForOwnTeam")
+				return
+			}
+			t.DeathVis = v
 		case "collisionrule", "collisionRule":
 			coll := map[string]int32{"always": 0, "never": 1, "pushOtherTeams": 2, "pushOwnTeam": 3}
 			v, ok := coll[val]
@@ -487,7 +498,7 @@ func (h *hub) cmdTeam(players map[int32]*tracked, e evTeamCmd) {
 			}
 			t.Collision = v
 		default:
-			tell("Options: color, prefix, suffix, displayName, friendlyFire, nametagVisibility, collisionRule")
+			tell("Options: color, prefix, suffix, displayName, friendlyFire, seeFriendlyInvisibles, nametagVisibility, deathMessageVisibility, collisionRule")
 			return
 		}
 		h.sbBroadcast(players, t.frame(a[1], attachproto.TeamUpdate, nil))
@@ -573,4 +584,24 @@ func (h *hub) sbGauges(players map[int32]*tracked) {
 		h.sbCriteria(players, "xp", t.p.name, int32(totalXP(t.xpLevel, t.xpPoints)), true)
 		h.sbCriteria(players, "level", t.p.name, int32(t.xpLevel), true)
 	}
+}
+
+// deathMessageReaches is ServerPlayer.die's team rule for who reads a
+// player's death message: everyone, nobody, only their team, or everyone
+// but their team.
+func (h *hub) deathMessageReaches(dead, reader string) bool {
+	tn := h.teamOf(dead)
+	if tn == "" {
+		return true
+	}
+	same := h.teamOf(reader) == tn
+	switch h.sb.Teams[tn].DeathVis {
+	case 1:
+		return false
+	case 2:
+		return same
+	case 3:
+		return !same
+	}
+	return true
 }
