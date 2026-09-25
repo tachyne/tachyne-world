@@ -271,3 +271,45 @@ func TestFireInFrameLightsPortal(t *testing.T) {
 		}
 	}
 }
+
+// sculkHears builds a pad at y=180 with a sculk sensor at (4,180,4), lets
+// it settle, runs act, and returns the frequency the sensor heard (0 for
+// nothing).
+func sculkHears(t *testing.T, act func(h *hub, players map[int32]*tracked, pl *tracked)) int {
+	t.Helper()
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	pl.x, pl.y, pl.z = 7.5, 180, 7.5
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	w := h.world
+	x, y, z := 4, 180, 4
+	w.ForceLoad(x, z, 2)
+	for dx := -3; dx <= 7; dx++ {
+		for dz := -3; dz <= 7; dz++ {
+			w.SetBlock(x+dx, y-1, z+dz, worldgen.Stone)
+			w.SetBlock(x+dx, y, z+dz, worldgen.Air)
+			w.SetBlock(x+dx, y+1, z+dz, worldgen.Air)
+		}
+	}
+	sensor := worldgen.BlockBase("sculk_sensor") + 1
+	w.SetBlock(x, y, z, sensor)
+	h.onBlock(players, evBlock{dim: dimOverworld, x: x, y: y, z: z, state: sensor})
+	stepSculk(h, players, sensorActiveTicks+sensorCooldownTicks+2)
+	act(h, players, pl)
+	stepSculk(h, players, 5)
+	return h.sculkFreq[simPos{dim: dimOverworld, blockPos: blockPos{x, y, z}}]
+}
+
+// A candle snuffed by hand is a BLOCK_CHANGE (AbstractCandleBlock.extinguish).
+func TestSculkHearsACandleSnuffed(t *testing.T) {
+	f := sculkHears(t, func(h *hub, players map[int32]*tracked, pl *tracked) {
+		lit := withProps(t, worldgen.BlockBase("candle"), map[string]string{"lit": "true"})
+		h.world.SetBlock(7, 180, 4, lit)
+		pl.inv.slots[pl.p.heldSlot()] = invStack{}
+		h.useCandle(players, evUseCandle{eid: pl.p.eid, x: 7, y: 180, z: 4, cy: 0.5})
+	})
+	if f != freqBlockChange {
+		t.Errorf("the sensor heard %d, want BLOCK_CHANGE %d", f, freqBlockChange)
+	}
+}
