@@ -4,7 +4,6 @@ import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/protocol"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
-	"math"
 )
 
 // Rideable mounts. Horses, donkeys, mules, camels, pigs and striders can be
@@ -145,7 +144,7 @@ func (h *hub) applyMountMove(players map[int32]*tracked, t *tracked, e evVehicle
 		return true
 	}
 	moved := e.x != m.sx || e.y != m.sy || e.z != m.sz
-	h.rideStats(t, m, math.Hypot(e.x-m.x, e.z-m.z))
+	h.rideStats(t, m, e.x-m.x, e.y-m.y, e.z-m.z)
 	if m.etype == entityStrider && moved {
 		if w := h.worldFor(m.dim); w != nil && worldgen.IsLava(w.At(floorInt(e.x), floorInt(e.y), floorInt(e.z))) {
 			h.advance(players, t, "ride_entity_in_lava", advMatch{}) // "Feels like home"

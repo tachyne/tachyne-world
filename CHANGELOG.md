@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Riding statistics count the right mount.** Riding a nautilus counted
+  as horse riding, and flying a happy ghast counted nothing; each now has
+  its own statistic, as in vanilla, for everyone aboard. Riding distances
+  include climbing and falling, not only ground covered.
 - **The crafter makes maps and book copies, and hands back buckets.** A
   crafter now extends and clones maps and copies written books, as in
   vanilla. It also gives back what a recipe leaves over: a cake returns its
