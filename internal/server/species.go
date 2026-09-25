@@ -1,6 +1,8 @@
 package server
 
 import (
+	"math"
+
 	attachproto "github.com/tachyne/tachyne-common/attach"
 )
 
@@ -455,6 +457,9 @@ func (h *hub) applySpecies(players map[int32]*tracked, m *mob) {
 	}
 	if d.held != "" {
 		m.held = itemByName[d.held]
+		if m.etype == entityPillager && !h.reloading {
+			h.pillagerCrossbowEnchant(m)
+		}
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, mobEquip(m.eid, m.held))
 	}
 	if m.etype == entityPiglin {
@@ -566,5 +571,25 @@ func (h *hub) speciesLoot(d *speciesDef) []drop {
 func init() {
 	for etype, d := range speciesTable {
 		summonable[d.name] = etype
+	}
+}
+
+// pillagerCrossbowEnchant is Pillager.enchantSpawnedWeapon: Mob's chance at
+// an enchanted weapon (0.25 × the special multiplier, the usual cost), and
+// then, one spawn in 300, Piercing I on the crossbow
+// (enchantment_provider/pillager_spawn_crossbow).
+func (h *hub) pillagerCrossbowEnchant(m *mob) {
+	f := h.specialMultiplier()
+	if h.rng.Float64() < 0.25*f {
+		cost := 5 + h.rng.Intn(int(math.Floor(f*17))+1)
+		m.heldEnch = enchApplyList(enchSelect(h.rng, m.held, cost, enchMobAllowed))
+	}
+	if h.rng.Intn(300) == 0 {
+		for i := range m.heldEnch {
+			if m.heldEnch[i].lvl == 0 || m.heldEnch[i].id == enchPiercing {
+				m.heldEnch[i] = enchApply{id: enchPiercing, lvl: max(1, m.heldEnch[i].lvl)}
+				break
+			}
+		}
 	}
 }

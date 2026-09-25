@@ -183,3 +183,23 @@ func TestCrossbowFiresRockets(t *testing.T) {
 		t.Errorf("crossbow wear %d, want 3 for a rocket", pl.inv.slots[0].dmg)
 	}
 }
+
+// Pillager.enchantSpawnedWeapon: one pillager in 300 or so comes with a
+// Piercing crossbow (more at hard difficulty, from the general roll).
+func TestPillagerCrossbowSometimesPierces(t *testing.T) {
+	h := newHub(world.New(1))
+	h.rules.Difficulty = diffEasy
+	pierce, n := 0, 6000
+	for i := 0; i < n; i++ {
+		m := &mob{etype: entityPillager, held: itemCrossbow}
+		h.pillagerCrossbowEnchant(m)
+		for _, e := range m.heldEnch {
+			if e.id == enchPiercing && e.lvl > 0 {
+				pierce++
+			}
+		}
+	}
+	if pierce < 5 || pierce > n/20 {
+		t.Fatalf("%d of %d pillagers had Piercing, want about one in 300", pierce, n)
+	}
+}
