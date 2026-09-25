@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Pillager patrols stand their ground.** A patrol that spots you from
+  afar now stops and watches you, as in vanilla, instead of opening fire at
+  once; it attacks when you come within ten blocks or hit one of them, and
+  the pillagers beside it join in. Pillagers now hold their crossbows at the
+  ready while fighting, and vindicators raise their axes.
 - **Skeletons raise their weapons when they fight.** A skeleton, stray,
   bogged or parched with a target now holds its bow up, a wither skeleton
   raises its sword, and an illusioner draws its bow, as vanilla shows them.

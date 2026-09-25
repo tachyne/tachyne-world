@@ -181,6 +181,7 @@ type mob struct {
 	raidCenter                      blockPos    // raider: the raid this mob belongs to (zero = not a raider)
 	raidWave                        int         // raider: the wave it came with (Raider.wave)
 	celebrating                     bool        // raider: cheering a lost raid (IS_CELEBRATING)
+	holdingGround                   bool        // pillager/vindicator: HoldGroundAttackGoal's stand-off
 	idleSecs                        int         // seconds spent >32 blocks from every player (despawn clock)
 	hopTicks                        int         // slime: updates left mid-bound (traveling)
 	hopDelay                        int         // slime: updates until the next bound (grounded, still)
@@ -738,6 +739,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			h.villagerMerchantTick(players, m)
 		}
 		h.updateCelebration(players, m) // a lost raid's raiders with nothing to fight cheer
+		h.updateHoldGround(players, m)  // a patrol's raider staring down a far target
 		if m.usesDoors {
 			if m.bed != (blockPos{}) && h.villagerSleep(players, m) {
 				continue // asleep in bed — no movement this tick
@@ -817,6 +819,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A ravager stunned, roaring or mid-bite stands still.
 		case m.etype == entityBreeze && h.breezeStep(players, m):
 			// A breeze sliding, drawing breath, mid-jump or shooting.
+		case m.holdingGround && h.holdGroundStep(m):
+			// A patrolling pillager standing its ground, watching its target.
 		case m.celebrating && h.celebrateStep(players, m):
 			// A raider cheering the raid it won: standing, jumping, calling out.
 		case h.raidPathStep(players, m):
@@ -1199,7 +1203,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				h.bowDrawTick(players, m)   // the pull before the shot
 				h.skeletonShoot(players, m) // ranged: arrows from bow distance
 			case entityPillager:
-				h.pillagerTick(players, m) // the crossbow: draw, aim, fire
+				if !m.holdingGround { // the crossbow goal waits out the stand-off
+					h.pillagerTick(players, m) // the crossbow: draw, aim, fire
+				}
 			case entityIllusioner:
 				h.illusionerTick(players, m) // mirror and blindness spells, then the bow
 			case entityBlaze:
