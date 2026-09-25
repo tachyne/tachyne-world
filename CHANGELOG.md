@@ -102,6 +102,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Bucketed mobs keep their health and name.** A hurt fish, axolotl or
+  tadpole scooped into a bucket comes back out just as hurt, and a named
+  one's bucket carries the name and names the mob again when poured, as in
+  vanilla.
 - **Copper golems sound their age.** A weathered or oxidized copper golem
   now hurts, dies and steps with its own creakier voice, as in vanilla, and
   a golem turning into a statue plays its sound again (it had been silent).

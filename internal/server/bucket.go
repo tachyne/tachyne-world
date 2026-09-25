@@ -61,7 +61,7 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 		h.releaseSulfurBucket(players, t.dim, st, x, y, z)
 		return
 	}
-	mobData := hs.cube // the bucketed mob's variant and age, read before the swap
+	mobData := *hs // the bucketed mob's variant, age, health and name, read before the swap
 	// LiquidBlockContainer: a water bucket emptied onto a slab, stair, fence,
 	// sign or any other waterloggable block fills THAT block instead of the
 	// cell beside it. Without this the water went next door and the slab
@@ -95,7 +95,7 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 			float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 0.5, 2.6+(h.rng.Float32()-h.rng.Float32())*0.8)
 		h.swapBucket(t, slot, itemBucket)
 		if mobBucket {
-			h.releaseBucketMob(players, t.dim, held, mobData, x, y, z)
+			h.releaseBucketMob(players, t.dim, mobData, x, y, z)
 		}
 		return
 	}
@@ -109,7 +109,7 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 	}
 	h.swapBucket(t, slot, itemBucket)
 	if mobBucket {
-		h.releaseBucketMob(players, t.dim, held, mobData, x, y, z)
+		h.releaseBucketMob(players, t.dim, mobData, x, y, z)
 	}
 }
 

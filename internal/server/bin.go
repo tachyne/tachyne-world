@@ -410,7 +410,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			if !worldgen.IsWater(ts) {
 				h.setBlockAt(players, pos.dim, front, worldgen.WaterBase)
 			}
-			h.releaseBucketMob(players, pos.dim, item, st.cube, front.x, front.y, front.z)
+			h.releaseBucketMob(players, pos.dim, *st, front.x, front.y, front.z)
 			st.item, st.count = itemBucket, 1
 		}
 	case dispense && item == int32(itemByName["chest"]) && h.dispenseChest(players, pos.dim, front):

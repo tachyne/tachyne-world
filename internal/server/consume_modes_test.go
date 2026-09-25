@@ -152,7 +152,7 @@ func TestAxolotlBucketKeepsItsColour(t *testing.T) {
 	if back := unpackStack(packStack(st)); back != st {
 		t.Errorf("the bucket did not survive a save: %+v vs %+v", back, st)
 	}
-	h.releaseBucketMob(players, 0, st.item, st.cube, 3, 200, 3)
+	h.releaseBucketMob(players, 0, st, 3, 200, 3)
 	for _, m := range h.mobs {
 		if m.etype == entityAxolotl && (m.variant != axolotlBlue || !m.variantSet) {
 			t.Errorf("the axolotl came back variant %d", m.variant)
