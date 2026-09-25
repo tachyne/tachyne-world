@@ -102,6 +102,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Hoppers pick up items in order.** A hopper, or a hopper minecart, now
+  takes the items lying on it oldest first, as in vanilla, instead of in a
+  random order.
 - **The warden's warning grows closer.** After each shriek the unseen
   warden now answers with its close, closer, closest and then angry growl
   as the warning level rises, from somewhere around the shrieker, as in

@@ -303,11 +303,11 @@ func (h *hub) cartSuckItems(players map[int32]*tracked, v *vehicle) bool {
 		}
 		return false
 	}
-	for eid, it := range h.items {
-		if it.dim != v.dim || math.Abs(it.x-v.x) > 0.74 || math.Abs(it.z-v.z) > 0.74 ||
-			it.y < v.y-0.25 || it.y > v.y+0.95 {
-			continue // the cart's box, widened by a quarter block
-		}
+	for _, eid := range h.itemsInOrder(func(it *itemEntity) bool {
+		return it.dim == v.dim && math.Abs(it.x-v.x) <= 0.74 && math.Abs(it.z-v.z) <= 0.74 &&
+			it.y >= v.y-0.25 && it.y <= v.y+0.95 // the cart's box, widened by a quarter block
+	}) {
+		it := h.items[eid]
 		st := it.stack()
 		if left := binInsert(v.bin.slots, st); left < st.count {
 			if left == 0 {

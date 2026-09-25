@@ -1,6 +1,7 @@
 package server
 
 import (
+	"slices"
 	"strings"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
@@ -907,14 +908,11 @@ func (h *hub) hopperTakeItems(players map[int32]*tracked, pos simPos, c *bin, ab
 	x0, x1 := float64(pos.x), float64(pos.x)+1
 	y0, y1 := float64(pos.y)+11.0/16, float64(pos.y)+2
 	z0, z1 := float64(pos.z), float64(pos.z)+1
-	for eid, it := range h.items {
-		if it.dim != pos.dim || it.x+half <= x0 || it.x-half >= x1 || it.z+half <= z0 || it.z-half >= z1 ||
-			it.y+2*half <= y0 || it.y >= y1 {
-			continue
-		}
-		if !aboveToo && floorInt(it.y) != pos.y {
-			continue // entityInside: the item is in the hopper's own cell
-		}
+	for _, eid := range h.itemsInOrder(func(it *itemEntity) bool {
+		return it.dim == pos.dim && it.x+half > x0 && it.x-half < x1 && it.z+half > z0 && it.z-half < z1 &&
+			it.y+2*half > y0 && it.y < y1 && (aboveToo || floorInt(it.y) == pos.y) // entityInside: its own cell
+	}) {
+		it := h.items[eid]
 		st := it.stack()
 		left := binInsert(c.slots, st)
 		if left == 0 {
@@ -1213,4 +1211,18 @@ func (h *hub) canTakeFromBelow(src simPos, slot int, item int32) bool {
 		}
 	}
 	return true
+}
+
+// itemsInOrder is the item entities a pick accepts, in the order they came
+// into the world — the order a hopper's getEntitiesOfClass meets them in,
+// where the item map alone would hand them over at random.
+func (h *hub) itemsInOrder(pick func(*itemEntity) bool) []int32 {
+	var eids []int32
+	for eid, it := range h.items {
+		if pick(it) {
+			eids = append(eids, eid)
+		}
+	}
+	slices.Sort(eids)
+	return eids
 }
