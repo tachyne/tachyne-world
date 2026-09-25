@@ -19,6 +19,7 @@ const (
 	worldEventBoneMeal       = 1505 // PARTICLES_AND_SOUND_PLANT_GROWTH, data: count
 	worldEventAnvilBroken    = 1029 // SOUND_ANVIL_BROKEN
 	worldEventAnvilUsed      = 1030 // SOUND_ANVIL_USED
+	worldEventGrindstoneUse  = 1042 // SOUND_GRINDSTONE_USED
 	worldEventChorusGrow     = 1033 // SOUND_CHORUS_GROW
 	worldEventChorusDeath    = 1034 // SOUND_CHORUS_DEATH
 	worldEventDragonFireball = 1017 // SOUND_DRAGON_FIREBALL

@@ -2144,7 +2144,7 @@ func (h *hub) run() {
 				}
 			case evOpenGrind:
 				if t := players[e.eid]; t != nil {
-					h.openGrindstone(t)
+					h.openGrindstone(t, blockPos{int(e.x), int(e.y), int(e.z)})
 					h.incCustom(t, "interact_with_grindstone", 1)
 				}
 			case evOpenCarto:

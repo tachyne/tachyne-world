@@ -46,7 +46,7 @@ type evOpenAnvil struct {
 	eid     int32
 	x, y, z int // the anvil block, for the wear roll
 }
-type evOpenGrind struct{ eid int32 }
+type evOpenGrind struct{ eid, x, y, z int32 }
 type evRename struct {
 	eid  int32
 	name string
@@ -63,8 +63,11 @@ func (h *hub) openAnvil(t *tracked, pos blockPos) {
 		t.winPos = simPos{dim: t.dim, blockPos: pos}
 	}
 }
-func (h *hub) openGrindstone(t *tracked) {
+func (h *hub) openGrindstone(t *tracked, pos blockPos) {
 	h.openTwoSlot(t, winGrind, menuGrindstone, "Repair & Disenchant")
+	if t.winKind == winGrind {
+		t.winPos = simPos{dim: t.dim, blockPos: pos} // the menu's access: where the orbs and the sound come from
+	}
 }
 
 func (h *hub) openTwoSlot(t *tracked, kind winKind, menu int32, title string) {
@@ -430,11 +433,14 @@ func (h *hub) takeTwoSlotResult(players map[int32]*tracked, t *tracked, mode int
 		_ = both
 		// getExperienceAmount: half the enchantments' worth, plus a roll of
 		// the same again — so the same gear never pays out quite the same.
+		// GrindstoneMenu's result onTake: the orbs at the grindstone's centre
+		// (Vec3.atCenterOf) and level event 1042, its use sound, there.
+		pos := t.winPos.blockPos
 		if cost > 0 {
 			half := (cost + 1) / 2 // ceil(n/2)
-			h.spawnXPOrbIn(players, t.dim, half+h.rng.Intn(half), t.x, t.y, t.z)
+			h.spawnXPOrbIn(players, t.dim, half+h.rng.Intn(half), float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5)
 		}
-		h.playSoundDim(players, t.dim, "minecraft:block.grindstone.use", sndBlock, t.x, t.y, t.z, 1, 1)
+		h.levelEvent(players, t.dim, worldEventGrindstoneUse, pos.x, pos.y, pos.z, 0)
 	}
 	h.resultTake(t, res, mode) // onto the cursor, or into the inventory on a shift-click
 	h.sendCursor(t)

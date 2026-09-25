@@ -102,6 +102,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Grindstone experience comes out of the grindstone.** The experience
+  from disenchanting now pops out of the grindstone itself, with its use
+  sound there, as in vanilla, rather than at your feet.
 - **Copper chests sound like copper.** Copper chests now open and close
   with their own sounds, creakier as they weather, as in vanilla, instead
   of a wooden chest's.

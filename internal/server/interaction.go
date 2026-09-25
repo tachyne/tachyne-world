@@ -847,7 +847,7 @@ func (s *Server) tryUseBlock(p *player, off bool, x, y, z int, seq int32, face i
 		return true
 	}
 	if state >= grindstoneStateMin && state <= grindstoneStateMax {
-		s.hub.post(evOpenGrind{eid: p.eid})
+		s.hub.post(evOpenGrind{eid: p.eid, x: int32(x), y: int32(y), z: int32(z)})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
