@@ -162,3 +162,29 @@ func (h *hub) relinkMounts(players map[int32]*tracked, riders []*mob, byOld map[
 		h.mountMobOn(players, r, v, r.mountDrives)
 	}
 }
+
+// rollDrownedNautilus is Drowned.finalizeSpawn's jockey: a grown drowned
+// spawned naturally or by a structure with a trident rides a zombie nautilus
+// half the time, except in the #more_frequent_drowned_spawns biomes (the
+// rivers). A structure's nautilus is persistent, as the drowned is. The
+// drowned is the controlling passenger (Mob.getControllingPassenger).
+func (h *hub) rollDrownedNautilus(players map[int32]*tracked, m *mob, structure bool) {
+	if m == nil || m.etype != entityDrowned || !m.trident || m.baby || m.mount != 0 {
+		return
+	}
+	if h.rng.Float64() >= 0.5 {
+		return
+	}
+	if w := h.worldFor(m.dim); w == nil || isRiverBiome(w.BiomeAt3D(floorInt(m.x), floorInt(m.y), floorInt(m.z))) {
+		return
+	}
+	n := h.spawnSpecies(players, entityZombieNautilus, m.dim, m.x, m.y, m.z)
+	if n == nil {
+		return
+	}
+	n.yaw = m.yaw
+	if structure {
+		n.persistent = true
+	}
+	h.mountMobOn(players, m, n, true)
+}

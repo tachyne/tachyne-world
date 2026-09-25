@@ -594,6 +594,9 @@ func (h *hub) spawnNatural(players map[int32]*tracked, dim, cat, etype, x, y, z 
 		if etype == entityHusk {
 			h.rollCamelHusk(players, m) // Husk.finalizeSpawn: NATURAL spawns only
 		}
+		if etype == entityDrowned {
+			h.rollDrownedNautilus(players, m, false) // Drowned.finalizeSpawn: NATURAL or STRUCTURE
+		}
 	case cat == catWaterCreature || cat == catWaterAmbient || cat == catAxolotls || cat == catUndergroundWater:
 		h.spawnSpecies(players, etype, dim, fx, fy+0.5, fz)
 	default:

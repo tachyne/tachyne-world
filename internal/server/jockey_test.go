@@ -129,3 +129,48 @@ func TestMountsSurviveReload(t *testing.T) {
 		}
 	}
 }
+
+// Drowned.finalizeSpawn: a naturally spawned drowned with a trident rides a
+// zombie nautilus half the time, and drives it; unarmed and baby drowned
+// never do.
+func TestDrownedSpawnsOnZombieNautilus(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.world.ForceLoad(0, 0, 2)
+	x, z := 0, 0
+	if isRiverBiome(h.world.BiomeAt3D(x, 180, z)) {
+		t.Skip("fixture column is a river")
+	}
+	armed, ridden := 0, 0
+	for i := 0; i < 600; i++ {
+		before := map[int32]bool{}
+		for eid := range h.mobs {
+			before[eid] = true
+		}
+		h.spawnNatural(players, dimOverworld, catMonster, entityDrowned, x, 180, z)
+		for eid, m := range h.mobs {
+			if before[eid] || m.etype != entityDrowned {
+				continue
+			}
+			if m.trident {
+				armed++
+			}
+			if m.mount != 0 {
+				v := h.mobs[m.mount]
+				if v == nil || v.etype != entityZombieNautilus || v.mobRider != m.eid || !m.mountDrives {
+					t.Fatalf("a jockey drowned should drive a zombie nautilus: %+v", v)
+				}
+				if !m.trident || m.baby {
+					t.Fatal("only a grown drowned with a trident rides a zombie nautilus")
+				}
+				ridden++
+			}
+		}
+		for _, m := range h.mobs {
+			h.removeMob(players, m)
+		}
+	}
+	if armed < 10 || ridden == 0 || ridden*4 < armed || ridden*4 > armed*3 {
+		t.Fatalf("half the trident drowned should ride: %d of %d", ridden, armed)
+	}
+}

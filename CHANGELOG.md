@@ -118,6 +118,9 @@ the public history since the project was open-sourced on 2026-07-10.
 - **You can hear a Warden's anger.** The Warden's heartbeat now quickens
   and its tendrils twitch as it grows angrier, as in vanilla; players
   arriving later see it at its current mood.
+- **Drowned ride zombie nautiluses.** Half the grown drowned that spawn in
+  the sea or at an ocean ruin carrying a trident now come riding a zombie
+  nautilus, as in vanilla; in rivers they never do.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in
