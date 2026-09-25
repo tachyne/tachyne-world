@@ -30,6 +30,14 @@ inner = [n for n in outer.namelist() if n.startswith("META-INF/versions/") and n
 z = zipfile.ZipFile(io.BytesIO(outer.read(inner[0]))) if inner else outer
 
 
+# The English names translatable set_name texts resolve to (a camp's map is
+# "Bamboo Camp Map"): the client shows item_name as sent, so the text goes in.
+try:
+    en_us = json.loads(z.read("assets/minecraft/lang/en_us.json"))
+except KeyError:
+    en_us = {}
+
+
 class Unsupported(Exception):
     pass
 
@@ -114,8 +122,8 @@ def func(f):
         return {"f": "set_potion", "potion": f["id"].removeprefix("minecraft:")}
     if t == "set_name":
         name = f["name"]
-        if isinstance(name, dict):  # a translatable: the English text
-            name = {"filled_map.buried_treasure": "Buried Treasure Map"}.get(name.get("translate", ""), "")
+        if isinstance(name, dict):  # a translatable: the English text, from the jar's en_us
+            name = en_us.get(name.get("translate", ""), "")
         if not isinstance(name, str) or not name:
             return None
         return {"f": "set_name", "name": name}

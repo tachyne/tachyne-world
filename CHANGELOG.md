@@ -102,6 +102,8 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Camp maps have names.** The maps in abandoned camp chests are named
+  for the camp they lead to ("Bamboo Camp Map" and so on), as in vanilla.
 - **Piglins guard their gold.** Breaking gold blocks, gold ore, chests,
   barrels and the other blocks piglins guard now angers the piglins
   around you, and so does opening a chest minecart or chest boat or
