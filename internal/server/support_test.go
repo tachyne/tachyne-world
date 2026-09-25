@@ -241,3 +241,40 @@ func TestGrindstoneNeverDrops(t *testing.T) {
 		t.Fatal("a grindstone in mid-air should still survive")
 	}
 }
+
+// A wall hanging sign facing north hangs between the blocks east and west
+// of it (WallHangingSignBlock.canPlace): it stays while either side holds,
+// and drops when both are gone. A second sign turned the same way beside it
+// counts as a hold.
+func TestWallHangingSignHeldFromTheSides(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	players := map[int32]*tracked{}
+	stone := worldgen.BlockBase("stone")
+	base := worldgen.BlockBase("oak_wall_hanging_sign")
+	info, _ := worldgen.InfoForState(base)
+	sign := worldgen.SetProperty(info, base, "facing", "north")
+	x, y, z := 4, 180, 4
+	h.world.SetBlock(x-1, y, z, stone)
+	h.world.SetBlock(x+1, y, z, stone)
+	h.world.SetBlock(x, y, z, sign)
+
+	h.setBlockAt(players, 0, blockPos{x - 1, y, z}, worldgen.Air)
+	if h.world.At(x, y, z) != sign {
+		t.Fatal("the sign fell while its east side still held it")
+	}
+	h.setBlockAt(players, 0, blockPos{x + 1, y, z}, worldgen.Air)
+	if h.world.At(x, y, z) == sign {
+		t.Fatal("the sign stayed with nothing on either side")
+	}
+
+	// Two signs in a row, the outer one on stone: the inner one holds.
+	h.world.SetBlock(x+1, y, z, stone)
+	h.world.SetBlock(x, y, z, sign)
+	h.world.SetBlock(x-1, y, z, sign)
+	h.setBlockAt(players, 0, blockPos{x - 2, y, z}, stone)
+	h.setBlockAt(players, 0, blockPos{x - 2, y, z}, worldgen.Air)
+	if h.world.At(x-1, y, z) != sign {
+		t.Fatal("a sign held by the sign beside it fell")
+	}
+}

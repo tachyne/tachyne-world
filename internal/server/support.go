@@ -135,6 +135,27 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 	if isChorusPlant(state) || isChorusFlower(state) {
 		return chorusSurvives(w, pos, state)
 	}
+	if k, ok := signKind(state); ok && k == signHangingWall {
+		// WallHangingSignBlock.canPlace: held from either side along its
+		// facing's clockwise axis — a full sturdy face there, or another
+		// wall hanging sign turned the same way.
+		f := prop("facing")
+		cw := clockwiseFacing(f)
+		for _, side := range []string{cw, oppositeOf(cw)} {
+			dx, dz := facingDelta(side)
+			n := w.At(pos.x+dx, pos.y, pos.z+dz)
+			if nk, ok := signKind(n); ok && nk == signHangingWall {
+				if ni, ok := worldgen.InfoForState(n); ok && facingAxisX(worldgen.GetProperty(ni, n, "facing")) == facingAxisX(f) {
+					return true
+				}
+				continue
+			}
+			if holdsBlock(n) {
+				return true
+			}
+		}
+		return false
+	}
 	switch worldgen.SupportFor(state) {
 	case worldgen.SupportFloor:
 		return holdsBlock(below())

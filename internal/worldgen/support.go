@@ -166,6 +166,13 @@ var supportNames = map[SupportKind][]string{
 		"pointed_dripstone", "sulfur_spike",
 	},
 	SupportWall: {
+		// Wall hanging signs are held from the SIDES, not from behind; the
+		// game layer answers them first (WallHangingSignBlock.canPlace).
+		"acacia_wall_hanging_sign", "bamboo_wall_hanging_sign", "birch_wall_hanging_sign",
+		"cherry_wall_hanging_sign", "crimson_wall_hanging_sign", "dark_oak_wall_hanging_sign",
+		"jungle_wall_hanging_sign", "mangrove_wall_hanging_sign", "oak_wall_hanging_sign",
+		"pale_oak_wall_hanging_sign", "poplar_wall_hanging_sign", "spruce_wall_hanging_sign",
+		"warped_wall_hanging_sign",
 		"acacia_wall_sign", "bamboo_wall_sign", "birch_wall_sign",
 		"black_wall_banner", "blue_wall_banner", "brain_coral_wall_fan",
 		"brown_wall_banner", "bubble_coral_wall_fan", "cherry_wall_sign",

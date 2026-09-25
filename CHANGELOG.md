@@ -23,6 +23,10 @@ the public history since the project was open-sourced on 2026-07-10.
   press a button in a map or minigame.
 
 ### Fixed
+- **Wall hanging signs fall when their support goes.** A hanging sign on a
+  wall is held from its two sides; it now drops as an item once both are
+  gone, as in vanilla, instead of floating. A sign beside another one
+  turned the same way still counts as held.
 - **Wither roses wither the undead.** Zombies, skeletons and other undead
   standing in a wither rose now get Wither, as in vanilla; only wither
   skeletons and the Wither shrug it off. The other vanilla immunities are
