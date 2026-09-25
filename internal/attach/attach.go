@@ -31,8 +31,12 @@ import (
 type Config struct {
 	World *world.World
 	Time  func() int64 // world day-time in ticks
-	Token string       // shared secret gateways must present; "" = refuse all
-	Spawn proto.Pos    // fallback spawn (used when Join is nil — solo mode)
+	// LoginFlags reads the gamerules the login packet carries
+	// (immediate_respawn, limited_crafting, reduced_debug_info); nil = the
+	// defaults.
+	LoginFlags func() (noRespawnScreen, limitedCrafting, reducedDebug bool)
+	Token      string    // shared secret gateways must present; "" = refuse all
+	Spawn      proto.Pos // fallback spawn (used when Join is nil — solo mode)
 
 	// Worlds picks the world for a dimension (0 overworld, 1 nether, 2 end);
 	// nil = World only (solo/test mode).
@@ -206,6 +210,9 @@ func session(c net.Conn, cfg Config) {
 		sections = cfg.World.Sections() // tall worlds report their real height
 	}
 	welcome := proto.Welcome{Spawn: cfg.Spawn, Time: cfg.Time(), MinY: proto.MinY, Sections: sections}
+	if cfg.LoginFlags != nil {
+		welcome.NoRespawnScreen, welcome.LimitedCrafting, welcome.ReducedDebug = cfg.LoginFlags()
+	}
 	var remote Remote
 	// Welcome MUST be the session's first frame (gateways refuse otherwise),
 	// but Join emits frames synchronously (command tree, abilities) and its

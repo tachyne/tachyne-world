@@ -615,8 +615,9 @@ type hub struct {
 	bells        map[simPos]*bellEntity // rung bells' block entities: the swing and the resonation
 	heartScanned map[[2]int32]bool      // chunks already searched for worldgen hearts
 
-	rules     worldRules // difficulty + gamerules (persisted to rulesPath)
-	rulesPath string
+	rules      worldRules    // difficulty + gamerules (persisted to rulesPath)
+	loginFlags atomic.Uint32 // the rules the login packet carries (syncLoginFlags)
+	rulesPath  string
 	// difficultyPub mirrors rules.Difficulty for connection-side reads (the
 	// join sequence sends Change Difficulty outside the hub goroutine).
 	difficultyPub atomic.Int32

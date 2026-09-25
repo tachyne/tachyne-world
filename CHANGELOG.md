@@ -102,6 +102,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Operator shortcuts and gamerule flags.** Operators' clients now know
+  their permission level, so F3+F4 (the game-mode switcher) works, on 26.x
+  too. The `immediate_respawn` and `limited_crafting` gamerules reach the
+  client at login and the moment they change, and the new
+  `reduced_debug_info` gamerule trims the F3 screen, as in vanilla.
 - **Command completion catches up.** The client now completes and accepts
   the full forms of `/xp`, `/tp`, `/time`, `/clear`, `/tellraw` and
   `/stopsound` instead of showing valid commands in red.

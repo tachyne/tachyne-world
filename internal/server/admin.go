@@ -48,8 +48,11 @@ type worldRules struct {
 	// LimitedCrafting is limited_crafting: a player may only craft what their
 	// recipe book has unlocked. Off by default, as in vanilla.
 	LimitedCrafting bool `json:"doLimitedCrafting"`
-	SleepPercent    int  `json:"playersSleepingPercentage"`
-	LocatorBar      bool `json:"locatorBar"`
+	// ReducedDebug is reduced_debug_info: the F3 screen leaves out
+	// coordinates and the like. Off by default, as in vanilla.
+	ReducedDebug bool `json:"reducedDebugInfo"`
+	SleepPercent int  `json:"playersSleepingPercentage"`
+	LocatorBar   bool `json:"locatorBar"`
 	// Added 2026-07-26. The JSON keys keep the historical spelling so an
 	// existing settings.json still loads; only the COMMAND surface renamed.
 	SpawnPhantoms  bool `json:"spawnPhantoms"`
@@ -445,12 +448,19 @@ func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {
 		h.rules.ShowDeathMsgs = e.on
 	case "immediate_respawn":
 		h.rules.ImmediateResp = e.on
+		h.broadcastRuleFlag(players, gameEventImmediateRespawn, e.on)
 	case "random_tick_speed":
 		h.rules.RandomTicks = e.num
 	case "max_minecart_speed":
 		h.rules.MaxCartSpeed = max(1, e.num)
 	case "limited_crafting":
 		h.rules.LimitedCrafting = e.on
+		h.broadcastRuleFlag(players, gameEventLimitedCrafting, e.on)
+	case "reduced_debug_info":
+		h.rules.ReducedDebug = e.on
+		for _, t := range players { // EntityEvent 22 reduced / 23 full
+			t.p.trySendEv(entityStatus(t.p.eid, map[bool]byte{true: 22, false: 23}[e.on]))
+		}
 	case "max_entity_cramming":
 		h.rules.MaxCramming = max(0, e.num)
 	case "respawn_radius":
@@ -522,6 +532,7 @@ func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {
 	case "pvp":
 		h.rules.PvP = e.on
 	}
+	h.syncLoginFlags()
 	h.saveRules()
 	h.plugins.Fire(&plugin.GameruleChangeEvent{Rule: e.rule, On: e.on, Num: e.num})
 }
@@ -541,6 +552,7 @@ func (h *hub) loadRules() {
 		h.rules.LegacyFireTick = nil
 	}
 	h.difficultyPub.Store(int32(h.rules.Difficulty))
+	h.syncLoginFlags()
 	if h.rules.Border != nil {
 		h.border = *h.rules.Border
 	}
@@ -574,4 +586,43 @@ func (h *hub) saveRules() {
 	}
 	data, _ := json.MarshalIndent(h.rules, "", "  ")
 	writeStore(h.rulesPath, data)
+}
+
+// The login packet's gamerule flags, mirrored for the attach goroutine that
+// writes each session's Welcome.
+const (
+	loginNoRespawnScreen = 1 << iota
+	loginLimitedCrafting
+	loginReducedDebug
+)
+
+// Game events MinecraftServer.onGameRuleChanged sends when those rules
+// change (ClientboundGameEventPacket).
+const (
+	gameEventImmediateRespawn = 11
+	gameEventLimitedCrafting  = 12
+)
+
+func (h *hub) syncLoginFlags() {
+	var f uint32
+	if h.rules.ImmediateResp {
+		f |= loginNoRespawnScreen
+	}
+	if h.rules.LimitedCrafting {
+		f |= loginLimitedCrafting
+	}
+	if h.rules.ReducedDebug {
+		f |= loginReducedDebug
+	}
+	h.loginFlags.Store(f)
+}
+
+func (h *hub) broadcastRuleFlag(players map[int32]*tracked, event int32, on bool) {
+	v := float32(0)
+	if on {
+		v = 1
+	}
+	for _, t := range players {
+		t.p.trySendEv(attachproto.GameEvent{Event: event, Value: v})
+	}
 }

@@ -57,6 +57,7 @@ var gameruleAlias = map[string]string{
 	"sendCommandFeedback":       "send_command_feedback",
 	"logAdminCommands":          "log_admin_commands",
 	"doLimitedCrafting":         "limited_crafting",
+	"reducedDebugInfo":          "reduced_debug_info",
 }
 
 // booleanRules is every boolean rule tachyne enforces, canonical names.
@@ -78,7 +79,7 @@ var booleanRules = []string{
 	"tnt_explosion_drop_decay", "spawn_wandering_traders", "universal_anger",
 	// Added 2026-09-20 — vanilla rules the engine has a mechanic for.
 	"allow_entering_nether_using_portals", "projectiles_can_break_blocks",
-	"global_sound_events", "limited_crafting",
+	"global_sound_events", "limited_crafting", "reduced_debug_info",
 	// Added 2026-09-24 — command feedback (cmdfeedback.go).
 	"send_command_feedback", "log_admin_commands",
 }

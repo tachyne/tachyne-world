@@ -46,6 +46,7 @@ func (s *Server) JoinRemote(id attach.Identity, emit func(typ byte, payload []by
 	// and the mode's abilities (creative flight).
 	r.emitEvNow(attachproto.CommandTree{Data: r.s.commandTreeBytes()})
 	r.emitEvNow(abilitiesFor(mode))
+	r.emitEvNow(opLevelEvent(p.eid, s.isOp(p.name)))
 	s.hub.post(evJoin{p: p, x: x, y: y, z: z, yaw: yaw, pitch: pitch, gamemode: mode})
 	return r, nil
 }
@@ -88,6 +89,7 @@ func (s *Server) ResumeRemote(id attach.Identity, token string, emit func(typ by
 	mode := int(ps.Gamemode)
 	r.emitEvNow(attachproto.CommandTree{Data: r.s.commandTreeBytes()})
 	r.emitEvNow(abilitiesFor(mode))
+	r.emitEvNow(opLevelEvent(p.eid, s.isOp(p.name)))
 	psCopy := ps
 	s.hub.post(evJoin{p: p, x: ps.X, y: ps.Y, z: ps.Z, yaw: ps.Yaw, pitch: ps.Pitch, dim: int(ps.Dim), gamemode: mode, resume: &psCopy})
 	return r, nil
@@ -617,4 +619,15 @@ func (s *Server) claimBedrockRename(name, key string) {
 			ids.recordMove(u.UUID, key)
 		}
 	}
+}
+
+// opLevelEvent is PlayerList.sendPlayerPermissionLevel: entity event 24 +
+// the permission level, which unlocks F3+F4, F3+N and the gamerule screen
+// on the client. Operators are level 4.
+func opLevelEvent(eid int32, op bool) attachproto.EntityStatus {
+	lvl := byte(0)
+	if op {
+		lvl = 4
+	}
+	return entityStatus(eid, 24+lvl)
 }

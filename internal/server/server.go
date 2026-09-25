@@ -625,8 +625,12 @@ func (s *Server) Serve() error {
 		}
 		defer aln.Close()
 		spawn := attach.Config{
-			World:  s.world,
-			Time:   func() int64 { return int64(s.hub.dayTime.Load()) },
+			World: s.world,
+			Time:  func() int64 { return int64(s.hub.dayTime.Load()) },
+			LoginFlags: func() (bool, bool, bool) {
+				f := s.hub.loginFlags.Load()
+				return f&loginNoRespawnScreen != 0, f&loginLimitedCrafting != 0, f&loginReducedDebug != 0
+			},
 			Token:  s.AttachToken,
 			Spawn:  attachproto.Pos{X: 0.5, Y: s.world.SurfaceY(0, 0), Z: 0.5},
 			Join:   s.JoinRemote,
