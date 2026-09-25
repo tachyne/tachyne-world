@@ -102,6 +102,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **The warden's warning grows closer.** After each shriek the unseen
+  warden now answers with its close, closer, closest and then angry growl
+  as the warning level rises, from somewhere around the shrieker, as in
+  vanilla; it always used the same growl.
 - **Sniffer eggs on moss sparkle; cobwebs catch falling blocks.** A sniffer
   egg set on moss shows its green sparkle, as in vanilla. Sand, gravel or
   an anvil falling through a cobweb (or powder snow) is slowed and loses

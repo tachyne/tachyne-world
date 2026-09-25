@@ -569,6 +569,14 @@ func (h *hub) shriek(players map[int32]*tracked, pos simPos, s uint32, by int32)
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 2, 1)
 }
 
+// wardenReplySounds is SculkShriekerBlockEntity.SOUND_BY_LEVEL.
+var wardenReplySounds = map[int]string{
+	1: "minecraft:entity.warden.nearby_close",
+	2: "minecraft:entity.warden.nearby_closer",
+	3: "minecraft:entity.warden.nearby_closest",
+	4: "minecraft:entity.warden.listening_angry",
+}
+
 // shriekerRespond fires when a shriek ends: at max warning a Warden emerges.
 func (h *hub) shriekerRespond(players map[int32]*tracked, pos simPos, s uint32) {
 	lvl := h.sculkWarn[pos]
@@ -589,10 +597,15 @@ func (h *hub) shriekerRespond(players map[int32]*tracked, pos simPos, s uint32) 
 		}
 	}
 	if !summoned {
-		// playWardenReplySound: the growl from somewhere below that tells you
-		// how close you are — the warning that is the whole point of the
-		// first three shrieks.
-		h.playSoundDim(players, pos.dim, "minecraft:entity.warden.nearby_closer", sndHostile, cx, cy, cz, 5, 1)
+		// playWardenReplySound: the growl from somewhere around that tells
+		// you how close you are — SOUND_BY_LEVEL, one voice per warning
+		// level, from a random point within 10 blocks of the shrieker.
+		if snd, ok := wardenReplySounds[lvl]; ok {
+			rx := float64(pos.x + h.rng.Intn(21) - 10)
+			ry := float64(pos.y + h.rng.Intn(21) - 10)
+			rz := float64(pos.z + h.rng.Intn(21) - 10)
+			h.playSoundDim(players, pos.dim, snd, sndHostile, rx, ry, rz, 5, 1)
+		}
 	}
 	// Every response darkens the room, summon or not.
 	h.darknessAround(players, pos.dim, cx, cy, cz, wardenDarknessRing)
