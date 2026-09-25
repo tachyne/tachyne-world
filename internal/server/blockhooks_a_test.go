@@ -509,3 +509,50 @@ func TestSculkHearsAHookAttach(t *testing.T) {
 		t.Errorf("the sensor heard %d, want BLOCK_ATTACH %d", f, freqBlockActivate)
 	}
 }
+
+// WeatheringCopperDoorBlock.randomTick ages the LOWER half only, and the
+// upper half follows it, so the two never end on different stages.
+func TestCopperDoorAgesAsOne(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	w := h.world
+	lower := withProps(t, worldgen.BlockBase("copper_door"), map[string]string{"half": "lower", "facing": "north", "open": "false", "powered": "false", "hinge": "left"})
+	upper := withProps(t, worldgen.BlockBase("copper_door"), map[string]string{"half": "upper", "facing": "north", "open": "false", "powered": "false", "hinge": "left"})
+	w.SetBlock(0, 180, 0, lower)
+	w.SetBlock(0, 181, 0, upper)
+	for i := 0; i < 3000; i++ {
+		h.tickCopper(players, 0, 0, 181, 0, w.At(0, 181, 0))
+	}
+	if w.At(0, 181, 0) != upper {
+		t.Fatal("the upper half of a copper door aged on its own")
+	}
+	for i := 0; i < 3000 && w.At(0, 180, 0) == lower; i++ {
+		h.tickCopper(players, 0, 0, 180, 0, w.At(0, 180, 0))
+	}
+	if w.At(0, 180, 0) == lower {
+		t.Fatal("the lower half never aged")
+	}
+	if copperName(w.At(0, 181, 0)) != copperName(w.At(0, 180, 0)) ||
+		worldgen.GetProperty(copperInfo(w.At(0, 181, 0)), w.At(0, 181, 0), "half") != "upper" {
+		t.Errorf("the upper half should follow the lower: %s / %s", copperName(w.At(0, 180, 0)), copperName(w.At(0, 181, 0)))
+	}
+}
+
+// WeatheringCopperChestBlock.randomTick: a copper chest someone has open
+// does not age.
+func TestOpenCopperChestDoesNotAge(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	players := map[int32]*tracked{1: pl}
+	h.playersRef = players
+	chestState := withProps(t, worldgen.BlockBase("copper_chest"), map[string]string{"facing": "north", "type": "single"})
+	h.world.SetBlock(0, 180, 0, chestState)
+	pl.winKind, pl.winPos = winChest, simPos{blockPos: blockPos{0, 180, 0}}
+	for i := 0; i < 3000; i++ {
+		h.tickCopper(players, 0, 0, 180, 0, h.world.At(0, 180, 0))
+	}
+	if h.world.At(0, 180, 0) != chestState {
+		t.Error("an open copper chest aged")
+	}
+}
