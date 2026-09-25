@@ -80,5 +80,6 @@ package worldgen
 //     icebergs, beached shipwrecks;
 //   - the Nether's bedrock roof at y=127 over netherrack from 121, left open
 //     over any build at y>=115 and two columns round it.
+//
 // Nearly every chunk generates differently.
 const GenVersion = 23
