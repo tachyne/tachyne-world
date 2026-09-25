@@ -935,3 +935,21 @@ func TestFireThawsAFreezingPlayer(t *testing.T) {
 		t.Errorf("fire should thaw the player: frozen %d", pl.frozen)
 	}
 }
+
+// BigDripleafBlock: a signal holds a dripleaf level in any dimension.
+func TestNetherDripleafReadsNetherPower(t *testing.T) {
+	h := newHub(world.New(1))
+	nw, err := world.NewNether(1, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.nether = nw
+	nw.ForceLoad(0, 0, 1)
+	nw.SetBlock(1, 100, 0, worldgen.BlockBase("redstone_block"))
+	if !h.dripleafPowered(dimNether, blockPos{0, 100, 0}) {
+		t.Error("a redstone block beside a Nether dripleaf powers it")
+	}
+	if h.dripleafPowered(dimOverworld, blockPos{0, 100, 0}) {
+		t.Error("the overworld has no redstone block there")
+	}
+}

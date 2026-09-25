@@ -47,10 +47,12 @@ func withDripleafTilt(s uint32, tilt string) uint32 {
 	return worldgen.SetProperty(info, s, "tilt", tilt)
 }
 
-// dripleafPowered is hasNeighborSignal; the redstone graph is overworld-only,
-// which is the only place a dripleaf grows.
+// dripleafPowered is hasNeighborSignal, read in the leaf's own dimension (a
+// dripleaf planted in the Nether or the End answers to redstone there).
 func (h *hub) dripleafPowered(dim int, pos blockPos) bool {
-	return dim == 0 && h.hasNeighborSignal(pos.x, pos.y, pos.z)
+	powered := false
+	h.inDim(dim, func() { powered = h.hasNeighborSignal(pos.x, pos.y, pos.z) })
+	return powered
 }
 
 // dripleafStepped is the entityInside half: a grounded entity on a flat,
