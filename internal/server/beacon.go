@@ -219,8 +219,8 @@ func (h *hub) beaconTick(players map[int32]*tracked) {
 	for key, b := range h.beacons {
 		dim, pos := key.dim, key.blockPos
 		w := h.worldFor(dim)
-		if w == nil {
-			continue
+		if w == nil || !h.cellWithinBorder(dim, pos.x, pos.z) {
+			continue // LevelChunk.isTicking: nothing ticks past the world border
 		}
 		cx, cy, cz := float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5
 		levels := 0

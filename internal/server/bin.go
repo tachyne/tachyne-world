@@ -762,8 +762,8 @@ func (h *hub) tickHoppers(players map[int32]*tracked) {
 			delete(h.hopperTicking, pos)
 			continue
 		}
-		if !w.Loaded(int32(pos.x>>4), int32(pos.z>>4)) {
-			keep = append(keep, pos) // an unloaded hopper waits, as vanilla's does
+		if !w.Loaded(int32(pos.x>>4), int32(pos.z>>4)) || !h.cellWithinBorder(pos.dim, pos.x, pos.z) {
+			keep = append(keep, pos) // an unloaded hopper, or one past the world border, waits, as vanilla's does
 			continue
 		}
 		state := w.At(pos.x, pos.y, pos.z)

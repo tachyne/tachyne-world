@@ -146,6 +146,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Nothing works past the world border.** Furnaces, brewing stands,
+  campfires, beacons, hoppers and dungeon spawners outside the world
+  border now stand still, and mobs no longer spawn naturally in chunks
+  that are not wholly inside it, as in vanilla.
 - **Riders are thrown off underwater.** A player or mob riding a horse,
   donkey, mule, camel, llama, pig, strider, spider, chicken, ravager,
   zombie horse or happy ghast now gets off once their head goes under

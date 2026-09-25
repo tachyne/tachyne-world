@@ -232,6 +232,9 @@ func (h *hub) campfireTick(players map[int32]*tracked) {
 		if w == nil {
 			continue
 		}
+		if !h.cellWithinBorder(pos.dim, pos.x, pos.z) {
+			continue // LevelChunk.isTicking: nothing ticks past the world border
+		}
 		state := w.At(pos.x, pos.y, pos.z)
 		if !isCampfireBlock(state) {
 			delete(h.campfires, pos) // spillCampfire handles drops; this is the fallback
