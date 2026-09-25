@@ -14,6 +14,8 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Brushing suspicious gravel sounds like gravel.** It made the sand
+  sound. The player brushing no longer hears the sound twice.
 - **Riding statistics count the right mount.** Riding a nautilus counted
   as horse riding, and flying a happy ghast counted nothing; each now has
   its own statistic, as in vanilla, for everyone aboard. Riding distances

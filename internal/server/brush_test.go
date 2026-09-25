@@ -1,8 +1,10 @@
 package server
 
 import (
+	"strings"
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -167,5 +169,39 @@ func TestDustedStagesMatchVanilla(t *testing.T) {
 		if got := dustedStage(c.count); got != c.want {
 			t.Errorf("dustedStage(%d) = %d, want %d", c.count, got, c.want)
 		}
+	}
+}
+
+// BrushableBlock.getBrushSound: suspicious gravel sounds like gravel, not
+// sand, and the brusher's own client plays it (Level.playSound(player, …)),
+// so only the others are sent it.
+func TestBrushingGravelSoundsLikeGravel(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	pos := blockPos{2, 180, 2}
+	h.world.SetBlock(pos.x, pos.y, pos.z, suspiciousGravelBase)
+	brusher, onlooker := testTracked(), testTracked()
+	onlooker.p = newPlayer(2, "onlooker", [16]byte{2})
+	for _, p := range []*tracked{brusher, onlooker} {
+		p.x, p.y, p.z = 2.5, 181, 3.5
+	}
+	brusher.p.setHotbarSlot(0, itemBrush)
+	players := map[int32]*tracked{brusher.p.eid: brusher, onlooker.p.eid: onlooker}
+	drainEvents(brusher)
+	drainEvents(onlooker)
+	h.brush(players, brusher, evBrush{eid: brusher.p.eid, x: pos.x, y: pos.y, z: pos.z, dy: 1})
+	heard := func(pl *tracked) string {
+		for len(pl.p.out) > 0 {
+			if s, ok := (<-pl.p.out).ev.(attachproto.Sound); ok && strings.Contains(s.Name, "brush") {
+				return s.Name
+			}
+		}
+		return ""
+	}
+	if got := heard(onlooker); got != "minecraft:item.brush.brushing.gravel" {
+		t.Errorf("an onlooker hears %q, want the gravel brushing", got)
+	}
+	if got := heard(brusher); got != "" {
+		t.Errorf("the brusher's client plays its own sound; the server sent %q", got)
 	}
 }
