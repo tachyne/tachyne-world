@@ -347,19 +347,16 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 		// no side at all — hasFaces.)
 		return worldgen.SupportFor(b) == worldgen.SupportMossCarpet && bottomProp(b) && mossCarpetHasSide(state)
 	case worldgen.SupportBell:
-		// BellBlock.canSurvive: the attachment says which way it hangs. A bell
-		// between two walls needs both of them — taking either one down drops
-		// it, which is the case a plain "face" rule cannot express.
+		// BellBlock.canSurvive: the attachment says which way it hangs. On a
+		// wall — one or two — it asks only for the wall it faces
+		// (canAttach(pos, facing)); a double-wall bell that loses its other
+		// wall becomes single-wall first (shapeupdate.go shapeBell).
 		switch prop("attachment") {
 		case "ceiling":
 			return holdsBlock(above())
 		case "floor":
 			return holdsBlock(below())
-		case "double_wall":
-			dx, dz := facingDelta(prop("facing"))
-			return holdsBlock(w.At(pos.x+dx, pos.y, pos.z+dz)) &&
-				holdsBlock(w.At(pos.x-dx, pos.y, pos.z-dz))
-		default: // single_wall: the wall is the one it faces (canAttach(pos, facing))
+		default: // single_wall and double_wall: the wall it faces
 			dx, dz := facingDelta(prop("facing"))
 			return holdsBlock(w.At(pos.x+dx, pos.y, pos.z+dz))
 		}

@@ -5,6 +5,7 @@ package server
 // and flower pots (right-click with a plant swaps in the potted block).
 
 import (
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -37,49 +38,61 @@ var (
 	}()
 )
 
-// placeBell places a bell with its attachment derived from the clicked face —
-// vanilla BellBlock.getStateForPlacement: top → floor, bottom → ceiling
-// (facing = the player's horizontal look either way), side → wall with
-// double_wall when both blocks across the clicked axis are sturdy.
+// placeBell places a bell — BellBlock.getStateForPlacement. The top or
+// bottom face stands it on the floor or hangs it from the ceiling, facing the
+// way the player looks; a side face puts it on that wall, facing out of it,
+// between two walls (double_wall) when the blocks on both sides along that
+// axis are sturdy. A wall bell that cannot hang there falls back to the floor
+// if the block below is sturdy, else to the ceiling; whatever it picks must
+// be able to stay (canSurvive), or nothing is placed.
 func (s *Server) placeBell(p *player, defState uint32, tx, ty, tz int, dir int32, seq int32) bool {
-	w := s.worldFor(p)
-	info, ok := worldgen.InfoForState(defState)
+	state, ok := bellPlacedState(s.worldFor(p), blockPos{tx, ty, tz}, defState, dir, p.yaw)
 	if !ok {
 		s.abortPlace(p, tx, ty, tz, seq)
 		return false
 	}
-	var state uint32
-	switch {
-	case dir == 1: // on the floor
-		if !worldgen.IsSolidFull(w.Block(tx, ty-1, tz)) {
-			s.abortPlace(p, tx, ty, tz, seq)
-			return false
-		}
-		state = worldgen.SetProperty(info, defState, "attachment", "floor")
-		state = worldgen.SetProperty(info, state, "facing", playerFacing(p.yaw))
-	case dir == 0: // hanging from the ceiling
-		if !worldgen.IsSolidFull(w.Block(tx, ty+1, tz)) {
-			s.abortPlace(p, tx, ty, tz, seq)
-			return false
-		}
-		state = worldgen.SetProperty(info, defState, "attachment", "ceiling")
-		state = worldgen.SetProperty(info, state, "facing", playerFacing(p.yaw))
-	default: // on a wall
-		var both bool
-		if dir == 4 || dir == 5 { // clicked an X face: check west+east neighbours
-			both = worldgen.IsSolidFull(w.Block(tx-1, ty, tz)) && worldgen.IsSolidFull(w.Block(tx+1, ty, tz))
-		} else {
-			both = worldgen.IsSolidFull(w.Block(tx, ty, tz-1)) && worldgen.IsSolidFull(w.Block(tx, ty, tz+1))
-		}
-		att := "single_wall"
-		if both {
-			att = "double_wall"
-		}
-		state = worldgen.SetProperty(info, defState, "attachment", att)
-		state = worldgen.SetProperty(info, state, "facing", oppositeFacing(faceName(dir)))
-	}
+	state = waterlogPlaced(s.worldFor(p), tx, ty, tz, state)
 	s.putBlock(p, tx, ty, tz, state, true, seq)
 	return true
+}
+
+// bellPlacedState is the state placeBell chooses; ok=false where vanilla
+// returns null.
+func bellPlacedState(w *world.World, pos blockPos, def uint32, dir int32, yaw float32) (uint32, bool) {
+	info, ok := worldgen.InfoForState(def)
+	if !ok {
+		return 0, false
+	}
+	if dir == 0 || dir == 1 {
+		att := "floor"
+		if dir == 0 {
+			att = "ceiling"
+		}
+		st := worldgen.SetProperty(info, def, "attachment", att)
+		st = worldgen.SetProperty(info, st, "facing", playerFacing(yaw))
+		return st, supported(w, pos, st)
+	}
+	var both bool
+	if dir == 4 || dir == 5 { // an X face: the west and east neighbours
+		both = holdsBlock(w.At(pos.x-1, pos.y, pos.z)) && holdsBlock(w.At(pos.x+1, pos.y, pos.z))
+	} else {
+		both = holdsBlock(w.At(pos.x, pos.y, pos.z-1)) && holdsBlock(w.At(pos.x, pos.y, pos.z+1))
+	}
+	att := "single_wall"
+	if both {
+		att = "double_wall"
+	}
+	st := worldgen.SetProperty(info, def, "facing", oppositeFacing(faceName(dir)))
+	st = worldgen.SetProperty(info, st, "attachment", att)
+	if supported(w, pos, st) {
+		return st, true
+	}
+	att = "ceiling"
+	if holdsBlock(w.At(pos.x, pos.y-1, pos.z)) {
+		att = "floor"
+	}
+	st = worldgen.SetProperty(info, st, "attachment", att)
+	return st, supported(w, pos, st)
 }
 
 // usePot handles a right click on a flower pot (FlowerPotBlock.useItemOn /

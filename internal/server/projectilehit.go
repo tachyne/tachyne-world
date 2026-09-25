@@ -79,8 +79,16 @@ func inRanges(rs []stateRange, s uint32) bool {
 // sticking (currently only a block it destroys).
 func (h *hub) projectileHitBlock(players map[int32]*tracked, a *arrowEntity, pos blockPos, state uint32) {
 	switch {
-	case isBell(state): // BellBlock.onProjectileHit: any projectile rings it
-		h.ringBell(players, a.dim, pos, -1)
+	case isBell(state):
+		// BellBlock.onProjectileHit → onHit(requireHitFromCorrectSide): only
+		// a hit on the bell's ringing side, below its top, rings it; a player
+		// who shot it is credited with the ring (Stats.BELL_RING).
+		face, hitY := projectileEntry(a, pos)
+		if face >= 0 && bellProperHit(state, face, float32(hitY)) && h.ringBell(players, a.dim, pos, face) {
+			if t := players[a.shooter]; t != nil {
+				h.incCustom(t, "bell_ring", 1)
+			}
+		}
 	case isTarget(state):
 		// Targets already had a handler; it lives here now with the rest, and
 		// it works in every dimension rather than only the overworld.
@@ -118,10 +126,12 @@ func (h *hub) projectileHitBlock(players map[int32]*tracked, a *arrowEntity, pos
 		// BigDripleafBlock.onProjectileHit: tips all the way at once.
 		h.dripleafShot(players, a.dim, pos, state)
 
-	case isDecoratedPot(state) && h.rules.ProjectilesBreak:
+	case isDecoratedPot(state) && h.projectileMayBreak(players, a):
 		// A direct hit shatters it. Vanilla cracks it and then destroys it,
-		// which drops the pot's contents along with the pot — and only when
-		// projectiles_can_break_blocks allows it (Projectile.canBreakBlocks).
+		// which drops the pot's contents along with the pot — and only as
+		// DecoratedPotBlock.onProjectileHit allows: an impact projectile, the
+		// projectiles_can_break_blocks rule, and a shooter who may interact
+		// (not an adventure player; a mob only with mob griefing).
 		h.breakPotByProjectile(players, a.dim, pos)
 
 	case isChorusFlower(state) && h.projectileMayBreak(players, a):
@@ -173,6 +183,51 @@ func (h *hub) projectileMayBreak(players map[int32]*tracked, a *arrowEntity) boo
 		return h.rules.MobGriefing
 	}
 	return true
+}
+
+// projectileEntry is the face a projectile flying along its velocity from
+// where it is enters the block at pos through (0 down … 5 east), and the
+// height within the block where it strikes — the BlockHitResult's direction
+// and location. face is -1 for a projectile that is not moving.
+func projectileEntry(a *arrowEntity, pos blockPos) (face int32, hitY float64) {
+	from := [3]float64{a.x, a.y, a.z}
+	d := [3]float64{a.vx, a.vy, a.vz}
+	lo := [3]float64{float64(pos.x), float64(pos.y), float64(pos.z)}
+	axis, best := -1, math.Inf(-1)
+	for i := 0; i < 3; i++ {
+		if d[i] == 0 {
+			continue
+		}
+		plane := lo[i]
+		if d[i] < 0 {
+			plane++
+		}
+		if t := (plane - from[i]) / d[i]; t > best {
+			axis, best = i, t
+		}
+	}
+	if axis < 0 {
+		return -1, 0
+	}
+	hitY = from[1] + d[1]*max(best, 0) - lo[1]
+	switch axis {
+	case 0:
+		face = 5 // moving west, it enters through the east face
+		if d[0] > 0 {
+			face = 4
+		}
+	case 1:
+		face = 1
+		if d[1] > 0 {
+			face = 0
+		}
+	default:
+		face = 3
+		if d[2] > 0 {
+			face = 2
+		}
+	}
+	return face, hitY
 }
 
 // projectileSpeed is how fast the projectile is travelling this tick.

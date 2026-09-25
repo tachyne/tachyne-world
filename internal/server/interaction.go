@@ -416,25 +416,25 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		return
 	}
 	if wallDef, isSign := signWallVariant[defState]; isSign { // sign item: standing or wall
-		if s.placeSign(p, defState, wallDef, tx, ty, tz, dir, seq) && isSurvival(s.modes.get(p.key())) {
+		if s.placeSign(p, defState, wallDef, tx, ty, tz, dir, replacingClicked, seq) && isSurvival(s.modes.get(p.key())) {
 			s.hub.post(evConsume{eid: p.eid, slot: slot})
 		}
 		return
 	}
 	if wallDef, isHanging := hangingWallVariant[defState]; isHanging { // hanging-sign item: ceiling or wall bracket
-		if s.placeHangingSign(p, defState, wallDef, tx, ty, tz, dir, seq) && isSurvival(s.modes.get(p.key())) {
+		if s.placeHangingSign(p, defState, wallDef, tx, ty, tz, dir, replacingClicked, seq) && isSurvival(s.modes.get(p.key())) {
 			s.hub.post(evConsume{eid: p.eid, slot: slot})
 		}
 		return
 	}
 	if wallDef, isBanner := bannerWallVariant[defState]; isBanner { // banner: standing or wall
-		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, seq, true) && isSurvival(s.modes.get(p.key())) {
+		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, replacingClicked, seq, false) && isSurvival(s.modes.get(p.key())) {
 			s.hub.post(evConsume{eid: p.eid, slot: slot})
 		}
 		return
 	}
 	if wallDef, isHead := headWallVariant[defState]; isHead { // mob head/skull: standing or wall
-		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, seq, false) && isSurvival(s.modes.get(p.key())) {
+		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, replacingClicked, seq, true) && isSurvival(s.modes.get(p.key())) {
 			s.hub.post(evConsume{eid: p.eid, slot: slot})
 		}
 		return

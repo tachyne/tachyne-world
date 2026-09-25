@@ -95,6 +95,16 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Signs, banners, heads and bells go where vanilla puts them.** Clicking
+  a ceiling with a sign or banner now puts it on the wall you are looking
+  toward, or on the floor below, instead of doing nothing; mob heads face
+  the way you look rather than away from you. A hanging sign set on a floor
+  under a low ceiling hangs from the ceiling, and one goes on a wall only
+  where something holds it at the side. A bell clicked onto a wall that
+  cannot hold it goes on the floor or ceiling instead, and only a hit on
+  its ringing side rings it — counted in your statistics when you shot it.
+  Adventure-mode players' arrows, and mobs' arrows with mob griefing off,
+  no longer smash decorated pots.
 - **What holds a block, as in vanilla.** Carpet stays on anything that is
   not air — a torch, a flower, even water — where it used to fall off.
   Amethyst buds and clusters point out of the face you set them on (up,

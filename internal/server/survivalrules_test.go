@@ -195,15 +195,16 @@ func TestBellNeedsWhateverItHangsFrom(t *testing.T) {
 		t.Error("a ceiling bell under stone should hang")
 	}
 
-	// Double wall: BOTH sides, so taking either one away drops it.
+	// Double wall: canSurvive asks only for the wall it faces (losing the
+	// other one turns it single-wall — the shape update, not this rule).
 	clear()
 	d := bell("double_wall", "east")
 	w.SetBlock(x, y, z, d)
-	w.SetBlock(x+1, y, z, worldgen.Stone)
-	if supported(w, blockPos{x, y, z}, d) {
-		t.Error("a double-wall bell stood on one wall")
-	}
 	w.SetBlock(x-1, y, z, worldgen.Stone)
+	if supported(w, blockPos{x, y, z}, d) {
+		t.Error("a double-wall bell stood without the wall it faces")
+	}
+	w.SetBlock(x+1, y, z, worldgen.Stone)
 	if !supported(w, blockPos{x, y, z}, d) {
 		t.Error("a double-wall bell with both walls should stand")
 	}
