@@ -137,6 +137,12 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Closed doors stop mobs, and raiding vindicators get through them.**
+  Mobs no longer walk straight through closed doors. During a raid a
+  vindicator that reaches a closed wooden door opens it and leaves it
+  open, or now and then (on Normal or Hard, with `mobGriefing` on) hacks
+  it down. Evokers and illusioners keep chasing a player they have lost
+  sight of for fifteen seconds instead of three.
 - **Shulkers cling to walls and ceilings.** A shulker whose block goes
   now turns to hold on to a wall or ceiling beside it, and teleports onto
   floors, walls or ceilings alike. It fires its bullets away from the face

@@ -1209,6 +1209,11 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 						break
 					}
 				}
+				if m.etype == entityVindicator && h.raiderInActiveRaid(m) {
+					if door, ok := h.doorAhead(m, nx, nz); ok && h.vindicatorAtDoor(players, m, door) {
+						break
+					}
+				}
 				ang := h.rng.Float64() * 2 * math.Pi
 				m.vx, m.vz = math.Cos(ang)*m.moveSpeed(), math.Sin(ang)*m.moveSpeed()
 				m.reroute = 15 + h.rng.Intn(15)
@@ -1483,7 +1488,9 @@ func (h *hub) bodyFits(m *mob, x, y, z int) bool {
 	w := h.worldFor(m.dim)
 	top := y + max(1, int(math.Ceil(m.box().h))) - 1
 	for cy := y; cy <= top; cy++ {
-		if worldgen.IsFullCube(w.At(x, cy, z)) {
+		// A closed door is a wall to walk into (a door-using mob opens it
+		// before it steps; others stop at it, or break it down).
+		if s := w.At(x, cy, z); worldgen.IsFullCube(s) || worldgen.IsClosedDoor(s) {
 			return false
 		}
 	}

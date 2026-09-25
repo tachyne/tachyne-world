@@ -45,7 +45,7 @@ func (h *hub) doorLowerHalf(dim int, pos blockPos) blockPos {
 // hunting a player is stopped by a closed wooden door. Returns whether it
 // is holding the zombie at the door.
 func (h *hub) zombieBeatsDoor(players map[int32]*tracked, m *mob, door blockPos) bool {
-	if !m.breaksDoors || h.rules.Difficulty != diffHard || !h.rules.MobGriefing {
+	if !h.canBreakDoors(m) || !h.rules.MobGriefing {
 		return false
 	}
 	door = h.doorLowerHalf(m.dim, door)
@@ -78,6 +78,38 @@ func (h *hub) zombieBeatsDoor(players map[int32]*tracked, m *mob, door blockPos)
 	h.playSoundDim(players, m.dim, "minecraft:entity.zombie.break_wooden_door", sndHostile, float64(door.x)+0.5, float64(door.y)+0.5, float64(door.z)+0.5, 2, 0.8+h.rng.Float32()*0.4)
 	h.zombieStopDoor(players, m)
 	return false
+}
+
+// canBreakDoors is BreakDoorGoal's isValidDifficulty with whose goal it is:
+// a door-breaking zombie on hard; a vindicator in an active raid on normal
+// or hard (VindicatorBreakDoorGoal).
+func (h *hub) canBreakDoors(m *mob) bool {
+	if m.etype == entityVindicator {
+		return h.raiderInActiveRaid(m) && (h.rules.Difficulty == diffNormal || h.rules.Difficulty == diffHard)
+	}
+	return m.breaksDoors && h.rules.Difficulty == diffHard
+}
+
+// raiderInActiveRaid is Raider.hasActiveRaid: in a raid that is not over.
+func (h *hub) raiderInActiveRaid(m *mob) bool {
+	if !isRaider(m) {
+		return false
+	}
+	r := h.raids[m.raidCenter]
+	return r != nil && r.lostLeft == 0 && r.wonLeft == 0
+}
+
+// vindicatorAtDoor is the raiding vindicator stopped by a closed wooden
+// door: VindicatorBreakDoorGoal (priority 2, one check in five) beats it
+// down, else RaiderOpenDoorGoal (priority 3) opens it and leaves it open.
+// It reports whether the door took the vindicator's move.
+func (h *hub) vindicatorAtDoor(players map[int32]*tracked, m *mob, door blockPos) bool {
+	door = h.doorLowerHalf(m.dim, door)
+	if m.doorPos == door || (h.rng.Intn(5) == 0 && h.canBreakDoors(m) && h.rules.MobGriefing) {
+		return h.zombieBeatsDoor(players, m, door)
+	}
+	s := h.worldFor(m.dim).At(door.x, door.y, door.z)
+	return h.setDoorOpen(players, m.dim, door, s, true)
 }
 
 // zombieStopDoor clears the crack overlay and forgets the door.

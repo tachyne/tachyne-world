@@ -48,8 +48,10 @@ func (h *hub) pathSteer(m *mob, gx, gz float64) (float64, float64) {
 		math.Hypot(float64(gxi-m.pathGoal[0]), float64(gzi-m.pathGoal[1])) > pathRegoal
 	if stale {
 		var pw pather = h.worldFor(m.dim)
-		if m.usesDoors {
-			pw = doorPather{h.worldFor(m.dim)} // route through closed wooden doors
+		if m.usesDoors || (m.etype == entityVindicator && h.raiderInActiveRaid(m)) {
+			// Route through closed wooden doors: a villager's, or a raiding
+			// vindicator's (setCanOpenDoors(level.isRaided(pos))).
+			pw = doorPather{h.worldFor(m.dim)}
 		}
 		m.path, m.pathReached = findPathLimits(pw, malusFor(m.etype), sxi, szi, gxi, gzi, pathMaxRange, pathMaxNodes)
 		m.pathIdx = 0

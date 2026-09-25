@@ -27,7 +27,9 @@ func (h *hub) huntTarget(players map[int32]*tracked, m *mob, reach float64) *tra
 			(t.x-m.x)*(t.x-m.x)+(t.z-m.z)*(t.z-m.z) <= reach*reach &&
 			(m.etype != entityDrowned || m.anger > 0 || h.drownedOKTarget(t)) {
 			memory := targetUnseenMemory
-			if m.anger > 0 {
+			if m.anger > 0 || m.etype == entityEvoker || m.etype == entityIllusioner {
+				// HurtByTargetGoal, and the evoker's and illusioner's own
+				// player goals (setUnseenMemoryTicks(300)).
 				memory = hurtByUnseenMemory
 			}
 			if h.mobSees(m, t) {
