@@ -30,8 +30,8 @@ func (h *hub) tickDriedGhast(players map[int32]*tracked, dim, x, y, z int, state
 		return true
 	}
 	key := simPos{dim: dim, blockPos: blockPos{x, y, z}}
-	if _, armed := h.driedGhastDue[key]; armed {
-		return true // hasScheduledTick
+	if due, armed := h.driedGhastDue[key]; armed && due > h.tick.Load() {
+		return true // hasScheduledTick (a past due is a leftover of a broken block)
 	}
 	if h.driedGhastDue == nil {
 		h.driedGhastDue = map[simPos]uint64{}
