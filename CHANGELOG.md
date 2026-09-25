@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/tellraw.** `/tellraw <targets> <message>` sends a JSON text message
+  with its colours, styles, click and hover actions, as in vanilla. Score
+  and selector parts are filled in for each reader. Bedrock players get the
+  plain text.
 - **/stopsound.** `/stopsound <targets> [<source>|*] [<sound>]` stops
   every sound, a whole category or one sound for the chosen players, as in
   vanilla. Bedrock players can have every sound stopped.

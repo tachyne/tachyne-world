@@ -27,6 +27,7 @@ func (s *Server) handleCommand(p *player, cmd string) {
 	if v := s.pluginCommand(p, cmd, fields[0]); v.handled {
 		return
 	} else if v.line != cmd {
+		cmd = v.line
 		fields = strings.Fields(v.line)
 		if len(fields) == 0 {
 			return
@@ -34,7 +35,7 @@ func (s *Server) handleCommand(p *player, cmd string) {
 	}
 	switch fields[0] {
 	case "help":
-		help := "Commands: /help /say /msg /teammsg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /enchant /setblock /fill /seed /me /spawnpoint /setworldspawn /playsound /stopsound /difficulty /gamerule /gamemode /defaultgamemode /hud /worldborder /locate /title /advancement /attribute /recipe /tag /ride /damage /spreadplayers /forceload /random /swing /clone /bossbar /save-all /save-off /save-on /version /stop /item /loot /bug" +
+		help := "Commands: /help /say /msg /teammsg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /enchant /setblock /fill /seed /me /spawnpoint /setworldspawn /playsound /stopsound /tellraw /difficulty /gamerule /gamemode /defaultgamemode /hud /worldborder /locate /title /advancement /attribute /recipe /tag /ride /damage /spreadplayers /forceload /random /swing /clone /bossbar /save-all /save-off /save-on /version /stop /item /loot /bug" +
 			" — targets take @s @p @a @r @e (with type=, distance=, limit=, name=, tag=), coordinates take ~ and ^." +
 			" /bug <what went wrong> reports something with the blocks around you attached; /bug list shows the last few and /bug re <text> adds to one."
 		if s.hub.plugHost != nil {
@@ -53,6 +54,8 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		s.cmdPlaysound(p, fields[1:])
 	case "stopsound":
 		s.cmdStopsound(p, fields[1:])
+	case "tellraw":
+		s.cmdTellraw(p, cmd)
 	case "particle":
 		s.cmdParticle(p, fields[1:])
 	case "bug":
