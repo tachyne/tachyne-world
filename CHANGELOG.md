@@ -23,6 +23,14 @@ the public history since the project was open-sourced on 2026-07-10.
   press a button in a map or minigame.
 
 ### Fixed
+- **Sandstone under the sand, and no sand over caves.** Deserts now have
+  sandstone under their sand, reaching up to thirty blocks down, and
+  beaches and warm oceans a few blocks of it, as in vanilla. Sand, red
+  sand or gravel with a cave straight under it generates as sandstone,
+  red sandstone or stone, so a cave roof no longer pours sand on you when
+  you open it. Frozen ocean floors have vanilla's small bare-stone dips,
+  and flooded badlands are floored with orange terracotta. Only
+  untouched ground changes; anything you placed or dug stays as it is.
 - **Sculk catalysts leave your builds alone.** A catalyst's bloom now turns
   only natural ground (stone, dirt, sand, gravel, and the rest vanilla
   lists) into sculk. Before, it could turn any solid block near a death
