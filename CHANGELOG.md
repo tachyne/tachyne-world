@@ -146,6 +146,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Rain and snow fall where vanilla's do.** The snow line on mountains
+  now wobbles as in vanilla instead of being a flat height, frozen oceans
+  have patches of rain and open water between the ice, rain follows the
+  biome at your height (cave biomes included), and cauldrons in deserts,
+  savannas and badlands no longer fill during a storm.
 - **Rain only counts where it actually falls.** Being rained on now
   depends on where you are, not just on the column: a roof of glass or
   leaves keeps the rain off, and so does standing under an overhang with

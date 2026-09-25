@@ -974,10 +974,10 @@ func (h *hub) precipTick(players map[int32]*tracked, dim, cx, cz int) {
 		return
 	}
 	at, below := w.At(x, topY, z), w.At(x, belowY, z)
-	biome := w.BiomeAt(x, z)
+	biome := w.BiomeAt3D(x, topY, z) // ServerLevel.tickPrecipitation: the biome at the top
 	// Biome.shouldFreeze(belowPos): exposed still water beside a non-water
-	// edge, where it is cold and dark enough.
-	if below == worldgen.WaterBase && worldgen.PrecipitationAt(biome, belowY) == worldgen.PrecipSnow &&
+	// edge, where it is cold (not warmEnoughToRain) and dark enough.
+	if below == worldgen.WaterBase && biomeTemperatureAt(biome, x, belowY, z) < 0.15 &&
 		h.blockLight(dim, x, belowY, z) < 10 {
 		for _, d := range horizNeighbors {
 			if !worldgen.IsWater(w.At(x+d.x, belowY, z+d.z)) {
@@ -989,7 +989,7 @@ func (h *hub) precipTick(players map[int32]*tracked, dim, cx, cz int) {
 	if !h.raining {
 		return
 	}
-	snowing := worldgen.PrecipitationAt(biome, topY) == worldgen.PrecipSnow
+	snowing := precipitationAt(biome, x, topY, z) == worldgen.PrecipSnow
 	if maxLayers := h.rules.MaxSnowHeight; maxLayers > 0 && snowing && h.blockLight(dim, x, topY, z) < 10 {
 		switch {
 		case at >= snowLayer1 && at <= snowLayer1+7:
@@ -1001,8 +1001,11 @@ func (h *hub) precipTick(players map[int32]*tracked, dim, cx, cz int) {
 		}
 	}
 	// Block.handlePrecipitation on the block under the top: a cauldron fills.
+	// Nothing falls where the biome has no precipitation.
 	if _, _, isCauldron := cauldronOf(below); isCauldron {
-		h.cauldronPrecip(players, blockPos{x, belowY, z}, below, worldgen.PrecipitationAt(biome, belowY) == worldgen.PrecipSnow)
+		if p := precipitationAt(biome, x, belowY, z); p != worldgen.PrecipNone {
+			h.cauldronPrecip(players, blockPos{x, belowY, z}, below, p == worldgen.PrecipSnow)
+		}
 	}
 }
 

@@ -357,7 +357,7 @@ func (h *hub) isRainingAt(x, y, z int) bool { return h.rainAt(dimOverworld, x, y
 func (h *hub) rainAt(dim, x, y, z int) bool {
 	return dim == dimOverworld && h.raining && h.canSeeSky(dim, x, y, z) &&
 		h.motionBlockingTop(dim, x, z) <= y &&
-		worldgen.PrecipitationAt(h.world.BiomeAt(x, z), y) == worldgen.PrecipRain
+		h.precipAt(dim, x, y, z) == worldgen.PrecipRain
 }
 
 // inRain is Entity.isInRain: rain at the block the entity stands in or at
