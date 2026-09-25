@@ -244,8 +244,11 @@ func (h *hub) updateBinTrigger(players map[int32]*tracked, pos simPos, state uin
 	h.setBlockAt(players, pos.dim, pos.blockPos, setBoolProp(state, "triggered", powered))
 	if powered {
 		// Vanilla scheduleTick(pos, 4): the dispense fires later, unconditionally
-		// (a pulse shorter than the delay still ejects).
-		h.binFire[pos] = h.tick.Load() + binFireDelay
+		// (a pulse shorter than the delay still ejects). A tick already
+		// pending stays as it is (LevelTicks keeps one per position).
+		if _, pending := h.binFire[pos]; !pending {
+			h.binFire[pos] = h.tick.Load() + binFireDelay
+		}
 	}
 }
 
@@ -261,14 +264,14 @@ func (h *hub) runBinFires(players map[int32]*tracked, age uint64) {
 		if !h.inWorldYIn(pos.dim, pos.y) {
 			continue
 		}
-		h.rsDim = pos.dim // the cell's own dimension for the whole ejection
 		w := h.worldFor(pos.dim)
 		if w == nil {
 			continue
 		}
 		state := w.Block(pos.x, pos.y, pos.z)
 		if isDispenser(state) || isDropper(state) { // still a bin (not broken meanwhile)
-			h.ejectFromBin(players, pos, state)
+			// The cell's own dimension for the whole ejection, and back after.
+			h.inDim(pos.dim, func() { h.ejectFromBin(players, pos, state) })
 		}
 	}
 }
@@ -310,9 +313,10 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			}
 		}
 	}
-	if st == nil {
-		h.rsSound(players, "minecraft:block.dispenser.fail", sndBlock,
-			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 1.2)
+	if st == nil { // DispenserBlock.dispenseFrom: levelEvent 1001 and BLOCK_ACTIVATE
+		h.playSoundDim(players, pos.dim, "minecraft:block.dispenser.fail", sndBlock,
+			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1.2)
+		h.vib(pos.dim, freqBlockActivate, pos.x, pos.y, pos.z, 0)
 		return
 	}
 	dx, dy, dz := pistonDelta(state) // same 6-way facing math

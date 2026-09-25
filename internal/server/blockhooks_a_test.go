@@ -556,3 +556,17 @@ func TestOpenCopperChestDoesNotAge(t *testing.T) {
 		t.Error("an open copper chest aged")
 	}
 }
+
+// DispenserBlock.dispenseFrom: an empty dispenser that fires clicks and is a
+// BLOCK_ACTIVATE for sculk.
+func TestSculkHearsAnEmptyDispenser(t *testing.T) {
+	f := sculkHears(t, func(h *hub, players map[int32]*tracked, pl *tracked) {
+		h.world.SetBlock(7, 180, 4, worldgen.BlockBase("dispenser"))
+		key := simPos{blockPos: blockPos{7, 180, 4}}
+		h.binFire[key] = h.tick.Load()
+		h.runBinFires(players, h.tick.Load())
+	})
+	if f != freqBlockActivate {
+		t.Errorf("the sensor heard %d, want BLOCK_ACTIVATE %d", f, freqBlockActivate)
+	}
+}
