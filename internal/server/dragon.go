@@ -113,6 +113,9 @@ func (h *hub) updateDragon(players map[int32]*tracked) {
 	}
 	dx, dy, dz := tx-m.x, ty-m.y, tz-m.z
 	d := math.Sqrt(dx*dx + dy*dy + dz*dz)
+	if h.dragonInWall {
+		speed *= 0.8 // EnderDragon.aiStep: move(deltaMovement × 0.8) while inWall
+	}
 	if d > 1e-6 && speed > 0 {
 		step := math.Min(speed, d)
 		m.x += dx / d * step
@@ -120,6 +123,7 @@ func (h *hub) updateDragon(players map[int32]*tracked) {
 		m.z += dz / d * step
 		m.yaw = float32(math.Atan2(dz, dx)*180/math.Pi) - 90
 	}
+	h.dragonInWall = h.dragonCheckWalls(players, m, sitting)
 	// Contact damage to End players in reach — only while it is flying. A
 	// perched dragon is the fight's one safe window to hit its head, so it
 	// must not still be grinding anyone who stands next to it. Vanilla has

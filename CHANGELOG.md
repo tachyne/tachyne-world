@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **The ender dragon tears through blocks.** Whatever its head, neck and body
+  fly into is destroyed, except end stone, obsidian, bedrock, iron bars and
+  the other blocks a dragon can't break. With `mobGriefing` off it breaks
+  nothing and is slowed by what it hits instead.
 - **Straw beds follow their own rules.** A straw bed lets you sleep through
   the night in the overworld but never sets your spawn point, and it falls
   apart when you get up. In the Nether and the End it breaks when used

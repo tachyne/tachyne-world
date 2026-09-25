@@ -721,6 +721,7 @@ type hub struct {
 
 	dragon        *mob               // the ender dragon (nil = none / defeated)
 	dragonCrystal int32              // EnderDragon.nearestCrystal: the crystal healing it (0 = none)
+	dragonInWall  bool               // EnderDragon.inWall: last tick it met blocks it could not break
 	crystals      map[int32]*crystal // end crystals by eid
 	dragonRespawn *dragonRespawn     // the respawn ceremony in progress (nil = none)
 	phantomNextAt uint64             // next insomnia check (vanilla PhantomSpawner cadence)
