@@ -53,6 +53,7 @@ type player struct {
 
 	digBonusMirror atomic.Int32 // Efficiency addend of the held tool (hub -> session)
 	offhandMirror  atomic.Int32 // the offhand's item id (setOffhand), for the use-item dispatch
+	leading        atomic.Int32 // mobs on this player's leads (hub → session): a fence click ties them
 	hmu            sync.Mutex   // guards hotbar (the hub mirrors the survival inventory in)
 	hotbar         [9]int32     // item id per hotbar slot (0 = empty)
 	// hotbarPaint carries the painting/variant component of a creative-menu

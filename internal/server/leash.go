@@ -245,9 +245,18 @@ func (h *hub) cutLeashesAt(players map[int32]*tracked, dim int, pos blockPos) {
 // gone or in another dimension cuts the lead, too far snaps it, and past the
 // elastic distance the mob is pulled after its holder.
 func (h *hub) updateLeashes(players map[int32]*tracked) {
+	led := map[int32]int32{}
+	defer func() {
+		for eid, t := range players {
+			t.p.leading.Store(led[eid])
+		}
+	}()
 	for _, m := range h.mobs {
 		if m.leash == 0 {
 			continue
+		}
+		if players[m.leash] != nil {
+			led[m.leash]++
 		}
 		if m.dying > 0 {
 			h.dropLeash(players, m, true)

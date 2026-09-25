@@ -408,3 +408,40 @@ func TestHostilesRefuseALeadHoweverTheyWereSpawned(t *testing.T) {
 		t.Error("a zombie took a lead because its hostile flag happened to be false")
 	}
 }
+
+// FenceBlock.useWithoutItem: a click on a fence ties the mobs a player
+// leads whatever is in their hand — here a stick, through the real click
+// path — and leading nothing, the click passes to the held item.
+func TestFenceClickTiesLedMobsWithAnyItem(t *testing.T) {
+	h, players := leashWorld(t)
+	s := &Server{world: h.world, hub: h, modes: newModeStore("", gmSurvival), Ops: map[string]bool{}}
+	tr := leashPlayer(t, h, players, 0.5, 70, 0.5)
+	cow := leashCow(t, h, players, 1.5, 70, 0.5)
+	fence := blockPos{2, 70, 2}
+	lo, _ := worldgen.BlockRange("oak_fence")
+	h.world.SetBlock(fence.x, fence.y, fence.z, lo)
+	stick := int32(itemByName["stick"])
+	giveHeld(t, tr, stick, 1)
+	tr.p.setHotbarSlot(tr.p.heldSlot(), stick)
+
+	click := func() {
+		s.handlePlace(tr.p, placeBody(fence.x, fence.y, fence.z, 1))
+		for len(h.events) > 0 {
+			if e, ok := (<-h.events).(evLeashFence); ok {
+				if tt := players[e.eid]; tt != nil && isFence(h.worldFor(tt.dim).At(e.pos.x, e.pos.y, e.pos.z)) {
+					h.leashToFence(players, tt, e.pos)
+				}
+			}
+		}
+	}
+	click() // leading nothing yet: no knot
+	if len(h.knots) != 0 {
+		t.Fatal("a fence click with nobody on a lead made a knot")
+	}
+	h.setLeash(players, cow, tr.p.eid)
+	h.updateLeashes(players)
+	click()
+	if len(h.knots) != 1 || h.knots[cow.leash] == nil {
+		t.Fatalf("clicking the fence with a stick while leading a cow: knots %d, cow tied to %d", len(h.knots), cow.leash)
+	}
+}

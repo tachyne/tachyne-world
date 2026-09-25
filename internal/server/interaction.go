@@ -672,6 +672,14 @@ func (s *Server) tryUseBlock(p *player, off bool, x, y, z int, seq int32, face i
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
+	if !off && isFence(state) && p.leading.Load() > 0 {
+		// FenceBlock.useWithoutItem → LeadItem.bindPlayerMobs: whatever is
+		// in hand, a click on a fence ties the mobs this player leads to it.
+		// Leading nothing, it passes and the held item acts as usual.
+		s.hub.post(evLeashFence{eid: p.eid, pos: blockPos{x, y, z}})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
 	if isRedstoneOre(state) && !boolProp(state, "lit") { // RedStoneOreBlock.useItemOn: lights up (then falls through, so a block still places against it)
 		s.hub.post(evLightOre{eid: p.eid, x: x, y: y, z: z})
 	}
