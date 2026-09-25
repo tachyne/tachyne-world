@@ -490,13 +490,17 @@ func (h *hub) provoke(m *mob, t *tracked) {
 	m.hostile = true
 	m.behavior = Behavior(hostileBehavior{})
 	m.anger = spiderAnger * 4
+	if persistentAnger(m.etype) {
+		m.anger = h.neutralAngerTime() // PERSISTENT_ANGER_TIME (neutralanger.go calms it)
+	}
 	m.hasTarget, m.tx, m.tz = true, t.x, t.z
 	m.targetEID, m.unseenTicks = t.p.eid, 0 // HurtByTargetGoal: the attacker, remembered 300 ticks unseen
+	m.angryAt = t.p.eid
 	if h.rules.UniversalAnger {
 		// universal_anger: the grudge is against everyone — no one player is
 		// remembered, so the hunt takes whoever is nearest (NeutralMob:
 		// persistentAngerTarget stays unset).
-		m.targetEID = 0
+		m.targetEID, m.angryAt = 0, 0
 	}
 	pack := m.etype == entityWolf || m.etype == entityBee || m.etype == entityPolarBear
 	if !pack {
@@ -515,7 +519,11 @@ func (h *hub) provoke(m *mob, t *tracked) {
 		o.hostile = true
 		o.behavior = Behavior(hostileBehavior{})
 		o.anger = spiderAnger * 4
+		if persistentAnger(o.etype) {
+			o.anger = h.neutralAngerTime()
+		}
 		o.hasTarget, o.tx, o.tz = true, t.x, t.z
+		o.targetEID, o.angryAt, o.unseenTicks = m.targetEID, m.angryAt, 0 // HurtByTargetGoal.alertOther: the same attacker
 	})
 }
 

@@ -390,6 +390,8 @@ type mob struct {
 	villagerHurt                    bool       // villager: hurt since the last update (HurtBySensor)
 	villagerHurtLeft                int        // villager: HURT_BY memory ticks left
 	vHurtBy                         int32      // villager: HURT_BY_ENTITY, until it calms down
+	angryAt                         int32      // provoked animal: the player it holds a grudge against (NeutralMob)
+	llamaDefending                  bool       // trader llama: its target is its trader's attacker, not its own
 	vPanicLeft                      int        // villager: updates before its panic walk target is dropped
 	cbState                         int8       // pillager: CrossbowState (uncharged / charging / charged / ready)
 	cbTicks                         int        // pillager: charge ticks so far, or the aim delay left
@@ -694,7 +696,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				m.rest = 0
 			}
 		} else if m.hostile {
-			h.acquireTarget(players, m) // pick a player to hunt this update
+			if !h.provokedTarget(players, m) { // a provoked animal keeps to its attacker, then calms
+				h.acquireTarget(players, m) // pick a player to hunt this update
+			}
 			if m.hasTarget {
 				m.rest = 0                               // a resting hostile wakes the instant prey appears
 				m.drifting, m.drownedGoal = false, false // a real quarry outranks any errand

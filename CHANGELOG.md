@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Angry animals calm down.** A wolf, polar bear, panda, dolphin or llama
+  you hit used to stay hostile for good, going after any player it saw.
+  As in vanilla, it now goes only after the player who hit it. A wolf or
+  polar bear stays angry at that player for 20 to 39 seconds after losing
+  sight of them, and a pack of wolves all go after the same attacker. A
+  llama spits at its attacker once and then goes back to its business.
 - **Polar bears hunt foxes.** As in vanilla, an adult polar bear now goes
   after a fox it can see, rears up and bites it. Cubs leave foxes alone.
 - **Panicked animals calm down on time.** A cow, pig or chicken you hit
