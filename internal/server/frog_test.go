@@ -83,7 +83,13 @@ func TestFrogLaysSpawnThatHatches(t *testing.T) {
 		t.Fatalf("frogspawn should sit on the water, got state %d", got)
 	}
 
-	// Hatch it: the block goes, tadpoles arrive.
+	// A neighbour's update before its time does nothing; its own tick hatches
+	// it: the block goes, tadpoles arrive.
+	h.tickFrogspawn(players, 0, spawn, h.world.At(spawn.x, spawn.y, spawn.z))
+	if h.world.At(spawn.x, spawn.y, spawn.z) != frogspawnBlock {
+		t.Fatal("a neighbour update hatched the clutch early")
+	}
+	h.tick.Add(frogspawnMaxHatch)
 	h.tickFrogspawn(players, 0, spawn, h.world.At(spawn.x, spawn.y, spawn.z))
 	if h.world.At(spawn.x, spawn.y, spawn.z) != worldgen.Air {
 		t.Error("hatching clears the clutch")

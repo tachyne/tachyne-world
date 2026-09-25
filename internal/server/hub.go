@@ -459,6 +459,7 @@ type hub struct {
 	shulkerLids                    map[simPos]*shulkerLid    // animating shulker box lids (shulkerlid.go)
 	composterDue                   map[simPos]uint64         // full composters' ready ticks (composter.go)
 	driedGhastDue                  map[simPos]uint64         // dried ghasts' scheduled hydration steps (happyghast.go)
+	frogspawnDue                   map[simPos]uint64         // frogspawn clutches' hatch ticks (frogspawn.go)
 
 	localCaps    *localCapState    // per-player category counts for this tick's spawning (localcap.go)
 	spawnCharges []pointCharge     // this tick\'s spawn-cost charges in the dimension being spawned (localcap.go)
