@@ -188,6 +188,7 @@ type mob struct {
 	strafeCW                        bool        // skeleton: current circling direction while shooting
 	retaliates                      bool        // peaceful until hit, then hunts its attacker (wolf/goat)
 	rider                           int32       // player eid riding this mob (0 = none); AI pauses while ridden
+	standLeft, standNext            int         // horse: ticks left in a rear; RandomStandGoal's counter (horsestand.go)
 	riders                          []int32     // happy ghast: up to 4 rider eids (riders[0] pilots); AI pauses while any aboard
 	mount                           int32       // eid of the MOB this mob rides (raid ravager riders); 0 = none
 	cart                            int32       // eid of the MINECART carrying this mob (scooped up by a rolling cart); 0 = none
@@ -701,6 +702,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		if m.etype == entitySnowGolem {
 			h.snowGolemStep(players, m)
+		}
+		if isEquine(m.etype) {
+			h.horseStandTick(players, m) // rearing: its countdown and RandomStandGoal
 		}
 		if m.rider != 0 || len(m.riders) > 0 {
 			// RunAroundLikeCrazyGoal is the one goal a ridden mount still

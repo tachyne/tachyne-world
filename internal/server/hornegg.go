@@ -54,6 +54,9 @@ func turtleMeta(m *mob) []byte {
 // speciesStateMeta is the per-species synced state to re-assert for a
 // late joiner, or nil when the species has none.
 func speciesStateMeta(m *mob) []byte {
+	if isEquine(m.etype) && (m.tamed || m.standLeft > 0) {
+		return horseFlagsMeta(m) // tamed, or caught mid-rear
+	}
 	switch m.etype {
 	case entityGoat:
 		if m.screaming || m.hornsGone > 0 {

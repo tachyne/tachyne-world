@@ -68,4 +68,5 @@ func (h *hub) tameHorse(players map[int32]*tracked, m *mob, t *tracked) {
 	m.temper = horseMaxTemperOf(m.etype)
 	h.playSoundDim(players, m.dim, "minecraft:entity.horse.eat", sndNeutral, m.x, m.y, m.z, 1, 1)
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameOK))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(horseFlagsMeta(m))) // FLAG_TAME
 }

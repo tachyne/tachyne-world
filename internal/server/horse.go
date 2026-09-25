@@ -111,9 +111,13 @@ func horseAngrySound(m *mob) string {
 	return ""
 }
 
-// horseMakeMad is AbstractHorse.makeMad: the angry call (the rear itself is
-// a client flag the engine does not drive).
+// horseMakeMad is AbstractHorse.makeMad: unless it is already up, the horse
+// rears (horsestand.go) and gives its angry call.
 func (h *hub) horseMakeMad(players map[int32]*tracked, m *mob) {
+	if m.standLeft > 0 {
+		return
+	}
+	h.horseStand(players, m)
 	if snd := horseAngrySound(m); snd != "" {
 		h.playSoundDim(players, m.dim, snd, sndNeutral, m.x, m.y, m.z, 1, 1)
 	}

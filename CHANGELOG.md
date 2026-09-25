@@ -42,6 +42,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Horses rear.** Horses, donkeys, mules and skeleton and zombie horses
+  now rear up now and then with a whinny, as in vanilla, and rear when
+  angered or bucking an untamed rider — the engine never sent the rearing
+  pose before. A tamed horse shows as tamed to everyone nearby.
 - **Spectators don't start raids.** A spectator with Bad Omen can pass
   through a village without setting off a raid, as in vanilla.
 - **Brewing stands bubble smoothly.** The brew now counts down every tick,
