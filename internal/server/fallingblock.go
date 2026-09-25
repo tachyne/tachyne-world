@@ -52,6 +52,7 @@ type fallingBlock struct {
 	dim          int
 	x, y, z      float64
 	vy           float64
+	stuckY       float64 // stuckSpeedMultiplier.y from the last tick's cobweb or powder snow (0 = none)
 	state        uint32
 	time         int
 	fallDistance float64
@@ -332,6 +333,10 @@ func (h *hub) discardFalling(players map[int32]*tracked, fb *fallingBlock) {
 // landed on (fallOn) and the damage (causeFallDamage).
 func (h *hub) fallMove(players map[int32]*tracked, w *world.World, fb *fallingBlock) {
 	dy := fb.vy
+	if fb.stuckY != 0 { // Entity.move: the stuck multiplier scales this move, and the motion is spent
+		dy *= fb.stuckY
+		fb.stuckY, fb.vy = 0, 0
+	}
 	bx, bz := floorInt(fb.x), floorInt(fb.z)
 	moved := dy
 	var onCell int
@@ -450,18 +455,28 @@ func (h *hub) fallingBlockHurts(players map[int32]*tracked, fb *fallingBlock, fd
 }
 
 // fallInsideBlocks is applyEffectsFromBlocks for the cells the box swept:
-// frogspawn is the one block that reacts to a falling block, and it is
-// destroyed (FrogspawnBlock.entityInside).
+// frogspawn is destroyed (FrogspawnBlock.entityInside), and a cobweb or
+// powder snow catches the block (WebBlock / PowderSnowBlock.entityInside →
+// makeStuckInBlock): its fall is reset and its next move slowed to 0.05
+// (a web) or 1.5 (powder snow) of its speed.
 func (h *hub) fallInsideBlocks(players map[int32]*tracked, w *world.World, fb *fallingBlock, yo float64) {
 	lo, hi := math.Min(yo, fb.y), math.Max(yo, fb.y)+fallHeight
 	bx, bz := floorInt(fb.x), floorInt(fb.z)
 	for cy := floorInt(lo); cy <= floorInt(hi-collideEpsilon); cy++ {
-		if w.At(bx, cy, bz) == frogspawnBlock {
+		switch st := w.At(bx, cy, bz); {
+		case st == frogspawnBlock:
 			h.setBlockAt(players, fb.dim, blockPos{bx, cy, bz}, worldgen.Air)
 			h.levelEvent(players, fb.dim, worldEventBlockBreak, bx, cy, bz, int32(frogspawnBlock))
+		case st == cobwebState:
+			fb.stuckY, fb.fallDistance = webStuckY, 0
+		case isPowderSnow(st):
+			fb.stuckY, fb.fallDistance = powderSnowStuckY, 0
 		}
 	}
 }
+
+// powderSnowStuckY is PowderSnowBlock's makeStuckInBlock(0.9, 1.5, 0.9).
+const powderSnowStuckY = 1.5
 
 // fallClipWaterSource is the concrete powder's clip (ClipContext.Fluid.
 // SOURCE_ONLY) down the column from the last position to this one: the first

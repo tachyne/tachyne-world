@@ -102,6 +102,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Sniffer eggs on moss sparkle; cobwebs catch falling blocks.** A sniffer
+  egg set on moss shows its green sparkle, as in vanilla. Sand, gravel or
+  an anvil falling through a cobweb (or powder snow) is slowed and loses
+  its fall there, so an anvil caught by a web no longer hurts what is
+  under it.
 - **Furnaces keep the experience they owe.** The experience from smelting
   is now saved with the furnace across restarts, pops out of the furnace
   when it is broken, and is no longer lost when the furnace is emptied by

@@ -250,3 +250,17 @@ func TestUnsupportedScaffoldingFalls(t *testing.T) {
 		t.Fatalf("the landed scaffold stands on stone: distance %d", d)
 	}
 }
+
+// WebBlock.entityInside → makeStuckInBlock: an anvil that falls through a
+// cobweb loses its fall there, so the cow under it is not hurt.
+func TestFallingAnvilCaughtByCobweb(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	cow := h.spawnMob(players, entityCow, float64(x)+0.5, float64(y), float64(z)+0.5)
+	hp := cow.health
+	dropFrom(h, players, x, y, z, 8, worldgen.BlockBase("anvil"))
+	w.SetBlock(x, y+2, z, cobwebState)
+	stepTicks(h, players, 400)
+	if lost := hp - cow.health; lost != 0 {
+		t.Fatalf("an anvil whose fall a cobweb reset cost the cow %d", lost)
+	}
+}
