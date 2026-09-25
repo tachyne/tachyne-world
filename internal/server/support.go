@@ -223,6 +223,11 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 		if worldgen.SupportFor(state) == worldgen.SupportGrowsDown {
 			anchor = above()
 		}
+		if anchor == magmaBlockState {
+			if g, ok := plantFamily(state); ok && g.intoWater {
+				return false // KelpBlock.canAttachTo: #cannot_support_kelp (magma)
+			}
+		}
 		return sameGrowingPlant(state, anchor) || holdsBlock(anchor)
 	case worldgen.SupportMossCarpet:
 		// MossyCarpetBlock.canSurvive: the base layer needs only something —
@@ -325,9 +330,17 @@ func isFenceGate(state uint32) bool {
 // one asking — its tip or its grown body, which is what a stalk of kelp or a
 // curtain of cave vines hangs from.
 func sameGrowingPlant(state, other uint32) bool {
-	k := worldgen.SupportFor(state)
-	return (k == worldgen.SupportGrowsUp || k == worldgen.SupportGrowsDown) &&
-		worldgen.SupportFor(other) == k
+	a, ok := plantFamily(state)
+	b, ok2 := plantFamily(other)
+	return ok && ok2 && a.headLo == b.headLo // GrowingPlantBlock: its own head or body, not another plant's
+}
+
+// plantFamily finds the growing plant a head or body state belongs to.
+func plantFamily(state uint32) (growingPlant, bool) {
+	if g, ok := growingPlantOf(state); ok {
+		return g, true
+	}
+	return growingPlantOfBody(state)
 }
 
 // holdsBlock reports whether a block can hold another one against it.

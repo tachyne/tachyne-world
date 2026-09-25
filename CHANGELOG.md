@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Kelp and vines hold on as in vanilla.** Kelp no longer grows on magma
+  blocks, and one kind of vine no longer holds up another: kelp, weeping,
+  twisting and cave vines each stand only on their own kind or on solid
+  ground.
 - **Farmland reads water and rain as in vanilla.** Waterlogged blocks near
   farmland now keep it wet, as open water does. Rain no longer soaks
   farmland through a glass or leaf roof, and a greenhouse keeps its soil

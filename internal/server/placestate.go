@@ -121,7 +121,9 @@ func growingPlantAnchorBody(w *world.World, pos blockPos, placed uint32) (blockP
 // growingPlantOfBody finds the plant a body block belongs to.
 func growingPlantOfBody(state uint32) (growingPlant, bool) {
 	for _, g := range growingPlants {
-		if sameBlockFamily(state, g.body) {
+		// state == body: a body with no properties (kelp_plant) has no
+		// BlockInfo, so the family test alone never matched it.
+		if state == g.body || sameBlockFamily(state, g.body) {
 			return g, true
 		}
 	}
