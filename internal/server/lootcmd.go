@@ -18,9 +18,9 @@ import (
 // archaeology, equipment and gameplay tables for "loot"; each mob's death
 // table for "kill" (rolled as a magic kill by the caller, with the caller's
 // Looting); each block's table for "mine" (with the tool's Silk Touch and
-// Fortune). Not here yet: the "fish" source (fishing's pools are not a
-// baked table), tables the engine has not baked, and mobs as "replace
-// entity" targets.
+// Fortune); the fishing tables for "fish" (gameplay/fishing and its fish,
+// junk and treasure pools, rolled with no hook and no luck). Not here yet:
+// tables the engine has not baked, and mobs as "replace entity" targets.
 //
 // What was used is counted as vanilla's CommandResponseTracker counts it —
 // one per stack that went somewhere — and answered only to the caller.
@@ -144,8 +144,35 @@ func dropsToStacks(ds []drop) []invStack {
 // lootSource rolls the source part.
 func (h *hub) lootSource(players map[int32]*tracked, t *tracked, src []string) (lootRoll, string) {
 	switch src[0] {
-	case "fish":
-		return lootRoll{}, "/loot fish is not supported yet"
+	case "fish": // fish <loot_table> <pos> [<tool>|mainhand|offhand]: the fishing tables, no hook
+		if len(src) < 5 || len(src) > 6 {
+			return lootRoll{}, lootUsage
+		}
+		x, y, z, ok := parsePosition(src[2:5], t.x, t.y, t.z, t.yaw, t.pitch)
+		if !ok {
+			return lootRoll{}, lootUsage
+		}
+		name := strings.TrimPrefix(src[1], "minecraft:")
+		b := &bobberEntity{dim: t.dim, x: float64(floorInt(x)) + 0.5, y: float64(floorInt(y)) + 0.5, z: float64(floorInt(z)) + 0.5}
+		var st invStack
+		switch name {
+		case "gameplay/fishing":
+			// No hook, so no open-water treasure, and no luck in the context.
+			if h.rng.Intn(95) < 85 {
+				st = h.rollFish()
+			} else {
+				st = h.rollFishJunk(b)
+			}
+		case "gameplay/fishing/fish":
+			st = h.rollFish()
+		case "gameplay/fishing/junk":
+			st = h.rollFishJunk(b)
+		case "gameplay/fishing/treasure":
+			st = h.rollFishTreasure()
+		default:
+			return lootRoll{}, fmt.Sprintf("The loot table minecraft:%s is not available on this server", name)
+		}
+		return lootRoll{drops: splitStacks([]invStack{st}), table: "minecraft:" + name}, ""
 	case "loot":
 		if len(src) != 2 {
 			return lootRoll{}, lootUsage

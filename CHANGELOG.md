@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/loot … fish.** `/loot` can now roll the fishing tables
+  (`gameplay/fishing` and its fish, junk and treasure pools) at a position,
+  as in vanilla.
 - **/setblock and /fill take more.** Both now accept block entity data
   after the block (a container's `CustomName` and `Items`) and a `strict`
   mode that changes blocks without updating their neighbours, and
