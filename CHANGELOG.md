@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Boats face the way you place them.** A boat put down on water always
+  pointed south; as in vanilla it now faces the way you are looking, and a
+  boat from a dispenser faces the way the dispenser shoots.
 - **Strays, bogged and parched drop real tipped arrows.** The tipped
   arrows these skeletons can drop when a player kills them came out with
   no effect. They are now arrows of Slowness (stray), Poison (bogged) and

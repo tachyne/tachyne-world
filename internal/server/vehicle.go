@@ -182,6 +182,13 @@ func (evDismount) isHubEvent()     {}
 // cell (player-independent core, also used by dispensers). Returns whether it
 // spawned.
 func (h *hub) spawnVehicleAt(players map[int32]*tracked, dim, etype, bx, by, bz int) bool {
+	return h.spawnVehicleFacing(players, dim, etype, bx, by, bz, 0)
+}
+
+// spawnVehicleFacing is spawnVehicleAt with the facing a boat is given:
+// BoatItem.use turns it to the placer's yaw, a dispenser to the facing it
+// shoots along (Direction.toYRot). A cart takes its heading from the rails.
+func (h *hub) spawnVehicleFacing(players map[int32]*tracked, dim, etype, bx, by, bz int, yaw float32) bool {
 	w := h.worldFor(dim)
 	if w == nil {
 		return false
@@ -202,13 +209,16 @@ func (h *hub) spawnVehicleAt(players map[int32]*tracked, dim, etype, bx, by, bz 
 		}
 	}
 	v := &vehicle{eid: h.allocEID(), dim: dim, etype: etype, x: x, y: y, z: z, sx: x, sy: y, sz: z}
+	if !cartTypes[etype] {
+		v.yaw, v.syaw, v.yawO = yaw, yaw, yaw
+	}
 	binary.BigEndian.PutUint32(v.uuid[12:], uint32(v.eid))
 	if chestBoatTypes[etype] {
 		v.chest = &chest{}
 	}
 	initCartKind(v)
 	h.vehicles[v.eid] = v
-	h.toNearbyEv(players, dim, x, z, entAdd(v.eid, etype, v.uuid, x, y, z, 0, 0))
+	h.toNearbyEv(players, dim, x, z, entAdd(v.eid, etype, v.uuid, x, y, z, v.yaw, 0))
 	return true
 }
 
@@ -249,7 +259,7 @@ func (h *hub) placeVehicleFromLook(players map[int32]*tracked, t *tracked, item 
 // placeVehicle spawns a cart on a clicked rail or a boat on/next to water.
 func (h *hub) placeVehicle(players map[int32]*tracked, t *tracked, e evPlaceVehicle) {
 	etype, ok := vehicleItems[e.item]
-	if !ok || !h.spawnVehicleAt(players, t.dim, etype, e.x, e.y, e.z) {
+	if !ok || !h.spawnVehicleFacing(players, t.dim, etype, e.x, e.y, e.z, t.yaw) {
 		return
 	}
 	h.vib(t.dim, freqEntityPlace, e.x, e.y, e.z, t.p.eid) // ENTITY_PLACE
