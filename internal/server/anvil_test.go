@@ -1,7 +1,10 @@
 package server
 
 import (
+	"strings"
 	"testing"
+
+	attachproto "github.com/tachyne/tachyne-common/attach"
 
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
@@ -157,5 +160,37 @@ func TestAnvilWearsWithUse(t *testing.T) {
 	}
 	if h.world.At(pos.x, pos.y, pos.z) != anvilStateMin {
 		t.Fatal("creative use must not wear the anvil")
+	}
+}
+
+// Clearing the name box takes a custom name off for a level; a box of only
+// spaces counts as cleared; the name comes in filtered and a name over 50
+// characters is refused whole (AnvilMenu.validateName / createResult).
+func TestAnvilBlankNameAndValidation(t *testing.T) {
+	named := invStack{item: tDiamondSword, count: 1, name: "Ol' Reliable"}
+	for _, box := range []string{"", "   "} {
+		res, cost := anvilResult(named, invStack{}, box)
+		if res.item == 0 || res.name != "" || cost != 1 {
+			t.Fatalf("box %q on a named sword: %+v cost %d, want the name off for 1", box, res, cost)
+		}
+	}
+	if res, _ := anvilResult(invStack{item: tDiamondSword, count: 1}, invStack{}, "  "); res.item != 0 {
+		t.Fatalf("blank box on an unnamed sword made %+v, want nothing", res)
+	}
+
+	h := newHub(world.New(1))
+	r := &remotePlayer{s: &Server{hub: h}, p: survPlayer(h).p, gm: -1}
+	r.Action(attachproto.NameItem{Name: "§cRed\x7f Sword"})
+	if ev := (<-h.events).(evRename); ev.name != "cRed Sword" {
+		t.Fatalf("filtered name %q, want %q", ev.name, "cRed Sword")
+	}
+	r.Action(attachproto.NameItem{Name: strings.Repeat("é", 50)}) // 100 bytes, 50 characters
+	if len(h.events) != 1 {
+		t.Fatal("a 50-character name was refused")
+	}
+	<-h.events
+	r.Action(attachproto.NameItem{Name: strings.Repeat("a", 51)})
+	if len(h.events) != 0 {
+		t.Fatal("a 51-character name was accepted")
 	}
 }

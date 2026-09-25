@@ -218,8 +218,8 @@ func (r *remotePlayer) Action(v any) {
 	case attachproto.WindowClose:
 		h.post(evCloseWin{eid: p.eid})
 	case attachproto.NameItem:
-		if len(e.Name) <= anvilMaxName {
-			h.post(evRename{eid: p.eid, name: e.Name})
+		if name, ok := anvilName(e.Name); ok {
+			h.post(evRename{eid: p.eid, name: name})
 		}
 	case attachproto.Enchant:
 		h.post(evEnchant{eid: p.eid, button: e.Button})

@@ -1,6 +1,10 @@
 package server
 
 import (
+	"strings"
+	"unicode"
+	"unicode/utf16"
+
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -128,8 +132,15 @@ func anvilResult(a, b invStack, rename string) (invStack, int) {
 		return invStack{}, 0
 	}
 	res, cost, renameCost := a, 0, 0
-	if rename != "" && rename != a.name {
-		res.name = rename
+	switch {
+	case !nameBlank(rename):
+		if rename != a.name {
+			res.name = rename
+			cost, renameCost = cost+1, 1
+		}
+	case a.name != "":
+		// A cleared box takes a custom name off, for a level like a rename.
+		res.name = ""
 		cost, renameCost = cost+1, 1
 	}
 	material := false
@@ -495,4 +506,24 @@ func (h *hub) wearAnvil(players map[int32]*tracked, t *tracked) {
 		h.setBlockAt(players, t.dim, pos, st+4)
 	}
 	h.levelEvent(players, t.dim, worldEventAnvilUsed, pos.x, pos.y, pos.z, 0)
+}
+
+// anvilName is AnvilMenu.validateName: the name box's text with the
+// characters chat refuses dropped (the section sign, control characters,
+// DEL), or ok false when what is left runs past 50 — a name that long is
+// refused, not cut, and the box keeps its last name.
+func anvilName(s string) (string, bool) {
+	var b strings.Builder
+	for _, r := range s {
+		if r != 0xa7 && r >= 32 && r != 127 {
+			b.WriteRune(r)
+		}
+	}
+	out := b.String()
+	return out, len(utf16.Encode([]rune(out))) <= anvilMaxName
+}
+
+// nameBlank is StringUtil.isBlank: empty, or nothing but whitespace.
+func nameBlank(s string) bool {
+	return strings.TrimFunc(s, unicode.IsSpace) == ""
 }

@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **The anvil can take a name off.** Clearing the name box on a renamed
+  item now removes the custom name for one level, as in vanilla; a box of
+  only spaces counts as empty. Names lose the characters chat refuses
+  (colour-code signs, control characters), and a name is measured in
+  characters rather than bytes, so accented names up to 50 letters go
+  through.
 - **Right-clicking a mob does it once.** The Java client sends a mob
   interaction for the main hand and, when that one works, again for the
   offhand; the server could not tell the two apart and ran the main-hand
