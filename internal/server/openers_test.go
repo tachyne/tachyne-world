@@ -81,3 +81,40 @@ func TestDisconnectClosesTheOpenChest(t *testing.T) {
 		t.Fatal("leaving with the ender chest open should close it for everyone else")
 	}
 }
+
+// CopperChestBlock's open and close sounds follow its weathering: plain
+// for unaffected and exposed, their own for weathered and oxidized, waxed
+// or not.
+func TestCopperChestSoundsByWeathering(t *testing.T) {
+	for _, c := range []struct{ block, voice string }{
+		{"copper_chest", "copper_chest"},
+		{"exposed_copper_chest", "copper_chest"},
+		{"weathered_copper_chest", "copper_chest_weathered"},
+		{"waxed_oxidized_copper_chest", "copper_chest_oxidized"},
+	} {
+		h := newHub(world.New(1))
+		a := survPlayer(h)
+		players := map[int32]*tracked{a.p.eid: a}
+		h.playersRef = players
+		x, y, z := 3, 180, 3
+		h.world.SetBlock(x, y-1, z, worldgen.Stone)
+		lo, _ := worldgen.BlockRange(c.block)
+		info, _ := worldgen.InfoForState(lo)
+		st := worldgen.SetProperty(info, worldgen.SetProperty(info, lo, "type", "single"), "waterlogged", "false")
+		h.world.SetBlock(x, y, z, st)
+		h.world.SetBlock(x, y+1, z, worldgen.Air)
+		a.x, a.y, a.z = float64(x)+1.5, float64(y), float64(z)
+		drainOut(a.p)
+		h.openChest(a, x, y, z)
+		want := "minecraft:block." + c.voice + ".open"
+		got := ""
+		for len(a.p.out) > 0 {
+			if ev, ok := (<-a.p.out).ev.(attachproto.Sound); ok && got == "" {
+				got = ev.Name
+			}
+		}
+		if got != want {
+			t.Errorf("%s opened with %q, want %q", c.block, got, want)
+		}
+	}
+}

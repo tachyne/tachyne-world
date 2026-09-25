@@ -102,6 +102,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Copper chests sound like copper.** Copper chests now open and close
+  with their own sounds, creakier as they weather, as in vanilla, instead
+  of a wooden chest's.
 - **Camp maps have names.** The maps in abandoned camp chests are named
   for the camp they lead to ("Bamboo Camp Map" and so on), as in vanilla.
 - **Piglins guard their gold.** Breaking gold blocks, gold ore, chests,
