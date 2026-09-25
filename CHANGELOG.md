@@ -23,6 +23,11 @@ the public history since the project was open-sourced on 2026-07-10.
   press a button in a map or minigame.
 
 ### Fixed
+- **Maces against players.** A falling mace blow on another player now
+  counts as a smash ("was smashed by"), and Breach cuts through a player's
+  armour as it does a mob's.
+- **Wind charges sting.** A wind charge that hits a player deals its one
+  point of damage, as in vanilla, not just the shove.
 - **Lightning rods don't stick on.** A lightning rod set down already
   powered (by a command, or copied with /clone) now switches off, as in
   vanilla, instead of powering its redstone for ever.

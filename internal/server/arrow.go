@@ -591,7 +591,14 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 		if py < t.y-0.1 || py > t.y+1.9 {
 			continue
 		}
-		if a.knock > 0 { // wind charge: a shove, no damage (vanilla breeze)
+		if a.knock > 0 { // wind charge: one point of damage, a shove and the burst (AbstractWindCharge.onHitEntity)
+			cause, src := deathCause{}, from(a.x, a.z)
+			if s := players[a.shooter]; s != nil {
+				cause.by, cause.byEID = s.p.name, s.p.eid
+			} else if m := h.mobs[a.shooter]; m != nil {
+				cause.by, src.byMob = mobDisplayName(m.etype), true // a breeze's scales with difficulty
+			}
+			h.hurtFrom(players, t, windChargeHitDamage, dtWindCharge, cause, src)
 			h.knockback(t, a.x, a.z)
 			t.launchCause = "wind_charge" // fall_after_explosion, until the next landing
 			h.chargeBurst(players, a, px, py, pz)

@@ -79,8 +79,15 @@ func (h *hub) attackPlayer(players map[int32]*tracked, attacker, target int32) b
 	if held := t.inv.slots[t.p.heldSlot()]; held.count > 0 {
 		cause.weapon = held.name
 	}
-	landed := h.hurtFrom(players, v, dmg, dtPlayerAttack,
-		cause, fromWeapon(t.x, t.z, t.p.heldItem()))
+	// A mace smash is its own damage type against a player too
+	// (MaceItem.getItemDamageSource), and Breach thins the victim's armour.
+	dt := dtPlayerAttack
+	if sw.smash {
+		dt = dtMaceSmash
+	}
+	from := fromWeapon(t.x, t.z, t.p.heldItem())
+	from.breach = sw.breachFrac
+	landed := h.hurtFrom(players, v, dmg, dt, cause, from)
 	// The attacker's view of where the damage went (Player.attack's
 	// DAMAGE_DEALT_ABSORBED / DAMAGE_DEALT_RESISTED).
 	if absorbed := absBefore - v.absorption; absorbed > 0 {

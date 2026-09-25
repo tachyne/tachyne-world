@@ -108,13 +108,17 @@ func (h *hub) applyToolWear(t *tracked, slot, n int) {
 // armorReduce applies the vanilla armor formula to incoming damage:
 //
 //	damage * (1 - min(20, max(points/5, points - damage/(2+toughness/4))) / 25)
-func (t *tracked) armorReduce(dmg float32) float32 {
+func (t *tracked) armorReduce(dmg float32) float32 { return t.armorReduceBreach(dmg, 0) }
+
+// armorReduceBreach is CombatRules.getDamageAfterAbsorb with the weapon's
+// armor_effectiveness (Breach: less 0.15 of the armour's share a level).
+func (t *tracked) armorReduceBreach(dmg float32, breach float64) float32 {
 	t.refreshArmorAttrs() // pick up a piece equipped since the last tick
 	points, tough := t.armorPoints(), t.armorToughness()
 	d := float64(dmg)
 	if points > 0 {
 		def := math.Min(20, math.Max(points/5, points-d/(2+tough/4)))
-		d *= 1 - def/25
+		d *= 1 - math.Max(0, math.Min(1, def/25-breach))
 	}
 	// The protection ENCHANTMENTS used to be folded in here. They are a
 	// separate step in vanilla (armour absorption then magic absorption) and

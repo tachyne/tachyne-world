@@ -40,6 +40,8 @@ var (
 // arc), so the zero value means exactly "unblockable" — which is what you want
 // for starving, drowning or falling.
 type dmgFrom struct {
+	// breach is the weapon's Breach share taken off the armour (0.15 a level).
+	breach float64
 	x, z   float64
 	ok     bool
 	weapon int32 // what a melee attacker struck with (0 = none/unknown): an axe disables the shield

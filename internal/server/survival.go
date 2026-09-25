@@ -559,7 +559,7 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 	// point: split across call sites, three of them wore no armour at all.
 	if !dt.has(tagBypassesArmor) {
 		h.wearArmor(players, t, amount, dt)
-		amount = t.armorReduce(amount)
+		amount = t.armorReduceBreach(amount, src.breach)
 	}
 	if !dt.has(tagBypassesEffects) { // starve: no effect or enchantment helps
 		// Resistance: -20% per level (MobEffects.DAMAGE_RESISTANCE); level 5 =

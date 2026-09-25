@@ -272,3 +272,25 @@ func TestSweepHitsPlayers(t *testing.T) {
 		t.Errorf("with PvP off the sweep leaves players alone, got %v", bystander.health)
 	}
 }
+
+// A falling mace blow on a player is a mace_smash (its own death message),
+// and Breach lets it through more of the victim's armour than a plain blow.
+func TestPvPMaceSmashAndBreach(t *testing.T) {
+	h := newHub(world.New(1))
+	a, b, players := pvpPair(h)
+	mace := invStack{item: itemMace, count: 1}
+	a.inv.slots[a.p.heldSlot()] = mace
+	a.p.setHotbarSlot(a.p.heldSlot(), itemMace)
+	a.airborne, a.peakY, a.y = true, 186, 180 // six blocks into a fall
+	h.attackPlayer(players, a.p.eid, b.p.eid)
+	if b.lastCause.dt != dtMaceSmash {
+		t.Fatalf("a smash on a player was %v, want mace_smash", b.lastCause.dt)
+	}
+
+	b.armor = [4]invStack{{item: int32(itemByName["diamond_helmet"]), count: 1}, {item: int32(itemByName["diamond_chestplate"]), count: 1},
+		{item: int32(itemByName["diamond_leggings"]), count: 1}, {item: int32(itemByName["diamond_boots"]), count: 1}}
+	plain, breached := b.armorReduceBreach(10, 0), b.armorReduceBreach(10, 0.6)
+	if breached <= plain {
+		t.Fatalf("Breach IV let %v through, a plain blow %v: want more", breached, plain)
+	}
+}

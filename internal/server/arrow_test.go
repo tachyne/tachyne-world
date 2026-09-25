@@ -115,3 +115,17 @@ func TestBoggedShootsPoisonArrows(t *testing.T) {
 		}
 	}
 }
+
+// A wind charge that strikes a player deals its one point of wind_charge
+// damage as well as the shove (AbstractWindCharge.onHitEntity).
+func TestWindChargeHurtsAPlayer(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	pl.x, pl.y, pl.z = 0.5, 70, 0.5
+	a := h.launchProjectileIn(players, entityWindCharge, 0, 0.5, 71, 4.5, 0, 0, -0.5)
+	h.arrowHitsPlayer(players, a, pl.x, pl.y+1, pl.z)
+	if pl.health != 19 || pl.lastCause.dt != dtWindCharge {
+		t.Fatalf("health %v cause %v, want 19 from wind_charge", pl.health, pl.lastCause.dt)
+	}
+}
