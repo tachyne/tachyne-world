@@ -904,6 +904,9 @@ func (s *Server) tryUseBlock(p *player, off bool, x, y, z int, seq int32, face i
 	// A berry plant uses the click only when there is something to pick
 	// (SweetBerryBushBlock.useItemOn / CaveVines.use); otherwise it passes
 	// to the item, which is how bone meal grows a bush.
+	if isWire(state) && !mayBuild(s.modes.get(p.key())) {
+		return false // RedStoneWireBlock.useWithoutItem: PASS for a player who may not build
+	}
 	plant := (isBerryBush(state) || isCaveVine(state)) && berriesClaimClick(state, held)
 	if plant || (isGolemStatue(state) && statueClaimsClick(state, held)) || isWire(state) { // the block's own use (blockclick.go)
 		s.hub.post(evClickBlock{eid: p.eid, x: x, y: y, z: z})

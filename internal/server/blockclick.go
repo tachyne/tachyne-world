@@ -183,9 +183,27 @@ func (h *hub) toggleWireDot(players map[int32]*tracked, pos blockPos, state uint
 	for _, d := range horizontalDirs {
 		next = worldgen.SetProperty(info, next, rsDirName[d], v)
 	}
-	if next != state {
-		h.rsSet(players, pos, next)
+	if next == state {
+		return
 	}
+	// setBlockAndUpdate: the wire's neighbours hear the change (its power
+	// is re-read with the new shape), then updatesOnShapeChange: a conductor
+	// on an arm that joined or left passes the update on to its own
+	// neighbours, so what it powers follows.
+	h.rsSet(players, pos, next)
+	h.nbAround(pos, 0, false)
+	for _, d := range horizontalDirs {
+		was := worldgen.GetProperty(info, state, rsDirName[d]) != "none"
+		if is := worldgen.GetProperty(info, next, rsDirName[d]) != "none"; was == is {
+			continue
+		}
+		dx, dy, dz := d.delta()
+		rel := blockPos{pos.x + dx, pos.y + dy, pos.z + dz}
+		if conducts(h.rsWorld().At(rel.x, rel.y, rel.z)) {
+			h.nbAround(rel, d.opposite(), true)
+		}
+	}
+	h.nbRun(players)
 }
 
 // wireIsDot reports a dust with no arms at all.

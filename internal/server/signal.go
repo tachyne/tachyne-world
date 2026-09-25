@@ -332,7 +332,10 @@ func (h *hub) weakSignal(x, y, z int, s uint32, d rsDir) int {
 		if p == 0 {
 			return 0
 		}
-		if d != dUp && !h.wireArms(x, y, z)[d.opposite()] {
+		// getConnectionState: a dot with nothing to connect to stays a dot and
+		// points nowhere — the player-made dot that powers only the block under
+		// it — where a lone cross points every way.
+		if d != dUp && (wireIsDot(s) && !h.wireHasRealArms(x, y, z) || !h.wireArms(x, y, z)[d.opposite()]) {
 			return 0
 		}
 		return p

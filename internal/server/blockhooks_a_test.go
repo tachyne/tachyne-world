@@ -636,3 +636,29 @@ func TestHopperPartialTakeIsNoPull(t *testing.T) {
 		t.Errorf("the hopper should take the one it has room for: item %d, slot %d", it.count, c.slots[4].count)
 	}
 }
+
+// RedStoneWireBlock.useWithoutItem: turning a powered cross into a dot
+// updates its neighbours, so the lamp it pointed into goes dark.
+func TestWireDotClickUnpowersTheLamp(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	pl := testTracked()
+	players[pl.p.eid] = pl
+	h.playersRef = players
+	w.SetBlock(x, y-1, z, worldgen.BlockBase("redstone_block"))
+	w.SetBlock(x+1, y, z, lampOff)
+	w.SetBlock(x, y, z, wireStateMin)
+	h.setBlock(players, blockPos{x, y, z}, h.connectWire(x, y, z, wireStateMin))
+	h.schedule(blockPos{x, y, z}, 1)
+	stepTicks(h, players, 10)
+	if wireIsDot(w.At(x, y, z)) || w.At(x+1, y, z) != lampOn {
+		t.Fatalf("fixture: a powered cross should light the lamp (lamp %d)", w.At(x+1, y, z))
+	}
+	h.clickBlock(players, evClickBlock{eid: pl.p.eid, x: x, y: y, z: z})
+	if !wireIsDot(w.At(x, y, z)) {
+		t.Fatal("the click should make a dot")
+	}
+	stepTicks(h, players, 10)
+	if w.At(x+1, y, z) != lampOff {
+		t.Error("a dot no longer powers the lamp beside it; the lamp should go out")
+	}
+}
