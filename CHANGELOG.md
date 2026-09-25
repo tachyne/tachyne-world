@@ -14,6 +14,8 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Polar bears hunt foxes.** As in vanilla, an adult polar bear now goes
+  after a fox it can see, rears up and bites it. Cubs leave foxes alone.
 - **Panicked animals calm down on time.** A cow, pig or chicken you hit
   used to run around for four seconds whatever happened. As in vanilla, it
   now panics for two seconds after the last hit and then finishes the dash

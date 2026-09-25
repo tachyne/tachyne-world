@@ -777,6 +777,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// Two fed villagers courting, and a child if a bed is free.
 		case m.etype == entityWolf && h.wolfHuntStep(players, m):
 			// A wolf after a sheep, a skeleton, or whatever hurt its owner.
+		case m.etype == entityPolarBear && h.bearFoxStep(players, m):
+			// An adult polar bear after a fox it has seen.
 		case m.etype == entityBat && h.batStep(players, m):
 			// A bat hanging under a block.
 		case m.etype == entityIronGolem && h.golemOfferTick(players, m):
