@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Villagers work at their job sites.** A villager at its workstation in
+  working hours now gets on with its job every so often, with its trade's
+  work sound. A farmer at its composter bakes bread from its wheat, takes
+  out the bone meal when the composter is full, and tips its spare seeds
+  in, keeping ten for sowing.
 - **Farmers farm again.** The villagers who harvested and replanted
   fields, asked for seeds and handed out spare wheat were the
   cartographers, not the farmers. Farmers with a composter now do their own

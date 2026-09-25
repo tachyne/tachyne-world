@@ -500,6 +500,7 @@ type mob struct {
 	merchantTimer                   int32      // villager: ticks left on Villager.updateMerchantTimer
 	levelUpPending                  bool       // villager: increaseProfessionLevelOnUpdate
 	lastRestockTick                 uint64     // villager: tick of the last restock (2400-tick spacing gate)
+	lastWorkCheck                   uint64     // villager: WorkAtPoi's lastCheck (every 300 ticks at most)
 	lastRestockDay                  uint64     // villager: day count at the last shouldRestock check
 	gossip                          gossipBook // villager: what it holds about each player (persisted)
 	home                            blockPos   // villager house / golem well — the anchor to drift back to
@@ -734,6 +735,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		if m.etype == entityVillager {
 			// Not reached while trading: the branch above continues out.
 			h.villagerMerchantTick(players, m)
+			h.villagerWorkTick(players, m) // WorkAtPoi: at the job site in working hours
 		}
 		if m.usesDoors {
 			if m.bed != (blockPos{}) && h.villagerSleep(players, m) {

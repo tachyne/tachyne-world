@@ -61,14 +61,8 @@ func (villagerBehavior) steer(h *hub, m *mob) (float64, float64) {
 	switch villagerSegment(h.dayTime.Load()) {
 	case vsWork:
 		if m.work != (blockPos{}) {
-			// Vanilla WorkAtPoi: standing at the job-site POI restocks used
-			// offers (gated by allowedToRestock to ≤2/day, ≥2400 ticks apart) —
-			// this is the day's second restock a heavily-traded villager gets.
-			if dist3(m.x, m.y, m.z,
-				float64(m.work.x)+0.5, float64(m.work.y), float64(m.work.z)+0.5) < 2 &&
-				h.shouldRestock(m) {
-				h.restockOffers(m)
-			}
+			// Standing there is WorkAtPoi's business (villagerwork.go): the
+			// work sound, the workstation, and the day's second restock.
 			vx, vz := h.pathSteerTo(m, m.work, poiValidRange[poiJob])
 			h.noteWalkToPoi(m, poiJob, m.work)
 			return vx, vz
