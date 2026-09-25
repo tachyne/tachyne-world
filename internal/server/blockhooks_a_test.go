@@ -918,3 +918,20 @@ func TestSoulFireBurnsForever(t *testing.T) {
 		t.Error("soul fire on soul sand went out")
 	}
 }
+
+// BaseFireBlock.entityInside: stepping into fire thaws a freezing player
+// (CLEAR_FREEZE), even with fire damage off.
+func TestFireThawsAFreezingPlayer(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	players := map[int32]*tracked{1: pl}
+	h.rules.FireDamage = false
+	h.world.SetBlock(0, 179, 0, worldgen.Stone)
+	h.world.SetBlock(0, 180, 0, fireDefault)
+	pl.x, pl.y, pl.z = 0.5, 180, 0.5
+	pl.frozen = 100
+	h.contactDamage(players, pl)
+	if pl.frozen != 0 {
+		t.Errorf("fire should thaw the player: frozen %d", pl.frozen)
+	}
+}
