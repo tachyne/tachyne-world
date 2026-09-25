@@ -195,7 +195,7 @@ func (s *Server) breakPairedHalf(p *player, x, y, z int, broken uint32) {
 // handlePlace places the held block against the clicked face of a block.
 func (s *Server) handlePlace(p *player, data []byte) {
 	br := bytes.NewReader(data)
-	protocol.ReadVarInt(br) // hand
+	hand, _ := protocol.ReadVarInt(br) // InteractionHand: 0 main, 1 off
 	var posb [8]byte
 	if _, err := io.ReadFull(br, posb[:]); err != nil {
 		return
@@ -213,6 +213,11 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	p.noteAck(seq)                    // the hub acknowledges it at the end of the tick
 
 	x, y, z := protocol.ReadPosition(posb[:])
+	// ServerGamePacketListenerImpl.handleUseItemOn works on the stack in the
+	// hand the packet names. The client sends MAIN_HAND first and OFF_HAND
+	// only when that passed, so a torch in the offhand beside a pickaxe
+	// arrives as its own OFF_HAND click.
+	off := hand == handOffhand
 
 	if !s.hub.ownedBlock(x, z) {
 		return // clicked block is outside this pod's region (finite world / cross-shard)
@@ -232,23 +237,23 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	// (ServerPlayerGameMode.useItemOn: suppressUsingBlock = isSecondaryUseActive
 	// && either hand holds an item). Sneaking empty-handed still opens a door.
 	holding := p.heldItem() != 0 || p.offhandItem() != 0
-	if !(p.sneaking && holding) && s.tryUseBlock(p, x, y, z, seq, dir, cursorX, cursorY, cursorZ) {
+	if !(p.sneaking && holding) && s.tryUseBlock(p, off, x, y, z, seq, dir, cursorX, cursorY, cursorZ) {
 		return
 	}
 
 	// A hoe on tillable ground tills it instead of placing anything. Vanilla
 	// runs HoeItem.useOn before BlockItem placement, and a hoe has no block to
 	// place, so this has to come before the item->block lookup below.
-	if s.tryTill(p, x, y, z, dir, seq) {
+	if s.tryTill(p, off, x, y, z, dir, seq) {
 		return
 	}
 	// Likewise a shovel flattening ground into a dirt path (ShovelItem.useOn).
-	if s.tryFlatten(p, x, y, z, dir, seq) {
+	if s.tryFlatten(p, off, x, y, z, dir, seq) {
 		return
 	}
 	// An axe stripping a log or scraping/un-waxing copper, and honeycomb waxing
 	// copper (AxeItem.useOn / HoneycombItem.useOn) — same slot in the chain.
-	if s.tryAxeUse(p, x, y, z, seq) || s.tryHoneycombUse(p, x, y, z, seq) || s.tryCompassUse(p, x, y, z, seq) {
+	if s.tryAxeUse(p, off, x, y, z, seq) || s.tryHoneycombUse(p, off, x, y, z, seq) || s.tryCompassUse(p, off, x, y, z, seq) {
 		return
 	}
 
@@ -262,8 +267,9 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		return
 	}
-	heldBlock, heldIsBlock := protocol.BlockForItem(p.heldItem())
-	if alias, isAlias := placeAlias[p.heldItem()]; isAlias {
+	held, slot := p.handItem(off), p.handSlot(off) // the stack this click uses, and where it lives
+	heldBlock, heldIsBlock := protocol.BlockForItem(held)
+	if alias, isAlias := placeAlias[held]; isAlias {
 		heldBlock, heldIsBlock = alias, true
 	}
 	replacingClicked := false
@@ -278,97 +284,97 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		replacingClicked = true
 	}
 
-	if int32(p.heldItem()) == itemArmorStand { // spawn the stand at the target cell
-		s.hub.post(evPlaceStand{eid: p.eid, x: tx, y: ty, z: tz, yaw: p.yaw})
+	if held == itemArmorStand { // spawn the stand at the target cell
+		s.hub.post(evPlaceStand{eid: p.eid, x: tx, y: ty, z: tz, yaw: p.yaw, off: off})
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		return
 	}
-	if int32(p.heldItem()) == itemLead { // tie whatever this player is towing to a fence
+	if held == itemLead { // tie whatever this player is towing to a fence
 		s.hub.post(evLeashFence{eid: p.eid, pos: blockPos{x, y, z}})
 		return
 	}
-	if int32(p.heldItem()) == itemBoneMeal { // grow the clicked block
-		s.hub.post(evBoneMeal{eid: p.eid, x: x, y: y, z: z, dx: dx, dy: dy, dz: dz, slot: int32(p.held)})
+	if held == itemBoneMeal { // grow the clicked block
+		s.hub.post(evBoneMeal{eid: p.eid, x: x, y: y, z: z, dx: dx, dy: dy, dz: dz, slot: slot})
 		s.sendBlockChange(p, x, y, z, s.worldFor(p).Block(x, y, z), seq)
 		return
 	}
-	if p.heldItem() == itemFlintSteel { // light a fire / prime TNT
-		s.useFlintSteel(p, x, y, z, dx, dy, dz, seq)
+	if held == itemFlintSteel { // light a fire / prime TNT
+		s.useFlintSteel(p, off, x, y, z, dx, dy, dz, seq)
 		return
 	}
-	if p.heldItem() == itemFireCharge { // FireChargeItem.useOn: light in place, or start a fire
-		s.useFireCharge(p, x, y, z, dx, dy, dz, seq)
+	if held == itemFireCharge { // FireChargeItem.useOn: light in place, or start a fire
+		s.useFireCharge(p, off, x, y, z, dx, dy, dz, seq)
 		return
 	}
-	if int32(p.heldItem()) == itemBrush { // sweep a suspicious block
-		s.hub.post(evBrush{eid: p.eid, x: x, y: y, z: z, dx: dx, dy: dy, dz: dz})
+	if held == itemBrush { // sweep a suspicious block
+		s.hub.post(evBrush{eid: p.eid, x: x, y: y, z: z, dx: dx, dy: dy, dz: dz, off: off})
 		s.sendBlockChange(p, x, y, z, s.worldFor(p).Block(x, y, z), seq)
 		return
 	}
-	if p.heldItem() == itemBucketH2O || p.heldItem() == itemBucketLav ||
-		int32(p.heldItem()) == itemBucketSnow || isMobBucket(p.heldItem()) { // pour into the target cell
-		s.hub.post(evBucketEmpty{eid: p.eid, slot: int32(p.held), x: tx, y: ty, z: tz, cx: x, cy: y, cz: z})
+	if held == itemBucketH2O || held == itemBucketLav ||
+		held == itemBucketSnow || isMobBucket(held) { // pour into the target cell
+		s.hub.post(evBucketEmpty{eid: p.eid, slot: slot, x: tx, y: ty, z: tz, cx: x, cy: y, cz: z})
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		return
 	}
-	if p.heldItem() == itemBucket { // scoop: the hub walks the look ray to a source
-		s.hub.post(evBucketFill{eid: p.eid, slot: int32(p.held)})
+	if held == itemBucket { // scoop: the hub walks the look ray to a source
+		s.hub.post(evBucketFill{eid: p.eid, slot: slot})
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		return
 	}
-	if p.heldItem() == itemGlassBottle && (worldgen.IsWater(s.worldFor(p).At(x, y, z)) ||
+	if held == itemGlassBottle && (worldgen.IsWater(s.worldFor(p).At(x, y, z)) ||
 		worldgen.IsWater(s.worldFor(p).At(tx, ty, tz))) {
-		s.hub.post(evFillBottle{eid: p.eid, slot: int32(p.held)})
+		s.hub.post(evFillBottle{eid: p.eid, slot: slot})
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		return
 	}
-	if p.heldItem() == itemNetherWart {
+	if held == itemNetherWart {
 		if s.worldFor(p).At(tx, ty-1, tz) == worldgen.SoulSand {
 			s.putBlock(p, tx, ty, tz, netherWartMin, true, seq)
 			if isSurvival(s.modes.get(p.key())) {
-				s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
+				s.hub.post(evConsume{eid: p.eid, slot: slot})
 			}
 		} else {
 			s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		}
 		return
 	}
-	if p.heldItem() == itemPainting { // paintings hang on walls (side faces only)
+	if held == itemPainting { // paintings hang on walls (side faces only)
 		if dir >= 2 && dir <= 5 {
 			s.hub.post(evPlacePainting{eid: p.eid, x: tx, y: ty, z: tz, dir: dir,
-				slot: int32(p.held), variant: p.heldPaintVariant()})
+				slot: slot, variant: p.handPaintVariant(off)})
 		}
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		return
 	}
-	if p.heldItem() == itemItemFrame || p.heldItem() == itemGlowItemFrame {
+	if held == itemItemFrame || held == itemGlowItemFrame {
 		if dir >= 0 && dir <= 5 { // frames mount on any face, floor and ceiling too
 			s.hub.post(evPlaceFrame{eid: p.eid, x: tx, y: ty, z: tz, dir: dir,
-				slot: int32(p.held), glow: p.heldItem() == itemGlowItemFrame})
+				slot: slot, glow: held == itemGlowItemFrame})
 		}
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		return
 	}
-	if _, isVeh := vehicleItems[p.heldItem()]; isVeh {
-		s.hub.post(evPlaceVehicle{eid: p.eid, item: p.heldItem(), x: x, y: y, z: z, slot: int32(p.held)})
+	if _, isVeh := vehicleItems[held]; isVeh {
+		s.hub.post(evPlaceVehicle{eid: p.eid, item: held, x: x, y: y, z: z, slot: slot})
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		return
 	}
-	if p.heldItem() == itemFrogspawn {
+	if held == itemFrogspawn {
 		// Frogspawn is laid on the surface of water, never against a block
 		// face — vanilla's PlaceOnWaterBlockItem passes on useOn entirely.
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		return
 	}
-	defState, ok := protocol.BlockForItem(p.heldItem())
-	if p.heldItem() == int32(itemString) { // string laid on a surface becomes tripwire
+	defState, ok := protocol.BlockForItem(held)
+	if held == int32(itemString) { // string laid on a surface becomes tripwire
 		defState, ok = tripwireDefaultState(), true
 	}
-	if alias, isAlias := placeAlias[p.heldItem()]; isAlias { // redstone → wire, cocoa beans → cocoa
+	if alias, isAlias := placeAlias[held]; isAlias { // redstone → wire, cocoa beans → cocoa
 		defState, ok = alias, true
 	}
 	if !ok { // planting items are named differently from their block — see farming.go
-		if c, isSeed := cropForSeed(p.heldItem()); isSeed {
+		if c, isSeed := cropForSeed(held); isSeed {
 			if !s.canPlantAt(p, c, tx, ty, tz) {
 				s.abortPlace(p, tx, ty, tz, seq)
 				return
@@ -376,7 +382,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 			defState, ok = c.block, true
 		}
 	}
-	if !ok || p.heldItem() == 0 {
+	if !ok || held == 0 {
 		// Nothing placeable in hand — clear any client-side ghost and ack.
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		return
@@ -404,31 +410,31 @@ func (s *Server) handlePlace(p *player, data []byte) {
 
 	if defState == bellDefault { // bell: floor/ceiling/wall attachment from the clicked face
 		if s.placeBell(p, defState, tx, ty, tz, dir, seq) && isSurvival(s.modes.get(p.key())) {
-			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
+			s.hub.post(evConsume{eid: p.eid, slot: slot})
 		}
 		return
 	}
 	if wallDef, isSign := signWallVariant[defState]; isSign { // sign item: standing or wall
 		if s.placeSign(p, defState, wallDef, tx, ty, tz, dir, seq) && isSurvival(s.modes.get(p.key())) {
-			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
+			s.hub.post(evConsume{eid: p.eid, slot: slot})
 		}
 		return
 	}
 	if wallDef, isHanging := hangingWallVariant[defState]; isHanging { // hanging-sign item: ceiling or wall bracket
 		if s.placeHangingSign(p, defState, wallDef, tx, ty, tz, dir, seq) && isSurvival(s.modes.get(p.key())) {
-			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
+			s.hub.post(evConsume{eid: p.eid, slot: slot})
 		}
 		return
 	}
 	if wallDef, isBanner := bannerWallVariant[defState]; isBanner { // banner: standing or wall
 		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, seq, true) && isSurvival(s.modes.get(p.key())) {
-			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
+			s.hub.post(evConsume{eid: p.eid, slot: slot})
 		}
 		return
 	}
 	if wallDef, isHead := headWallVariant[defState]; isHead { // mob head/skull: standing or wall
 		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, seq, false) && isSurvival(s.modes.get(p.key())) {
-			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
+			s.hub.post(evConsume{eid: p.eid, slot: slot})
 		}
 		return
 	}
@@ -550,7 +556,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 				name: name, volume: vol, pitch: pitch})
 		}
 		if isSurvival(s.modes.get(p.key())) { // survival uses up one of the stack
-			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
+			s.hub.post(evConsume{eid: p.eid, slot: slot})
 		}
 	}
 }
@@ -623,10 +629,16 @@ func (s *Server) abortPlace(p *player, x, y, z int, seq int32) {
 // tryUseBlock operates the clicked block if it's interactive (has an "open" state:
 // doors, fence gates, trapdoors). Returns whether it handled the click. Doors are
 // two-tall, so both halves toggle together.
-func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, cy, cz float32) bool {
+//
+// off is the packet's hand. ServerPlayerGameMode.useItemOn hands the block the
+// stack in THAT hand (BlockBehaviour.useItemOn), and runs the block's own
+// empty-handed use (useWithoutItem: doors, chests, beds, buttons) only for
+// MAIN_HAND, so an offhand click reaches just the item-driven uses.
+func (s *Server) tryUseBlock(p *player, off bool, x, y, z int, seq int32, face int32, cx, cy, cz float32) bool {
 	state := s.worldFor(p).Block(x, y, z)
-	if _, _, isCauldron := cauldronOf(state); isCauldron { // bucket/bottle/wash interactions
-		s.hub.post(evCauldron{eid: p.eid, slot: int32(p.held), x: x, y: y, z: z})
+	held, slot := p.handItem(off), p.handSlot(off)
+	if _, _, isCauldron := cauldronOf(state); isCauldron && (!off || cauldronUsesItem(held)) { // bucket/bottle/wash interactions
+		s.hub.post(evCauldron{eid: p.eid, slot: slot, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
@@ -635,24 +647,24 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 	}
 	// Item.useOn overriders (useon.go): what the held item does to this block,
 	// which vanilla runs before the block's own use.
-	if held := p.heldItem(); held != 0 {
+	if held != 0 {
 		var ev hubEvent
 		switch {
 		case held == itemShears && isGrowingPlantHead(state):
-			ev = evTrimPlant{eid: p.eid, x: x, y: y, z: z}
+			ev = evTrimPlant{eid: p.eid, x: x, y: y, z: z, off: off}
 		case held == itemPotion && face != 0 && convertableToMud(state):
-			ev = evMudBottle{eid: p.eid, x: x, y: y, z: z}
+			ev = evMudBottle{eid: p.eid, x: x, y: y, z: z, off: off}
 		case state == spawnerBlock && spawnEggEntity[held] != 0:
-			ev = evEggSpawner{eid: p.eid, x: x, y: y, z: z}
+			ev = evEggSpawner{eid: p.eid, x: x, y: y, z: z, off: off}
 		case spawnEggEntity[held] != 0:
 			// SpawnEggItem.useOn anywhere else: the mob appears on the face.
-			ev = evSpawnEgg{eid: p.eid, x: x, y: y, z: z, face: face}
+			ev = evSpawnEgg{eid: p.eid, x: x, y: y, z: z, face: face, off: off}
 		case held == itemEndCrystal && (state == obsidianBase || state == worldgen.Bedrock):
-			ev = evPlaceCrystal{eid: p.eid, x: x, y: y, z: z}
+			ev = evPlaceCrystal{eid: p.eid, x: x, y: y, z: z, off: off}
 		case held == itemFireworkRocket:
-			ev = evPlaceRocket{eid: p.eid, x: x, y: y, z: z, face: face, cx: cx, cy: cy, cz: cz}
+			ev = evPlaceRocket{eid: p.eid, x: x, y: y, z: z, face: face, cx: cx, cy: cy, cz: cz, off: off}
 		case isMapItem(held) && isBannerState(state):
-			ev = evMapBanner{eid: p.eid, x: x, y: y, z: z}
+			ev = evMapBanner{eid: p.eid, x: x, y: y, z: z, off: off}
 		}
 		if ev != nil {
 			s.hub.post(ev)
@@ -660,13 +672,21 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 			return true
 		}
 	}
-	if state == pumpkinBlock && p.heldItem() == itemShears { // PumpkinBlock.useItemOn: carve it
-		s.hub.post(evCarvePumpkin{eid: p.eid, x: x, y: y, z: z, face: face, yaw: p.yaw})
+	if state == pumpkinBlock && held == itemShears { // PumpkinBlock.useItemOn: carve it
+		s.hub.post(evCarvePumpkin{eid: p.eid, x: x, y: y, z: z, face: face, yaw: p.yaw, off: off})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
+	if off {
+		return s.useOffhandOnBlock(p, state, held, x, y, z, seq)
+	}
+	// RespawnAnchorBlock.useItemOn: a main hand without glowstone passes when
+	// the offhand has some and the anchor can take it, so the offhand click
+	// that follows charges it rather than this one claiming the spawn point.
+	if c := anchorCharge(state); c >= 0 && c < anchorMaxCharge && held != itemGlowstoneBlock && p.offhandItem() == itemGlowstoneBlock {
+		return false
+	}
 	if inRanges(candleRanges, state) { // snuff a candle, or eat a candle cake
-		held := p.heldItem()
 		if held == itemFlintSteel || held == itemFireCharge {
 			return false // the lighter handles it
 		}
@@ -683,12 +703,12 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 		return true
 	}
 	if anchorCharge(state) >= 0 { // charge it with glowstone, or claim it as a respawn point
-		s.hub.post(evUseAnchor{eid: p.eid, slot: int32(p.held), x: x, y: y, z: z})
+		s.hub.post(evUseAnchor{eid: p.eid, slot: slot, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
 	if _, isComposter := composterLevel(state); isComposter { // feed it, or take the bone meal
-		s.hub.post(evUseComposter{eid: p.eid, slot: int32(p.held), x: x, y: y, z: z})
+		s.hub.post(evUseComposter{eid: p.eid, slot: slot, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
@@ -773,7 +793,6 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 		return true
 	}
 	if isLectern(state) {
-		held := p.heldItem()
 		hasBook := boolProp(state, "has_book")
 		if hasBook || isLecternBook(int32(held)) {
 			s.hub.post(evUseLectern{eid: p.eid, x: x, y: y, z: z})
@@ -788,14 +807,14 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 		return true
 	}
 	if isCampfireBlock(state) {
-		if _, cookable := campfireResult[p.heldItem()]; cookable { // lit or not, as vanilla
+		if _, cookable := campfireResult[held]; cookable { // lit or not, as vanilla
 			s.hub.post(evCampfireAdd{eid: p.eid, x: x, y: y, z: z})
 			s.sendBlockChange(p, x, y, z, state, seq)
 			return true
 		}
 		return false // no menu — other clicks fall through (e.g. placing against it)
 	}
-	if isEndFrame(state) && p.heldItem() == itemEnderEye {
+	if isEndFrame(state) && held == itemEnderEye {
 		s.hub.post(evInsertEye{eid: p.eid, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
@@ -813,7 +832,7 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 	if isNoteBlock(state) {
 		// NoteBlock.useItemOn: a head clicked onto the TOP face passes, so it
 		// is placed there (and sets the instrument) instead of tuning.
-		if face == 1 && noteBlockTopInstruments[p.heldItem()] { // 1 = up
+		if face == 1 && noteBlockTopInstruments[held] { // 1 = up
 			return false
 		}
 		s.hub.post(evNoteBlock{eid: p.eid, x: x, y: y, z: z, tune: true})
@@ -826,14 +845,14 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 		return true
 	}
 	if isJukebox(state) {
-		s.hub.post(evUseJukebox{eid: p.eid, x: x, y: y, z: z, slot: int32(p.held)})
+		s.hub.post(evUseJukebox{eid: p.eid, x: x, y: y, z: z, slot: slot})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
 	// A berry plant uses the click only when there is something to pick
 	// (SweetBerryBushBlock.useItemOn / CaveVines.use); otherwise it passes
 	// to the item, which is how bone meal grows a bush.
-	plant := (isBerryBush(state) || isCaveVine(state)) && berriesClaimClick(state, p.heldItem())
+	plant := (isBerryBush(state) || isCaveVine(state)) && berriesClaimClick(state, held)
 	if plant || isGolemStatue(state) || isWire(state) { // the block's own use (blockclick.go)
 		s.hub.post(evClickBlock{eid: p.eid, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)
@@ -845,11 +864,11 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
-	if s.usePot(p, x, y, z, state, seq) { // flower pot: pot / un-pot a plant
+	if s.usePot(p, off, x, y, z, state, seq) { // flower pot: pot / un-pot a plant
 		return true
 	}
-	if kind, isSign := signKind(state); isSign && !chainsHangingSign(kind, state, p.heldItem(), face) { // edit the sign / apply dye, ink, wax
-		s.hub.post(evUseSign{eid: p.eid, x: x, y: y, z: z, item: p.heldItem(), slot: int32(p.held)})
+	if kind, isSign := signKind(state); isSign && !chainsHangingSign(kind, state, held, face) { // edit the sign / apply dye, ink, wax
+		s.hub.post(evUseSign{eid: p.eid, x: x, y: y, z: z, item: held, slot: slot})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}

@@ -45,15 +45,15 @@ type evUseLodestone struct {
 func (evUseLodestone) isHubEvent() {}
 
 // tryCompassUse (connection side): a compass on a lodestone.
-func (s *Server) tryCompassUse(p *player, x, y, z int, seq int32) bool {
-	if p.heldItem() != itemCompass {
+func (s *Server) tryCompassUse(p *player, off bool, x, y, z int, seq int32) bool {
+	if p.handItem(off) != itemCompass {
 		return false
 	}
 	state := s.worldFor(p).Block(x, y, z)
 	if state != lodestoneBlock {
 		return false
 	}
-	s.hub.post(evUseLodestone{eid: p.eid, x: x, y: y, z: z, slot: int32(p.held)})
+	s.hub.post(evUseLodestone{eid: p.eid, x: x, y: y, z: z, slot: p.handSlot(off)})
 	s.sendBlockChange(p, x, y, z, state, seq)
 	return true
 }
@@ -72,10 +72,14 @@ func dimRegistryName(dim int) string {
 // onUseLodestone is CompassItem.useOn on the hub.
 func (h *hub) onUseLodestone(players map[int32]*tracked, e evUseLodestone) {
 	t := players[e.eid]
-	if t == nil || t.dead || t.inv == nil || e.slot < 0 || e.slot >= 9 {
+	if t == nil || t.dead {
 		return
 	}
-	held := t.inv.slots[e.slot]
+	hs := t.handStack(int(e.slot)) // a hotbar slot or the offhand
+	if hs == nil {
+		return
+	}
+	held := *hs
 	if held.item != itemCompass || held.count == 0 {
 		return
 	}
@@ -88,16 +92,16 @@ func (h *hub) onUseLodestone(players map[int32]*tracked, e evUseLodestone) {
 	h.advance(players, t, "item_used_on_block", advMatch{blockState: state, item: held.item})
 	target := lodeTracker{has: true, target: true, x: int32(e.x), y: int32(e.y), z: int32(e.z), dim: int8(t.dim)}
 	if t.gamemode != gmCreative && held.count == 1 { // replaceExistingStack
-		t.inv.slots[e.slot].lode = target
-		h.sendSlot(t, int(e.slot))
+		hs.lode = target
+		h.sendHandSlot(t, int(e.slot))
 		return
 	}
 	// transmuteCopy: one new lodestone compass; survival pays one plain
 	// compass for it. Wherever the inventory has room, else at the feet.
 	if t.gamemode != gmCreative {
 		held.count--
-		t.inv.slots[e.slot] = held
-		h.sendSlot(t, int(e.slot))
+		*hs = held
+		h.sendHandSlot(t, int(e.slot))
 	}
 	fresh := invStack{item: itemCompass, count: 1, lode: target}
 	changed, left := t.inv.addStack(fresh)

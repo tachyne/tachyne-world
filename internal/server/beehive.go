@@ -69,23 +69,23 @@ func (h *hub) harvestBeeHome(players map[int32]*tracked, t *tracked, pos blockPo
 	if honeyLevel(cur) < beeMaxHoney {
 		return false // not ready; vanilla just does nothing
 	}
-	held := heldStack(t)
+	held := usedStack(t)
 	tool := held.item // the bottle or shears, for the item_used_on_block trigger
 	var give invStack
 	sound := "minecraft:block.beehive.shear"
 	switch held.item {
 	case int32(itemByName["shears"]):
 		give = invStack{item: int32(itemByName["honeycomb"]), count: beeHoneycombYield}
-		h.applyToolWear(t, t.p.heldSlot(), 1)
+		h.applyToolWear(t, t.useSlot(), 1)
 	case int32(itemByName["glass_bottle"]):
 		give = invStack{item: int32(itemByName["honey_bottle"]), count: 1}
 		sound = "minecraft:item.bottle.fill" // vanilla: BOTTLE_FILL, not the shear
-		slot := t.p.heldSlot()
+		slot := t.useSlot()
 		if held.count--; held.count <= 0 {
 			held = invStack{}
 		}
-		t.inv.slots[slot] = held
-		h.sendSlot(t, slot)
+		*t.handStack(slot) = held // the hand the bottle came from
+		h.sendHandSlot(t, slot)
 	default:
 		return false
 	}
@@ -152,6 +152,7 @@ func (h *hub) angerBees(players map[int32]*tracked, t *tracked, dim int, pos blo
 type evHarvestHive struct {
 	eid     int32
 	x, y, z int
+	off     bool // used from the offhand (the packet's InteractionHand)
 }
 
 func (evHarvestHive) isHubEvent() {}

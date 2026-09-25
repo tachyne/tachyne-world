@@ -17,6 +17,7 @@ type evCarvePumpkin struct {
 	x, y, z int
 	face    int32
 	yaw     float32
+	off     bool // used from the offhand (the packet's InteractionHand)
 }
 
 func (evCarvePumpkin) isHubEvent() {}
@@ -45,7 +46,7 @@ func (h *hub) carvePumpkin(players map[int32]*tracked, e evCarvePumpkin) {
 	dx, dz := facingDelta(facing)
 	h.spawnItemIn(players, t.dim, itemPumpkinSeeds, 4, cx+float64(dx)*0.65, float64(e.y)+0.1, cz+float64(dz)*0.65)
 	if isSurvival(t.gamemode) {
-		h.applyToolWear(t, t.p.heldSlot(), 1)
+		h.applyToolWear(t, t.useSlot(), 1)
 	}
 	h.incStat(t, attachproto.StatUsed, itemShears, 1)
 }

@@ -49,8 +49,8 @@ func (evCauldron) isHubEvent() {}
 // useCauldron applies one right-click on a cauldron with whatever is held —
 // the vanilla CauldronInteraction map.
 func (h *hub) useCauldron(players map[int32]*tracked, t *tracked, slot int32, x, y, z int) {
-	if int(slot) != t.p.heldSlot() || t.inv == nil {
-		return
+	if (int(slot) != t.p.heldSlot() && slot != offhandSlot) || t.inv == nil {
+		return // the stack in the hand the click used
 	}
 	st := h.worldFor(t.dim).At(x, y, z)
 	kind, level, ok := cauldronOf(st)
@@ -68,7 +68,7 @@ func (h *hub) useCauldron(players map[int32]*tracked, t *tracked, slot int32, x,
 	}
 	set := func(state uint32, snd string) { setStat(state, snd, "use_cauldron") }
 	fill := func(state uint32, snd string) { setStat(state, snd, "fill_cauldron") }
-	held := t.inv.slots[slot]
+	held := *t.handStack(int(slot))
 	switch held.item {
 	case itemBucketH2O: // fills with water regardless of prior content
 		fill(waterCauldronBase+2, "minecraft:item.bucket.empty")
@@ -114,8 +114,8 @@ func (h *hub) useCauldron(players map[int32]*tracked, t *tracked, slot int32, x,
 		// colour comes off for one water level.
 		if kind == cauldronWater && isDyeable(held.item) && held.color != 0 {
 			held.color = 0
-			t.inv.slots[slot] = held
-			h.sendSlot(t, int(slot))
+			*t.handStack(int(slot)) = held
+			h.sendHandSlot(t, int(slot))
 			h.incCustom(t, "clean_armor", 1)
 			next := cauldronState
 			if level > 1 {
@@ -128,8 +128,8 @@ func (h *hub) useCauldron(players map[int32]*tracked, t *tracked, slot int32, x,
 		// SHULKER_BOX): one water level, contents kept.
 		if kind == cauldronWater && isShulkerBoxItem(held.item) && held.item != int32(itemByName["shulker_box"]) {
 			held.item = int32(itemByName["shulker_box"])
-			t.inv.slots[slot] = held
-			h.sendSlot(t, int(slot))
+			*t.handStack(int(slot)) = held
+			h.sendHandSlot(t, int(slot))
 			h.incCustom(t, "clean_shulker_box", 1)
 			next := cauldronState
 			if level > 1 {
@@ -142,8 +142,8 @@ func (h *hub) useCauldron(players map[int32]*tracked, t *tracked, slot int32, x,
 		if kind == cauldronWater && held.patCount() > 0 {
 			held.pats[held.patCount()-1] = bannerLayer{}
 			h.incCustom(t, "clean_banner", 1)
-			t.inv.slots[slot] = held
-			h.sendSlot(t, int(slot))
+			*t.handStack(int(slot)) = held
+			h.sendHandSlot(t, int(slot))
 			next := cauldronState
 			if level > 1 {
 				next = waterCauldronBase + uint32(level-2)

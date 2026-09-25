@@ -80,23 +80,23 @@ type primedTNT struct {
 
 // useFlintSteel handles a flint-&-steel click on (x,y,z): prime TNT, or set
 // the face-adjacent air cell alight. Returns whether the click was consumed.
-func (s *Server) useFlintSteel(p *player, x, y, z, dx, dy, dz int, seq int32) bool {
+func (s *Server) useFlintSteel(p *player, off bool, x, y, z, dx, dy, dz int, seq int32) bool {
 	target := s.worldFor(p).Block(x, y, z)
 	if canLightBlock(target) { // an unlit candle, candle cake or campfire
 		s.hub.post(evLightBlock{eid: p.eid, x: x, y: y, z: z, sound: sndFlintSteelUse})
-		s.hub.post(evToolWear{eid: p.eid, slot: p.held})
+		s.hub.post(evToolWear{eid: p.eid, slot: int(p.handSlot(off))})
 		s.sendBlockChange(p, x, y, z, target, seq)
 		return true
 	}
 	if isTNT(target) { // TntBlock.useItemOn: the lighter wears a point, as it does lighting anything
 		s.hub.post(evPrimeTNT{dim: p.dim, x: x, y: y, z: z, by: p.eid})
-		s.hub.post(evToolWear{eid: p.eid, slot: p.held})
+		s.hub.post(evToolWear{eid: p.eid, slot: int(p.handSlot(off))})
 		s.sendBlockChange(p, x, y, z, target, seq)
 		return true
 	}
 	fx, fy, fz := x+dx, y+dy, z+dz
 	if s.worldFor(p).Block(x, y, z) == worldgen.Obsidian && s.lightPortal(p, fx, fy, fz) {
-		s.hub.post(evToolWear{eid: p.eid, slot: p.held})
+		s.hub.post(evToolWear{eid: p.eid, slot: int(p.handSlot(off))})
 		s.sendBlockChange(p, x, y, z, s.worldFor(p).Block(x, y, z), seq)
 		return true
 	}
@@ -105,23 +105,23 @@ func (s *Server) useFlintSteel(p *player, x, y, z, dx, dy, dz int, seq int32) bo
 		return true
 	}
 	s.putBlock(p, fx, fy, fz, fireDefault, true, seq)
-	s.hub.post(evToolWear{eid: p.eid, slot: p.held})
+	s.hub.post(evToolWear{eid: p.eid, slot: int(p.handSlot(off))})
 	return true
 }
 
 // useFireCharge is FireChargeItem.useOn: lights a candle/candle cake/campfire
 // in place or starts a fire in the empty cell in front, spending the charge.
-func (s *Server) useFireCharge(p *player, x, y, z, dx, dy, dz int, seq int32) {
+func (s *Server) useFireCharge(p *player, off bool, x, y, z, dx, dy, dz int, seq int32) {
 	target := s.worldFor(p).Block(x, y, z)
 	if isTNT(target) { // TntBlock.useItemOn: a fire charge lights it too, and is spent
 		s.hub.post(evPrimeTNT{dim: p.dim, x: x, y: y, z: z, by: p.eid})
-		s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
+		s.hub.post(evConsume{eid: p.eid, slot: p.handSlot(off)})
 		s.sendBlockChange(p, x, y, z, target, seq)
 		return
 	}
 	if canLightBlock(target) {
 		s.hub.post(evLightBlock{eid: p.eid, x: x, y: y, z: z, sound: sndFireChargeUse})
-		s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
+		s.hub.post(evConsume{eid: p.eid, slot: p.handSlot(off)})
 		s.sendBlockChange(p, x, y, z, target, seq)
 		return
 	}
@@ -131,7 +131,7 @@ func (s *Server) useFireCharge(p *player, x, y, z, dx, dy, dz int, seq int32) {
 		return
 	}
 	s.putBlock(p, fx, fy, fz, fireDefault, true, seq)
-	s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
+	s.hub.post(evConsume{eid: p.eid, slot: p.handSlot(off)})
 }
 
 type evPrimeTNT struct {

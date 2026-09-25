@@ -288,14 +288,14 @@ func TestNoteBlockLetsHeadOntoItsTop(t *testing.T) {
 	head := itemByName["zombie_head"]
 	p.setHotbarSlot(0, head)
 	p.held = 0
-	if s.tryUseBlock(p, x, y, z, 0, 1, 0.5, 1, 0.5) {
+	if s.tryUseBlock(p, false, x, y, z, 0, 1, 0.5, 1, 0.5) {
 		t.Fatal("a head on the top face should pass through to placement")
 	}
-	if !s.tryUseBlock(p, x, y, z, 0, 2, 0.5, 0.5, 0) {
+	if !s.tryUseBlock(p, false, x, y, z, 0, 2, 0.5, 0.5, 0) {
 		t.Fatal("a head on a side face still tunes the block")
 	}
 	p.setHotbarSlot(0, itemByName["stick"])
-	if !s.tryUseBlock(p, x, y, z, 0, 1, 0.5, 1, 0.5) {
+	if !s.tryUseBlock(p, false, x, y, z, 0, 1, 0.5, 1, 0.5) {
 		t.Fatal("anything but a head tunes it from the top")
 	}
 }

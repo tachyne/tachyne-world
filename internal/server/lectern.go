@@ -55,6 +55,7 @@ type lectern struct {
 type evUseLectern struct {
 	eid     int32
 	x, y, z int
+	off     bool // used from the offhand (the packet's InteractionHand)
 }
 
 func (evUseLectern) isHubEvent() {}
@@ -72,7 +73,7 @@ func (h *hub) onUseLectern(players map[int32]*tracked, e evUseLectern) {
 	pos := simPos{dim: t.dim, blockPos: blockPos{e.x, e.y, e.z}}
 	lec := h.lecterns[pos]
 	if lec == nil || lec.book.item == 0 {
-		held := t.inv.slots[t.p.heldSlot()]
+		held := usedStack(t)
 		if !isLecternBook(held.item) || held.count <= 0 {
 			return
 		}
@@ -80,11 +81,11 @@ func (h *hub) onUseLectern(players map[int32]*tracked, e evUseLectern) {
 		book.count = 1
 		h.lecterns[pos] = &lectern{book: book}
 		if t.gamemode != gmCreative {
-			s := &t.inv.slots[t.p.heldSlot()]
+			s := t.handStack(t.useSlot()) // the hand the book came from
 			if s.count--; s.count <= 0 {
 				*s = invStack{}
 			}
-			h.sendSlot(t, t.p.heldSlot())
+			h.sendHandSlot(t, t.useSlot())
 		}
 		info, _ := worldgen.InfoForState(state)
 		h.setBlockLive(players, t.dim, e.x, e.y, e.z, worldgen.SetProperty(info, state, "has_book", "true"))

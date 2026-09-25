@@ -30,6 +30,16 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla it now falls off with distance, like Healing, and a glancing
   splash can do nothing at all. Undead mobs healed by Harming get vanilla's
   amount.
+- **Your offhand works on blocks.** Right-clicking a block with something
+  in your offhand used whatever was in your main hand instead, so a torch
+  or a stack of blocks held beside a pickaxe could not be placed, and bone
+  meal, buckets, flint and steel, hoes, shovels, axes, shears and spawn
+  eggs did nothing from the offhand. As in vanilla, the offhand item now
+  gets its turn when the main hand has nothing to do, and it is the one
+  used up. It also feeds a composter, a campfire, a lectern, a decorated
+  pot, a cake or a respawn anchor, but never opens doors or chests on its
+  own, and a respawn anchor waits for the offhand's glowstone instead of
+  setting your spawn.
 - **Beds refuse you the way vanilla does.** A bed someone is already in,
   one more than three blocks away, or one with a solid block over it now
   turns you down with vanilla's message above the hotbar. "Respawn point

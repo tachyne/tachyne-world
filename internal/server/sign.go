@@ -302,15 +302,15 @@ func (h *hub) onSignPlaced(players map[int32]*tracked, e evSignPlaced) {
 
 // signConsume uses up one of the applied item (dye/ink/honeycomb), survival only.
 func (h *hub) signConsume(t *tracked, slot int32) {
-	if !isSurvival(t.gamemode) || t.inv == nil || slot < 0 || slot >= 9 {
+	if !isSurvival(t.gamemode) {
 		return
 	}
-	if sl := &t.inv.slots[slot]; sl.count > 0 {
+	if sl := t.handStack(int(slot)); sl != nil && sl.count > 0 { // a hotbar slot or the offhand
 		sl.count--
 		if sl.count == 0 {
 			sl.item = 0
 		}
-		h.sendSlot(t, int(slot))
+		h.sendHandSlot(t, int(slot))
 	}
 }
 

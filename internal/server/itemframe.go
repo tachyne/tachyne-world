@@ -153,11 +153,11 @@ func (h *hub) onPlaceFrame(players map[int32]*tracked, e evPlaceFrame) {
 	h.playSoundDim(players, t.dim, "minecraft:entity.item_frame.place", sndPlayer,
 		float64(e.x), float64(e.y), float64(e.z), 1, 1)
 	if t.gamemode != gmCreative {
-		if sl := &t.inv.slots[e.slot]; sl.count > 0 {
+		if sl := t.handStack(int(e.slot)); sl != nil && sl.count > 0 { // the hand it was hung from
 			if sl.count--; sl.count == 0 {
 				*sl = invStack{}
 			}
-			h.sendSlot(t, int(e.slot))
+			h.sendHandSlot(t, int(e.slot))
 		}
 	}
 }

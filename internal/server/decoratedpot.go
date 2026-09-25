@@ -41,7 +41,7 @@ func (h *hub) usePot(players map[int32]*tracked, t *tracked, pos blockPos) bool 
 	}
 	key := simPos{dim: t.dim, blockPos: pos}
 	h.ensurePotLoot(key)
-	held := heldStack(t)
+	held := usedStack(t)
 	stored := h.pots[key]
 	cx, cy, cz := float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5
 
@@ -62,12 +62,14 @@ func (h *hub) usePot(players map[int32]*tracked, t *tracked, pos blockPos) bool 
 		stored.count++
 	}
 	h.pots[key] = stored
-	slot := t.p.heldSlot()
+	slot := t.useSlot()
 	if t.gamemode != gmCreative {
-		if t.inv.slots[slot].count--; t.inv.slots[slot].count <= 0 {
-			t.inv.slots[slot] = invStack{}
+		if s := t.handStack(slot); s != nil { // the hand the item came from
+			if s.count--; s.count <= 0 {
+				*s = invStack{}
+			}
+			h.sendHandSlot(t, slot)
 		}
-		h.sendSlot(t, slot)
 	}
 	h.incStat(t, attachproto.StatUsed, held.item, 1)
 	// The insert sound rises with how full the pot is, so you can hear a pot
@@ -169,6 +171,7 @@ func (h *hub) potExtract(pos simPos) (invStack, bool) {
 type evUsePot struct {
 	eid     int32
 	x, y, z int
+	off     bool // used from the offhand (the packet's InteractionHand)
 }
 
 func (evUsePot) isHubEvent() {}

@@ -78,8 +78,8 @@ func isHoe(item int32) bool {
 // tryTill handles a hoe used on a block. Reports whether it consumed the click;
 // a non-tillable block returns false so normal placement carries on, matching
 // vanilla's InteractionResult.PASS.
-func (s *Server) tryTill(p *player, x, y, z int, dir int32, seq int32) bool {
-	if !isHoe(p.heldItem()) {
+func (s *Server) tryTill(p *player, off bool, x, y, z int, dir int32, seq int32) bool {
+	if !isHoe(p.handItem(off)) {
 		return false
 	}
 	res, ok := tillables[s.worldFor(p).Block(x, y, z)]
@@ -99,7 +99,7 @@ func (s *Server) tryTill(p *player, x, y, z int, dir int32, seq int32) bool {
 			x: float64(x) + 0.5, y: float64(y) + 0.5, z: float64(z) + 0.5})
 	}
 	if isSurvival(s.modes.get(p.key())) {
-		s.hub.post(evToolWear{eid: p.eid, slot: p.held})
+		s.hub.post(evToolWear{eid: p.eid, slot: int(p.handSlot(off))})
 	}
 	return true
 }
@@ -144,8 +144,8 @@ func isShovel(item int32) bool {
 // else, then the flattenable table (which needs air above — unlike the hoe
 // there is no per-entry exception), and dowsing only as the ELSE branch, which
 // is why a campfire under a solid block still puts out.
-func (s *Server) tryFlatten(p *player, x, y, z int, dir int32, seq int32) bool {
-	if !isShovel(p.heldItem()) || dir == 0 {
+func (s *Server) tryFlatten(p *player, off bool, x, y, z int, dir int32, seq int32) bool {
+	if !isShovel(p.handItem(off)) || dir == 0 {
 		return false
 	}
 	state := s.worldFor(p).Block(x, y, z)
@@ -165,7 +165,7 @@ func (s *Server) tryFlatten(p *player, x, y, z int, dir int32, seq int32) bool {
 
 	s.putBlock(p, x, y, z, into, true, seq)
 	if isSurvival(s.modes.get(p.key())) {
-		s.hub.post(evToolWear{eid: p.eid, slot: p.held})
+		s.hub.post(evToolWear{eid: p.eid, slot: int(p.handSlot(off))})
 	}
 	return true
 }

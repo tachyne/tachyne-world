@@ -26,6 +26,7 @@ type mapBanner struct {
 type evMapBanner struct {
 	eid     int32
 	x, y, z int
+	off     bool // used from the offhand (the packet's InteractionHand)
 }
 
 func (evMapBanner) isHubEvent() {}
@@ -50,7 +51,7 @@ func (h *hub) toggleMapBanner(players map[int32]*tracked, e evMapBanner) {
 	if t == nil || t.inv == nil || h.maps == nil {
 		return
 	}
-	st := heldStack(t)
+	st := usedStack(t)
 	if !isMapItem(st.item) || st.mapID == 0 {
 		return
 	}
