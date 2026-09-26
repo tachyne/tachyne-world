@@ -140,7 +140,7 @@ func (h *hub) useSpawnEggOnFluid(players map[int32]*tracked, t *tracked, slot in
 	if s := h.worldFor(t.dim).At(pos.x, pos.y, pos.z); s != worldgen.WaterBase && s != worldgen.LavaBase {
 		return // not a LiquidBlock: PASS
 	}
-	m := h.spawnMobIn(players, et, t.dim, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5)
+	m := h.spawnConfigured(players, et, t.dim, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5)
 	if m == nil {
 		return
 	}

@@ -89,11 +89,7 @@ func (h *hub) summonAt(players map[int32]*tracked, e evSummon) {
 	}
 	switch {
 	case name == "lightning_bolt":
-		if e.dim != dimOverworld {
-			fail()
-			return
-		}
-		h.strikeLightning(players, e.x, e.y, e.z, false)
+		h.strikeLightning(players, e.dim, e.x, e.y, e.z, false)
 	case name == "tnt":
 		fuse := 80
 		if n, ok := snbtInt(e.nbt["fuse"]); ok {
@@ -168,27 +164,35 @@ func (h *hub) summonAt(players map[int32]*tracked, e evSummon) {
 
 // summonMob spawns a mob the way its kind is configured.
 func (h *hub) summonMob(players map[int32]*tracked, e evSummon) *mob {
+	return h.spawnConfigured(players, e.etype, e.dim, e.x, e.y, e.z)
+}
+
+// spawnConfigured is EntityType.spawn with finalizeSpawn: the mob comes out
+// set up as its kind is — a zombie hostile and geared, a villager with its
+// trades, a nether mob with its brain. /summon, spawn eggs and a dispensed
+// egg all spawn this way.
+func (h *hub) spawnConfigured(players map[int32]*tracked, etype, dim int, x, y, z float64) *mob {
 	switch {
-	case e.etype == entityEnderDragon:
-		return h.spawnHostileYIn(players, e.etype, e.dim, e.x, e.y, e.z)
-	case e.etype == entitySulfurCube:
-		return h.spawnSulfurCube(players, e.dim, e.x, e.y, e.z, false)
-	case e.etype == entityVillager || e.etype == entityIronGolem:
-		m := h.spawnMobIn(players, e.etype, e.dim, e.x, e.y, e.z)
+	case etype == entityEnderDragon:
+		return h.spawnHostileYIn(players, etype, dim, x, y, z)
+	case etype == entitySulfurCube:
+		return h.spawnSulfurCube(players, dim, x, y, z, false)
+	case etype == entityVillager || etype == entityIronGolem:
+		m := h.spawnMobIn(players, etype, dim, x, y, z)
 		if m != nil {
 			h.configureVillageMob(players, m)
 		}
 		return m
-	case netherConfigured(e.etype):
-		m := h.spawnMobIn(players, e.etype, e.dim, e.x, e.y, e.z)
+	case netherConfigured(etype):
+		m := h.spawnMobIn(players, etype, dim, x, y, z)
 		if m != nil {
 			h.configureNetherMob(players, m)
 		}
 		return m
-	case isRosterPassive(e.etype):
-		return h.spawnSpecies(players, e.etype, e.dim, e.x, e.y, e.z)
+	case isRosterPassive(etype):
+		return h.spawnSpecies(players, etype, dim, x, y, z)
 	}
-	return h.spawnHostileYIn(players, e.etype, e.dim, e.x, e.y, e.z)
+	return h.spawnHostileYIn(players, etype, dim, x, y, z)
 }
 
 // applySummonNBT reads the common entity NBT onto a summoned mob.

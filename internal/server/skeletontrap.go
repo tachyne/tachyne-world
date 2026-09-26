@@ -34,7 +34,7 @@ func (h *hub) tickSkeletonTraps(players map[int32]*tracked) {
 func (h *hub) springSkeletonTrap(players map[int32]*tracked, horse *mob) {
 	horse.trap, horse.tamed, horse.baby = false, true, false
 	horse.refreshBabySpeed()
-	h.strikeLightning(players, horse.x, horse.y, horse.z, true) // visual only
+	h.strikeLightning(players, horse.dim, horse.x, horse.y, horse.z, true) // visual only
 	if sk := h.trapSkeleton(players, horse); sk != nil {
 		h.mountMobOn(players, sk, horse, false)
 	}

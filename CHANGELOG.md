@@ -97,6 +97,15 @@ the public history since the project was open-sourced on 2026-07-10.
   across a restart. Foxes, pandas, dolphins and allays keep an item's name
   and other data while they carry it. A player killed by a mob holding a
   named weapon is "slain by Zombie using Excalibur", as in vanilla.
+- **Spawn eggs make proper mobs.** A mob from a spawn egg, whether used on
+  a block, on water or from a dispenser, is now set up the way /summon sets
+  it up. An egg zombie is hostile and may spawn with gear, an egg villager
+  walks, opens doors and has its trades, and Nether mobs get their full
+  behaviour. Before, they came out as bare wandering bodies.
+- **Summoned lightning works in the Nether and the End.** /summon
+  lightning_bolt now strikes in whichever dimension it is run in, and hurts,
+  lights and charges what is there. Storms still bring lightning only to the
+  overworld.
 
 ## 2026-09-25
 

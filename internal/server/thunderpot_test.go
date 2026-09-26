@@ -17,7 +17,7 @@ func TestLightningIgnites(t *testing.T) {
 	pl.x, pl.y, pl.z = 100.5, 180, 100.5
 	z := h.spawnMob(players, entityZombie, 101.5, 180, 100.5)
 	pl.health = 20
-	h.strikeLightning(players, 100.5, 180, 100.5, false)
+	h.strikeLightning(players, dimOverworld, 100.5, 180, 100.5, false)
 	if pl.fireSecs != lightningFireSecs || pl.health >= 20 {
 		t.Fatalf("player: fire %d health %v", pl.fireSecs, pl.health)
 	}

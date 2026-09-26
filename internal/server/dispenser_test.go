@@ -85,10 +85,20 @@ func TestDispenserBehaviors(t *testing.T) {
 
 		// Spawn egg → spawns its mob ahead, consuming one.
 		w.SetBlock(front.x, front.y, front.z, worldgen.Air)
-		mobsBefore := len(h.mobs)
+		zombies := func() (n int, hostile bool) {
+			for _, m := range h.mobs {
+				if m.etype == entityZombie {
+					n, hostile = n+1, m.hostile
+				}
+			}
+			return
+		}
+		before, _ := zombies()
 		s = fire(int32(itemByName["zombie_spawn_egg"]), 0)
-		if len(h.mobs) != mobsBefore+1 {
-			t.Errorf("zombie spawn egg: mob count %d, want %d", len(h.mobs), mobsBefore+1)
+		if n, hostile := zombies(); n != before+1 || !hostile {
+			// EntityType.spawn runs finalizeSpawn: a dispensed egg's zombie
+			// is a zombie, not a bare wandering body.
+			t.Errorf("zombie spawn egg: %d zombies (hostile %v), want %d hostile", n, hostile, before+1)
 		}
 		if s.count != 2 {
 			t.Errorf("spawn egg: count %d, want 2 (one used)", s.count)

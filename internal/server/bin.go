@@ -591,7 +591,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 	case dispense && isEgg:
 		// Spawn the egg's mob in the block ahead (facing offset so it clears
 		// the dispenser); vanilla consumes the egg whether or not it takes.
-		h.spawnMobIn(players, eggEnt, h.rsDim, float64(front.x)+0.5, float64(front.y), float64(front.z)+0.5)
+		h.spawnConfigured(players, eggEnt, h.rsDim, float64(front.x)+0.5, float64(front.y), float64(front.z)+0.5)
 	case dispense && item == int32(itemShears):
 		// A full hive ahead is sheared first (tryShearBeehive): three honeycomb
 		// pop out and the bees are released CALM — a dispenser has nobody to

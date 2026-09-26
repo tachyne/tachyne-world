@@ -109,7 +109,7 @@ func TestLightningMooshroomAndTurtle(t *testing.T) {
 	moo.variant, moo.variantSet, moo.health = mooshroomRed, true, 20
 	turtle := h.spawnMob(players, entityTurtle, x+1, y, z)
 	turtle.health = 30
-	h.strikeLightning(players, x, y, z, false)
+	h.strikeLightning(players, dimOverworld, x, y, z, false)
 	if moo.variant != mooshroomBrown {
 		t.Error("a struck red mooshroom turns brown")
 	}

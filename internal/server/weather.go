@@ -299,7 +299,7 @@ func (h *hub) tickLightning(players map[int32]*tracked) {
 			}
 			visualOnly = true
 		}
-		h.strikeLightning(players, float64(sx)+0.5, float64(sy), float64(sz)+0.5, visualOnly)
+		h.strikeLightning(players, dimOverworld, float64(sx)+0.5, float64(sy), float64(sz)+0.5, visualOnly)
 	}
 }
 
@@ -391,15 +391,17 @@ func moonBrightness(dayTime uint64) float32 {
 
 // strikeLightning spawns the bolt flash, cracks the thunder, and (unless the
 // bolt is a trap's visual) hurts everything at the strike point and starts
-// fires on normal+ difficulty.
-func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visualOnly bool) {
+// fires on normal+ difficulty. A bolt is an entity of its level like any
+// other: weather only brings them to the overworld, but /summon or a
+// channeling trident puts one in whichever dimension it is in.
+func (h *hub) strikeLightning(players map[int32]*tracked, dim int, x, y, z float64, visualOnly bool) {
 	eid := h.allocEID()
 	var uuid [16]byte
 	binary.BigEndian.PutUint32(uuid[12:], uint32(eid))
-	h.toNearbyEv(players, 0, x, z, entAdd(eid, entityLightning, uuid, x, y, z, 0, 0))
-	h.bolts = append(h.bolts, bolt{eid: eid, x: x, z: z, dieAt: h.tick.Load() + boltLifeTicks})
+	h.toNearbyEv(players, dim, x, z, entAdd(eid, entityLightning, uuid, x, y, z, 0, 0))
+	h.bolts = append(h.bolts, bolt{eid: eid, dim: dim, x: x, z: z, dieAt: h.tick.Load() + boltLifeTicks})
 	if !visualOnly {
-		h.vibAt(0, freqLightning, x, y, z, eid)
+		h.vibAt(dim, freqLightning, x, y, z, eid)
 	}
 	// No thunder is sent: LightningBolt plays its thunder and impact on the
 	// CLIENT (playLocalSound in its client-side tick), for everyone the bolt
@@ -409,13 +411,13 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 		return
 	}
 	strikePos := blockPos{int(math.Floor(x)), int(math.Floor(y - 1e-6)), int(math.Floor(z))}
-	h.rodStruck(players, strikePos)
-	h.clearCopperOnLightningStrike(players, dimOverworld, strikePos)
+	h.rodStruck(players, dim, strikePos)
+	h.clearCopperOnLightningStrike(players, dim, strikePos)
 
 	// Entity.thunderHit: eight seconds alight (unless already burning), then
 	// the five of damage.
 	for _, t := range players {
-		if t.dim == dimOverworld && math.Abs(t.x-x) <= 3 && math.Abs(t.z-z) <= 3 && math.Abs(t.y-y) <= 6 {
+		if t.dim == dim && math.Abs(t.x-x) <= 3 && math.Abs(t.z-z) <= 3 && math.Abs(t.y-y) <= 6 {
 			if t.fireSecs == 0 {
 				h.setBurning(players, t, lightningFireSecs)
 			}
@@ -424,7 +426,7 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 	}
 	var struck []*mob
 	for _, m := range h.mobs {
-		if m.dying == 0 && m.dim == dimOverworld && math.Abs(m.x-x) <= 3 && math.Abs(m.z-z) <= 3 && math.Abs(m.y-y) <= 6 {
+		if m.dying == 0 && m.dim == dim && math.Abs(m.x-x) <= 3 && math.Abs(m.z-z) <= 3 && math.Abs(m.y-y) <= 6 {
 			if m.fireSecs == 0 {
 				m.ignite(lightningFireSecs)
 			}
@@ -439,7 +441,8 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 	for _, m := range struck {
 		h.lightningTransforms(players, m) // thunderHit: charged creepers, zombified pigs, witches
 	}
-	lit := h.strikeFire(players, int(math.Floor(x)), int(math.Floor(y)), int(math.Floor(z)))
+	var lit bool
+	h.inDim(dim, func() { lit = h.strikeFire(players, int(math.Floor(x)), int(math.Floor(y)), int(math.Floor(z))) })
 	// LightningStrikeTrigger: every player within reach sees the bolt, with
 	// whether a villager stood by and whether anything caught fire.
 	// The bystanders are LightningBolt's: the living entities whose boxes
@@ -451,7 +454,7 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 	}
 	villagerBy := false
 	for _, m := range h.mobs {
-		if m.etype != entityVillager || m.dying != 0 || m.dim != dimOverworld || hit[m.eid] {
+		if m.etype != entityVillager || m.dying != 0 || m.dim != dim || hit[m.eid] {
 			continue
 		}
 		if b := m.box(); math.Abs(m.x-x) <= 15+b.w/2 && math.Abs(m.z-z) <= 15+b.w/2 && m.y <= y+21 && m.y+b.h >= y-15 {
@@ -460,20 +463,21 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 		}
 	}
 	for _, t := range players {
-		if t.dim == dimOverworld && dist3(t.x, t.y, t.z, x, y, z) < 256 { // LightningBolt.tick: distanceTo < 256 in its level
+		if t.dim == dim && dist3(t.x, t.y, t.z, x, y, z) < 256 { // LightningBolt.tick: distanceTo < 256 in its level
 			h.advance(players, t, "lightning_strike", advMatch{bystander: villagerBy, noFire: !lit})
 		}
 	}
 }
 
 // strikeFire ports LightningBolt.spawnFire: on normal+ difficulty, fire at
-// the strike cell plus four attempts one block around it.
+// the strike cell plus four attempts one block around it, in the block
+// simulation's dimension (inDim).
 func (h *hub) strikeFire(players map[int32]*tracked, x, y, z int) (lit bool) {
 	if h.rules.Difficulty < diffNormal {
 		return false
 	}
 	try := func(pos blockPos) {
-		if h.world.At(pos.x, pos.y, pos.z) == worldgen.Air && h.validFireLocation(pos) {
+		if h.rsWorld().At(pos.x, pos.y, pos.z) == worldgen.Air && h.validFireLocation(pos) {
 			h.igniteFire(players, pos, 0)
 			lit = true
 		}
@@ -488,6 +492,7 @@ func (h *hub) strikeFire(players map[int32]*tracked, x, y, z int) (lit bool) {
 // bolt is a transient lightning entity awaiting despawn.
 type bolt struct {
 	eid   int32
+	dim   int
 	x, z  float64
 	dieAt uint64
 }
@@ -501,7 +506,7 @@ func (h *hub) updateBolts(players map[int32]*tracked) {
 	kept := h.bolts[:0]
 	for _, b := range h.bolts {
 		if now >= b.dieAt {
-			h.entityGone(players, 0, b.eid)
+			h.entityGone(players, b.dim, b.eid)
 		} else {
 			kept = append(kept, b)
 		}
@@ -559,8 +564,8 @@ func (evSetWeather) isHubEvent() {}
 
 // rodStruck is LightningBolt.powerLightningRod → LightningRodBlock.onLightningStrike:
 // a rod at the strike position (or just under it) powers for 8 ticks.
-func (h *hub) rodStruck(players map[int32]*tracked, pos blockPos) {
-	w := h.worldFor(0)
+func (h *hub) rodStruck(players map[int32]*tracked, dim int, pos blockPos) {
+	w := h.worldFor(dim)
 	st := w.At(pos.x, pos.y, pos.z)
 	if !isLightningRodState(st) {
 		pos.y--
@@ -569,8 +574,8 @@ func (h *hub) rodStruck(players map[int32]*tracked, pos blockPos) {
 			return
 		}
 	}
-	h.inDim(0, func() {
-		h.rsDue[simPos{blockPos: pos}] = h.tick.Load() + 8
+	h.inDim(dim, func() {
+		h.rsDue[h.rsKey(pos)] = h.tick.Load() + 8
 		h.rsSet(players, pos, setBoolProp(st, "powered", true))
 		h.rsSchedule(pos, 8)
 		h.scheduleSignalAround(players, pos)

@@ -19,7 +19,7 @@ func TestLightningClearsCopper(t *testing.T) {
 			w.SetBlock(x+dx, y, z+dz, oxid)
 		}
 	}
-	h.strikeLightning(players, float64(x)+0.5, float64(y)+1, float64(z)+0.5, false)
+	h.strikeLightning(players, dimOverworld, float64(x)+0.5, float64(y)+1, float64(z)+0.5, false)
 	if got := w.At(x, y, z); got != worldgen.BlockID("copper_block") {
 		t.Fatalf("the struck block becomes plain copper, got %s", copperName(got))
 	}
@@ -41,7 +41,7 @@ func TestLightningClearsCopper(t *testing.T) {
 	w2 := h2.world
 	waxed := worldgen.BlockID("waxed_oxidized_copper")
 	w2.SetBlock(0, 200, 0, waxed)
-	h2.strikeLightning(map[int32]*tracked{}, 0.5, 201, 0.5, false)
+	h2.strikeLightning(map[int32]*tracked{}, dimOverworld, 0.5, 201, 0.5, false)
 	if w2.At(0, 200, 0) != waxed {
 		t.Fatal("struck waxed copper is left alone")
 	}

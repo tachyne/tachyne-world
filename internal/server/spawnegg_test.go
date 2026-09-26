@@ -183,3 +183,45 @@ func TestSpawnEggUsedOnWaterSpawnsInIt(t *testing.T) {
 		t.Errorf("the offhand egg is spent: %+v", pl.offhand)
 	}
 }
+
+// EntityType.spawn runs finalizeSpawn for an egg's mob: an egg zombie is a
+// zombie — hostile, able to be geared — and an egg villager has its walk,
+// its doors and its (unemployed) trades, as a summoned one does. The egg
+// used to make a bare wandering body of either.
+func TestSpawnEggMobIsConfiguredLikeItsKind(t *testing.T) {
+	w := world.New(61)
+	w.ForceLoad(0, 0, 1)
+	h := newHub(w)
+	pl := testTracked()
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	pl.gamemode = gmCreative
+	pl.dim, pl.x, pl.y, pl.z = 0, 0.5, 180, 0.5
+	for x := -2; x <= 6; x++ {
+		w.SetBlock(x, 179, 0, worldgen.BlockBase("stone"))
+	}
+	use := func(egg string, x int) *mob {
+		t.Helper()
+		pl.inv.slots[0] = invStack{item: itemByName[egg], count: 1}
+		pl.p.setHotbarSlot(0, int32(itemByName[egg]))
+		before := map[int32]bool{}
+		for id := range h.mobs {
+			before[id] = true
+		}
+		h.useSpawnEgg(players, evSpawnEgg{eid: pl.p.eid, x: x, y: 179, z: 0, face: 1})
+		for id, m := range h.mobs {
+			if !before[id] && m.etype == spawnEggEntity[itemByName[egg]] {
+				return m
+			}
+		}
+		t.Fatalf("%s spawned nothing", egg)
+		return nil
+	}
+	if z := use("zombie_spawn_egg", 0); !z.hostile {
+		t.Error("an egg zombie must be hostile")
+	}
+	v := use("villager_spawn_egg", 3)
+	if _, ok := v.behavior.(villagerBehavior); !ok || !v.usesDoors {
+		t.Errorf("an egg villager must run the villager brain and use doors: %T doors=%v", v.behavior, v.usesDoors)
+	}
+}
