@@ -44,6 +44,22 @@ the public history since the project was open-sourced on 2026-07-10.
   bears, piglins and pandas choosing whom to shoot, flee from or go after,
   and to animals deciding whom to look at. A mob already chasing someone
   keeps after them when they drink the potion, as in vanilla.
+- **Nether portals link the vanilla way.** Every trip now searches the other
+  side for the closest portal (within 16 blocks going into the Nether, 128
+  coming out, at 8:1 coordinates) instead of following a remembered pair, so
+  any portal built near the right spot is found, by players and mobs alike.
+  With none there, the new portal goes on the closest spot within 16 blocks
+  that has room for the frame and ground under it, facing the way the entry
+  portal faces, and only on a small obsidian platform when nowhere fits; the
+  old 10×7 obsidian slab and carved pocket are gone. You come out at the same
+  place in the far portal as you went into the near one, turned a quarter if
+  the two face different ways. Mobs, items, arrows and lit TNT open a new
+  portal when they need one rather than waiting for a player, and one left
+  standing in the far portal stays there instead of bouncing back.
+- **Falling blocks behave like entities.** Sand, gravel, anvils and the rest
+  travel through nether and End portals while falling, are lifted by upward
+  bubble columns and dragged down by whirlpools, and are thrown by
+  explosions, landing where the blast carried them.
 - **Item frames and paintings hang on more blocks.** Anything solid now
   holds them, slabs, stairs, chests and fences included, not only full
   cubes; a repeater or comparator holds a frame on its side (but not one

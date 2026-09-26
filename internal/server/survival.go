@@ -765,7 +765,6 @@ func (h *hub) respawn(t *tracked) {
 		// blocks-in-thin-air. Route through the pending-switch machinery so the
 		// connection resets its dimension, restreams chunks, and everyone's view
 		// swaps.
-		t.p.pendingFrom = dimPos{}
 		t.p.pendingDest = blockPos{floorInt(sx), floorInt(sy), floorInt(sz) - 1}
 		t.p.pendingDestOK = true
 		t.p.pendingDim.Store(int32(sdim))

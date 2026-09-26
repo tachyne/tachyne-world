@@ -150,7 +150,6 @@ func (h *hub) updateEndPortalContact(players map[int32]*tracked) {
 		if t.wonGame {
 			continue // the credits are rolling; the respawn request takes them home
 		}
-		t.p.pendingFrom = dimPos{}
 		if t.dim == dimEnd {
 			// The Bedrock gateway has no credits to roll (its client would
 			// never ask to respawn afterwards), so Bedrock players go home.
@@ -180,7 +179,6 @@ const gameEventWinGame = 4
 // death, so an anchor is read without being spent.
 func (h *hub) leaveEndHome(players map[int32]*tracked, t *tracked) {
 	sx, sy, sz, sdim := h.respawnPointCharging(players, t, false)
-	t.p.pendingFrom = dimPos{}
 	t.p.pendingDest = blockPos{floorInt(sx), floorInt(sy), floorInt(sz) - 1}
 	t.p.pendingDestOK = true
 	t.p.pendingDim.Store(int32(sdim))

@@ -470,7 +470,9 @@ type savedFalling struct {
 	X          float64 `json:"x"`
 	Y          float64 `json:"y"`
 	Z          float64 `json:"z"`
+	VX         float64 `json:"vx,omitempty"`
 	VY         float64 `json:"vy,omitempty"`
+	VZ         float64 `json:"vz,omitempty"`
 	FallDist   float64 `json:"fall,omitempty"`
 	State      uint32  `json:"state" mig:"state"`
 	Time       int     `json:"time,omitempty"`

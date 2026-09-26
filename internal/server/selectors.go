@@ -694,7 +694,6 @@ func (h *hub) onTeleportTo(players map[int32]*tracked, e evTeleportTo) {
 	}
 	if dim != me.dim {
 		// TeleportCommand moves the caller into the entity's level.
-		me.p.pendingFrom = dimPos{}
 		me.p.pendingDest = blockPos{floorInt(x), floorInt(y), floorInt(z) - 1}
 		me.p.pendingDestOK = true
 		me.p.pendingDim.Store(int32(dim))
@@ -779,7 +778,6 @@ func (h *hub) onTeleportTargets(players map[int32]*tracked, e evTeleportTargets)
 		if t.dim != dim {
 			// TeleportCommand moves the target into the destination's level:
 			// the connection's dimension switch lands them on the spot.
-			t.p.pendingFrom = dimPos{}
 			t.p.pendingDest = blockPos{floorInt(x), floorInt(y), floorInt(z) - 1}
 			t.p.pendingDestOK = true
 			t.p.pendingDim.Store(int32(dim))

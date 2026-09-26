@@ -165,6 +165,20 @@ func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power
 			pt.vx, pt.vy, pt.vz = pt.vx+ex/n*impact, pt.vy+ey/n*impact, pt.vz+ez/n*impact
 		}
 	}
+	// A falling block is an entity like any other (ServerExplosion.hurtEntities):
+	// never hurt, but shoved from its eyes (0.85 of its height) with the
+	// same strength — a blast under a sand column throws the sand.
+	for _, fb := range h.fallingBlocks {
+		if fb.dim != dim || dist3(fb.x, fb.y, fb.z, cx, cy, cz) > dr {
+			continue
+		}
+		exposure := h.seenPercent(dim, cx, cy, cz, fb.x-fallHalfWidth, fb.y, fb.z-fallHalfWidth, fb.x+fallHalfWidth, fb.y+fallHeight, fb.z+fallHalfWidth)
+		impact := explosionImpact(power, cx, cy, cz, fb.x, fb.y, fb.z, exposure)
+		ex, ey, ez := fb.x-cx, fb.y+fallEyeHeight-cy, fb.z-cz
+		if n := math.Sqrt(ex*ex + ey*ey + ez*ez); impact > 0 && n > 1e-9 {
+			fb.vx, fb.vy, fb.vz = fb.vx+ex/n*impact, fb.vy+ey/n*impact, fb.vz+ez/n*impact
+		}
+	}
 	h.bus.publish("explosion", map[string]any{"x": cx, "y": cy, "z": cz})
 	return knock
 }
