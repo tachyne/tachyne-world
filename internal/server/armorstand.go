@@ -116,6 +116,9 @@ func (h *hub) sendStandsTo(t *tracked) {
 		if st.name != "" {
 			t.p.trySendEv(metaEv(nameMeta(st.eid, st.name)))
 		}
+		if st.fire > 0 { // the flames ride with the spawn
+			t.p.trySendEv(metaEv(fireMetadata(st.eid, true)))
+		}
 	}
 }
 

@@ -176,4 +176,12 @@ func (h *hub) onDimSwitch(players map[int32]*tracked, t *tracked, e evDim) {
 		h.sendVehiclesTo(t)
 		h.sendItemSpawnersTo(t)
 	}
+	// The respawn gave the client a new level with no entities in it: the
+	// fixed furniture of the dimension it arrived in goes again, as at join.
+	// Without this a trip through a portal left every armour stand, painting,
+	// item frame and leash knot invisible until a relog.
+	h.sendStandsTo(t)
+	h.sendPaintingsTo(t)
+	h.sendFramesTo(t)
+	h.sendLeashesTo(t)
 }

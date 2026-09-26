@@ -71,6 +71,10 @@ the public history since the project was open-sourced on 2026-07-10.
   out anything burning nearby; it used to do nothing. An enderman hit by
   water or Harming teleports away at once, and a thrown potion now breaks on
   an enderman instead of passing through it.
+- **Armour stands stay damaged and keep burning across a restart**, and a
+  player who arrives while one burns sees the flames. Armour stands,
+  paintings, item frames and leash knots also reappear after a trip through
+  a portal; they used to stay invisible until you logged out and back in.
 - **A door a zombie breaks down is gone, not dropped.** As in vanilla, a
   zombie (or raiding vindicator) that beats a door off its hinges removes it
   without leaving a door item behind.

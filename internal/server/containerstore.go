@@ -188,6 +188,11 @@ type savedStand struct {
 	Yaw   float32     `json:"yaw"`
 	Equip [6]stackRow `json:"equip"`
 	Name  string      `json:"name,omitempty"` // custom_name
+	// Hurt and Fire are LivingEntity's Health and Entity's Fire tags: the
+	// health a stand has lost and the ticks it has left to burn, which a
+	// restart used to reset to a whole, unlit stand.
+	Hurt float64 `json:"hurt,omitempty"`
+	Fire int     `json:"fire,omitempty"`
 }
 
 // recordLecterns / loadLecterns persist lectern books + pages.
@@ -256,7 +261,7 @@ func (s *containerStore) recordStands(stands map[int32]*armorStand) {
 	defer s.mu.Unlock()
 	s.m.Stands = s.m.Stands[:0]
 	for _, st := range stands {
-		sv := savedStand{Dim: st.dim, X: st.x, Y: st.y, Z: st.z, Yaw: st.yaw, Name: st.name}
+		sv := savedStand{Dim: st.dim, X: st.x, Y: st.y, Z: st.z, Yaw: st.yaw, Name: st.name, Hurt: st.hurt, Fire: st.fire}
 		for i, e := range st.equip {
 			sv.Equip[i] = packStack(e)
 		}
@@ -270,7 +275,8 @@ func (s *containerStore) loadStands(alloc func() int32) map[int32]*armorStand {
 	defer s.mu.Unlock()
 	out := map[int32]*armorStand{}
 	for _, sv := range s.m.Stands {
-		st := &armorStand{eid: alloc(), dim: sv.Dim, x: sv.X, y: sv.Y, z: sv.Z, yaw: sv.Yaw, name: sv.Name}
+		st := &armorStand{eid: alloc(), dim: sv.Dim, x: sv.X, y: sv.Y, z: sv.Z, yaw: sv.Yaw, name: sv.Name,
+			hurt: sv.Hurt, fire: sv.Fire}
 		for i, r := range sv.Equip {
 			st.equip[i] = unpackStack(r)
 		}

@@ -1,8 +1,11 @@
 package server
 
 import (
+	"bytes"
+	"path/filepath"
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -96,5 +99,58 @@ func TestArmorStandBurns(t *testing.T) {
 	}
 	if h2.armorStands[st2.eid] != nil {
 		t.Fatal("out of the lava, still burning, it burns away")
+	}
+}
+
+// A damaged, burning stand is still damaged and burning after a restart
+// (LivingEntity's Health, Entity's Fire), and a player who joins while it
+// burns sees the flames.
+func TestArmorStandHealthAndFireSurviveARestart(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "containers.json")
+	cs := newContainerStore(path)
+	st := &armorStand{eid: 1, x: 1.5, y: 64, z: 2.5, hurt: 7.5, fire: 140}
+	cs.recordStands(map[int32]*armorStand{1: st})
+	cs.flush()
+
+	next := int32(100)
+	var got *armorStand
+	for _, l := range newContainerStore(path).loadStands(func() int32 { next++; return next }) {
+		got = l
+	}
+	if got == nil || got.hurt != 7.5 || got.fire != 140 {
+		t.Fatalf("after a restart: %+v, want hurt 7.5 and fire 140", got)
+	}
+
+	h := newHub(world.New(1))
+	h.armorStands[got.eid] = got
+	pl := survPlayer(h)
+	drain(pl.p)
+	h.sendStandsTo(pl)
+	want := metaEv(fireMetadata(got.eid, true))
+	burning := false
+	for _, f := range frames(pl.p) {
+		if m, ok := f.(attachproto.EntityMeta); ok && m.EID == want.EID && bytes.Equal(m.Meta, want.Meta) {
+			burning = true
+		}
+	}
+	if !burning {
+		t.Error("a player joining beside a burning stand must see it burn")
+	}
+}
+
+// A portal trip gives the client a new, empty level: the stands (and the
+// other fixed furniture) of the dimension it arrives in are sent again.
+func TestStandsReappearAfterAPortalTrip(t *testing.T) {
+	h := dimHub()
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	st := &armorStand{eid: h.allocEID(), x: 3.5, y: 70, z: 3.5}
+	h.armorStands[st.eid] = st
+
+	h.onDimSwitch(players, pl, evDim{eid: pl.p.eid, dim: dimNether, x: 0, y: 70, z: 0})
+	h.onDimSwitch(players, pl, evDim{eid: pl.p.eid, dim: dimOverworld, x: 0, y: 70, z: 0})
+	if fs := frames(pl.p); !sawAdd(fs, st.eid) {
+		t.Fatal("back in the overworld, the armour stand must be spawned again")
 	}
 }
