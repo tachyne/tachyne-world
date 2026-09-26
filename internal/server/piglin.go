@@ -80,7 +80,7 @@ func wearsGold(t *tracked) bool {
 	return false
 }
 
-// nearestPiglinPrey is nearestHuntable minus the gold-clad.
+// nearestPiglinPrey is nearestTargetable minus the gold-clad.
 func (h *hub) nearestPiglinPrey(players map[int32]*tracked, m *mob, maxDist float64) *tracked {
 	var best *tracked
 	bestD2 := maxDist * maxDist
@@ -88,7 +88,7 @@ func (h *hub) nearestPiglinPrey(players map[int32]*tracked, m *mob, maxDist floa
 		if !isSurvival(t.gamemode) || t.dead || t.dim != m.dim || wearsGold(t) {
 			continue
 		}
-		if d2 := (t.x-m.x)*(t.x-m.x) + (t.z-m.z)*(t.z-m.z); d2 < bestD2 {
+		if d2 := (t.x-m.x)*(t.x-m.x) + (t.z-m.z)*(t.z-m.z); d2 < bestD2 && perceives(t, m, maxDist, d2) {
 			best, bestD2 = t, d2
 		}
 	}

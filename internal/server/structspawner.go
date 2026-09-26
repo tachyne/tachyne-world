@@ -62,14 +62,11 @@ func (h *hub) updateStructureSpawners(players map[int32]*tracked) {
 			if h.world.At(pos.x, pos.y, pos.z) != spawnerState {
 				continue // mined out
 			}
-			etype := h.spawnerMobFor(dimOverworld, pos.x, pos.y, pos.z, s.etype)
-			h.showSpawner(players, dimOverworld, pos, etype)
-			key := simPos{blockPos: pos}
-			if next, ok := h.spawnerNext[key]; ok && now < next {
-				continue
+			if h.placedSpawner(dimOverworld, pos) {
+				continue // a spawn egg made it a block entity of its own
 			}
-			h.spawnerNext[key] = now + spawnerMinDelay + uint64(h.rng.Intn(spawnerDelaySpan))
-			h.spawnerCycle(players, pos, etype)
+			h.showSpawner(players, dimOverworld, pos, s.etype)
+			h.seedSpawnerTick(players, dimOverworld, pos, s.etype, now)
 		}
 	}
 }

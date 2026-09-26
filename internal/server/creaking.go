@@ -451,7 +451,7 @@ func (h *hub) creakingTarget(players map[int32]*tracked, m *mob) *tracked {
 	var best *tracked
 	bestD := follow + 1
 	for _, t := range players {
-		if d := dist3(t.x, t.y, t.z, m.x, m.y, m.z); d < bestD && valid(t) {
+		if d := dist3(t.x, t.y, t.z, m.x, m.y, m.z); d < bestD && valid(t) && perceives(t, m, follow, d*d) {
 			best, bestD = t, d
 		}
 	}

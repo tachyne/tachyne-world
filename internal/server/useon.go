@@ -166,11 +166,7 @@ func (h *hub) eggSpawner(players map[int32]*tracked, e evEggSpawner) {
 	if !ok || h.worldFor(t.dim).At(e.x, e.y, e.z) != spawnerBlock {
 		return
 	}
-	if h.rules.SpawnerMobs == nil {
-		h.rules.SpawnerMobs = map[string]string{}
-	}
-	h.rules.SpawnerMobs[spawnerKey(t.dim, e.x, e.y, e.z)] = entityRegistryName(et)
-	h.saveRules()
+	h.setSpawnerEntity(simPos{dim: t.dim, blockPos: blockPos{e.x, e.y, e.z}}, entityRegistryName(et))
 	// The cage shows what it will spawn from now on, without waiting for the
 	// spawner's own cadence to come round.
 	h.showSpawner(players, t.dim, blockPos{e.x, e.y, e.z}, et)

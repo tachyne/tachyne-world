@@ -125,3 +125,34 @@ var mobVisibilityHeads = func() map[int32]map[int]bool {
 	}
 	return out
 }()
+
+// nearestTargetable is nearestHuntable through TargetingConditions' range
+// test: the player m already holds counts out to r (canContinueToUse reads no
+// visibility), anyone else only within r shrunk by visibilityPercent, never
+// below 2. The shooting, spitting and fleeing steps that pick "the nearest
+// player" use it so an invisible player is not found by a side door.
+func (h *hub) nearestTargetable(players map[int32]*tracked, m *mob, r float64) *tracked {
+	var best *tracked
+	bestD2 := r * r
+	for _, t := range players {
+		if !isSurvival(t.gamemode) || t.dead || t.dim != m.dim {
+			continue
+		}
+		d2 := (t.x-m.x)*(t.x-m.x) + (t.z-m.z)*(t.z-m.z)
+		if d2 >= bestD2 || !perceives(t, m, r, d2) {
+			continue
+		}
+		best, bestD2 = t, d2
+	}
+	return best
+}
+
+// perceives is TargetingConditions' range test for a player at squared
+// distance d2 from m, with the target m already holds exempt.
+func perceives(t *tracked, m *mob, r, d2 float64) bool {
+	if t.p.eid == m.targetEID {
+		return d2 <= r*r
+	}
+	vis := math.Max(r*visibilityPercent(t, m), 2)
+	return d2 <= vis*vis
+}

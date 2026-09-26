@@ -53,7 +53,7 @@ func (h *hub) bearHasCubNear(m *mob) bool {
 func (h *hub) polarBearStep(players map[int32]*tracked, m *mob) {
 	// A cub in sight makes any player within ten a target.
 	if !m.hostile && !m.baby && h.bearHasCubNear(m) {
-		if t := h.nearestHuntable(players, m.dim, m.x, m.z, bearGuardRange); t != nil {
+		if t := h.nearestTargetable(players, m, bearGuardRange); t != nil {
 			h.provoke(m, t)
 		}
 	}
@@ -63,7 +63,7 @@ func (h *hub) polarBearStep(players map[int32]*tracked, m *mob) {
 		}
 		return
 	}
-	t := h.nearestHuntable(players, m.dim, m.x, m.z, m.followRange())
+	t := h.nearestTargetable(players, m, m.followRange())
 	if t == nil {
 		h.setBearStanding(players, m, false)
 		return

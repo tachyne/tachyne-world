@@ -203,7 +203,7 @@ func (h *hub) shulkerQuarry(players map[int32]*tracked, m *mob) *tracked {
 			t.y > m.y+1+shulkerSlab || t.y+1.8 < m.y-shulkerSlab {
 			continue
 		}
-		if d := dist3(t.x, t.y, t.z, m.x, m.y, m.z); d < bestD && d <= shulkerFollow && h.mobSees(m, t) {
+		if d := dist3(t.x, t.y, t.z, m.x, m.y, m.z); d < bestD && d <= shulkerFollow && perceives(t, m, shulkerFollow, d*d) && h.mobSees(m, t) {
 			best, bestD = t, d
 		}
 	}

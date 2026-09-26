@@ -44,7 +44,7 @@ func (h *hub) inFortressPiece(x, z int) bool {
 // a cycle, while the spawner block still stands.
 func (h *hub) updateFortressSpawners(players map[int32]*tracked) {
 	nw := h.worldFor(dimNether)
-	if !h.rules.DoMobSpawning || h.rules.Difficulty == diffPeaceful || nw == nil {
+	if !h.rules.DoMobSpawning || h.rules.Difficulty == diffPeaceful || !h.rules.SpawnerBlocks || nw == nil {
 		return
 	}
 	gen := nw.Gen()
@@ -71,34 +71,11 @@ func (h *hub) updateFortressSpawners(players map[int32]*tracked) {
 			if nw.At(s[0], s[1], s[2]) != spawnerState {
 				continue // mined out
 			}
-			h.showSpawner(players, dimNether, pos,
-				h.spawnerMobFor(dimNether, s[0], s[1], s[2], entityBlaze)) // the blaze turning in the cage
-			key := simPos{dim: dimNether, blockPos: pos}
-			if next, ok := h.spawnerNext[key]; ok && now < next {
-				continue
+			if h.placedSpawner(dimNether, pos) {
+				continue // a spawn egg made it a block entity of its own
 			}
-			h.spawnerNext[key] = now + spawnerMinDelay + uint64(h.rng.Intn(spawnerDelaySpan))
-			near := 0
-			for _, m := range h.mobs {
-				if m.dim == dimNether && m.etype == entityBlaze && dist3(m.x, m.y, m.z, float64(s[0]), float64(s[1]), float64(s[2])) < 9 {
-					near++
-				}
-			}
-			if near >= spawnerMobCap {
-				continue
-			}
-			for i := 0; i < spawnerCount; i++ {
-				sx := float64(s[0]) + (h.rng.Float64()-0.5)*8 + 0.5
-				sz := float64(s[2]) + (h.rng.Float64()-0.5)*8 + 0.5
-				sy := float64(s[1]) + float64(h.rng.Intn(3)-1)
-				if nw.At(floorInt(sx), floorInt(sy), floorInt(sz)) != worldgen.Air {
-					continue
-				}
-				m := h.spawnMobIn(players, entityBlaze, dimNether, sx, sy, sz)
-				h.configureNetherMob(players, m)
-			}
-			h.playSoundDim(players, dimNether, "minecraft:block.fire.ambient", sndHostile,
-				float64(s[0])+0.5, float64(s[1])+0.5, float64(s[2])+0.5, 0.6, 0.8)
+			h.showSpawner(players, dimNether, pos, entityBlaze) // the blaze turning in the cage
+			h.seedSpawnerTick(players, dimNether, pos, entityBlaze, now)
 		}
 	}
 }

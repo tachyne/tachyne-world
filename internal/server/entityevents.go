@@ -7,6 +7,7 @@ package server
 const (
 	entityStatusWitchMagic  = 15 // WITCH_HAT_MAGIC: the ambient purple sparkle
 	entityStatusFireworks   = 17 // FIREWORKS_EXPLODE: the burst from the rocket's own item
+	entityStatusSpawnAnim   = 20 // SILVERFISH_MERGE_ANIM: Mob.spawnAnim's puff, as a spawner's mob appears
 	entityStatusReelIn      = 31 // FISHING_ROD_REEL_IN: the hooked thing is pulled
 	entityStatusVillagerSwt = 42 // VILLAGER_SWEAT: a villager in a raid
 	entityStatusFoxEat      = 45 // FOX_EAT: the crumbs

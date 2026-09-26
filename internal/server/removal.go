@@ -48,6 +48,9 @@ func (h *hub) afterRemoval(players map[int32]*tracked, dim int, pos blockPos, ol
 	if old == worldgen.Air || sameBlockKind(old, now) {
 		return
 	}
+	if old == spawnerBlock {
+		h.dropSpawnerBE(simPos{dim: dim, blockPos: pos}) // the cage's SpawnData and delay go with it
+	}
 	h.inDim(dim, func() { h.afterRemovalIn(players, dim, pos, old, now) })
 }
 

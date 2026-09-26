@@ -89,14 +89,14 @@ func (h *hub) idleLook(players map[int32]*tracked, m *mob) {
 	// InteractGoal(Player, 3, 1.0): a wandering trader always looks at a
 	// player within three blocks.
 	if m.etype == entityWanderingTrader {
-		if t := h.nearestPlayerIn(players, m.dim, m.x, m.z, 3); t != nil {
+		if t := h.nearestPlayerIn(players, m, 3); t != nil {
 			m.lookEID = t.p.eid
 			m.lookTicks = int32(lookPlayerTicksMin + h.rng.Intn(lookPlayerTicksMax-lookPlayerTicksMin))
 			return
 		}
 	}
 	// LookAtPlayerGoal first, as vanilla adds it first at the same priority.
-	if t := h.nearestPlayerIn(players, m.dim, m.x, m.z, d); t != nil && !foxBusy && h.rng.Float64() < lookChance {
+	if t := h.nearestPlayerIn(players, m, d); t != nil && !foxBusy && h.rng.Float64() < lookChance {
 		m.lookEID = t.p.eid
 		m.lookTicks = int32(lookPlayerTicksMin + h.rng.Intn(lookPlayerTicksMax-lookPlayerTicksMin))
 		return
@@ -116,15 +116,17 @@ func yawToward(fromX, fromZ, toX, toZ float64) float32 {
 	return float32(math.Atan2(-(toX-fromX), toZ-fromZ) * 180 / math.Pi)
 }
 
-// nearestPlayerIn is the closest player in a dimension within range.
-func (h *hub) nearestPlayerIn(players map[int32]*tracked, dim int, x, z, r float64) *tracked {
+// nearestPlayerIn is the closest player in m's dimension within range: the
+// look goals' TargetingConditions, so an invisible player is looked at only
+// from close by (the range shrunk by visibilityPercent, never below 2).
+func (h *hub) nearestPlayerIn(players map[int32]*tracked, m *mob, r float64) *tracked {
 	var best *tracked
 	bestD2 := r * r
 	for _, t := range players {
-		if t.dim != dim || t.dead {
+		if t.dim != m.dim || t.dead {
 			continue
 		}
-		if d2 := (t.x-x)*(t.x-x) + (t.z-z)*(t.z-z); d2 < bestD2 {
+		if d2 := (t.x-m.x)*(t.x-m.x) + (t.z-m.z)*(t.z-m.z); d2 < bestD2 && d2 <= sq(math.Max(r*visibilityPercent(t, m), 2)) {
 			best, bestD2 = t, d2
 		}
 	}

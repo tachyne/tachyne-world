@@ -71,6 +71,9 @@ func TestSpawnEggPlacesItsMob(t *testing.T) {
 	if pig == nil {
 		t.Fatal("a pig spawn egg on grass made no pig")
 	}
+	if pig.hostile {
+		t.Error("a pig from an egg came out hostile")
+	}
 	if int(pig.y) != 180 {
 		t.Errorf("the pig stands at y=%v, want inside the grass at 180", pig.y)
 	}

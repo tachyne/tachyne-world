@@ -33,7 +33,7 @@ func mobHuntPrey(m, o *mob) bool {
 // mobHuntStep runs each mob update. Returns whether it holds the mob.
 func (h *hub) mobHuntStep(players map[int32]*tracked, m *mob) bool {
 	if m.hasTarget { // a player in reach outranks the mob hunt…
-		if t := h.nearestHuntable(players, m.dim, m.x, m.z, m.followRange()); t != nil {
+		if t := h.nearestTargetable(players, m, m.followRange()); t != nil {
 			// …except for a zoglin, whose StartAttacking takes the closest
 			// living thing, player or mob, and keeps it while it is valid.
 			if m.etype != entityZoglin {
