@@ -9,7 +9,8 @@ import (
 // Banner markers (MapItem.useOn → MapItemSavedData.toggleBanner): a filled
 // map used on a banner inside its area pins a marker of the banner's colour
 // there, and again takes it off. The marker goes when the banner does
-// (checkBanners), and rides with the map through locking and copies.
+// (checkBanners), and rides with the map through locking and copies. A
+// named banner carries its name onto the marker (MapBanner.name).
 
 // decorBannerWhite is map decoration type banner_white; the sixteen colours
 // follow in dye order.
@@ -17,10 +18,11 @@ const decorBannerWhite = 10
 
 // mapBanner is one pinned banner.
 type mapBanner struct {
-	X     int  `json:"x"`
-	Y     int  `json:"y"`
-	Z     int  `json:"z"`
-	Color int8 `json:"color"`
+	X     int    `json:"x"`
+	Y     int    `json:"y"`
+	Z     int    `json:"z"`
+	Color int8   `json:"color"`
+	Name  string `json:"name,omitempty"`
 }
 
 type evMapBanner struct {
@@ -69,8 +71,9 @@ func (h *hub) toggleMapBanner(players map[int32]*tracked, e evMapBanner) {
 	if xd < -63 || xd > 63 || zd < -63 || zd > 63 {
 		return
 	}
+	name := h.blockNames.get(simPos{dim: t.dim, blockPos: blockPos{e.x, e.y, e.z}})
 	key := bannerKey(e.x, e.y, e.z)
-	if b, ok := md.Banners[key]; ok && b.Color == color {
+	if b, ok := md.Banners[key]; ok && b.Color == color && b.Name == name { // remove(id, banner): equal pos, colour and name
 		delete(md.Banners, key)
 	} else {
 		if md.Banners == nil {
@@ -79,7 +82,7 @@ func (h *hub) toggleMapBanner(players map[int32]*tracked, e evMapBanner) {
 		if len(md.Banners) >= 256 {
 			return // isTrackedCountOverLimit
 		}
-		md.Banners[key] = mapBanner{X: e.x, Y: e.y, Z: e.z, Color: color}
+		md.Banners[key] = mapBanner{X: e.x, Y: e.y, Z: e.z, Color: color, Name: name}
 	}
 	h.maps.markDirty()
 	for _, hd := range md.holders {
@@ -88,7 +91,7 @@ func (h *hub) toggleMapBanner(players map[int32]*tracked, e evMapBanner) {
 }
 
 // mapBannerDecorations is the banner half of the decoration set, dropping
-// any marker whose banner is gone or recoloured (checkBanners).
+// any marker whose banner is gone, recoloured or renamed (checkBanners).
 func (h *hub) mapBannerDecorations(md *mapData) []attachproto.MapDecoration {
 	if len(md.Banners) == 0 {
 		return nil
@@ -97,7 +100,8 @@ func (h *hub) mapBannerDecorations(md *mapData) []attachproto.MapDecoration {
 	scale := float64(int(1) << md.Scale)
 	var out []attachproto.MapDecoration
 	for key, b := range md.Banners {
-		if c, ok := bannerColorOf(w.At(b.X, b.Y, b.Z)); !ok || c != b.Color {
+		c, ok := bannerColorOf(w.At(b.X, b.Y, b.Z))
+		if !ok || c != b.Color || h.blockNames.get(simPos{dim: md.Dim, blockPos: blockPos{b.X, b.Y, b.Z}}) != b.Name {
 			delete(md.Banners, key)
 			h.maps.markDirty()
 			continue
@@ -110,7 +114,8 @@ func (h *hub) mapBannerDecorations(md *mapData) []attachproto.MapDecoration {
 		out = append(out, attachproto.MapDecoration{
 			Type: decorBannerWhite + int32(b.Color),
 			X:    int8(xd*2 + 0.5), Z: int8(zd*2 + 0.5),
-			Rot: 8, // vanilla pins banners at 180°
+			Rot:  8, // vanilla pins banners at 180°
+			Name: b.Name,
 		})
 	}
 	return out

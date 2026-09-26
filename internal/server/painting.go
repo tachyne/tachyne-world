@@ -74,8 +74,9 @@ func paintingCells(x, y, z, w, h int, facing string) [][3]int {
 }
 
 // paintingFits is vanilla Painting.survives for one variant at one anchor:
-// every covered cell open (no colliding block), a sturdy wall block behind
-// each, and no overlap with an already-placed painting.
+// every covered cell open (no colliding block), a solid block or a diode
+// behind each (HangingEntity.isSupportingBlock), and no overlap with an
+// already-placed painting.
 func (h *hub) paintingFits(dim, x, y, z int, dir int32, w, hgt int) bool {
 	facing := faceName(dir)
 	bdx, bdz := facingDelta(oppositeFacing(facing)) // toward the wall
@@ -84,7 +85,7 @@ func (h *hub) paintingFits(dim, x, y, z int, dir int32, w, hgt int) bool {
 		if worldgen.Collides(world.Block(c[0], c[1], c[2])) {
 			return false
 		}
-		if !worldgen.IsSolidFull(world.Block(c[0]+bdx, c[1], c[2]+bdz)) {
+		if b := world.Block(c[0]+bdx, c[1], c[2]+bdz); !worldgen.IsSolid(b) && !isDiode(b) {
 			return false
 		}
 	}

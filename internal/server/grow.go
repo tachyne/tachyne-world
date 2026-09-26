@@ -907,8 +907,9 @@ func (h *hub) opaqueAbove(dim, x, y, z int) bool {
 }
 
 // lavaIgnite is the vanilla LavaFluid.randomTick fire-starter: an overworld
-// lava block randomly sets fire to a nearby flammable block (using the
-// flammability table as the ignitedByLava proxy). Gated by the fire-spread
+// lava block randomly sets fire beside a nearby block lava ignites (the
+// block property ignitedByLava, not the fire odds: a door or a banner
+// catches, a flower or a hay bale does not). Gated by the fire-spread
 // radius, like every other way fire travels.
 func (h *hub) lavaIgnite(players map[int32]*tracked, dim, x, y, z int) {
 	var spreads bool
@@ -918,7 +919,7 @@ func (h *hub) lavaIgnite(players map[int32]*tracked, dim, x, y, z int) {
 	}
 	flammableNear := func(px, py, pz int) bool {
 		for _, d := range allNeighbors {
-			if ig, _ := worldgen.Flammability(h.worldFor(dim).At(px+d.x, py+d.y, pz+d.z)); ig > 0 {
+			if worldgen.IgnitedByLava(h.worldFor(dim).At(px+d.x, py+d.y, pz+d.z)) {
 				return true
 			}
 		}
@@ -944,13 +945,11 @@ func (h *hub) lavaIgnite(players map[int32]*tracked, dim, x, y, z int) {
 		}
 		return
 	}
-	// passes == 0: ignite the air directly above a flammable block nearby.
+	// passes == 0: ignite the air directly above a block lava ignites nearby.
 	for i := 0; i < 3; i++ {
 		ax, az := x+h.rng.Intn(3)-1, z+h.rng.Intn(3)-1
-		if h.inWorldY(y+1) && h.worldFor(dim).At(ax, y, az) != worldgen.Air {
-			if ig, _ := worldgen.Flammability(h.worldFor(dim).At(ax, y, az)); ig > 0 && h.worldFor(dim).At(ax, y+1, az) == worldgen.Air {
-				h.inDim(dim, func() { h.igniteFire(players, blockPos{ax, y + 1, az}, 0) })
-			}
+		if h.inWorldY(y+1) && worldgen.IgnitedByLava(h.worldFor(dim).At(ax, y, az)) && h.worldFor(dim).At(ax, y+1, az) == worldgen.Air {
+			h.inDim(dim, func() { h.igniteFire(players, blockPos{ax, y + 1, az}, 0) })
 		}
 	}
 }

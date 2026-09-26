@@ -736,6 +736,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		if m.health <= 0 || h.mobs[m.eid] == nil {
 			continue
 		}
+		if m.etype == entityBee {
+			h.beeEyeblossomInside(m) // EyeblossomBlock.entityInside, every update a bee is in one
+		}
 		// LivingEntity.aiStep's water check runs whatever the mob is doing.
 		if waterSensitive(m.etype) && h.waterSensitiveTick(players, m) {
 			continue // hurt to death, or an enderman teleported out of the wet

@@ -280,10 +280,6 @@ func (h *hub) mobsInsideTick(players map[int32]*tracked) {
 					m.ignite(lavaFireSecs)
 					h.hurtMobOf(nil, m, lavaDmgPerSec, dtLava)
 				}
-			case !onFloor && m.etype == entityBee && s == openEyeblossom && h.rules.Difficulty != diffPeaceful && m.hasEffect(effPoison) == 0:
-				// EyeblossomBlock.entityInside: an open eyeblossom poisons the
-				// bee that visits it (25 ticks), unless it is poisoned already.
-				h.applyMobEffectTicks(h.playersRef, m, effPoison, 0, 25)
 			case berryBushRipe(s):
 				// Foxes and bees push through a bush unharmed (vanilla), and
 				// only a mob moving through it is scratched (the 0.003 test).
@@ -299,6 +295,23 @@ func (h *hub) mobsInsideTick(players map[int32]*tracked) {
 				}
 			}
 		})
+	}
+}
+
+// beeEyeblossomInside is EyeblossomBlock.entityInside for a bee, on every
+// mob update rather than the one-second sweep: an open eyeblossom poisons
+// the bee in it (25 ticks), and poisons it again the update the last dose
+// runs out, so a bee that stays in the flower stays poisoned.
+func (h *hub) beeEyeblossomInside(m *mob) {
+	if h.rules.Difficulty == diffPeaceful || m.hasEffect(effPoison) != 0 {
+		return
+	}
+	in := false
+	h.blocksTouching(m.dim, m.x, m.y, m.z, func(s uint32, onFloor bool) {
+		in = in || !onFloor && s == openEyeblossom
+	})
+	if in {
+		h.applyMobEffectTicks(h.playersRef, m, effPoison, 0, 25)
 	}
 }
 

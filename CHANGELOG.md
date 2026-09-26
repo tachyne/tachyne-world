@@ -14,6 +14,21 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-26
 
 ### Fixed
+- **Item frames and paintings hang on more blocks.** Anything solid now
+  holds them, slabs, stairs, chests and fences included, not only full
+  cubes; a repeater or comparator holds a frame on its side (but not one
+  laid on top) and holds a painting.
+- **Named banners label their map markers.** Clicking a renamed banner with
+  a filled map puts its name on the marker, and renaming the banner removes
+  the marker, as in vanilla.
+- **Lava sets fire to the right things.** Lava lights fires beside the blocks
+  vanilla marks as lava-flammable (wood, wool, beds, banners, doors, signs,
+  chests, bookshelves and the like) instead of anything that burns: flowers,
+  hay bales and coal blocks no longer catch from nearby lava, and beds,
+  banners, doors and signs now do.
+- **Open eyeblossoms keep a bee poisoned.** A bee sitting in an open
+  eyeblossom is poisoned as soon as it arrives and again the moment the
+  poison wears off, rather than on a once-a-second check.
 - **Endermen pick their fights the vanilla way.** The player who stares at
   an enderman is the one it goes for, not whoever happens to be nearest, and
   it keeps after them out of sight and out of range until they die or leave

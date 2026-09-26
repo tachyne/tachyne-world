@@ -63,6 +63,9 @@ func isComparator(s uint32) bool { return s >= comparatorMin && s <= comparatorM
 func isObserver(s uint32) bool   { return s >= observerMin && s <= observerMax }
 func isDaylight(s uint32) bool   { return s >= daylightMin && s <= daylightMax }
 
+// isDiode is DiodeBlock.isDiode: a repeater or a comparator.
+func isDiode(s uint32) bool { return isRepeater(s) || isComparator(s) }
+
 // platePower is the signal a plate emits in its current state.
 
 // daylight detector state math: power is the fastest-varying property.

@@ -69,7 +69,7 @@ func (h *hub) frameFits(dim, x, y, z int, dir int32, ignore int32) bool {
 		return false
 	}
 	off := frameSupportOffset[dir]
-	if !worldgen.IsSolidFull(w.At(x+off[0], y+off[1], z+off[2])) {
+	if !frameSupports(w.At(x+off[0], y+off[1], z+off[2]), dir) {
 		return false
 	}
 	for eid, f := range h.itemFrames {
@@ -89,6 +89,13 @@ func (h *hub) frameFits(dim, x, y, z int, dir int32, ignore int32) bool {
 		}
 	}
 	return true
+}
+
+// frameSupports is ItemFrame.survives' support test: any isSolid block (a
+// slab, a chest, a fence) holds a frame, and so does a repeater or
+// comparator — but only for a frame on a wall, not the floor or ceiling.
+func frameSupports(state uint32, dir int32) bool {
+	return worldgen.IsSolid(state) || dir >= 2 && isDiode(state)
 }
 
 // frameYawPitch renders the facing: horizontal = yaw quarters, floor and

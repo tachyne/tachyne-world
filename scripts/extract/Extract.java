@@ -189,6 +189,10 @@ public class Extract {
             o.addProperty("sound", soundNames.getOrDefault(block.defaultBlockState().getSoundType(), null));
             // The note-block instrument this block gives a note block above it.
             o.addProperty("instrument", block.defaultBlockState().instrument().getSerializedName());
+            // Whether lava sets it alight (Properties.ignitedByLava: a block
+            // flag every state shares — LavaFluid.randomTick's fire test, and
+            // not the same set as the fire odds below).
+            o.addProperty("ignitedByLava", block.defaultBlockState().ignitedByLava());
 
             // One entry per STATE, in state-id order. These are the facts a
             // per-block dataset flattens: light, light filtering, collision,

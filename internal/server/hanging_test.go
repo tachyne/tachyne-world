@@ -146,3 +146,55 @@ func TestPunchingAKnotUntiesEverything(t *testing.T) {
 		t.Fatal("fourteen blocks is within a happy ghast's sixteen")
 	}
 }
+
+// ItemFrame.survives: any isSolid block holds a frame (a slab, not only a
+// full cube), and a repeater or comparator holds one hung on its side but
+// not one laid on top; a carpet holds nothing. Hung through the placement
+// event, and a slab-hung frame outlasts its hundred-tick checks.
+func TestItemFrameHangsOnSlabsAndDiodes(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	pl := testTracked()
+	pl.gamemode = gmCreative
+	players := map[int32]*tracked{1: pl}
+	h.playersRef = players
+	slab, _ := worldgen.BlockRange("stone_slab")
+	carpet, _ := worldgen.BlockRange("white_carpet")
+	h.world.SetBlock(0, 200, 1, slab)
+	h.world.SetBlock(2, 200, 1, repeaterMin)
+	h.world.SetBlock(4, 199, 0, comparatorMin)
+	h.world.SetBlock(6, 200, 1, carpet)
+	hung := func(x, y, z int, dir int32) *itemFrame {
+		before := len(h.itemFrames)
+		h.onPlaceFrame(players, evPlaceFrame{eid: 1, x: x, y: y, z: z, dir: dir})
+		if len(h.itemFrames) == before {
+			return nil
+		}
+		for _, f := range h.itemFrames {
+			if f.x == x && f.y == y && f.z == z && f.dir == dir {
+				return f
+			}
+		}
+		return nil
+	}
+	onSlab := hung(0, 200, 0, 2)
+	if onSlab == nil {
+		t.Fatal("a slab is solid: it holds a frame")
+	}
+	if hung(2, 200, 0, 2) == nil {
+		t.Fatal("a repeater holds a frame hung on its side")
+	}
+	if hung(4, 200, 0, 1) != nil {
+		t.Fatal("a frame laid on top of a comparator does not survive")
+	}
+	if hung(6, 200, 0, 2) != nil {
+		t.Fatal("a carpet is not solid: no frame")
+	}
+	for i := 0; i < hangingCheckInterval; i++ {
+		h.tick.Add(1)
+		h.hangingSurvivalTick(players)
+	}
+	if h.itemFrames[onSlab.eid] == nil {
+		t.Fatal("the slab-hung frame survives its support checks")
+	}
+}

@@ -67,3 +67,35 @@ func TestMapBannerMarkers(t *testing.T) {
 		t.Fatal("a banner off the map cannot be pinned")
 	}
 }
+
+// MapBanner.fromWorld carries the banner's custom name: the marker shows
+// it, and renaming the banner drops the marker (checkBanners compares the
+// whole MapBanner, name included).
+func TestMapBannerMarkerCarriesTheName(t *testing.T) {
+	h := newHub(world.New(1))
+	h.maps = newMapStore(filepath.Join(t.TempDir(), "maps.json"))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	pl.x, pl.y, pl.z = 0.5, 180, 0.5
+	md := h.maps.create(0, 0, 0, 0)
+	pl.p.setHotbarSlot(0, itemFilledMap)
+	pl.inv.slots[0] = invStack{item: itemFilledMap, count: 1, mapID: md.ID}
+	h.worldFor(0).SetBlock(5, 180, 7, worldgen.BlockBase("blue_banner"))
+	at := simPos{dim: 0, blockPos: blockPos{5, 180, 7}}
+	h.blockNames.set(at, "Home")
+	h.toggleMapBanner(players, evMapBanner{eid: pl.p.eid, x: 5, y: 180, z: 7})
+	named := ""
+	for _, d := range h.mapDecorations(md, players) {
+		if d.Type >= decorBannerWhite && d.Type < decorBannerWhite+16 {
+			named = d.Name
+		}
+	}
+	if named != "Home" {
+		t.Fatalf("the marker should carry the banner's name, got %q", named)
+	}
+	h.blockNames.set(at, "Away")
+	h.mapDecorations(md, players)
+	if len(md.Banners) != 0 {
+		t.Fatal("a renamed banner no longer matches its marker")
+	}
+}

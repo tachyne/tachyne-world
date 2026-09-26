@@ -105,25 +105,39 @@ func TestFallingBlockSinksThroughWater(t *testing.T) {
 	}
 }
 
-// TestOpenEyeblossomPoisonsBees: a bee inside an open eyeblossom is poisoned.
+// TestOpenEyeblossomPoisonsBees: a bee inside an open eyeblossom is
+// poisoned on the mob update itself (EyeblossomBlock.entityInside runs
+// every tick the bee is in it), not on the one-second contact sweep, and
+// poisoned again the update after the dose runs out.
 func TestOpenEyeblossomPoisonsBees(t *testing.T) {
 	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	w := h.worldFor(0)
 	w.SetBlock(0, 179, 0, worldgen.GrassBlock)
 	w.SetBlock(0, 180, 0, openEyeblossom)
 	bee := h.spawnMob(players, entityBee, 0.5, 180, 0.5)
-	h.insideBoth(players)
+	h.mobsInsideTick(players)
+	if bee.hasEffect(effPoison) != 0 {
+		t.Fatal("the one-second sweep no longer runs the eyeblossom")
+	}
+	h.updateMobs(players)
 	if bee.hasEffect(effPoison) == 0 {
-		t.Fatal("the bee should be poisoned")
+		t.Fatal("the bee should be poisoned on its update")
 	}
 	if e := bee.effects[effPoison]; e == nil || e.left != 25 {
 		t.Errorf("EyeblossomBlock.getBeeInteractionEffect is Poison for 25 ticks: %+v", e)
 	}
+	delete(bee.effects, effPoison) // the dose ran out
+	bee.x, bee.y, bee.z = 0.5, 180, 0.5
+	h.updateMobs(players)
+	if bee.hasEffect(effPoison) == 0 {
+		t.Fatal("a bee still in the flower is poisoned again at once")
+	}
 	w.SetBlock(0, 180, 0, closedEyeblossom)
 	bee2 := h.spawnMob(players, entityBee, 0.5, 180, 0.5)
-	h.insideBoth(players)
+	h.updateMobs(players)
 	if bee2.hasEffect(effPoison) != 0 {
 		t.Fatal("a closed eyeblossom does nothing")
 	}

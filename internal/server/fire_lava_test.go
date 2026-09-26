@@ -138,3 +138,53 @@ func TestRisingLavaWaitsLonger(t *testing.T) {
 		t.Fatalf("%d of %d rises waited four times as long, want about three in four", slow, n)
 	}
 }
+
+// LavaFluid.randomTick asks ignitedByLava, not the fire odds: a pool ringed
+// with hay bales (flammable, but not lit by lava) never lights, and one
+// ringed with banners (lit by lava, with no fire odds at all) does.
+func TestLavaIgnitesByTheBlockProperty(t *testing.T) {
+	lights := func(ring uint32) bool {
+		h := newHub(world.New(1))
+		h.world.ForceLoad(0, 0, 1)
+		pl := testTracked()
+		pl.x, pl.y, pl.z = 0.5, 180, 0.5
+		players := map[int32]*tracked{1: pl}
+		w := h.world
+		for dx := -4; dx <= 4; dx++ {
+			for dz := -4; dz <= 4; dz++ {
+				w.SetBlock(dx, 179, dz, worldgen.Stone)
+				for y := 180; y <= 184; y++ {
+					w.SetBlock(dx, y, dz, worldgen.Air)
+				}
+				if dx >= -1 && dx <= 1 && dz >= -1 && dz <= 1 {
+					w.SetBlock(dx, 180, dz, ring)
+				}
+			}
+		}
+		w.SetBlock(0, 180, 0, worldgen.LavaBase)
+		for i := 0; i < 3000; i++ {
+			h.randomTickBlock(players, 0, 0, 180, 0)
+			for dx := -4; dx <= 4; dx++ {
+				for dz := -4; dz <= 4; dz++ {
+					for y := 180; y <= 184; y++ {
+						if isFire(w.At(dx, y, dz)) {
+							return true
+						}
+					}
+				}
+			}
+		}
+		return false
+	}
+	hay := worldgen.BlockBase("hay_block")
+	banner := worldgen.BlockBase("white_banner")
+	if !worldgen.IgnitedByLava(banner) || worldgen.IgnitedByLava(hay) {
+		t.Fatal("ignitedByLava: banners yes, hay no")
+	}
+	if lights(hay) {
+		t.Error("lava lit a fire beside hay bales, which it does not ignite")
+	}
+	if !lights(banner) {
+		t.Error("lava never lit a fire beside banners in 3000 random ticks")
+	}
+}

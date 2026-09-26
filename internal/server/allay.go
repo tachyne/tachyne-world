@@ -196,7 +196,9 @@ const allayJukeboxRange = 10.0
 // allaysHearJukebox is Allay.JukeboxListener: a playing jukebox sends
 // JUKEBOX_PLAY once a second, and stopping sends JUKEBOX_STOP_PLAY; every
 // allay whose eyes are within ten of the jukebox's centre, in its own
-// dimension, hears it (setJukeboxPlaying).
+// dimension, hears it (setJukeboxPlaying). The allay is the only listener
+// these two events have: neither has a vibration frequency or sits in
+// #vibrations or #warden_can_listen, so sculk and wardens never hear a song.
 func (h *hub) allaysHearJukebox(players map[int32]*tracked, dim int, pos blockPos, playing bool) {
 	cx, cy, cz := float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5
 	for _, m := range h.mobs {

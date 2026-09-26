@@ -125,3 +125,24 @@ func TestAllayJukeboxListener(t *testing.T) {
 		t.Fatal("with the jukebox gone it stops dancing")
 	}
 }
+
+// JUKEBOX_PLAY and JUKEBOX_STOP_PLAY are no vibrations: neither is in
+// #vibrations or #warden_can_listen and neither has a frequency, so a
+// sensor beside a jukebox playing through its once-a-second event and its
+// end stays inactive (only the disc going in, a BLOCK_CHANGE, reaches it).
+func TestJukeboxSongIsNoVibration(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	sensor := worldgen.BlockBase("sculk_sensor") + 1
+	w.SetBlock(x, y, z, sensor)
+	h.sculkIndexOnBlockChange(0, x, y, z, sensor)
+	w.SetBlock(x+3, y, z, jukeboxState(true))
+	disc := invStack{item: int32(itemByName["music_disc_cat"]), count: 1}
+	h.jukeboxes[simPos{blockPos: blockPos{x + 3, y, z}}] = &jukebox{disc: disc, started: h.tick.Load() + 1, length: 45}
+	for i := 0; i < 60; i++ {
+		stepSculk(h, players, 1)
+		h.jukeboxTick(players)
+		if s := w.At(x, y, z); sensorPhase(s) != sculkPhaseInactive {
+			t.Fatalf("tick %d: the sensor heard the song (phase %d)", i, sensorPhase(s))
+		}
+	}
+}
