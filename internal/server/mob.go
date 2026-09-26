@@ -1205,9 +1205,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// trudging along the seabed under them.
 			h.swimMove(m, nx, nz, fnx, fnz)
 		default:
-			// Walk — but never onto water, into a tree, or up/down a step taller
-			// than one block (mobStepOK holds the rules). When blocked, commit to
-			// a fresh random heading for a while to escape.
+			// Walk — but never onto water, into a tree, up a step taller than
+			// one block or off a drop deeper than three (mobStepOK holds the
+			// rules). When blocked, commit to a fresh random heading for a while
+			// to escape.
 			//
 			// The shove gets a second chance first: a mob being pressed into a
 			// wall by the crowd should slide along it, as vanilla's axis-separated
@@ -1477,7 +1478,13 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 }
 
 // mobStepOK reports whether a walker may stand at (nx, nz): never onto water,
-// into a tree, or up/down a step taller than one block.
+// into a tree, up a step taller than one block, or off a drop deeper than
+// Mob.getMaxFallDistance's comfortable three (pathMaxFall — the same drop the
+// route planner already plans for). It used to refuse any drop past one, so
+// a route with a two-block drop in it was planned and then never walked, and
+// a golem spawned on a village fountain's pillar (the water on top is room
+// to stand in, as vanilla's LEGACY_IRON_GOLEM strategy says) stood there for
+// good.
 //
 // Step height is measured at the mob's own level (MobFeetFrom), not the column
 // surface — a cave zombie steps along the cave floor, and the cave wall reads
@@ -1509,7 +1516,7 @@ func (h *hub) mobStepOK(m *mob, nx, nz float64) bool {
 	// mob already wedged somewhere may still leave.
 	fy := int(math.Floor(m.y))
 	roomOK := h.bodyFits(m, fnx, fy+step, fnz) || !h.bodyFits(m, cx, fy, cz)
-	return destOK && hazardOK && roomOK && step <= 1 && step >= -1 && !w.TallObstacle(fnx, fnz)
+	return destOK && hazardOK && roomOK && step <= 1 && step >= -pathMaxFall && !w.TallObstacle(fnx, fnz)
 }
 
 // bodyFits reports whether this mob's height of cells from feet y up is
