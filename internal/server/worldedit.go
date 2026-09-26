@@ -248,6 +248,9 @@ func (h *hub) applySetBlocks(players map[int32]*tracked, e evSetBlocks) {
 				} else {
 					h.setBlockAt(players, e.dim, pos, want)
 				}
+				if old == spawnerBlock || want == spawnerBlock {
+					h.dropSpawnerBE(simPos{dim: e.dim, blockPos: pos}) // a fresh block entity: an empty cage
+				}
 				if e.nbt != nil {
 					h.loadBlockEntityNBT(simPos{dim: e.dim, blockPos: pos}, want, e.nbt)
 				}
@@ -273,6 +276,10 @@ func (h *hub) applySetBlocks(players map[int32]*tracked, e evSetBlocks) {
 func (h *hub) loadBlockEntityNBT(pos simPos, state uint32, nbt map[string]any) {
 	if name := nbtName(nbt); name != "" && nameableBlock(state) {
 		h.blockNames.set(pos, name)
+	}
+	if state == spawnerBlock {
+		h.loadSpawnerNBT(pos, nbt)
+		return
 	}
 	items, ok := nbt["Items"].([]any)
 	if !ok || !isChestLikeContainer(state) {

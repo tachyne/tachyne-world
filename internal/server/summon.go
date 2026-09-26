@@ -191,6 +191,14 @@ func (h *hub) spawnConfigured(players map[int32]*tracked, etype, dim int, x, y, 
 		return m
 	case isRosterPassive(etype):
 		return h.spawnSpecies(players, etype, dim, x, y, z)
+	case etype == entityPig || etype == entityCow || etype == entitySheep || etype == entityChicken:
+		// The four farm animals have no roster row: without this they fell
+		// through to the hostile path and came out chasing players.
+		m := h.spawnSpecies(players, etype, dim, x, y, z)
+		if m != nil && etype == entityChicken {
+			m.eggIn = eggLayMin + h.rng.Intn(eggLayMax-eggLayMin) // Chicken's eggTime
+		}
+		return m
 	}
 	return h.spawnHostileYIn(players, etype, dim, x, y, z)
 }

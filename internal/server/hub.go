@@ -719,6 +719,7 @@ type hub struct {
 	potSherds        *potSherdStore          // …and of the decorated pots' faces
 	blockNames       *blockNameStore         // custom names of placed containers, banners, heads
 	detectorsOn      map[simPos]uint64       // pressed detector rails, by dimension → the tick of their next 20-tick checkPressed
+	spawnerDelays    map[simPos]int          // placed spawners' spawnDelay (spawnerbe.go)
 	spawnerNext      map[simPos]uint64       // spawner cooldowns, per dimension:
 	// an overworld dungeon and a Nether fortress spawner can share coordinates
 	patrolNextAt uint64             // world tick the next pillager-patrol attempt is due
@@ -930,6 +931,7 @@ func newHub(w *world.World) *hub {
 
 		detectorsOn:    map[simPos]uint64{},
 		spawnerNext:    map[simPos]uint64{},
+		spawnerDelays:  map[simPos]int{},
 		raids:          map[blockPos]*raid{},
 		brewProg:       map[simPos]int{},
 		brewFuel:       map[simPos]int{},
@@ -1044,6 +1046,7 @@ func (h *hub) run() {
 		h.conduits = h.containers.loadConduits()
 		h.vaults = h.containers.loadVaults()
 		h.trials = h.containers.loadTrials(h.tick.Load())
+		h.spawnerDelays = h.containers.loadSpawnerDelays()
 		h.bins = h.containers.loadBins()
 		h.restoreItems(h.containers.loadItems())
 		h.restoreVehicles(h.containers.loadVehicles())
@@ -1270,6 +1273,7 @@ func (h *hub) run() {
 				h.updateOutposts(players)         // populate pillager outposts on approach
 				// The strongholds' silverfish and the mineshafts' cave spiders.
 				h.updateStructureSpawners(players)
+				h.updatePlacedSpawners(players) // placed, cloned and egged spawners (block entities)
 				h.updateEndPortalContact(players)
 				h.updateEndGateways(players) // step into a gateway → the outer islands
 				h.updateCameras(players)     // spectators ride along with their camera entity
@@ -1410,6 +1414,7 @@ func (h *hub) run() {
 					h.containers.recordConduits(h.conduits)
 					h.containers.recordVaults(h.vaults)
 					h.containers.recordTrials(h.trials, h.tick.Load())
+					h.containers.recordSpawnerDelays(h.spawnerDelays)
 					h.containers.recordBins(h.bins)
 					h.containers.recordItems(h.snapshotItems())
 					h.containers.recordVehicles(h.snapshotVehicles())
@@ -2426,6 +2431,7 @@ func (h *hub) run() {
 					h.containers.recordConduits(h.conduits)
 					h.containers.recordVaults(h.vaults)
 					h.containers.recordTrials(h.trials, h.tick.Load())
+					h.containers.recordSpawnerDelays(h.spawnerDelays)
 					h.containers.recordBins(h.bins)
 					h.containers.recordItems(h.snapshotItems())
 					h.containers.recordVehicles(h.snapshotVehicles())

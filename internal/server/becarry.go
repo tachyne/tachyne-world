@@ -11,8 +11,8 @@ import attachproto "github.com/tachyne/tachyne-common/attach"
 // Carried: chest/barrel/shulker-box storage, furnace state, the dispenser /
 // dropper / hopper / brewing-stand / crafter storage (and a brewing stand's
 // progress), a jukebox's disc, a lectern's book, both kinds of shelf, a
-// decorated pot's item and faces, a campfire's cooking, sign text and
-// banner patterns.
+// decorated pot's item and faces, a campfire's cooking, sign text, banner
+// patterns and a spawner's entity and delay.
 type carriedBE struct {
 	chest     *chest
 	furnace   *furnace
@@ -28,12 +28,15 @@ type carriedBE struct {
 	campfire  *campfire
 	sign      *signData
 	banner    []attachproto.BannerLayer
+	spawner   string // the entity a spawner spawns ("" = none, or an empty cage)
+	spawnerDl *int   // …and its delay, when it has one of its own
 }
 
 func (c carriedBE) empty() bool {
 	return c.chest == nil && c.furnace == nil && c.bin == nil && c.brew == nil &&
 		c.jukebox == nil && c.lectern == nil && c.shelf == nil && c.woodShelf == nil &&
-		c.pot == nil && c.sherds == nil && c.campfire == nil && c.sign == nil && c.banner == nil
+		c.pot == nil && c.sherds == nil && c.campfire == nil && c.sign == nil && c.banner == nil &&
+		c.spawner == ""
 }
 
 // peekBlockEntity copies a cell's block-entity data, leaving the cell as it
@@ -124,6 +127,12 @@ func (h *hub) peekBlockEntity(pos simPos, fork bool) carriedBE {
 			c.banner = append([]attachproto.BannerLayer(nil), l...)
 		}
 	}
+	if w := h.worldFor(pos.dim); w != nil && w.At(pos.x, pos.y, pos.z) == spawnerBlock {
+		c.spawner = h.spawnerEntityAt(pos) // a seed spawner's own mob comes along too
+		if d, ok := h.spawnerDelays[pos]; ok {
+			c.spawnerDl = &d
+		}
+	}
 	return c
 }
 
@@ -161,6 +170,7 @@ func (h *hub) discardBlockEntity(pos simPos) {
 	if h.banners != nil {
 		h.banners.remove(pos)
 	}
+	h.dropSpawnerBE(pos)
 }
 
 // placeBlockEntity sets carried data down at a cell whose block has just
@@ -218,6 +228,12 @@ func (h *hub) placeBlockEntity(players map[int32]*tracked, pos simPos, c carried
 		h.banners.set(pos, c.banner)
 		h.toNearbyEv(players, pos.dim, float64(pos.x), float64(pos.z), attachproto.BannerPatterns{
 			X: int32(pos.x), Y: int32(pos.y), Z: int32(pos.z), Layers: c.banner})
+	}
+	if c.spawner != "" && state == spawnerBlock {
+		h.setSpawnerEntity(pos, c.spawner)
+		if c.spawnerDl != nil {
+			h.spawnerDelays[pos] = *c.spawnerDl
+		}
 	}
 }
 

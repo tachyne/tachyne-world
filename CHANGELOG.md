@@ -26,6 +26,17 @@ the public history since the project was open-sourced on 2026-07-10.
   clocks) are refused.
 
 ### Fixed
+- **Placed spawners work.** A spawner set with a spawn egg, placed with
+  `/setblock` (with `SpawnData` and `Delay`) or copied with `/clone` now
+  spawns its mob as in vanilla: a player within 16 blocks, four tries every
+  10 to 40 seconds, up to six of the kind nearby, and the mob's own spawn
+  rules, so a monster spawner needs darkness and an animal one needs grass
+  and light. Its countdown survives a restart. Every spawner, dungeon ones
+  included, now follows those rules: lighting up a dungeon stops it, and a
+  round that spawns nothing tries again a second later. A fortress spawner
+  given a spawn egg spawns the egg's mob instead of blazes.
+- **Pigs, cows, sheep and chickens from spawn eggs and `/summon` are
+  peaceful.** They came out hostile and chased players.
 - **Invisibility hides you from every mob, not only the ones that chase.**
   The shorter detection range for an invisible or crouching player (and the
   halved range a matching mob head gives) now also applies to skeletons,

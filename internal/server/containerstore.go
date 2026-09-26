@@ -109,6 +109,9 @@ type containerFile struct {
 	// everyone claim every vault again.
 	Vaults map[string]savedVault `json:"vaults,omitempty"`
 	Trials map[string]savedTrial `json:"trials,omitempty"`
+	// Placed spawners' delays (BaseSpawner's "Delay"), +1 so a spent one
+	// is told apart from none; their entities ride rules.SpawnerMobs.
+	SpawnerDelays map[string]int `json:"spawner_delays,omitempty"`
 }
 
 // savedVault is who has already been paid by one vault (VaultServerData's

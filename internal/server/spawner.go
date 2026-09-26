@@ -3,10 +3,13 @@ package server
 import "github.com/tachyne/tachyne-world/internal/worldgen"
 
 // Live dungeon spawners + loot chests. Dungeons are pure functions of the
-// seed (worldgen.DungeonIn), so the hub needs no block scan: every 2 seconds
-// it checks the dungeon cells around each player, and any spawner block still
+// seed (worldgen.DungeonIn), so the hub needs no block scan: every second it
+// checks the dungeon cells around each player, and any spawner block still
 // standing within activation range rolls mob spawns into its room. The
 // dungeon chest fills with deterministic loot the first time it's opened.
+// spawnerCycle is the one BaseSpawner round every kind of spawner runs: the
+// seed-derived ones here, in fortress.go and structspawner.go, and the placed
+// ones in spawnerbe.go.
 
 const (
 	spawnerRange     = 16  // vanilla activation distance
@@ -18,7 +21,7 @@ const (
 
 var dungeonMobs = [3]int{entityZombie, entitySkeleton, entitySpider}
 
-// updateSpawners runs on a 40-tick cadence from the hub loop.
+// updateSpawners runs on the once-a-second survival cadence from the hub loop.
 func (h *hub) updateSpawners(players map[int32]*tracked) {
 	if !h.rules.DoMobSpawning || h.rules.Difficulty == diffPeaceful || !h.rules.SpawnerBlocks {
 		return
@@ -51,14 +54,12 @@ func (h *hub) updateSpawners(players map[int32]*tracked) {
 				if h.world.At(d.X, d.Y, d.Z) != worldgen.BlockBase("spawner") { // mined out → dead spawner
 					continue
 				}
-				etype := h.spawnerMobFor(0, d.X, d.Y, d.Z, dungeonMobs[d.Mob%3])
-				h.showSpawner(players, 0, pos, etype) // the mob turning in the cage
-				key := simPos{blockPos: pos}          // dungeons are overworld
-				if next, ok := h.spawnerNext[key]; ok && now < next {
-					continue
+				if h.placedSpawner(dimOverworld, pos) {
+					continue // a spawn egg made it a block entity of its own (updatePlacedSpawners)
 				}
-				h.spawnerNext[key] = now + spawnerMinDelay + uint64(h.rng.Intn(spawnerDelaySpan))
-				h.spawnerCycle(players, pos, etype)
+				etype := dungeonMobs[d.Mob%3]
+				h.showSpawner(players, 0, pos, etype) // the mob turning in the cage
+				h.seedSpawnerTick(players, dimOverworld, pos, etype, now)
 			}
 		}
 	}
@@ -67,18 +68,62 @@ func (h *hub) updateSpawners(players map[int32]*tracked) {
 // (Structure chest loot is now data-driven — see structloot.go/chestloot.go.
 // The old hand-rolled dungeonLoot + hash01ServerSeed lived here.)
 
-// spawnerCycle is one BaseSpawner.serverTick spawn round at an overworld
-// cage: nothing when maxNearbyEntities of the same type already stand in
-// the cage's cell inflated by spawnRange; otherwise four attempts, each at
-// x/z ±spawnRange (triangular) and y −1..+1 around the cage, where the
-// mob's box is clear of colliding blocks (noCollision), then the spawn
-// particles and the caged mob's turn reset.
-func (h *hub) spawnerCycle(players map[int32]*tracked, pos blockPos, etype int) {
+// spawnerCycle is one BaseSpawner.serverTick spawn round at a cage whose
+// delay has run out: four attempts, each at x/z ±spawnRange (triangular) and
+// y −1..+1 around the cage, where the mob's box is clear of colliding blocks
+// (noCollision) and the species' spawn rules pass for a SPAWNER spawn. An
+// attempt that finds maxNearbyEntities of the kind already in the cage's
+// cell inflated by spawnRange ends the round. Each mob that goes in gets the
+// spawn particles at the cage, its ENTITY_PLACE and its poof. It reports
+// whether the spawner re-arms (delay()): when something spawned or the cap
+// was reached; otherwise vanilla leaves the delay at zero and tries again.
+func (h *hub) spawnerCycle(players map[int32]*tracked, dim int, pos blockPos, etype int) bool {
+	box, ok := mobBoxes[etype]
+	if !ok {
+		box = defaultMobBox
+	}
+	spawned := false
+	for i := 0; i < spawnerCount; i++ {
+		sx := float64(pos.x) + (h.rng.Float64()-h.rng.Float64())*spawnerSpawnRange + 0.5
+		sz := float64(pos.z) + (h.rng.Float64()-h.rng.Float64())*spawnerSpawnRange + 0.5
+		sy := float64(pos.y + h.rng.Intn(3) - 1)
+		if !h.spawnBoxClear(dim, sx, sy, sz, box.w, box.h) {
+			continue
+		}
+		if !h.spawnerRulesOK(dim, etype, floorInt(sx), floorInt(sy), floorInt(sz)) {
+			continue
+		}
+		if h.spawnerNearby(dim, pos, etype) >= spawnerMobCap {
+			h.spawnerReset(players, dim, pos)
+			return true
+		}
+		if h.boxHasLiquid(dim, sx, sy, sz, box.w, box.h) {
+			continue // Mob.checkSpawnObstruction
+		}
+		m := h.spawnConfigured(players, etype, dim, sx, sy, sz)
+		if m == nil {
+			h.spawnerReset(players, dim, pos) // tryAddFreshEntity refused it
+			return true
+		}
+		h.levelEvent(players, dim, worldEventSpawnerSpawn, pos.x, pos.y, pos.z, 0) // the smoke and flames
+		h.vib(dim, freqEntityPlace, floorInt(sx), floorInt(sy), floorInt(sz), m.eid)
+		h.toTracking(players, m.eid, dim, m.x, m.z, entityStatus(m.eid, entityStatusSpawnAnim))
+		spawned = true
+	}
+	if spawned {
+		h.spawnerReset(players, dim, pos)
+	}
+	return spawned
+}
+
+// spawnerNearby counts the living mobs of the kind whose boxes touch the
+// cage's cell inflated by spawnRange (getEntities over that AABB).
+func (h *hub) spawnerNearby(dim int, pos blockPos, etype int) int {
 	near := 0
 	lo := [3]float64{float64(pos.x) - spawnerSpawnRange, float64(pos.y) - spawnerSpawnRange, float64(pos.z) - spawnerSpawnRange}
 	hi := [3]float64{float64(pos.x) + 1 + spawnerSpawnRange, float64(pos.y) + 1 + spawnerSpawnRange, float64(pos.z) + 1 + spawnerSpawnRange}
 	for _, m := range h.mobs {
-		if m.dim != dimOverworld || m.etype != etype || m.dying > 0 {
+		if m.dim != dim || m.etype != etype || m.dying > 0 {
 			continue
 		}
 		b := m.box()
@@ -86,24 +131,27 @@ func (h *hub) spawnerCycle(players map[int32]*tracked, pos blockPos, etype int) 
 			near++
 		}
 	}
-	if near >= spawnerMobCap {
-		return
-	}
-	box, ok := mobBoxes[etype]
-	if !ok {
-		box = defaultMobBox
-	}
-	for i := 0; i < spawnerCount; i++ {
-		sx := float64(pos.x) + (h.rng.Float64()-h.rng.Float64())*spawnerSpawnRange + 0.5
-		sz := float64(pos.z) + (h.rng.Float64()-h.rng.Float64())*spawnerSpawnRange + 0.5
-		sy := float64(pos.y + h.rng.Intn(3) - 1)
-		if !h.spawnBoxClear(dimOverworld, sx, sy, sz, box.w, box.h) {
-			continue
+	return near
+}
+
+// spawnerDelayRoll is BaseSpawner.delay's new spawnDelay: 200..799.
+func (h *hub) spawnerDelayRoll() int {
+	return spawnerMinDelay + h.rng.Intn(spawnerDelaySpan)
+}
+
+// boxHasLiquid is level.containsAnyLiquid over a mob's box.
+func (h *hub) boxHasLiquid(dim int, x, y, z, w, ht float64) bool {
+	wd := h.worldFor(dim)
+	for bx := floorInt(x - w/2); bx <= floorInt(x+w/2-1e-9); bx++ {
+		for by := floorInt(y); by <= floorInt(y+ht-1e-9); by++ {
+			for bz := floorInt(z - w/2); bz <= floorInt(z+w/2-1e-9); bz++ {
+				if st := wd.At(bx, by, bz); worldgen.HoldsWater(st) || worldgen.IsLava(st) {
+					return true
+				}
+			}
 		}
-		h.spawnHostileYIn(players, etype, dimOverworld, sx, sy, sz)
 	}
-	h.levelEvent(players, 0, worldEventSpawnerSpawn, pos.x, pos.y, pos.z, 0) // the smoke and flames
-	h.spawnerReset(players, 0, pos)                                          // …and the caged mob starts its turn again
+	return false
 }
 
 // spawnBoxClear is level.noCollision(type.getSpawnAABB(x, y, z)) against
@@ -120,4 +168,19 @@ func (h *hub) spawnBoxClear(dim int, x, y, z, w, ht float64) bool {
 		}
 	}
 	return true
+}
+
+// seedSpawnerTick runs a seed-derived spawner's cooldown: in memory, as the
+// spawner itself is found again from the seed. A round that neither spawned
+// nor hit the cap leaves the spawner armed for the next pass.
+func (h *hub) seedSpawnerTick(players map[int32]*tracked, dim int, pos blockPos, etype int, now uint64) {
+	key := simPos{dim: dim, blockPos: pos}
+	if next, ok := h.spawnerNext[key]; ok && now < next {
+		return
+	}
+	if h.spawnerCycle(players, dim, pos, etype) {
+		h.spawnerNext[key] = now + uint64(h.spawnerDelayRoll())
+	} else {
+		delete(h.spawnerNext, key)
+	}
 }
