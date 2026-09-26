@@ -789,7 +789,6 @@ func chunkOf(x, z int) (cx, cz, lx, lz int) {
 	return cx, cz, x - cx*16, z - cz*16
 }
 
-// SetBlock records a persistent edit at a world coordinate.
 // RevertEdit deletes the edit at (x,y,z) so the block falls back to whatever
 // generation now produces (used to clean structure debris a since-removed
 // generator left as edits). No-op if there is no edit there.
@@ -802,7 +801,10 @@ func (w *World) RevertEdit(x, y, z int) {
 	idx := localIndex(lx, y, lz)
 	w.mu.Lock()
 	if m := w.edits[key]; m != nil {
-		delete(m, idx)
+		if _, had := m[idx]; had {
+			delete(m, idx)
+			w.nEdits.Add(-1)
+		}
 	}
 	w.mu.Unlock()
 	w.dirty.Store(true)
@@ -810,6 +812,16 @@ func (w *World) RevertEdit(x, y, z int) {
 	w.poiInvalidate(key[0], key[1])
 }
 
+// SetBlock records a persistent edit at a world coordinate — unless the
+// block is set back to exactly what generation made there, which leaves no
+// edit at all (the edit already there is dropped). Reads cannot tell the
+// difference; what it changes is what the overlay remembers. A door a
+// villager swung open and shut again, a fire burnt out to the air it started
+// in, water drained back to the dry cell it flooded: none of these is a
+// build, and kept as edits they outlived what generated them — a village
+// laid out afresh by a new GenVersion left its old houses' doors standing
+// alone wherever a villager had once walked through one. Only a generated
+// chunk already in memory is consulted; SetBlock never generates one.
 func (w *World) SetBlock(x, y, z int, state uint32) {
 	if !w.inBounds(y) {
 		return
@@ -817,6 +829,14 @@ func (w *World) SetBlock(x, y, z int, state uint32) {
 	cx, cz, lx, lz := chunkOf(x, z)
 	idx := localIndex(lx, y, lz)
 	key := chunkPos{int32(cx), int32(cz)}
+
+	if ch := w.cachedGenerated(key); ch != nil {
+		sec, ly := (y-worldgen.MinY)/16, (y-worldgen.MinY)%16
+		if ch.Sections[sec][(ly*16+lz)*16+lx] == state {
+			w.RevertEdit(x, y, z)
+			return
+		}
+	}
 
 	w.mu.Lock()
 	m := w.edits[key]
@@ -832,6 +852,18 @@ func (w *World) SetBlock(x, y, z int, state uint32) {
 	w.dirty.Store(true)
 	w.invalidateLight(x, z) // cached chunk light is stale for this 3×3
 	w.poiInvalidate(key[0], key[1])
+}
+
+// cachedGenerated is the generated chunk if the memory cache holds it, nil
+// otherwise: it neither generates nor reads the persistent cache.
+func (w *World) cachedGenerated(key chunkPos) *worldgen.Chunk {
+	w.genMu.Lock()
+	e, ok := w.cache[key]
+	w.genMu.Unlock()
+	if !ok {
+		return nil
+	}
+	return e.ch
 }
 
 // Block returns the block state at a world coordinate: an edit if one exists,
