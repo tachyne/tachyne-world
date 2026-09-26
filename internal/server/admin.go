@@ -72,14 +72,14 @@ type worldRules struct {
 	// The dragon is not in mobs.json (bosses are not persisted), so without
 	// this a restart mid-fight handed it back its full health. Zero means "no
 	// fight in progress"; a live fight writes what it has left.
-	DragonHealth int           `json:"dragonHealth,omitempty"`
-	Weather      *weatherSave  `json:"weather,omitempty"`
+	DragonHealth int          `json:"dragonHealth,omitempty"`
+	Weather      *weatherSave `json:"weather,omitempty"`
 	// DayTime is level.dat's DayTime: the day clock. Unsaved, every restart
 	// began at sunrise — mobs caught out at night found it morning, and the
 	// time of day jumped under anyone online through a deploy.
-	DayTime *uint64 `json:"dayTime,omitempty"`
-	Border       *worldBorder  `json:"border,omitempty"`
-	EndGateways  []gatewayExit `json:"endGateways,omitempty"` // each gateway's remembered exit
+	DayTime     *uint64       `json:"dayTime,omitempty"`
+	Border      *worldBorder  `json:"border,omitempty"`
+	EndGateways []gatewayExit `json:"endGateways,omitempty"` // each gateway's remembered exit
 	// SpawnerMobs are the spawners a spawn egg was used on: "dim,x,y,z" → the
 	// entity name they spawn instead of their dungeon's (SpawnEggItem.useOn).
 	SpawnerMobs map[string]string `json:"spawnerMobs,omitempty"`
