@@ -36,11 +36,14 @@ type player struct {
 	props      []skinProperty // Mojang textures etc. (online mode)
 	pendingDim atomic.Int32   // hub-requested dimension switch (-1 = none)
 	// Written by the hub before pendingDim.Store, read by the connection after
-	// Load (the atomic pair orders them). pendingFrom is the departure portal;
-	// pendingDest, when OK, is the remembered destination portal base.
-	pendingFrom   dimPos
+	// Load (the atomic pair orders them). pendingDest, when OK, is a known
+	// landing cell (a bed, the spawn, a teleport); pendingAt is a nether
+	// portal's exact arrival spot and heading, worked out by the hub.
 	pendingDest   blockPos
 	pendingDestOK bool
+	pendingAt     bool
+	pendingPos    [3]float64
+	pendingYaw    float32
 	onGround      bool
 	sprinting     bool // from Entity Action start/stop-sprint (for hunger exhaustion)
 	sneaking      bool // from Entity Action start/stop-sneak (place against usable blocks)

@@ -78,8 +78,8 @@ func (s *Server) switchDimension(p *player, dim int) {
 	s.hub.post(evDim{eid: p.eid, dim: dim, x: p.x, y: p.y, z: p.z})
 }
 
-// switchDimensionTo is switchDimension landing at a KNOWN portal base (the
-// remembered half of a portal pair) instead of derived coordinates.
+// switchDimensionTo is switchDimension landing beside a KNOWN cell (a bed,
+// the spawn, a teleport target) instead of derived coordinates.
 func (s *Server) switchDimensionTo(p *player, dim int, dest blockPos) {
 	if dim == p.dim {
 		return
@@ -88,6 +88,21 @@ func (s *Server) switchDimensionTo(p *player, dim int, dest blockPos) {
 	log.Printf("portal: %q respawning into dim %d at linked portal (%d,%d,%d)", p.name, dim, dest.x, dest.y, dest.z)
 	p.sendEv(attachproto.Dimension{Dim: int32(dim), Gamemode: int32(s.modes.get(p.key())), Death: s.deathOf(p.key())})
 	p.x, p.y, p.z = float64(dest.x)+0.5, float64(dest.y), float64(dest.z)+1.5
+	p.setHubPos(p.x, p.z)
+	p.sendEv(teleportEv(p.x, p.y, p.z, p.yaw, p.pitch))
+	s.hub.post(evDim{eid: p.eid, dim: dim, x: p.x, y: p.y, z: p.z})
+}
+
+// switchDimensionAt is switchDimension landing at a nether portal's exact
+// arrival spot and heading, as the hub worked them out (portalforcer.go).
+func (s *Server) switchDimensionAt(p *player, dim int, x, y, z float64, yaw float32) {
+	if dim == p.dim {
+		return
+	}
+	p.dim = dim
+	log.Printf("portal: %q respawning into dim %d at portal (%.1f,%.1f,%.1f)", p.name, dim, x, y, z)
+	p.sendEv(attachproto.Dimension{Dim: int32(dim), Gamemode: int32(s.modes.get(p.key())), Death: s.deathOf(p.key())})
+	p.x, p.y, p.z, p.yaw = x, y, z, yaw
 	p.setHubPos(p.x, p.z)
 	p.sendEv(teleportEv(p.x, p.y, p.z, p.yaw, p.pitch))
 	s.hub.post(evDim{eid: p.eid, dim: dim, x: p.x, y: p.y, z: p.z})

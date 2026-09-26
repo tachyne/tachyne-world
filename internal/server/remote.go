@@ -58,7 +58,6 @@ func (s *Server) JoinRemote(id attach.Identity, emit func(typ byte, payload []by
 	r.emitEvNow(opLevelEvent(p.eid, s.isOp(p.name)))
 	s.hub.post(evJoin{p: p, x: x, y: y, z: z, yaw: yaw, pitch: pitch, gamemode: mode})
 	if spawnDim != 0 {
-		p.pendingFrom = dimPos{}
 		p.pendingDest = blockPos{floorInt(sx), floorInt(sy), floorInt(sz) - 1} // switchDimensionTo lands at z+1.5
 		p.pendingDestOK = true
 		p.pendingDim.Store(spawnDim)

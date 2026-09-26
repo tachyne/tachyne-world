@@ -5,18 +5,17 @@ import "github.com/tachyne/tachyne-world/internal/worldgen"
 // Portal travel for everything that is not a player.
 //
 // Entity.handlePortal runs for every entity, and NetherPortalBlock's
-// getPortalTransitionTime is zero for anything but a player: a mob or a
-// dropped item standing in a portal goes through on the first tick it touches
-// one, with none of the dwell a player serves. What stops it coming straight
-// back is Entity.getDimensionChangingDelay — 300 ticks of portal cooldown,
-// which vanilla gives every non-player.
+// getPortalTransitionTime is zero for anything but a player: a mob, a dropped
+// item, an arrow, a lit charge or a falling block standing in a portal goes
+// through on the first tick it touches one, with none of the dwell a player
+// serves. Where it comes out is the same search a player's trip makes
+// (portalforcer.go): the closest portal on the far side, or a new one built
+// there — a mob can open the way as well as a player can.
 //
-// The destination is the portal this one is PAIRED with. Vanilla would search
-// the far side and build a portal where it found none; the engine only builds
-// one for a player, whose connection it can talk to while it carves the
-// pocket. So an unpaired portal carries nobody — which in practice means the
-// player walks through first, as they always do, and everything after them
-// follows the pair that trip recorded.
+// What stops it coming straight back is Entity.getDimensionChangingDelay —
+// 300 ticks of portal cooldown — and setAsInsidePortal, which starts the
+// cooldown over on every tick the entity is still inside a portal: one that
+// comes out standing in the far portal stays there until it steps off.
 //
 // Not modelled: a mob's passengers and whatever it is leashed to travel with
 // it in vanilla. Here the mob goes alone, and a leash to a stranded holder
@@ -25,36 +24,68 @@ import "github.com/tachyne/tachyne-world/internal/worldgen"
 // entityPortalCooldown is Entity.getDimensionChangingDelay for a non-player.
 const entityPortalCooldown = 300
 
-// updatePortalTravel walks mobs and dropped items through nether portals.
+// portalCooldownTick is processPortalCooldown with setAsInsidePortal's reset:
+// it reports whether the entity is still on cooldown this tick.
+func (h *hub) portalCooldownTick(cool *int, dim int, x, y, z float64) bool {
+	if *cool <= 0 {
+		return false
+	}
+	if h.inAnyPortal(dim, x, y, z) {
+		*cool = entityPortalCooldown
+	} else {
+		*cool--
+	}
+	return true
+}
+
+// inAnyPortal reports a nether or end portal block at an entity's feet.
+func (h *hub) inAnyPortal(dim int, x, y, z float64) bool {
+	w := h.worldFor(dim)
+	if w == nil {
+		return false
+	}
+	s := w.At(floorInt(x), floorInt(y+0.05), floorInt(z))
+	return isPortalBlock(s) || s == worldgen.EndPortalBlock
+}
+
+// entityPortalExit resolves a non-player's trip through the nether portal it
+// stands in (box width w, height ht).
+func (h *hub) entityPortalExit(players map[int32]*tracked, dim int, x, y, z, w, ht float64) (portalArrival, bool) {
+	entry := blockPos{floorInt(x), floorInt(y + 0.05), floorInt(z)}
+	return h.netherPortalExit(players, dim, entry, x, y, z, w, ht, false)
+}
+
+// updatePortalTravel walks mobs, dropped items, projectiles, lit charges and
+// falling blocks through nether portals.
 func (h *hub) updatePortalTravel(players map[int32]*tracked) {
 	for _, m := range h.mobs {
-		if m.portalCool > 0 {
-			m.portalCool--
+		if h.portalCooldownTick(&m.portalCool, m.dim, m.x, m.y, m.z) {
 			continue
 		}
-		if !h.portalTravelCandidate(m.dim, m.x, m.y, m.z) {
-			continue
+		if m.dying > 0 || m.mount != 0 || !h.portalTravelCandidate(m.dim, m.x, m.y, m.z) {
+			continue // canUsePortal: alive and not riding anything
 		}
-		if to, ok := h.portalPartner(m.dim, m.x, m.y, m.z); ok {
-			h.entityGone(players, m.dim, m.eid)
-			m.dim = to.dim
-			m.x, m.y, m.z = float64(to.pos.x)+0.5, float64(to.pos.y), float64(to.pos.z)+0.5
+		b := m.box()
+		if a, ok := h.entityPortalExit(players, m.dim, m.x, m.y, m.z, b.w, b.h); ok {
+			h.mobChangeDimension(players, m, a.dim, a.x, a.y, a.z)
+			m.yaw += a.turn
+			m.headYaw += a.turn
+			m.vx, m.vz = rotateDelta(m.vx, m.vz, a.turn)
 			m.portalCool = entityPortalCooldown
-			m.targetEID, m.hasTarget = 0, false // whatever it was chasing is a world away
 		}
 	}
 	for _, a := range h.arrows { // a projectile in flight goes through, still flying
-		if a.portalCool > 0 {
-			a.portalCool--
+		if h.portalCooldownTick(&a.portalCool, a.dim, a.x, a.y, a.z) {
 			continue
 		}
 		if a.stuck || a.etype == entityPearlProj || !h.portalTravelCandidate(a.dim, a.x, a.y, a.z) {
 			continue // an ender pearl's trip is its thrower's business
 		}
-		if to, ok := h.portalPartner(a.dim, a.x, a.y, a.z); ok {
+		if to, ok := h.entityPortalExit(players, a.dim, a.x, a.y, a.z, 0.5, 0.5); ok {
 			h.entityGone(players, a.dim, a.eid)
 			a.dim = to.dim
-			a.x, a.y, a.z = float64(to.pos.x)+0.5, float64(to.pos.y)+0.5, float64(to.pos.z)+0.5
+			a.x, a.y, a.z = to.x, to.y, to.z
+			a.vx, a.vz = rotateDelta(a.vx, a.vz, to.turn)
 			a.sx, a.sy, a.sz, a.ox, a.oz = a.x, a.y, a.z, a.x, a.z
 			a.portalCool = entityPortalCooldown
 			add := entAdd(a.eid, a.etype, a.uuid, a.x, a.y, a.z, arrowYaw(a), arrowPitch(a))
@@ -63,34 +94,46 @@ func (h *hub) updatePortalTravel(players map[int32]*tracked) {
 		}
 	}
 	for _, t := range h.tnt { // a lit charge goes through too, fuse and all
-		if t.portalCool > 0 {
-			t.portalCool--
+		if h.portalCooldownTick(&t.portalCool, t.dim, t.x, t.y, t.z) {
 			continue
 		}
 		if !h.portalTravelCandidate(t.dim, t.x, t.y, t.z) {
 			continue
 		}
-		if to, ok := h.portalPartner(t.dim, t.x, t.y, t.z); ok {
+		if to, ok := h.entityPortalExit(players, t.dim, t.x, t.y, t.z, 2*tntHalfWidth, tntHeight); ok {
 			h.entityGone(players, t.dim, t.eid)
 			t.dim = to.dim
-			t.x, t.y, t.z = float64(to.pos.x)+0.5, float64(to.pos.y), float64(to.pos.z)+0.5
+			t.x, t.y, t.z = to.x, to.y, to.z
+			t.vx, t.vz = rotateDelta(t.vx, t.vz, to.turn)
 			t.portalCool = entityPortalCooldown
 			h.showPrimedTNT(players, t)
 		}
 	}
 	for _, it := range h.items {
-		if it.portalCool > 0 {
-			it.portalCool--
+		if h.portalCooldownTick(&it.portalCool, it.dim, it.x, it.y, it.z) {
 			continue
 		}
 		if !h.portalTravelCandidate(it.dim, it.x, it.y, it.z) {
 			continue
 		}
-		if to, ok := h.portalPartner(it.dim, it.x, it.y, it.z); ok {
+		if to, ok := h.entityPortalExit(players, it.dim, it.x, it.y, it.z, 2*itemHalfHeight, 2*itemHalfHeight); ok {
 			h.entityGone(players, it.dim, it.eid)
 			it.dim = to.dim
-			it.x, it.y, it.z = float64(to.pos.x)+0.5, float64(to.pos.y), float64(to.pos.z)+0.5
+			it.x, it.y, it.z = to.x, to.y, to.z
+			it.vx, it.vz = rotateDelta(it.vx, it.vz, to.turn)
 			it.portalCool = entityPortalCooldown
+		}
+	}
+	for _, fb := range h.fallingBlocks { // FallingBlockEntity.tick calls handlePortal too
+		if h.portalCooldownTick(&fb.portalCool, fb.dim, fb.x, fb.y, fb.z) {
+			continue
+		}
+		if !h.portalTravelCandidate(fb.dim, fb.x, fb.y, fb.z) {
+			continue
+		}
+		if to, ok := h.entityPortalExit(players, fb.dim, fb.x, fb.y, fb.z, 2*fallHalfWidth, fallHeight); ok {
+			h.moveFallingBlock(players, fb, to.dim, to.x, to.y, to.z)
+			fb.vx, fb.vz = rotateDelta(fb.vx, fb.vz, to.turn)
 		}
 	}
 }
@@ -98,7 +141,7 @@ func (h *hub) updatePortalTravel(players map[int32]*tracked) {
 // portalTravelCandidate is the cheap half of the test: the right dimensions,
 // the gamerule, and a portal block where the entity's feet are.
 func (h *hub) portalTravelCandidate(dim int, x, y, z float64) bool {
-	if dim > 1 || len(h.portalLinks) == 0 {
+	if dim > 1 {
 		return false // nether portals link the overworld and nether only
 	}
 	// ServerLevel.isAllowedToEnterPortal gates the way IN to the Nether only;
@@ -108,28 +151,6 @@ func (h *hub) portalTravelCandidate(dim int, x, y, z float64) bool {
 		return false
 	}
 	return isPortalBlock(h.worldFor(dim).At(floorInt(x), floorInt(y+0.05), floorInt(z)))
-}
-
-// portalPartner resolves the portal an entity is standing in to the portal it
-// is paired with, checking that the far side is still a real, lit, enterable
-// portal — and forgetting a pair whose other half has been broken, so the next
-// player through records a fresh one.
-func (h *hub) portalPartner(dim int, x, y, z float64) (dimPos, bool) {
-	w := h.worldFor(dim)
-	from := dimPos{dim, portalBaseKey(w, floorInt(x), floorInt(y+0.05), floorInt(z))}
-	to, ok := h.portalLinks[from]
-	if !ok {
-		return dimPos{}, false
-	}
-	tw := h.worldFor(to.dim)
-	st := tw.At(to.pos.x, to.pos.y, to.pos.z)
-	if isPortalBlock(st) && portalIntact(tw, to.pos.x, to.pos.y, to.pos.z, st) &&
-		portalSpotSafe(tw, to.pos.x, to.pos.y, to.pos.z) {
-		return to, true
-	}
-	delete(h.portalLinks, from)
-	delete(h.portalLinks, to)
-	return dimPos{}, false
 }
 
 // updateEndPortalEntities is EndPortalBlock.entityInside for mobs and dropped
@@ -179,6 +200,14 @@ func (h *hub) updateEndPortalEntities(players map[int32]*tracked) {
 			h.entityGone(players, it.dim, it.eid)
 			it.dim, it.x, it.y, it.z = d, x, y, z
 			it.portalCool = entityPortalCooldown
+		}
+	}
+	for _, fb := range h.fallingBlocks {
+		if fb.portalCool > 0 || !inPortal(fb.dim, fb.x, fb.y, fb.z) {
+			continue
+		}
+		if d, x, y, z, ok := dest(fb.dim); ok {
+			h.moveFallingBlock(players, fb, d, x, y, z)
 		}
 	}
 }

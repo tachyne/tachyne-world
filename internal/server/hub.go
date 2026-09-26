@@ -731,10 +731,9 @@ type hub struct {
 	siegeNext   int // ticks to the next zombie
 	siegeLeft   int
 	siegeCenter blockPos
-	brewProg    map[simPos]int    // brewing stand progress (ticks)
-	brewFuel    map[simPos]int    // brewing stand fuel charges (1 blaze powder = 20)
-	brewIng     map[simPos]int32  // …and the ingredient it started on (swapped out → the brew is lost)
-	portalLinks map[dimPos]dimPos // sticky portal pairs (both directions)
+	brewProg    map[simPos]int   // brewing stand progress (ticks)
+	brewFuel    map[simPos]int   // brewing stand fuel charges (1 blaze powder = 20)
+	brewIng     map[simPos]int32 // …and the ingredient it started on (swapped out → the brew is lost)
 	// gatewayCool is TheEndGatewayBlockEntity.teleportCooldown, per GATEWAY:
 	// one that has just taken somebody is shut to everyone for forty ticks.
 	gatewayCool map[simPos]uint64
@@ -934,7 +933,6 @@ func newHub(w *world.World) *hub {
 		brewProg:       map[simPos]int{},
 		brewFuel:       map[simPos]int{},
 		brewIng:        map[simPos]int32{},
-		portalLinks:    map[dimPos]dimPos{},
 		gatewayCool:    map[simPos]uint64{},
 		bossSeen:       map[[2]int32]bool{},
 		openDoors:      map[simPos]uint64{},
@@ -1568,10 +1566,6 @@ func (h *hub) run() {
 						}
 					}
 				}
-			case evPortalLinked:
-				h.portalLinks[e.from] = e.to
-				h.portalLinks[e.to] = e.from
-				log.Printf("portal: linked %v <-> %v", e.from, e.to)
 			case evDim:
 				if t := players[e.eid]; t != nil {
 					fromDim, fromX, fromZ := t.dim, t.x, t.z

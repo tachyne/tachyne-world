@@ -39,6 +39,10 @@ const (
 	collideEpsilon      = 1e-7 // Shapes.EPSILON
 )
 
+// fallEyeHeight is the EntityDimensions default eye height (0.85 of the
+// height), where a blast pushes a falling block from.
+const fallEyeHeight = 0.85 * fallHeight
+
 // Level events a falling block fires on the way out.
 const (
 	worldEventAnvilLand      = 1031 // SOUND_ANVIL_LAND (AnvilBlock.onLand)
@@ -47,14 +51,17 @@ const (
 
 var entityFallingBlock = entityID("falling_block")
 
-// fallingBlock is one FallingBlockEntity. It never moves sideways — nothing
-// in the engine pushes one — so it keeps to the column it fell from.
+// fallingBlock is one FallingBlockEntity. It falls straight down its column
+// unless something gives it sideways motion — a blast, or the far side of a
+// portal it came through turned.
 type fallingBlock struct {
 	eid          int32
 	dim          int
 	x, y, z      float64
-	vy           float64
+	vx, vy, vz   float64
 	stuckY       float64 // stuckSpeedMultiplier.y from the last tick's cobweb or powder snow (0 = none)
+	stuckXZ      float64 // …and its x and z
+	portalCool   int     // ticks before it may take a portal again (Entity.portalCooldown)
 	state        uint32
 	time         int
 	fallDistance float64
@@ -180,7 +187,21 @@ func (h *hub) addFallingBlock(players map[int32]*tracked, fb *fallingBlock) {
 	binary.BigEndian.PutUint32(uuid[12:], uint32(fb.eid))
 	add := entAdd(fb.eid, entityFallingBlock, uuid, fb.x, fb.y, fb.z, 0, 0)
 	add.Data = int32(fb.state)
-	add.VY = fb.vy
+	add.VX, add.VY, add.VZ = fb.vx, fb.vy, fb.vz
+	h.toNearbyEv(players, fb.dim, fb.x, fb.z, add)
+}
+
+// moveFallingBlock carries a falling block to another dimension (a portal):
+// the old dimension's viewers see it go, the new one's see it arrive.
+func (h *hub) moveFallingBlock(players map[int32]*tracked, fb *fallingBlock, dim int, x, y, z float64) {
+	h.entityGone(players, fb.dim, fb.eid)
+	fb.dim, fb.x, fb.y, fb.z = dim, x, y, z
+	fb.portalCool = entityPortalCooldown
+	var uuid [16]byte
+	binary.BigEndian.PutUint32(uuid[12:], uint32(fb.eid))
+	add := entAdd(fb.eid, entityFallingBlock, uuid, fb.x, fb.y, fb.z, 0, 0)
+	add.Data = int32(fb.state)
+	add.VX, add.VY, add.VZ = fb.vx, fb.vy, fb.vz
 	h.toNearbyEv(players, fb.dim, fb.x, fb.z, add)
 }
 
@@ -217,10 +238,10 @@ func (h *hub) fallingBlockStep(players map[int32]*tracked, w *world.World, fb *f
 	}
 	fb.time++
 	fb.vy -= fallGravity // applyGravity
-	yo := fb.y
+	xo, yo, zo := fb.x, fb.y, fb.z
 	h.fallMove(players, w, fb)
 	h.fallInsideBlocks(players, w, fb, yo)
-	if fb.y != yo {
+	if fb.x != xo || fb.y != yo || fb.z != zo {
 		h.toNearbyEv(players, fb.dim, fb.x, fb.z, entMove(fb.eid, fb.x, fb.y, fb.z, 0, 0, fb.onGround))
 	}
 	pos := blockPos{floorInt(fb.x), floorInt(fb.y), floorInt(fb.z)}
@@ -244,13 +265,13 @@ func (h *hub) fallingBlockStep(players map[int32]*tracked, w *world.World, fb *f
 		}
 	} else {
 		cur := w.At(pos.x, pos.y, pos.z)
-		fb.vy *= -0.5 // multiply(0.7, -0.5, 0.7)
+		fb.vx, fb.vy, fb.vz = fb.vx*0.7, fb.vy*-0.5, fb.vz*0.7 // multiply(0.7, -0.5, 0.7)
 		if !isMovingPiston(cur) {
 			alive = false
 			h.fallingBlockLands(players, w, fb, pos, cur, concrete, stuck)
 		}
 	}
-	fb.vy *= fallAirDrag
+	fb.vx, fb.vy, fb.vz = fb.vx*fallAirDrag, fb.vy*fallAirDrag, fb.vz*fallAirDrag
 	return alive
 }
 
@@ -331,45 +352,56 @@ func (h *hub) discardFalling(players map[int32]*tracked, fb *fallingBlock) {
 	h.entityGone(players, fb.dim, fb.eid)
 }
 
-// fallMove is Entity.move for a falling block: straight down its column,
-// stopped by the first collision shape its box meets (by the shape's real
-// height: half a block up on a slab, a block and a half on a fence), then
+// fallMove is Entity.move for a falling block: down (or up) first, stopped
+// by the first collision shape its box meets (by the shape's real height:
+// half a block up on a slab, a block and a half on a fence), then sideways,
+// the larger way first, a way that is blocked losing its motion; then
 // checkFallDamage — the distance fallen, and on touching down the block it
 // landed on (fallOn) and the damage (causeFallDamage).
 func (h *hub) fallMove(players map[int32]*tracked, w *world.World, fb *fallingBlock) {
-	dy := fb.vy
+	dx, dy, dz := fb.vx, fb.vy, fb.vz
 	if fb.stuckY != 0 { // Entity.move: the stuck multiplier scales this move, and the motion is spent
-		dy *= fb.stuckY
-		fb.stuckY, fb.vy = 0, 0
+		dx, dy, dz = dx*fb.stuckXZ, dy*fb.stuckY, dz*fb.stuckXZ
+		fb.stuckY, fb.stuckXZ = 0, 0
+		fb.vx, fb.vy, fb.vz = 0, 0, 0
 	}
-	bx, bz := floorInt(fb.x), floorInt(fb.z)
+	x0, x1 := floorInt(fb.x-fallHalfWidth), floorInt(fb.x+fallHalfWidth-collideEpsilon)
+	z0, z1 := floorInt(fb.z-fallHalfWidth), floorInt(fb.z+fallHalfWidth-collideEpsilon)
 	moved := dy
-	var onCell int
+	var onCell blockPos
 	var onState uint32
 	hit := false
 	if dy < 0 {
 		bottom, target := fb.y, fb.y+dy
-		// The cell below the target too: a fence or wall reaches 1.5 up.
-		for cy := floorInt(target) - 1; cy <= floorInt(bottom); cy++ {
-			st := w.At(bx, cy, bz)
-			_, hi, ok := fallCollision(st, fb.fallDistance)
-			if !ok {
-				continue
-			}
-			top := float64(cy) + hi
-			if top <= bottom+collideEpsilon && top-bottom > moved {
-				moved, onCell, onState, hit = top-bottom, cy, st, true
+		for bx := x0; bx <= x1; bx++ {
+			for bz := z0; bz <= z1; bz++ {
+				// The cell below the target too: a fence or wall reaches 1.5 up.
+				for cy := floorInt(target) - 1; cy <= floorInt(bottom); cy++ {
+					st := w.At(bx, cy, bz)
+					_, hi, ok := fallCollision(st, fb.fallDistance)
+					if !ok {
+						continue
+					}
+					top := float64(cy) + hi
+					if top <= bottom+collideEpsilon && top-bottom > moved {
+						moved, onCell, onState, hit = top-bottom, blockPos{bx, cy, bz}, st, true
+					}
+				}
 			}
 		}
 	} else if dy > 0 {
 		head, target := fb.y+fallHeight, fb.y+fallHeight+dy
-		for cy := floorInt(head); cy <= floorInt(target); cy++ {
-			lo, _, ok := fallCollision(w.At(bx, cy, bz), fb.fallDistance)
-			if !ok {
-				continue
-			}
-			if floor := float64(cy) + lo; floor >= head-collideEpsilon && floor-head < moved {
-				moved = floor - head
+		for bx := x0; bx <= x1; bx++ {
+			for bz := z0; bz <= z1; bz++ {
+				for cy := floorInt(head); cy <= floorInt(target); cy++ {
+					lo, _, ok := fallCollision(w.At(bx, cy, bz), fb.fallDistance)
+					if !ok {
+						continue
+					}
+					if floor := float64(cy) + lo; floor >= head-collideEpsilon && floor-head < moved {
+						moved = floor - head
+					}
+				}
 			}
 		}
 	}
@@ -379,16 +411,63 @@ func (h *hub) fallMove(players map[int32]*tracked, w *world.World, fb *fallingBl
 	if vertical {
 		fb.vy = 0 // Block.updateEntityMovementAfterFallOn
 	}
+	// Sideways, the larger component first (Direction.axisStepOrder).
+	stepX := func() {
+		if dx == 0 {
+			return
+		}
+		if fallBoxBlocked(w, fb.x+dx, fb.y, fb.z, fb.fallDistance) {
+			fb.vx = 0
+		} else {
+			fb.x += dx
+		}
+	}
+	stepZ := func() {
+		if dz == 0 {
+			return
+		}
+		if fallBoxBlocked(w, fb.x, fb.y, fb.z+dz, fb.fallDistance) {
+			fb.vz = 0
+		} else {
+			fb.z += dz
+		}
+	}
+	if math.Abs(dx) < math.Abs(dz) {
+		stepZ()
+		stepX()
+	} else {
+		stepX()
+		stepZ()
+	}
 	// Entity.checkFallDamage.
 	if moved < 0 {
 		fb.fallDistance -= moved
 	}
 	if fb.onGround && hit {
 		if fb.fallDistance > 0 {
-			h.fallOn(players, fb, onState, blockPos{bx, onCell, bz})
+			h.fallOn(players, fb, onState, onCell)
 		}
 		fb.fallDistance = 0
 	}
+}
+
+// fallBoxBlocked reports whether a falling block's box at (x,y,z) overlaps
+// a block's collision shape.
+func fallBoxBlocked(w *world.World, x, y, z, fallDistance float64) bool {
+	x0, x1 := floorInt(x-fallHalfWidth), floorInt(x+fallHalfWidth-collideEpsilon)
+	y0, y1 := floorInt(y)-1, floorInt(y+fallHeight-collideEpsilon) // the cell below: a fence reaches up into the box
+	z0, z1 := floorInt(z-fallHalfWidth), floorInt(z+fallHalfWidth-collideEpsilon)
+	for bx := x0; bx <= x1; bx++ {
+		for by := y0; by <= y1; by++ {
+			for bz := z0; bz <= z1; bz++ {
+				lo, hi, ok := fallCollision(w.At(bx, by, bz), fallDistance)
+				if ok && float64(by)+hi > y+collideEpsilon && float64(by)+lo < y+fallHeight-collideEpsilon {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // fallOn is the landed-on block's Block.fallOn for a falling block: most
@@ -473,9 +552,44 @@ func (h *hub) fallInsideBlocks(players map[int32]*tracked, w *world.World, fb *f
 			h.setBlockAt(players, fb.dim, blockPos{bx, cy, bz}, worldgen.Air)
 			h.levelEvent(players, fb.dim, worldEventBlockBreak, bx, cy, bz, int32(frogspawnBlock))
 		case st == cobwebState:
-			fb.stuckY, fb.fallDistance = webStuckY, 0
+			fb.stuckY, fb.stuckXZ, fb.fallDistance = webStuckY, 0.25, 0
 		case isPowderSnow(st):
-			fb.stuckY, fb.fallDistance = powderSnowStuckY, 0
+			fb.stuckY, fb.stuckXZ, fb.fallDistance = powderSnowStuckY, powderSnowStuckXZ, 0
+		}
+	}
+	fallBubbleColumns(w, fb)
+}
+
+// fallBubbleColumns is BubbleColumnBlock.entityInside for the column cells
+// the block's box is in: an upward column lifts it (onInsideBubbleColumn,
+// +0.06 up to 0.7 a tick), a whirlpool drags it (−0.03 down to −0.3), and
+// the top cell of a column, with open air over it, throws it harder
+// (onAboveBubbleColumn: +0.1 up to 1.8, or down to −0.9).
+func fallBubbleColumns(w *world.World, fb *fallingBlock) {
+	x0, x1 := floorInt(fb.x-fallHalfWidth+1e-5), floorInt(fb.x+fallHalfWidth-1e-5)
+	y0, y1 := floorInt(fb.y+1e-5), floorInt(fb.y+fallHeight-1e-5)
+	z0, z1 := floorInt(fb.z-fallHalfWidth+1e-5), floorInt(fb.z+fallHalfWidth-1e-5)
+	for by := y0; by <= y1; by++ {
+		for bx := x0; bx <= x1; bx++ {
+			for bz := z0; bz <= z1; bz++ {
+				st := w.At(bx, by, bz)
+				if !worldgen.IsBubbleColumn(st) {
+					continue
+				}
+				above := w.At(bx, by+1, bz)
+				top := !worldgen.Collides(above) && !worldgen.HoldsWater(above) && !worldgen.IsLava(above)
+				drag := st == worldgen.BubbleColumnDrag
+				switch {
+				case top && drag:
+					fb.vy = math.Max(columnTopDownCap, fb.vy-columnDownStep)
+				case top:
+					fb.vy = math.Min(columnTopUpCap, fb.vy+columnTopUpStep)
+				case drag:
+					fb.vy = math.Max(columnDownCap, fb.vy-columnDownStep)
+				default:
+					fb.vy = math.Min(columnUpCap, fb.vy+columnUpStep)
+				}
+			}
 		}
 	}
 }
@@ -606,7 +720,7 @@ func (h *hub) stalactiteShapeUpdate(dim int, pos blockPos) {
 func (h *hub) snapshotFalling() []savedFalling {
 	out := make([]savedFalling, 0, len(h.fallingBlocks))
 	for _, fb := range h.fallingBlocks {
-		out = append(out, savedFalling{Dim: fb.dim, X: fb.x, Y: fb.y, Z: fb.z, VY: fb.vy, FallDist: fb.fallDistance,
+		out = append(out, savedFalling{Dim: fb.dim, X: fb.x, Y: fb.y, Z: fb.z, VX: fb.vx, VY: fb.vy, VZ: fb.vz, FallDist: fb.fallDistance,
 			State: fb.state, Time: fb.time, NoDrop: !fb.dropItem, Hurts: fb.hurtEntities, HurtPer: fb.hurtPer,
 			HurtMax: fb.hurtMax, CancelDrop: fb.cancelDrop})
 	}
@@ -619,7 +733,7 @@ func (h *hub) restoreFalling(saved []savedFalling) {
 		if sf.State == worldgen.Air || h.worldFor(sf.Dim) == nil {
 			continue
 		}
-		fb := &fallingBlock{eid: h.allocEID(), dim: sf.Dim, x: sf.X, y: sf.Y, z: sf.Z, vy: sf.VY,
+		fb := &fallingBlock{eid: h.allocEID(), dim: sf.Dim, x: sf.X, y: sf.Y, z: sf.Z, vx: sf.VX, vy: sf.VY, vz: sf.VZ,
 			fallDistance: sf.FallDist, state: sf.State, time: sf.Time, dropItem: !sf.NoDrop,
 			hurtEntities: sf.Hurts, hurtPer: sf.HurtPer, hurtMax: sf.HurtMax, cancelDrop: sf.CancelDrop}
 		if fb.hurtMax == 0 {
