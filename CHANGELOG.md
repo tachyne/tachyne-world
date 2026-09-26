@@ -26,6 +26,13 @@ the public history since the project was open-sourced on 2026-07-10.
   clocks) are refused.
 
 ### Fixed
+- **Invisibility hides you from every mob, not only the ones that chase.**
+  The shorter detection range for an invisible or crouching player (and the
+  halved range a matching mob head gives) now also applies to skeletons,
+  witches, blazes, ghasts, breezes, phantoms, shulkers, creakings, polar
+  bears, piglins and pandas choosing whom to shoot, flee from or go after,
+  and to animals deciding whom to look at. A mob already chasing someone
+  keeps after them when they drink the potion, as in vanilla.
 - **Item frames and paintings hang on more blocks.** Anything solid now
   holds them, slabs, stairs, chests and fences included, not only full
   cubes; a repeater or comparator holds a frame on its side (but not one

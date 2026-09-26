@@ -53,7 +53,7 @@ func blazeFlagsMeta(m *mob) []byte {
 
 // ghastTick runs each mob update from the hostile switch.
 func (h *hub) ghastTick(players map[int32]*tracked, m *mob) {
-	t := h.nearestHuntable(players, m.dim, m.x, m.z, 64)
+	t := h.nearestTargetable(players, m, 64)
 	was := m.ghastCharge > ghastChargeWarn
 	// The target selector only accepts somebody within four blocks of the
 	// ghast's own height — the reason one high above a lava lake ignores you.
@@ -101,7 +101,7 @@ func (h *hub) setBlazeCharged(players map[int32]*tracked, m *mob, on bool) {
 // blazeTick runs each mob update from the hostile switch.
 func (h *hub) blazeTick(players map[int32]*tracked, m *mob) {
 	m.blazeTime -= mobMoveInterval
-	t := h.nearestHuntable(players, m.dim, m.x, m.z, m.followRange())
+	t := h.nearestTargetable(players, m, m.followRange())
 	if t == nil {
 		if m.blazeStep != 0 || m.blazeCharged {
 			m.blazeStep = 0

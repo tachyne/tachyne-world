@@ -78,7 +78,7 @@ func (h *hub) breezeStep(players map[int32]*tracked, m *mob) bool {
 		return true
 	case brzShooting:
 		m.vx, m.vz = 0, 0
-		t := h.nearestHuntable(players, m.dim, m.x, m.z, float64(m.followRange()))
+		t := h.nearestTargetable(players, m, float64(m.followRange()))
 		if t == nil {
 			h.breezeStopShooting(players, m)
 			return false
@@ -95,7 +95,7 @@ func (h *hub) breezeStep(players map[int32]*tracked, m *mob) bool {
 		return true
 	}
 	// Standing: a target within follow range, or nothing to do.
-	t := h.nearestHuntable(players, m.dim, m.x, m.z, float64(m.followRange()))
+	t := h.nearestTargetable(players, m, float64(m.followRange()))
 	if t == nil {
 		m.brzSlide = false
 		return false

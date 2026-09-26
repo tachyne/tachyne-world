@@ -74,7 +74,7 @@ func (h *hub) piglinFoe(players map[int32]*tracked, m *mob, maxDist float64) (qu
 				return mobQuarry(o), true // the hoglin it hunts, or the mob that hit it
 			}
 		} else if h.rules.UniversalAnger {
-			if t := h.nearestHuntable(players, m.dim, m.x, m.z, maxDist); t != nil {
+			if t := h.nearestTargetable(players, m, maxDist); t != nil {
 				return playerQuarry(t), true
 			}
 			return quarry{}, false

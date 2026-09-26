@@ -131,8 +131,8 @@ func (h *hub) phantomTarget(players map[int32]*tracked, m *mob) *tracked {
 			continue
 		}
 		if math.Abs(t.x-m.x) > 16+b.w/2+0.3 || math.Abs(t.z-m.z) > 16+b.w/2+0.3 ||
-			t.y+1.8 < m.y-64 || t.y > m.y+b.h+64 || dist3(t.x, t.y, t.z, m.x, m.y, m.z) > 64 {
-			continue
+			t.y+1.8 < m.y-64 || t.y > m.y+b.h+64 || !perceives(t, m, 64, dist3sq(t.x, t.y, t.z, m.x, m.y, m.z)) {
+			continue // attackTargeting: range 64, shrunk for an invisible player
 		}
 		cands = append(cands, t)
 	}

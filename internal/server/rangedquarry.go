@@ -18,7 +18,7 @@ type quarry struct {
 // rangedQuarry is the nearest huntable player within r, or failing one the
 // mob's prey if it is still valid and within r.
 func (h *hub) rangedQuarry(players map[int32]*tracked, m *mob, r float64) (quarry, bool) {
-	if t := h.nearestHuntable(players, m.dim, m.x, m.z, r); t != nil {
+	if t := h.nearestTargetable(players, m, r); t != nil {
 		return quarry{t: t, x: t.x, y: t.y, z: t.z, aimY: t.y + 0.6}, true // a player is 1.8 tall
 	}
 	if m.preyTarget == 0 {

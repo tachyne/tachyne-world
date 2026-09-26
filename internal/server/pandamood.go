@@ -76,7 +76,7 @@ func (h *hub) pandaStep(players map[int32]*tracked, m *mob) bool {
 		// PandaAvoidGoal: a player within eight sends it off at 2.0× (the
 		// panic branch's speed).
 		if m.panic == 0 && m.kb == 0 && h.pandaCanAct(m) {
-			if t := h.nearestHuntable(players, m.dim, m.x, m.z, pandaAvoidRange); t != nil {
+			if t := h.nearestTargetable(players, m, pandaAvoidRange); t != nil {
 				m.panic, m.fleeX, m.fleeZ = panicTicks, t.x, t.z
 			}
 		}

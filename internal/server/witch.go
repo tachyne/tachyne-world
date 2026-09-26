@@ -43,7 +43,7 @@ func (h *hub) witchTick(players map[int32]*tracked, m *mob) {
 		h.witchFinishDrink(players, m)
 		return
 	}
-	t := h.nearestHuntable(players, m.dim, m.x, m.z, witchRange)
+	t := h.nearestTargetable(players, m, witchRange)
 	if kind := h.witchWantsToDrink(players, m, t); kind != potNone {
 		h.witchStartDrink(players, m, kind)
 		return
