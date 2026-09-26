@@ -26,6 +26,11 @@ the public history since the project was open-sourced on 2026-07-10.
   clocks) are refused.
 
 ### Fixed
+- **Item pickup reaches the next block.** Players now collect what touches
+  their box widened by a block each way and half a block up and down (and,
+  riding, the box stretched over the boat, cart or mount), instead of a
+  one-block radius around their feet. An item resting on the block in front
+  is picked up from the edge of your own.
 - **Placed spawners work.** A spawner set with a spawn egg, placed with
   `/setblock` (with `SpawnData` and `Delay`) or copied with `/clone` now
   spawns its mob as in vanilla: a player within 16 blocks, four tries every
