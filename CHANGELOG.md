@@ -80,6 +80,13 @@ the public history since the project was open-sourced on 2026-07-10.
   without leaving a door item behind.
 - **Endermen leave a purple particle trail when they teleport** (26.3
   clients), and never teleport past the world border.
+- **The Ender Dragon's head and wings hit mobs too.** As in vanilla, a mob
+  caught by the dragon's head or neck takes ten damage, and one under a wing
+  is thrown clear and takes five. Before, only players were hurt or shoved.
+- **Endermen no longer teleport into fire.** A landing spot is refused when
+  fire, a berry bush, a wither rose, powder snow or another block endermen
+  avoid is anywhere in the space the enderman would fill. Before, only the
+  block it would stand on was checked.
 
 ## 2026-09-25
 
