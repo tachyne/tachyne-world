@@ -45,8 +45,10 @@ the public history since the project was open-sourced on 2026-07-10.
   only chunks where one overlapped a build change).
 - **Hedges built before 24 September stop rotting.** Leaves placed by hand
   used to be saved like tree leaves, so a hedge with no log nearby decayed.
-  A one-time repair at startup makes those leaves permanent. Leaves that
-  are part of a living tree still decay when it is cut, as in vanilla.
+  A one-time repair at startup makes those leaves permanent: leaves with no
+  log in reach that stand beside something a player built (a wall, a
+  lantern, a fence). Canopy left by a felled tree, which stands beside
+  nothing, still decays as in vanilla.
 - **Endermen set carried blocks down only where they can stay.** A flower
   needs soil and nothing may be standing in the spot, as in vanilla. Before,
   a carried poppy could land on bare stone.

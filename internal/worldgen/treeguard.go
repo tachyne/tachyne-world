@@ -111,6 +111,48 @@ func isBuildBlock(s uint32) bool {
 	return s != Air && !IsReplaceable(s) && !IsFluid(s) && !fireStates[s]
 }
 
+// PlayerBuilt reports whether an edit is the work of a player building
+// rather than a tree or the ground: a build block that is not a leaf, a log
+// or a soil block (grass spreads and dirt reverts as edits of their own).
+// It tells a hedge, which stands among a player's lanterns and walls, from
+// the canopy of a felled tree, which stands among nothing.
+func PlayerBuilt(s uint32) bool {
+	return isBuildBlock(s) && !IsDirtTag(s) && !notBuilt[s]
+}
+
+// notBuilt is what trees, plants and weather leave as edits without a
+// player: every leaf (#leaves) and trunk block (#prevents_nearby_leaf_decay),
+// the plants and fungi that grow wild beside them, and the snow and ice that
+// fall and freeze.
+var notBuilt = func() map[uint32]bool {
+	m := map[uint32]bool{}
+	for _, tag := range []string{"leaves", "prevents_nearby_leaf_decay"} {
+		for _, r := range BlockTag(tag) {
+			for s := r[0]; s <= r[1]; s++ {
+				m[s] = true
+			}
+		}
+	}
+	for _, name := range []string{"snow_block", "ice", "powder_snow",
+		"sweet_berry_bush", "brown_mushroom", "red_mushroom", "brown_mushroom_block", "red_mushroom_block",
+		"mushroom_stem", "cactus", "cactus_flower", "sugar_cane", "bamboo", "bamboo_sapling", "pumpkin",
+		"melon", "azalea", "flowering_azalea", "spore_blossom", "cocoa", "bee_nest", "moss_block",
+		"pale_moss_block", "cave_vines", "cave_vines_plant", "big_dripleaf", "big_dripleaf_stem",
+		"small_dripleaf", "dandelion", "golden_dandelion", "open_eyeblossom", "closed_eyeblossom", "poppy",
+		"blue_orchid", "allium", "azure_bluet", "red_tulip", "orange_tulip", "white_tulip", "pink_tulip",
+		"oxeye_daisy", "cornflower", "lily_of_the_valley", "wither_rose", "torchflower", "sunflower",
+		"lilac", "rose_bush", "peony", "pitcher_plant", "lily_pad", "oak_sapling", "spruce_sapling",
+		"birch_sapling", "jungle_sapling", "acacia_sapling", "dark_oak_sapling", "cherry_sapling",
+		"pale_oak_sapling", "poplar_sapling", "mangrove_propagule", "sulfur", "cinnabar"} {
+		if lo, hi, ok := BlockRangeOK(name); ok {
+			for s := lo; s <= hi; s++ {
+				m[s] = true
+			}
+		}
+	}
+	return m
+}()
+
 var fireStates = func() map[uint32]bool {
 	m := map[uint32]bool{}
 	for _, name := range []string{"fire", "soul_fire"} {
