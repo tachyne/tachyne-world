@@ -31,8 +31,8 @@ the public history since the project was open-sourced on 2026-07-10.
   3), and a thunderstorm applies only the storm's blend instead of rain's
   and then the storm's on top: a storm at noon darkens by 5, not 8. Dusk,
   dawn and bad weather had been a level darker than they should be, which
-  let monsters spawn and kept the undead from burning where vanilla would
-  not.
+  let monsters spawn, and kept the undead from burning, where vanilla's
+  sky is already bright enough.
 - **Item pickup reaches the next block.** Players now collect what touches
   their box widened by a block each way and half a block up and down (and,
   riding, the box stretched over the boat, cart or mount), instead of a
