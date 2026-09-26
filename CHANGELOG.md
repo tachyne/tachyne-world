@@ -71,6 +71,9 @@ the public history since the project was open-sourced on 2026-07-10.
   out anything burning nearby; it used to do nothing. An enderman hit by
   water or Harming teleports away at once, and a thrown potion now breaks on
   an enderman instead of passing through it.
+- **A door a zombie breaks down is gone, not dropped.** As in vanilla, a
+  zombie (or raiding vindicator) that beats a door off its hinges removes it
+  without leaving a door item behind.
 - **Endermen leave a purple particle trail when they teleport** (26.3
   clients), and never teleport past the world border.
 

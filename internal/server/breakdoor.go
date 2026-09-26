@@ -70,11 +70,13 @@ func (h *hub) zombieBeatsDoor(players map[int32]*tracked, m *mob, door blockPos)
 	if m.doorTicks < doorBreakTicks {
 		return true
 	}
-	// Off its hinges: both halves go, the door drops as an item.
-	w := h.worldFor(m.dim)
-	lower := w.At(door.x, door.y, door.z)
+	// Off its hinges: level.removeBlock, not destroyBlock — both halves go
+	// and nothing drops (the upper half follows through DoorBlock.updateShape,
+	// which drops nothing either). The break-particle event vanilla sends reads
+	// the cell after removal, which is air, so no particles show; removeBlock
+	// raises no BLOCK_DESTROY vibration. It used to drop the door as an item.
 	h.setBlockLive(players, m.dim, door.x, door.y+1, door.z, worldgen.Air)
-	h.breakBlockDrop(players, m.dim, door, lower)
+	h.setBlockAt(players, m.dim, door, worldgen.Air)
 	h.playSoundDim(players, m.dim, "minecraft:entity.zombie.break_wooden_door", sndHostile, float64(door.x)+0.5, float64(door.y)+0.5, float64(door.z)+0.5, 2, 0.8+h.rng.Float32()*0.4)
 	h.zombieStopDoor(players, m)
 	return false

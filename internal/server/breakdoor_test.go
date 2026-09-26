@@ -8,8 +8,8 @@ import (
 )
 
 // TestZombieBreaksDoor: on hard, a door-breaking zombie stopped by a closed
-// wooden door beats it down in two hundred and forty ticks; on normal it
-// leaves it alone.
+// wooden door beats it down in two hundred and forty ticks, and the door
+// is gone without dropping; on normal it leaves it alone.
 func TestZombieBreaksDoor(t *testing.T) {
 	h := newHub(world.New(1))
 	pl := survPlayer(h)
@@ -42,6 +42,9 @@ func TestZombieBreaksDoor(t *testing.T) {
 	}
 	if z.doorPos != (blockPos{}) {
 		t.Fatal("the door is forgotten once broken")
+	}
+	if len(h.items) != 0 {
+		t.Fatalf("BreakDoorGoal removes the door without a drop; %d item(s) dropped", len(h.items))
 	}
 	// Normal difficulty: no beating.
 	w.SetBlock(1, 180, 0, lower)
