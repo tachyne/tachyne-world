@@ -376,6 +376,10 @@ func (h *hub) endermanTeleportTo(players map[int32]*tracked, m *mob, x, y, z flo
 	if w == nil || m.mount != 0 { // isPassenger
 		return false
 	}
+	// randomTeleport: the target is first pulled inside the world border
+	// (clampVec3ToBound), so an enderman by the wall lands against it rather
+	// than beyond it.
+	x, z = h.clampToBorder(m.dim, x, z)
 	bx, bz := floorInt(x), floorInt(z)
 	py := floorInt(y)
 	if !h.inWorldYIn(m.dim, py) {
@@ -418,6 +422,11 @@ func (h *hub) endermanTeleportTo(players map[int32]*tracked, m *mob, x, y, z flo
 		h.playSoundDim(players, m.dim, "minecraft:entity.enderman.teleport", sndHostile, m.x, m.y, m.z, 1, 1)
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTeleport))
+		// Enderman.teleport: the purple trail from where it stood to where it
+		// landed, a level event at the old block carrying the difference.
+		obx, oby, obz := floorInt(ox), floorInt(oy), floorInt(oz)
+		h.levelEvent(players, m.dim, worldEventEndermanTeleport, obx, oby, obz,
+			clampedPackDifference(obx, oby, obz, floorInt(m.x), floorInt(m.y), floorInt(m.z)))
 		h.vibAt(m.dim, freqTeleport, ox, oy, oz, m.eid)
 		return true
 	}

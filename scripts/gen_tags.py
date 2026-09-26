@@ -32,6 +32,7 @@ TAGS = {
               "washed_away_by_fluids",
               # hostile2.go: LivingEntity.randomTeleport + Enderman.teleport
               "entities_can_teleport_to", "enderman_does_not_teleport_to",
+              "enderman_holdable", "small_flowers",  # enderman_carry.go: Take/LeaveBlockGoal
               # grow.go: StemBlock.randomTick's fruit ground
               "supports_melon_stem_fruit", "supports_pumpkin_stem_fruit",
               # sculk.go: VibrationSystem occlusion and damping

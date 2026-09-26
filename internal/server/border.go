@@ -94,6 +94,23 @@ func (h *hub) withinBorder(dim int, x, z float64) bool {
 	return h.border.distanceToBorder(x, z, h.border.sizeAt(h.tick.Load())) >= 0
 }
 
+// clampToBorder is WorldBorder.clampVec3ToBound for x and z: a point pulled
+// inside the wall, a hair short of its far edges. Overworld only, as
+// withinBorder.
+func (h *hub) clampToBorder(dim int, x, z float64) (float64, float64) {
+	if dim != dimOverworld {
+		return x, z
+	}
+	b := h.border
+	half := b.sizeAt(h.tick.Load()) / 2
+	minX := clampF(b.CenterX-half, -borderMaxCoordinate, borderMaxCoordinate)
+	maxX := clampF(b.CenterX+half, -borderMaxCoordinate, borderMaxCoordinate)
+	minZ := clampF(b.CenterZ-half, -borderMaxCoordinate, borderMaxCoordinate)
+	maxZ := clampF(b.CenterZ+half, -borderMaxCoordinate, borderMaxCoordinate)
+	const inset = float64(float32(1.0e-5)) // vanilla subtracts 1.0E-5F
+	return clampF(x, minX, maxX-inset), clampF(z, minZ, maxZ-inset)
+}
+
 // borderFrame renders the current state as the attach frame.
 func (h *hub) borderFrame() attachproto.WorldBorder {
 	b := h.border

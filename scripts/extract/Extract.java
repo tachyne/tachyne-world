@@ -31,6 +31,7 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 import java.io.FileWriter;
@@ -47,6 +48,21 @@ public class Extract {
     // Resolved once, so one tool runs against every version -- which is what
     // makes a cross-version comparison trustworthy.
     private static final Method LIGHT_DAMPENING = resolve("getLightDampening", "getLightBlock");
+
+    // The offset bounds are protected on BlockBehaviour (a pointed dripstone
+    // overrides them); asked through reflection so the override answers.
+    private static final Method MAX_H_OFFSET = declared("getMaxHorizontalOffset");
+    private static final Method MAX_V_OFFSET = declared("getMaxVerticalOffset");
+
+    private static Method declared(String name) {
+        try {
+            Method m = net.minecraft.world.level.block.state.BlockBehaviour.class.getDeclaredMethod(name);
+            m.setAccessible(true);
+            return m;
+        } catch (NoSuchMethodException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 
     private static Method resolve(String... names) {
         for (String n : names) {
@@ -181,8 +197,44 @@ public class Extract {
             JsonArray solid = new JsonArray(), fullCube = new JsonArray(), solidRender = new JsonArray();
             JsonArray bounds = new JsonArray(), mapColor = new JsonArray(), fluid = new JsonArray();
             JsonArray push = new JsonArray(), ignite = new JsonArray(), burn = new JsonArray();
-            JsonArray faces = new JsonArray();
+            JsonArray faces = new JsonArray(), outline = new JsonArray();
+            // A plant's random nudge (BlockBehaviour.Properties.offsetType): the
+            // outline below is recorded un-nudged, and the consumer re-applies
+            // the nudge for the position it asks about. The type is told apart
+            // by the Y component, which only an XYZ nudge ever sets.
+            if (block.defaultBlockState().hasOffsetFunction()) {
+                JsonObject off = new JsonObject();
+                boolean xyz = false;
+                for (int i = 0; i < 16 && !xyz; i++) {
+                    xyz = block.defaultBlockState().getOffset(new BlockPos(i, 0, i * 7)).y != 0;
+                }
+                off.addProperty("type", xyz ? "xyz" : "xz");
+                off.addProperty("maxHorizontal", (float) MAX_H_OFFSET.invoke(block));
+                off.addProperty("maxVertical", (float) MAX_V_OFFSET.invoke(block));
+                o.add("offset", off);
+            }
             for (BlockState st : states) {
+                // The outline shape (getShape under an empty context: what a
+                // ClipContext.Block.OUTLINE ray and the crosshair hit), as its
+                // boxes, with the offset nudge at the origin taken back out.
+                // null for the full cube, [] for no outline at all.
+                VoxelShape ol = st.getShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
+                if (ol.isEmpty()) {
+                    outline.add(new JsonArray());
+                } else if (Block.isShapeFullBlock(ol)) {
+                    outline.add(com.google.gson.JsonNull.INSTANCE);
+                } else {
+                    Vec3 nudge = st.getOffset(BlockPos.ZERO);
+                    JsonArray boxes = new JsonArray();
+                    for (AABB r : ol.move(nudge.reverse()).toAabbs()) {
+                        JsonArray rr = new JsonArray();
+                        for (double v : new double[]{r.minX, r.minY, r.minZ, r.maxX, r.maxY, r.maxZ}) {
+                            rr.add(Math.round(v * 1e6) / 1e6);
+                        }
+                        boxes.add(rr);
+                    }
+                    outline.add(boxes);
+                }
                 // The state's map colour id (a bed's halves differ).
                 mapColor.add(st.getMapColor(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).id);
                 // Whether the state holds a fluid — water and lava, and every
@@ -256,6 +308,7 @@ public class Extract {
             o.add("igniteOdds", ignite);
             o.add("burnOdds", burn);
             o.add("collisionFaces", faces);
+            o.add("outlineBoxes", outline);
             blocks.add(o);
         }
 

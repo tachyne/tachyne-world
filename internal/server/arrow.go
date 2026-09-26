@@ -744,10 +744,12 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 		if m.etype == entityShulker && m.shulkerClosed() && a.etype != entityShulkerBullet {
 			continue // a closed shell: arrows glance off (Shulker.hurtServer)
 		}
-		if m.etype == entityEnderman {
+		if m.etype == entityEnderman && !a.splash && !a.xpBottle {
 			// Vanilla Enderman.hurtServer: projectiles NEVER land — the
 			// enderman teleports out from under them (up to 64 tries),
-			// taking no damage.
+			// taking no damage. A thrown potion or a bottle o' enchanting
+			// hurts nothing it strikes: it shatters on the enderman, and
+			// the potion's splash is what may send it off (splash.go).
 			h.endermanTeleportHard(players, m)
 			continue
 		}

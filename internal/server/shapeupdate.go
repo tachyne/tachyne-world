@@ -97,6 +97,25 @@ var shapeKinds = func() map[uint32]shapeKind {
 // snowTagStates is #snow: what makes the ground under it snowy.
 var snowTagStates = blockRange("snow", "snow_block", "powder_snow")
 
+// updateShapeOrder is BlockBehaviour.UPDATE_SHAPE_ORDER: west, east,
+// north, south, down, up.
+var updateShapeOrder = [...][3]int{{-1, 0, 0}, {1, 0, 0}, {0, 0, -1}, {0, 0, 1}, {0, -1, 0}, {0, 1, 0}}
+
+// updateFromNeighbourShapes is Block.updateFromNeighbourShapes: a state
+// about to be set at n, run through updateShape against each neighbour in
+// turn, as a block that arrives without a placement of its own (an
+// enderman's) takes the shape its surroundings give it.
+func updateFromNeighbourShapes(w *world.World, n blockPos, st uint32) uint32 {
+	for _, d := range updateShapeOrder {
+		ns, ok := shapeUpdated(w, n, st, d)
+		if !ok {
+			return st
+		}
+		st = ns
+	}
+	return st
+}
+
 // shapeUpdated is updateShape for the block st at n, told that the cell one
 // step along d changed. It returns the state the block should now hold
 // (st itself when nothing follows) and whether st is one of these families.

@@ -67,6 +67,19 @@ func (m *mob) ignite(secs int) {
 // bush does not, so a zombie in full diamond used to burn exactly as fast as a
 // naked one — the same bug the player side had, found by fixing that one.
 func (h *hub) hurtMobOf(players map[int32]*tracked, m *mob, dmg float64, dt dmgType) {
+	h.hurtMobKind(players, m, dmg, dt, true)
+}
+
+// hurtMobNoBlink is hurtMobOf for a hurt that brings its own enderman
+// teleport (a thrown potion's: repeatedlyTryToTeleport), so the one-in-ten
+// blink must not roll as well.
+func (h *hub) hurtMobNoBlink(players map[int32]*tracked, m *mob, dmg float64, dt dmgType) {
+	h.hurtMobKind(players, m, dmg, dt, false)
+}
+
+// hurtMobKind is hurtMobOf; blink says whether an enderman may roll its
+// one-in-ten teleport.
+func (h *hub) hurtMobKind(players map[int32]*tracked, m *mob, dmg float64, dt dmgType, blink bool) {
 	if dt.has(tagIsFire) && m.resistsFire() {
 		return // LivingEntity.hurtServer: Fire Resistance refuses #is_fire outright
 	}
@@ -90,7 +103,7 @@ func (h *hub) hurtMobOf(players map[int32]*tracked, m *mob, dmg float64, dt dmgT
 	}
 	// EnderMan.hurtServer: hurt by anything that is not a living thing — fire,
 	// a cactus, a fall — it blinks away nine times in ten.
-	if m.etype == entityEnderman && dt != dtDrown && !livingSourced(dt) && h.rng.Intn(10) != 0 { // the wet rolls its own (watersensitive.go)
+	if blink && m.etype == entityEnderman && dt != dtDrown && !livingSourced(dt) && h.rng.Intn(10) != 0 { // the wet rolls its own (watersensitive.go)
 		h.endermanTeleport(players, m)
 	}
 	// PanicGoal: the environment sets an animal running too — out of the

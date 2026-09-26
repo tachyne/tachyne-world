@@ -58,6 +58,9 @@ func (h *hub) splashPotion(players map[int32]*tracked, dim int, x, y, z float64,
 	bx, by, bz := floorInt(x), floorInt(y), floorInt(z)
 	h.levelEvent(players, dim, ev, bx, by, bz, potionColor(kind))
 	h.levelEvent(players, dim, snd, bx, by, bz, 0)
+	if kind == potWater {
+		h.splashWater(players, dim, x, y, z) // splash and lingering both
+	}
 	if lingering {
 		h.spawnPotionCloud(dim, x, y, z, kind)
 		return
@@ -87,7 +90,91 @@ func (h *hub) splashPotion(players map[int32]*tracked, dim int, x, y, z float64,
 		if d > splashRadius {
 			continue
 		}
-		h.applyPotionAoEMob(players, m, effs, 1-d/splashRadius, splashFactor)
+		h.applyThrownPotionMob(players, m, effs, 1-d/splashRadius, splashFactor)
+	}
+}
+
+// splashWater is AbstractThrownPotion.affectEntitiesAround for a bottle of
+// water — the one potion in #hurts_water_sensitive_entities and
+// #extinguishes_entities. Every living thing within four blocks of the
+// shatter (the bottle's box grown 4, 2, 4, then a true distance under four)
+// that is water-sensitive takes a point of indirect magic, and every one
+// on fire is put out. It runs for a lingering bottle as much as a splash
+// one: it is the hit that does it, not a cloud, and water leaves none.
+func (h *hub) splashWater(players map[int32]*tracked, dim int, x, y, z float64) {
+	near := func(ex, ey, ez, hw, ht float64) bool {
+		if ex+hw < x-splashRadius-0.125 || ex-hw > x+splashRadius+0.125 ||
+			ez+hw < z-splashRadius-0.125 || ez-hw > z+splashRadius+0.125 ||
+			ey+ht < y-2 || ey > y+0.25+2 {
+			return false
+		}
+		dx, dy, dz := ex-x, ey-y, ez-z
+		return dx*dx+dy*dy+dz*dz < splashRadius*splashRadius
+	}
+	for _, m := range h.mobs {
+		if m.dim != dim || m.dying > 0 || m.health <= 0 {
+			continue
+		}
+		b := m.box()
+		if !near(m.x, m.y, m.z, b.w/2, b.h) {
+			continue
+		}
+		if waterSensitive(m.etype) {
+			if m.etype == entityEnderman {
+				// Enderman.hurtServer: a thrown potion's hurt lands only when
+				// it is clean water, and either way the enderman is gone —
+				// repeatedlyTryToTeleport, not the one-in-ten blink.
+				h.hurtMobNoBlink(players, m, 1, dtIndirectMagic)
+				if h.mobs[m.eid] != nil && m.health > 0 {
+					h.endermanTeleportHard(players, m)
+				}
+			} else {
+				h.hurtMobOf(players, m, 1, dtIndirectMagic)
+			}
+		}
+		if h.mobs[m.eid] != nil && m.health > 0 && (m.fireSecs > 0 || m.burning) {
+			m.fireSecs = 0 // extinguishFire
+			if m.burning {
+				m.burning = false
+				h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(fireMetadata(m.eid, false)))
+			}
+		}
+	}
+	for _, t := range players {
+		if t.dim == dim && !t.dead && t.fireSecs > 0 && near(t.x, t.y, t.z, 0.3, 1.8*t.scale()) {
+			t.fireSecs = 0
+		}
+	}
+	for _, st := range h.armorStands {
+		if st.dim == dim && st.fire > 0 && near(st.x, st.y, st.z, 0.25, 1.975) {
+			st.fire = 0
+			h.toTracking(players, st.eid, st.dim, st.x, st.z, metaEv(fireMetadata(st.eid, false)))
+		}
+	}
+}
+
+// applyThrownPotionMob is applyPotionAoEMob for a thrown bottle. The one
+// difference is the enderman: Harming reaches it as a hurt whose direct
+// entity is the bottle, and Enderman.hurtServer turns any such hurt that is
+// not clean water into no damage and a repeatedlyTryToTeleport. A cloud's
+// Harming is the cloud's, not a bottle's, and lands as it does on anything.
+func (h *hub) applyThrownPotionMob(players map[int32]*tracked, m *mob, effs []potEffect, prox, factor float64) {
+	if m.etype != entityEnderman {
+		h.applyPotionAoEMob(players, m, effs, prox, factor)
+		return
+	}
+	rest := make([]potEffect, 0, len(effs))
+	harmed := false
+	for _, e := range effs {
+		if e.id == effInstantDamage {
+			harmed = true
+			continue
+		}
+		rest = append(rest, e)
+	}
+	h.applyPotionAoEMob(players, m, rest, prox, factor)
+	if harmed && h.mobs[m.eid] != nil && m.health > 0 {
+		h.endermanTeleportHard(players, m)
 	}
 }
 

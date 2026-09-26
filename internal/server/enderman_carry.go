@@ -35,29 +35,33 @@ type holdableSpan struct{ lo, hi, def uint32 }
 
 // endermanHoldable is the #minecraft:enderman_holdable block tag expanded to
 // state ranges. An enderman only picks up blocks whose state falls in one of
-// these; it then holds the block's default state.
+// these; it then holds the block's default state. Read from the generated
+// tag, so a flower a new version adds to #small_flowers (the golden
+// dandelion, in 26.3) is holdable without anyone remembering to list it.
 var endermanHoldable = func() []holdableSpan {
-	names := []string{
-		// #small_flowers
-		"dandelion", "open_eyeblossom", "poppy", "blue_orchid", "allium",
-		"azure_bluet", "red_tulip", "orange_tulip", "white_tulip", "pink_tulip",
-		"oxeye_daisy", "cornflower", "lily_of_the_valley", "wither_rose",
-		"torchflower", "closed_eyeblossom",
-		// #dirt
-		"dirt", "grass_block", "podzol", "coarse_dirt", "mycelium", "rooted_dirt",
-		"moss_block", "pale_moss_block", "mud", "muddy_mangrove_roots",
-		// the rest of the tag
-		"sand", "red_sand", "gravel", "brown_mushroom", "red_mushroom", "tnt",
-		"cactus", "clay", "pumpkin", "carved_pumpkin", "melon", "crimson_fungus",
-		"crimson_nylium", "crimson_roots", "warped_fungus", "warped_nylium",
-		"warped_roots", "cactus_flower",
-	}
+	names := worldgen.BlockTagNames("enderman_holdable")
 	spans := make([]holdableSpan, 0, len(names))
 	for _, n := range names {
-		lo, hi := worldgen.BlockRange(n)
-		spans = append(spans, holdableSpan{lo, hi, worldgen.BlockID(n)})
+		if lo, hi, ok := worldgen.BlockRangeOK(n); ok {
+			spans = append(spans, holdableSpan{lo, hi, worldgen.BlockID(n)})
+		}
 	}
 	return spans
+}()
+
+// endermanVegetation is the holdable blocks that are VegetationBlocks —
+// the small flowers, the mushrooms, the fungi and roots and the cactus
+// flower. Their updateShape turns them to air where they cannot survive,
+// and LeaveBlockGoal runs updateShape on the carried block before it asks
+// canSurvive (see endermanPlaceBlock).
+var endermanVegetation = func() [][2]uint32 {
+	out := worldgen.BlockTag("small_flowers")
+	for _, n := range []string{"brown_mushroom", "red_mushroom", "crimson_fungus", "warped_fungus",
+		"crimson_roots", "warped_roots", "cactus_flower"} {
+		lo, hi := worldgen.BlockRange(n)
+		out = append(out, [2]uint32{lo, hi})
+	}
+	return out
 }()
 
 // endermanHoldableDefault returns the default state to carry if `state` belongs
@@ -119,6 +123,7 @@ func (h *hub) endermanTakeBlock(players map[int32]*tracked, m *mob) {
 	pos := blockPos{x, y, z}
 	h.setBlockAt(players, m.dim, pos, worldgen.Air)
 	h.scheduleAroundIn(m.dim, pos, 1) // let neighbours (fluids/falling blocks) react
+	h.vib(m.dim, freqBlockDestroy, x, y, z, m.eid)
 	m.carriedBlock = def
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(enderCarryMeta(m.eid, def)))
 }
@@ -133,7 +138,10 @@ func (h *hub) endermanTakeBlock(players map[int32]*tracked, m *mob) {
 // permanent enderman and one more free slot for the spawner.
 //
 // The ray is vanilla's own odd one: from the enderman's BLOCK centre taken at
-// the TARGET's height, to the target's centre.
+// the TARGET's height, to the target's centre, clipped against block
+// OUTLINES — a flower, a tuft of grass or a torch in the way stops it — and
+// the block must be the first thing it meets (or nothing at all, when the
+// ray starts in the target's own cell).
 func (h *hub) endermanTakeable(m *mob, x, y, z int) (uint32, bool) {
 	w := h.worldFor(m.dim)
 	if w == nil {
@@ -143,9 +151,10 @@ func (h *hub) endermanTakeable(m *mob, x, y, z int) (uint32, bool) {
 	if def == 0 {
 		return 0, false
 	}
-	if !h.sightClear(m.dim,
+	hit, _ := h.clipOutline(m.dim,
 		math.Floor(m.x)+0.5, float64(y)+0.5, math.Floor(m.z)+0.5,
-		float64(x)+0.5, float64(y)+0.5, float64(z)+0.5) {
+		float64(x)+0.5, float64(y)+0.5, float64(z)+0.5)
+	if hit != (blockPos{x, y, z}) {
 		return 0, false
 	}
 	return def, true
@@ -156,7 +165,7 @@ func (h *hub) endermanTakeable(m *mob, x, y, z int) (uint32, bool) {
 // z±1) whose target cell is empty — and only where the block can stay
 // (carried.canSurvive: a flower needs soil, a cactus clear sides) with no
 // entity in the cell but the enderman itself. Without those two checks a
-// carried poppy was set down on bare stone.
+// carried poppy was set down on bare stone; vanilla loses it there instead.
 func (h *hub) endermanPlaceBlock(players map[int32]*tracked, m *mob) {
 	if h.rng.Intn(endermanPlaceOdds) != 0 {
 		return
@@ -167,22 +176,37 @@ func (h *hub) endermanPlaceBlock(players map[int32]*tracked, m *mob) {
 	if !h.inWorldY(y) {
 		return
 	}
-	if h.worldFor(m.dim).At(x, y, z) != worldgen.Air { // vanilla canPlaceBlock: target empty
+	w := h.worldFor(m.dim)
+	pos := blockPos{x, y, z}
+	// Block.updateFromNeighbourShapes first: grass set under snow goes down
+	// snowy. A flower, a mushroom or a fungus that cannot survive here comes
+	// out of it as AIR, and air passes every test below — so the enderman
+	// "places" nothing and its hands are empty. That is vanilla's, and it is
+	// where the flowers endermen carry over bare stone go.
+	carried := m.carriedBlock
+	if inRanges2(carried, endermanVegetation) && !supported(w, pos, carried) {
+		carried = worldgen.Air
+	} else {
+		carried = updateFromNeighbourShapes(w, pos, carried)
+	}
+	if !isAirState(w.At(x, y, z)) { // vanilla canPlaceBlock: target empty
 		return
 	}
-	below := h.worldFor(m.dim).At(x, y-1, z) // …on a solid full block that isn't bedrock
+	below := w.At(x, y-1, z) // …on a solid full block that isn't bedrock
 	if below == worldgen.Bedrock || !worldgen.IsSolidFull(below) {
 		return
 	}
-	pos := blockPos{x, y, z}
-	if !supported(h.worldFor(m.dim), pos, m.carriedBlock) {
+	if carried != worldgen.Air && !supported(w, pos, carried) {
 		return
 	}
 	if h.entityInCell(players, m.dim, pos, m.eid) {
 		return
 	}
-	h.setBlockAt(players, m.dim, pos, m.carriedBlock)
-	h.scheduleAroundIn(m.dim, pos, 1)
+	if carried != worldgen.Air {
+		h.setBlockAt(players, m.dim, pos, carried)
+		h.scheduleAroundIn(m.dim, pos, 1)
+	}
+	h.vib(m.dim, freqBlockPlace, x, y, z, m.eid)
 	m.carriedBlock = 0
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(enderCarryMeta(m.eid, 0)))
 }

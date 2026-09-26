@@ -51,7 +51,18 @@ the public history since the project was open-sourced on 2026-07-10.
   nothing, still decays as in vanilla.
 - **Endermen set carried blocks down only where they can stay.** A flower
   needs soil and nothing may be standing in the spot, as in vanilla. Before,
-  a carried poppy could land on bare stone.
+  a carried poppy could land on bare stone; now, as in vanilla, a flower an
+  enderman tries to set down where it cannot grow is lost. Grass set down
+  under snow is snowy, and sculk sensors hear an enderman take and place
+  blocks. An enderman only lifts a block it can see past flowers, grass and
+  torches, and it can now carry the golden dandelion.
+- **Splash water hurts endermen, blazes, striders and snow golems.** A
+  splash or lingering bottle of water deals them a point of damage and puts
+  out anything burning nearby; it used to do nothing. An enderman hit by
+  water or Harming teleports away at once, and a thrown potion now breaks on
+  an enderman instead of passing through it.
+- **Endermen leave a purple particle trail when they teleport** (26.3
+  clients), and never teleport past the world border.
 
 ## 2026-09-25
 

@@ -397,7 +397,9 @@ func TestEndermanDropsItsCarriedBlock(t *testing.T) {
 
 // Bug #39: an enderman set a carried flower down on bare stone. Vanilla's
 // LeaveBlockGoal needs carried.canSurvive at the cell — a poppy on stone
-// never lands, the same poppy over grass does.
+// never lands, the same poppy over grass does. (Over stone the poppy is
+// lost instead: updateFromNeighbourShapes turns it to air first, and the
+// enderman "places" that.)
 func TestEndermanPlacesFlowerOnlyWhereItSurvives(t *testing.T) {
 	poppy := worldgen.BlockID("poppy")
 	for _, tc := range []struct {
@@ -424,8 +426,17 @@ func TestEndermanPlacesFlowerOnlyWhereItSurvives(t *testing.T) {
 		for i := 0; i < 500000 && m.carriedBlock != 0; i++ {
 			h.endermanPlaceBlock(players, m)
 		}
-		if placed := m.carriedBlock == 0; placed != tc.want {
+		placed := false
+		for dx := -1; dx <= 1; dx++ {
+			for dz := -1; dz <= 1; dz++ {
+				placed = placed || h.world.At(ex+dx, ey, ez+dz) == poppy
+			}
+		}
+		if placed != tc.want {
 			t.Errorf("poppy over %s: placed=%v, want %v", tc.floor, placed, tc.want)
+		}
+		if m.carriedBlock != 0 {
+			t.Errorf("poppy over %s: still carried", tc.floor)
 		}
 	}
 }
