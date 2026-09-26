@@ -68,14 +68,16 @@ func (h *hub) dolphinPlay(players map[int32]*tracked, m *mob) bool {
 		h.playSoundDim(players, m.dim, "minecraft:entity.dolphin.play", sndNeutral, m.x, m.y, m.z, 1, 1)
 	}
 	if bestD <= dolphinPlayReach { // Dolphin.pickUpItem
-		m.held = it.item
+		one := it.stack()
+		one.count = 1
+		m.setHeld(one)
 		if it.count--; it.count <= 0 {
 			delete(h.items, it.eid)
 			h.entityGone(players, it.dim, it.eid)
 		} else {
 			h.refreshItemMeta(players, it)
 		}
-		h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: 1}, invStack{}, m.gear))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(), invStack{}, m.gear))
 		h.playSoundDim(players, m.dim, "minecraft:entity.item.pickup", sndNeutral, m.x, m.y, m.z, 0.2, 1)
 		m.dolphinPlayEID = 0
 		return true
@@ -93,10 +95,12 @@ func (h *hub) dolphinToss(players map[int32]*tracked, m *mob, now uint64) {
 	yaw := float64(m.yaw) * math.Pi / 180
 	tx := m.x - math.Sin(yaw)*dolphinTossReach
 	tz := m.z + math.Cos(yaw)*dolphinTossReach
-	item := m.held
+	st := m.heldStack()
 	m.held = 0
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, m.gear))
-	if it := h.spawnItemIn(players, m.dim, item, 1, tx, m.y+0.5, tz); it != nil {
+	if it := h.spawnItemIn(players, m.dim, st.item, 1, tx, m.y+0.5, tz); it != nil {
+		it.setFrom(st)
+		h.refreshItemMeta(players, it)
 		it.noPickupUntil = now + dolphinTossHold
 		it.vy = dolphinTossLift
 	}

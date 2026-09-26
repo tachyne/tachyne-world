@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Raid.spawnGroup: each wave's first raider that can lead (in the raider
@@ -108,5 +109,49 @@ func TestCaptainDeathDrops(t *testing.T) {
 		if (bottles == 1) != tc.bottle || (banners == 1) != tc.captain || bottles > 1 || banners > 1 {
 			t.Errorf("type %d captain=%v: %d bottles, %d banners", tc.etype, tc.captain, bottles, banners)
 		}
+	}
+}
+
+// Raid.setLeader / PatrollingMonster.finalizeSpawn put the OMINOUS banner on
+// a captain (it used to be a plain white one): Raider.isCaptain matches that
+// stack, the banner drops as itself, keeps its identity in a save, and a
+// captain saved in the old plain banner gets the ominous one back.
+func TestCaptainWearsTheOminousBanner(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	h.world.ForceLoad(0, 0, 1)
+	for x := -2; x <= 2; x++ {
+		for z := -2; z <= 2; z++ {
+			h.world.SetBlock(x, 179, z, worldgen.Stone)
+		}
+	}
+	p := h.spawnMob(players, entityPillager, 0.5, 180, 0.5)
+	h.makeCaptain(players, p)
+	if !isOminousBanner(p.gear[0]) || !isCaptain(p) {
+		t.Fatalf("a captain wears the ominous banner: %+v captain=%v", p.gear[0], isCaptain(p))
+	}
+	if back := unpackStack(packStack(p.gear[0])); back != p.gear[0] {
+		t.Errorf("the ominous banner does not survive a save: %+v", back)
+	}
+	old := toSavedMob(p)
+	old.Gear[0] = packStack(invStack{item: itemWhiteBanner, count: 1})
+	h2 := newHub(world.New(1))
+	h2.reloading = true
+	if r := h2.reloadMob(map[int32]*tracked{}, &old); r == nil || !isCaptain(r) {
+		t.Error("a captain saved in a plain white banner should get the ominous one back")
+	}
+
+	p.health, p.hitByPlayer = 0, true
+	h.rules.DoMobLoot = true
+	h.despawnMob(players, p)
+	dropped := false
+	for _, it := range h.items {
+		if isOminousBanner(it.stack()) {
+			dropped = true
+		}
+	}
+	if !dropped {
+		t.Error("the captain's banner drops as the ominous banner (drop chance 2.0)")
 	}
 }

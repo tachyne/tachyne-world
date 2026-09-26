@@ -53,6 +53,13 @@ func playerCause(t *tracked) deathCause {
 	return deathCause{by: t.p.name, byEID: t.p.eid, weapon: namedMainhand(t)}
 }
 
+// mobMeleeCause is a mob's blow: its name, and — getLocalizedDeathMessage
+// reading the attacker's main hand, as for a player — a named item it holds,
+// for the "… using Excalibur" form.
+func mobMeleeCause(m *mob) deathCause {
+	return deathCause{by: mobDisplayName(m.etype), weapon: m.heldStack().name}
+}
+
 // killCreditTicks is how long vanilla remembers who a victim was last
 // fighting (LivingEntity's lastHurtByMob timeout). Inside that window a death
 // with nobody directly to blame still reads "while trying to escape X".

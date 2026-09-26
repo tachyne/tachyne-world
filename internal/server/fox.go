@@ -500,7 +500,9 @@ func (h *hub) foxPickupStep(players map[int32]*tracked, m *mob) bool {
 		return false
 	}
 	if bestD <= 1.5 {
-		h.foxHold(players, m, it.item)
+		one := it.stack()
+		one.count = 1
+		h.foxHold(players, m, one)
 		if it.count--; it.count <= 0 {
 			delete(h.items, it.eid)
 			h.entityGone(players, it.dim, it.eid)
@@ -516,10 +518,11 @@ func (h *hub) foxPickupStep(players map[int32]*tracked, m *mob) bool {
 
 // foxHold puts an item in the fox's mouth: shown, kept (a guaranteed drop),
 // and the eating clock starts over.
-func (h *hub) foxHold(players map[int32]*tracked, m *mob, item int32) {
-	m.held, m.foxEatTicks = item, 0
+func (h *hub) foxHold(players map[int32]*tracked, m *mob, st invStack) {
+	m.setHeld(st)
+	m.foxEatTicks = 0
 	m.persistent = true
-	h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: 1}, invStack{}, m.gear))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(), invStack{}, m.gear))
 }
 
 // steerTo sets a walker's velocity straight at (x, z) at a speed multiple.

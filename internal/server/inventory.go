@@ -76,6 +76,10 @@ type invStack struct {
 	// A sulfur cube bucket's cube: the block it had swallowed and its age
 	// (sulfur_cube_content + bucket_entity_data). Zero for everything else.
 	cube cubeContent
+	// The ominous banner (Raid.getOminousBannerInstance): a white banner
+	// carrying the raid's eight layers, its item name and uncommon rarity.
+	// One flag for the whole component set (ominousbanner.go).
+	ominous bool
 }
 
 // cubeContent is what a sulfur cube bucket holds besides the cube itself.

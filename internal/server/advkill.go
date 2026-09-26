@@ -122,7 +122,7 @@ func (h *hub) creditPlayerDeath(players map[int32]*tracked, v *tracked) {
 // the projectile as the direct entity).
 func killMatch(t *tracked, m *mob) advMatch {
 	km := advMatch{entity: advEntityName[m.etype], baby: m.baby, dim: int32(m.dim),
-		distH: math.Hypot(m.x-t.x, m.z-t.z), ominousBanner: m.patrolCaptain,
+		distH: math.Hypot(m.x-t.x, m.z-t.z), ominousBanner: isOminousBanner(m.gear[0]),
 		damageTags: map[string]bool{}}
 	if m.lastDirect != 0 {
 		km.damageDirect = advEntityName[m.lastDirect]

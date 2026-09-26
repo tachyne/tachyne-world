@@ -293,7 +293,7 @@ func (h *hub) foxPickBerries(players map[int32]*tracked, m *mob, p blockPos) {
 			n++
 		}
 		if m.held == 0 {
-			h.foxHold(players, m, itemSweetBerries)
+			h.foxHold(players, m, invStack{item: itemSweetBerries, count: 1})
 			n--
 		}
 		if n > 0 {

@@ -63,6 +63,7 @@ type itemEntity struct {
 	starID        int32       // a firework's bursts
 	shieldBase    int8        // a decorated shield's banner base (dye + 1)
 	cube          cubeContent // a sulfur cube bucket's cube
+	ominous       bool        // the ominous banner
 	vx, vy, vz    float64     // motion per tick (tickItem); all 0 at rest
 	born          uint64      // world tick spawned
 	age           int         // ItemEntity.age: ticks it has lain (despawns at 6000; saved)
@@ -80,7 +81,8 @@ func (it *itemEntity) stack() invStack {
 		pats: it.pats, trimMat: it.trimMat, trimPat: it.trimPat, bookID: it.bookID, boxID: it.boxID,
 		hiveID: it.hiveID, bundleID: it.bundleID, potion: it.potion, repairCost: it.repairCost,
 		instrument: it.instrument, name: it.name, lode: it.lode, color: it.color, stew: it.stew,
-		shieldBase: it.shieldBase, sherds: it.sherds, flight: it.flight, starID: it.starID, cube: it.cube}
+		shieldBase: it.shieldBase, sherds: it.sherds, flight: it.flight, starID: it.starID, cube: it.cube,
+		ominous: it.ominous}
 }
 
 // setFrom is stack()'s inverse: everything a slot carries, onto the dropped
@@ -96,7 +98,7 @@ func (it *itemEntity) setFrom(st invStack) {
 	it.potion, it.repairCost, it.instrument = st.potion, st.repairCost, st.instrument
 	it.name, it.lode, it.stew, it.shieldBase = st.name, st.lode, st.stew, st.shieldBase
 	it.sherds, it.flight, it.starID = st.sherds, st.flight, st.starID
-	it.cube = st.cube
+	it.cube, it.ominous = st.cube, st.ominous
 }
 
 // refreshItemMeta re-sends a ground item's stack after a drop site has

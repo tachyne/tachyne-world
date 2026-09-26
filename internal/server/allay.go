@@ -280,17 +280,20 @@ func (h *hub) tryAllay(players map[int32]*tracked, t *tracked, m *mob) bool {
 		}
 		return true
 	case m.held == 0 && held.item != 0:
-		m.held = held.item
+		one := held
+		one.count = 1
+		m.setHeld(one)
 		m.owner, m.ownerUUID = t.p.eid, t.p.uuid
 		if isSurvival(t.gamemode) {
 			h.consumeHeld(t)
 		}
 		h.playSoundDim(players, m.dim, "minecraft:entity.allay.item_given", sndNeutral, m.x, m.y, m.z, 2, 1)
-		h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: 1}, invStack{}, m.gear))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(), invStack{}, m.gear))
 		m.persistent = true
 		return true
 	case m.held != 0 && held.item == 0:
-		back := invStack{item: m.held, count: 1}
+		back := m.heldStack()
+		back.count = 1
 		m.held = 0
 		m.owner, m.ownerUUID = 0, [16]byte{}
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, m.gear))

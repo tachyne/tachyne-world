@@ -325,7 +325,7 @@ func (h *hub) stabPlayerByMob(players map[int32]*tracked, m *mob, v *tracked, b 
 			}
 			dmg = float32(math.Max(0, dev.Damage))
 		}
-		landed = h.hurtFrom(players, v, dmg, dtSpear, deathCause{by: mobDisplayName(m.etype)},
+		landed = h.hurtFrom(players, v, dmg, dtSpear, mobMeleeCause(m),
 			fromMobWeapon(m.x, m.z, m.held))
 		if landed {
 			v.lastHurtByMob = m.eid

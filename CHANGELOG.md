@@ -87,6 +87,16 @@ the public history since the project was open-sourced on 2026-07-10.
   fire, a berry bush, a wither rose, powder snow or another block endermen
   avoid is anywhere in the space the enderman would fill. Before, only the
   block it would stand on was checked.
+- **Raid and patrol captains wear the Ominous Banner.** A captain's banner
+  used to be a plain white one. It is now the Ominous Banner: it drops as
+  one, shows its pattern when placed and comes back as one when broken, and
+  killing a raider who wears it earns Voluntary Exile. Held in the hand or
+  worn by a captain, it still looks like a white banner for now.
+- **Mobs keep the names of the items they hold.** A named sword that a
+  zombie picks up keeps its name in the zombie's hand, in its drop and
+  across a restart. Foxes, pandas, dolphins and allays keep an item's name
+  and other data while they carry it. A player killed by a mob holding a
+  named weapon is "slain by Zombie using Excalibur", as in vanilla.
 
 ## 2026-09-25
 

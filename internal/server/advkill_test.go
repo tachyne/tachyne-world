@@ -115,23 +115,32 @@ func TestKillCriteriaSniperDuel(t *testing.T) {
 	}
 }
 
-// Voluntary Exile is a raider wearing the ominous banner: a patrol captain,
-// not any pillager.
+// Voluntary Exile is a raider wearing the ominous banner on its head (the
+// predicate reads the equipment, not the leader flag): a patrol captain, not
+// any pillager, and not one in a plain white banner.
 func TestKillCriteriaVoluntaryExile(t *testing.T) {
-	kill := func(captain bool) *tracked {
+	kill := func(dress func(h *hub, players map[int32]*tracked, p *mob)) *tracked {
 		h, pl, players := killRig(t)
 		p := h.spawnMob(players, entityPillager, 0, 180, 2)
-		p.health, p.patrolCaptain = 1, captain
+		p.health = 1
+		dress(h, players, p)
 		h.attackMob(players, pl.p.eid, p.eid)
 		if p.dying == 0 {
 			t.Fatal("the punch did not kill the pillager")
 		}
 		return pl
 	}
-	if pl := kill(false); hasCrit(pl, advVoluntaryExile, "voluntary_exile") {
+	if pl := kill(func(*hub, map[int32]*tracked, *mob) {}); hasCrit(pl, advVoluntaryExile, "voluntary_exile") {
 		t.Error("an ordinary pillager earned Voluntary Exile")
 	}
-	if pl := kill(true); !hasCrit(pl, advVoluntaryExile, "voluntary_exile") {
+	plain := func(_ *hub, _ map[int32]*tracked, p *mob) {
+		p.patrolCaptain, p.gear[0] = true, invStack{item: itemWhiteBanner, count: 1}
+	}
+	if pl := kill(plain); hasCrit(pl, advVoluntaryExile, "voluntary_exile") {
+		t.Error("a pillager in a plain white banner earned Voluntary Exile")
+	}
+	captain := func(h *hub, players map[int32]*tracked, p *mob) { h.makeCaptain(players, p) }
+	if pl := kill(captain); !hasCrit(pl, advVoluntaryExile, "voluntary_exile") {
 		t.Error("a patrol captain does not earn Voluntary Exile")
 	}
 }
