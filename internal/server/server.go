@@ -518,6 +518,9 @@ func (s *Server) Serve() error {
 		for _, w := range s.hub.mobstore.villages() {
 			s.hub.villageDone[unpackPos(w)] = true // populated villages stay populated
 		}
+		if s.WorldFile != "" {
+			s.clearLoneDoors() // villagers' door swings a new village layout left standing (#48)
+		}
 		for w, keys := range s.hub.mobstore.villagePlaced() {
 			s.hub.villagePlaced[w] = keys // …and each template entity is placed once
 		}

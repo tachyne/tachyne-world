@@ -53,7 +53,11 @@ the public history since the project was open-sourced on 2026-07-10.
   village was built with, so when a later world-generation update laid a
   village out again, the doors stayed behind where the old houses had
   stood. A block set back to exactly what generation made there is no
-  longer stored as a change.
+  longer stored as a change, and the doors already left behind are cleared
+  once at the next start: a saved door where generation has none, within 80
+  blocks of a village and with no wall beside it, goes back to the ground
+  that was generated there. Doors set in a wall, and doors away from
+  villages, are left as they are.
 - **Placed spawners work.** A spawner set with a spawn egg, placed with
   `/setblock` (with `SpawnData` and `Delay`) or copied with `/clone` now
   spawns its mob as in vanilla: a player within 16 blocks, four tries every

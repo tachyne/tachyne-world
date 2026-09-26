@@ -902,6 +902,19 @@ func (w *World) At(x, y, z int) uint32 {
 	return ch.Sections[sec][(ly*16+lz)*16+lx]
 }
 
+// GeneratedAt is the block generation made at a world coord, edits ignored:
+// what the cell reverts to if its edit goes. It generates the chunk on a miss,
+// as At does.
+func (w *World) GeneratedAt(x, y, z int) uint32 {
+	if !w.inBounds(y) {
+		return worldgen.Air
+	}
+	cx, cz, lx, lz := chunkOf(x, z)
+	ch := w.generated(int32(cx), int32(cz))
+	sec, ly := (y-worldgen.MinY)/16, (y-worldgen.MinY)%16
+	return ch.Sections[sec][(ly*16+lz)*16+lx]
+}
+
 // Chunk returns a fresh chunk: a copy of the cached generated base with any
 // persistent edits applied on top. The copy keeps the shared cached chunk
 // immutable.
