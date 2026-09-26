@@ -503,6 +503,7 @@ func (s *Server) Serve() error {
 			log.Printf("cull-animals: capped to %d/chunk + cow-thinned, persisted mobs %d -> %d",
 				s.CullAnimals, before, after)
 		}
+		s.cullEndermenOnce() // the copies bug #45 left in the store
 		// Load the persisted seeded-chunk set so the vanilla chunk-generation herds
 		// fire once per chunk EVER (not once per restart) — the accumulation fix.
 		s.hub.seededChunks = s.hub.mobstore.seededSet()

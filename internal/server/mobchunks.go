@@ -150,8 +150,8 @@ func (h *hub) unloadMobChunks(players map[int32]*tracked, chunkSet map[[3]int32]
 }
 
 // reconcileEntityChunks computes every dimension's entity-ticking chunks and
-// loads or unloads the mobs with them: every player's view window in the
-// dimension they are in, and every forced chunk (ForceLoadCommand's FORCED
+// loads or unloads the mobs with them: the simulation distance around every
+// player in the dimension they are in, and every forced chunk (ForceLoadCommand's FORCED
 // ticket is entity ticking), so mobs in a /forceload'ed area stay loaded and
 // keep moving with nobody online.
 func (h *hub) reconcileEntityChunks(players map[int32]*tracked) {
@@ -164,7 +164,7 @@ func (h *hub) reconcileEntityChunks(players map[int32]*tracked) {
 	set := h.scratchEntityChunks
 	clear(set)
 	for _, t := range players {
-		r := t.p.radius()
+		r := int32(simulationDistance)
 		d, cx, cz := int32(t.dim), int32(chunkFloor(t.x)), int32(chunkFloor(t.z))
 		for x := cx - r; x <= cx+r; x++ {
 			for z := cz - r; z <= cz+r; z++ {

@@ -19,13 +19,10 @@ import (
 // species come from per-biome weighted pools with vanilla pack sizes, and
 // non-persistent mobs despawn by distance.
 //
-// Divergences (deliberate, documented): no per-player local mob cap (our
-// player counts are small); underground-water creatures (glow squid) are
-// folded into the water-creature pool by depth; vanilla's chunk-generation
-// creature herds are approximated by a low-rate herd top-up near players
-// (our chunks regenerate on the fly and mobs don't persist, so without it
-// the countryside would empty after every restart); the nether keeps its
-// own spawner (updateNetherMobs).
+// The spawner runs over each player's simulation distance (ten chunks, the
+// server default), attempting only chunks within 128 blocks of a player;
+// the cap counts the ±8 spawn ring. Mobs load and unload with the chunks of
+// that window in every dimension (mobchunks.go).
 
 // Mob categories (vanilla MobCategory): caps are per 17×17 chunks = 289,
 // scaled by the spawnable-chunk count; -1 despawn distance = persistent.
@@ -44,10 +41,21 @@ var categoryCap = [catCount]int{70, 10, 15, 5, 20, 5, 5}
 var categoryDespawnDist = [catCount]int{128, 128, 128, 128, 64, 128, 128}
 
 const (
-	spawnChunkArea   = 17 * 17 // vanilla MAGIC_NUMBER: cap scale denominator
-	spawnDistChunks  = 8       // vanilla SPAWN_DISTANCE_CHUNK: the spawn ring is ±8 chunks
-	creatureSpawnMod = 400     // persistent categories spawn every 400 ticks
-	maxSpawnCluster  = 4       // vanilla Mob.getMaxSpawnClusterSize default
+	spawnChunkArea  = 17 * 17 // vanilla MAGIC_NUMBER: cap scale denominator
+	spawnDistChunks = 8       // vanilla SPAWN_DISTANCE_CHUNK: the spawn ring is ±8 chunks
+	// simulationDistance is server.properties simulation-distance (default
+	// 10): the chunks around each player whose entities tick — the mob
+	// window, which loads and unloads mobs with its chunks, and the natural
+	// spawner's area. It is the server's, not the client's render distance: a
+	// monster left behind is 128 blocks away, and despawned, well before its
+	// chunk leaves this window, so it is not saved to come back.
+	simulationDistance = 10
+	// spawnPlayerRange is ChunkMap.playerIsCloseEnoughForSpawning: a chunk
+	// takes spawn attempts only with a player (not a spectator) within 128
+	// blocks of its centre.
+	spawnPlayerRange = 128
+	creatureSpawnMod = 400 // persistent categories spawn every 400 ticks
+	maxSpawnCluster  = 4   // vanilla Mob.getMaxSpawnClusterSize default
 	// Vanilla attempts one position per loaded chunk per tick; we sample at
 	// one per 8 chunks per tick per category. Most attempts die instantly
 	// (random Y lands inside rock), so a higher rate is what makes cave
@@ -165,7 +173,8 @@ func (h *hub) countsTowardCaps(m *mob) bool {
 
 // naturalSpawn runs every tick — the port of NaturalSpawner.spawnForChunk
 // over the spawnable-chunk set of every dimension with a player in it (the
-// union of those players' view windows), one position attempt per chunk.
+// union of those players' simulation windows, near enough to a player to
+// spawn for), one position attempt per chunk.
 func (h *hub) naturalSpawn(players map[int32]*tracked) {
 	if !h.rules.DoMobSpawning || len(players) == 0 {
 		return
@@ -196,7 +205,7 @@ func (h *hub) naturalSpawnDim(players map[int32]*tracked, dim int) {
 			continue
 		}
 		here++
-		r := t.p.radius()
+		r := int32(simulationDistance)
 		cx, cz := int32(chunkFloor(t.x)), int32(chunkFloor(t.z))
 		for x := cx - r; x <= cx+r; x++ {
 			for z := cz - r; z <= cz+r; z++ {
@@ -211,9 +220,13 @@ func (h *hub) naturalSpawnDim(players map[int32]*tracked, dim int) {
 	if here == 0 {
 		return
 	}
+	// ServerChunkCache.tickChunks → collectSpawningChunks: the ticking chunks
+	// with a player close enough to spawn for.
 	chunks := make([][2]int32, 0, len(chunkSet))
 	for c := range chunkSet {
-		chunks = append(chunks, c)
+		if spawningChunk(players, dim, c) {
+			chunks = append(chunks, c)
+		}
 	}
 
 	var counts [catCount]int
@@ -225,6 +238,22 @@ func (h *hub) naturalSpawnDim(players map[int32]*tracked, dim int) {
 	}
 
 	h.spawnVanilla(players, dim, chunks, chunkSet, len(spawnRing), &counts)
+}
+
+// spawningChunk is anyPlayerCloseEnoughForSpawning: some non-spectator
+// player in the dimension within 128 blocks, horizontally, of the chunk's
+// centre.
+func spawningChunk(players map[int32]*tracked, dim int, c [2]int32) bool {
+	x, z := float64(c[0])*16+8, float64(c[1])*16+8
+	for _, t := range players {
+		if t.dim != dim || t.gamemode == gmSpectator {
+			continue
+		}
+		if dx, dz := x-t.x, z-t.z; dx*dx+dz*dz < spawnPlayerRange*spawnPlayerRange {
+			return true
+		}
+	}
+	return false
 }
 
 // spawnCap is vanilla NaturalSpawner.canSpawnForCategoryGlobal: the per-category

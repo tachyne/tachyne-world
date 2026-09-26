@@ -29,7 +29,15 @@ the public history since the project was open-sourced on 2026-07-10.
   despawn while holding a block, piled up this way. Nether and End mobs are
   now saved with their own dimension's chunks instead of the overworld's at
   the same coordinates, and an enderman no longer teleports into a chunk
-  that isn't loaded.
+  that isn't loaded. The copies already saved are cleared once: saved
+  overworld endermen are removed and the natural spawner refills them at
+  vanilla rates.
+- **Mobs are simulated out to vanilla's simulation distance.** Mobs tick and
+  spawn over ten chunks around each player, as a vanilla server does by
+  default, with spawn attempts only in chunks within 128 blocks of a
+  player. The monster cap is vanilla's 70 (it was 40). A monster left
+  behind now despawns at 128 blocks before its chunk unloads, instead of
+  being saved and waiting for you to come back.
 - **Hedges built before 24 September stop rotting.** Leaves placed by hand
   used to be saved like tree leaves, so a hedge with no log nearby decayed.
   A one-time repair at startup makes those leaves permanent. Leaves that

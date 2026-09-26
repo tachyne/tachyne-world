@@ -1,6 +1,7 @@
 package server
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -123,5 +124,34 @@ func TestMobStoreRefilesBucketsByDimension(t *testing.T) {
 	}
 	if got := s2.take(0, 5, 5); len(got) != 1 || got[0].Etype != entityCow {
 		t.Fatalf("overworld bucket after reload: %+v, want the cow", got)
+	}
+}
+
+// The one-time cull clears the overworld's saved endermen, leaves other
+// mobs and other dimensions alone, backs the store up, and runs only once.
+func TestEndermanCullRunsOnce(t *testing.T) {
+	dir := t.TempDir()
+	s := &Server{MobFile: filepath.Join(dir, "mobs.json"), hub: newHub(world.New(1))}
+	s.hub.mobstore = newMobStore(s.MobFile)
+	s.hub.mobstore.stash(0, 1, 1, []savedMob{
+		{Etype: entityEnderman, X: 20, Y: 70, Z: 20, CustomName: "Ender"},
+		{Etype: entityCow, X: 21, Y: 70, Z: 20},
+	})
+	s.hub.mobstore.stash(dimEnd, 1, 1, []savedMob{{Etype: entityEnderman, Dim: dimEnd, X: 20, Y: 60, Z: 20}})
+	s.hub.mobstore.flush()
+	s.cullEndermenOnce()
+	if got := s.hub.mobstore.take(0, 1, 1); len(got) != 1 || got[0].Etype != entityCow {
+		t.Fatalf("overworld bucket after the cull: %+v, want only the cow", got)
+	}
+	if got := s.hub.mobstore.take(dimEnd, 1, 1); len(got) != 1 {
+		t.Fatalf("the End's endermen must be left alone, got %+v", got)
+	}
+	if _, err := os.Stat(s.MobFile + ".pre-enderman-cull"); err != nil {
+		t.Fatalf("no backup: %v", err)
+	}
+	s.hub.mobstore.stash(0, 2, 2, []savedMob{{Etype: entityEnderman, X: 40, Y: 70, Z: 40}})
+	s.cullEndermenOnce()
+	if got := s.hub.mobstore.take(0, 2, 2); len(got) != 1 {
+		t.Fatal("the cull must run only once")
 	}
 }

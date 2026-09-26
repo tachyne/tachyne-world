@@ -14,10 +14,16 @@ func netherHub(t *testing.T) (*hub, *tracked, map[int32]*tracked) {
 	h.nether = nw
 	pl := testTracked()
 	pl.dim = 1
-	pl.p.viewDist.Store(2) // a 5×5-chunk window: the spawner's per-chunk attempts generate nether terrain
 	// Park the player on a real nether floor.
 	y := nw.Gen().NetherFloor(40, 40)
 	pl.x, pl.y, pl.z = 40.5, float64(y), 40.5
+	// A player's view holds the chunks around them loaded, and only a loaded
+	// (ticking) chunk takes spawn attempts.
+	for cx := int32(-1); cx <= 6; cx++ {
+		for cz := int32(-1); cz <= 6; cz++ {
+			nw.Reader(cx, cz)
+		}
+	}
 	return h, pl, map[int32]*tracked{1: pl}
 }
 

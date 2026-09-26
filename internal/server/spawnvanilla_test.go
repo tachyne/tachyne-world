@@ -104,7 +104,7 @@ func TestVanillaSpawnerFillsCaves(t *testing.T) {
 	// The global cap gates each chunk's attempt BEFORE its pack is placed
 	// (canSpawnForCategoryGlobal), so vanilla — and the port — can overshoot
 	// it by the last pack, never by more than a cluster.
-	capN := categoryCap[catMonster] * (13 * 13) / spawnChunkArea
+	capN := categoryCap[catMonster] // one player's whole ±8 spawn ring
 	if monsters > capN+maxSpawnCluster-1 {
 		t.Fatalf("monster count %d exceeded the scaled cap %d by more than a pack", monsters, capN)
 	}

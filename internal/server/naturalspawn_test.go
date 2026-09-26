@@ -319,7 +319,7 @@ func TestNaturalSpawnFillsCaves(t *testing.T) {
 	if monsters == 0 {
 		t.Fatal("a night of attempts must spawn monsters")
 	}
-	capN := categoryCap[catMonster] * (13 * 13) / spawnChunkArea // radius-6 window
+	capN := categoryCap[catMonster] // one player's whole ±8 spawn ring: exactly the category's cap
 	if monsters > capN {
 		t.Fatalf("monster count %d exceeded the scaled cap %d", monsters, capN)
 	}
