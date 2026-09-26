@@ -354,3 +354,44 @@ func TestDragonTailLagsThroughTheTurn(t *testing.T) {
 		t.Fatalf("once the turn is history the tail trails behind along −x: dx %.2f", tail.x-m.x)
 	}
 }
+
+// EnderDragon.hurt and knockBack take every LivingEntity in the boxes, not
+// only players: a mob at the head takes ten, one under a wing is shoved off
+// the body and takes five (only the shove while the dragon sits), and an
+// armor stand shrugs a mob's attack off.
+func TestDragonContactHitsMobs(t *testing.T) {
+	h, m, _, players := dragonFight(t)
+	m.x, m.y, m.z, m.yaw = 0.5, 120, 0.5, 0
+	head := dragonPartOf(m, 0)
+	cow := h.spawnMobIn(players, entityCow, dimEnd, head.x, head.y, head.z)
+	cow.health = 10
+	h.dragonContact(players, m, false, h.tick.Load())
+	if cow.health > 0 && cow.dying == 0 {
+		t.Fatalf("a cow at the dragon's head takes ten: health %d", cow.health)
+	}
+
+	wing := dragonPartOf(m, 6)
+	body := dragonPartOf(m, 2)
+	pig := h.spawnMobIn(players, entityPig, dimEnd, wing.x+3, wing.y-3, wing.z)
+	pig.health = 10
+	h.dragonContact(players, m, true, h.tick.Load())
+	if pig.health != 10 {
+		t.Errorf("a sitting dragon's wing only shoves: health %d", pig.health)
+	}
+	if (pig.vx*(pig.x-body.x)+pig.vz*(pig.z-body.z)) <= 0 || pig.vy <= 0 {
+		t.Errorf("the wing shoves the pig away from the body and up: v=(%v,%v,%v)", pig.vx, pig.vy, pig.vz)
+	}
+	pig.invulnTicks = 0
+	h.dragonContact(players, m, false, h.tick.Load())
+	if pig.health != 5 {
+		t.Errorf("a wing in flight hurts a mob for five: health %d", pig.health)
+	}
+
+	st := &armorStand{eid: h.allocEID(), dim: dimEnd, x: head.x, y: head.y, z: head.z}
+	h.armorStands[st.eid] = st
+	h.rules.MobGriefing = true
+	h.dragonContact(players, m, false, h.tick.Load())
+	if h.armorStands[st.eid] == nil || st.hurt != 0 {
+		t.Error("a mob's attack does nothing to an armor stand")
+	}
+}

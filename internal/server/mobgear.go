@@ -137,7 +137,7 @@ func (h *hub) mobEquipItem(players map[int32]*tracked, m *mob, st invStack) int 
 	taken := 1
 	if slot == gearSlotHand { // EquipmentSlot.limit: a hand takes the whole stack
 		taken = st.count
-		m.held, m.heldEnch, m.heldDmg, m.heldCount = st.item, st.ench, st.dmg, st.count
+		m.setHeld(st) // the whole stack: its name and all
 	} else {
 		m.gear[slot] = st // the whole piece: dye, trim and all
 		m.gear[slot].count = 1

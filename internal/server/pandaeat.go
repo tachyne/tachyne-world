@@ -110,10 +110,10 @@ func (h *hub) pandaSitEat(players map[int32]*tracked, m *mob, trait int32, now u
 		return true
 	}
 	// pickUpItem: the whole stack goes into the mouth (a guaranteed drop).
-	m.held = it.item
+	m.setHeld(it.stack())
 	delete(h.items, it.eid)
 	h.entityGone(players, it.dim, it.eid)
-	h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: 1}, invStack{}, m.gear))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(), invStack{}, m.gear))
 	h.playSoundDim(players, m.dim, "minecraft:entity.item.pickup", sndNeutral, m.x, m.y, m.z, 0.2, 1)
 	m.persistent = true
 	h.setPandaFlag(players, m, pandaFlagSit, true)
@@ -125,7 +125,11 @@ func (h *hub) pandaSitEat(players map[int32]*tracked, m *mob, trait int32, now u
 // panda stands.
 func (h *hub) pandaEatStop(players map[int32]*tracked, m *mob, trait int32, now uint64) {
 	if m.held != 0 {
-		h.spawnItemIn(players, m.dim, m.held, 1, m.x, m.y+0.5, m.z)
+		st := m.heldStack()
+		if it := h.spawnItemIn(players, m.dim, st.item, 1, m.x, m.y+0.5, m.z); it != nil {
+			it.setFrom(st)
+			h.refreshItemMeta(players, it)
+		}
 		m.held = 0
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, m.gear))
 		wait := h.rng.Intn(150) + 10

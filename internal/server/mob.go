@@ -309,6 +309,7 @@ type mob struct {
 	heldEnch                        enchList                          // enchantments on that item (spawn gear rolls them)
 	heldDmg                         int                               // wear on that item
 	heldCount                       int                               // how many it holds (0 = one): a hand takes a whole stack
+	heldFull                        invStack                          // the rest of that stack (a name, patterns, a potion…); counts only while its item is still held
 	gearSure                        [5]bool                           // setGuaranteedDrop per slot (0-3 armour, 4 hand): picked up, so it always drops
 	carry                           invStack                          // allay: the stack it has collected for its liked player
 	allayPickupCD                   int                               // allay: ticks before it collects again (60 after a throw)
@@ -2230,7 +2231,20 @@ func (m *mob) refreshBabySpeed() { m.setBabySpeed(m.baby && m.hostile) }
 // heldStack is the mob's main-hand item as a stack: what the equipment frame
 // renders and what drops when it dies.
 func (m *mob) heldStack() invStack {
-	return invStack{item: m.held, count: max(b2i(m.held != 0), m.heldCount*b2i(m.held != 0)), ench: m.heldEnch, dmg: m.heldDmg}
+	st := invStack{item: m.held, count: max(b2i(m.held != 0), m.heldCount*b2i(m.held != 0)), ench: m.heldEnch, dmg: m.heldDmg}
+	if m.held != 0 && m.heldFull.item == m.held {
+		// The whole stack it was given or picked up: a named sword stays
+		// named in its hand, in its drop and across a restart.
+		full := m.heldFull
+		full.count, full.ench, full.dmg = st.count, st.ench, st.dmg
+		return full
+	}
+	return st
+}
+
+// setHeld puts a whole stack in the mob's main hand (setItemSlot(MAINHAND)).
+func (m *mob) setHeld(st invStack) {
+	m.held, m.heldEnch, m.heldDmg, m.heldCount, m.heldFull = st.item, st.ench, st.dmg, st.count, st
 }
 
 const slimeStepFactor = 0.4

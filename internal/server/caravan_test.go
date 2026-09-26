@@ -215,7 +215,7 @@ func TestLightningStaysInTheOverworld(t *testing.T) {
 	near := h.spawnMobIn(players, entityZombie, dimNether, 0.5, 100, 0.5)
 	here := h.spawnMobIn(players, entityZombie, dimOverworld, 0.5, 100, 0.5)
 	hpN, hpO := near.health, here.health
-	h.strikeLightning(players, 0.5, 100, 0.5, false)
+	h.strikeLightning(players, dimOverworld, 0.5, 100, 0.5, false)
 	if near.health != hpN || near.fireSecs != 0 {
 		t.Error("an overworld bolt struck a zombie in the Nether")
 	}

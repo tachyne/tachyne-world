@@ -623,7 +623,7 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 		defer func() { m.attackCD = wardenMeleeCD }()
 	}
 	landed := h.hurtFrom(players, t, dmg, mobMeleeDamage(m.etype),
-		deathCause{by: mobDisplayName(m.etype)}, fromMobWeapon(m.x, m.z, m.held))
+		mobMeleeCause(m), fromMobWeapon(m.x, m.z, m.held))
 	// A caught bite still shoves them. Mob.getKnockback is ATTACK_KNOCKBACK
 	// plus the weapon's Knockback, halved, on top of the 0.4 the hurt itself
 	// gives — and 0.4 is what a scale of 1 means here, so each unit of the

@@ -115,6 +115,32 @@ the public history since the project was open-sourced on 2026-07-10.
   4 players", with the item's name (its custom name if it has one), and a
   request for more than a hundred stacks is refused ("Can't give more than
   6400 of [Stone]") instead of being quietly capped.
+- **The Ender Dragon's head and wings hit mobs too.** As in vanilla, a mob
+  caught by the dragon's head or neck takes ten damage, and one under a wing
+  is thrown clear and takes five. Before, only players were hurt or shoved.
+- **Endermen no longer teleport into fire.** A landing spot is refused when
+  fire, a berry bush, a wither rose, powder snow or another block endermen
+  avoid is anywhere in the space the enderman would fill. Before, only the
+  block it would stand on was checked.
+- **Raid and patrol captains wear the Ominous Banner.** A captain's banner
+  used to be a plain white one. It is now the Ominous Banner: it drops as
+  one, shows its pattern when placed and comes back as one when broken, and
+  killing a raider who wears it earns Voluntary Exile. Held in the hand or
+  worn by a captain, it still looks like a white banner for now.
+- **Mobs keep the names of the items they hold.** A named sword that a
+  zombie picks up keeps its name in the zombie's hand, in its drop and
+  across a restart. Foxes, pandas, dolphins and allays keep an item's name
+  and other data while they carry it. A player killed by a mob holding a
+  named weapon is "slain by Zombie using Excalibur", as in vanilla.
+- **Spawn eggs make proper mobs.** A mob from a spawn egg, whether used on
+  a block, on water or from a dispenser, is now set up the way /summon sets
+  it up. An egg zombie is hostile and may spawn with gear, an egg villager
+  walks, opens doors and has its trades, and Nether mobs get their full
+  behaviour. Before, they came out as bare wandering bodies.
+- **Summoned lightning works in the Nether and the End.** /summon
+  lightning_bolt now strikes in whichever dimension it is run in, and hurts,
+  lights and charges what is there. Storms still bring lightning only to the
+  overworld.
 
 ## 2026-09-25
 

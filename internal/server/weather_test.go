@@ -176,7 +176,7 @@ func TestLightningStrikeDamages(t *testing.T) {
 	players := map[int32]*tracked{1: pl}
 	m := h.spawnMob(players, entityCow, 1.5, 64, 1.5)
 	hp := pl.health
-	h.strikeLightning(players, 0.5, 64, 0.5, false)
+	h.strikeLightning(players, dimOverworld, 0.5, 64, 0.5, false)
 	if pl.health >= hp {
 		t.Fatal("a direct strike must hurt the player")
 	}
@@ -195,7 +195,7 @@ func TestLightningStrikeDamages(t *testing.T) {
 	}
 	// a skeleton-trap bolt is visual-only: flash and thunder, no damage
 	hp = pl.health
-	h.strikeLightning(players, 0.5, 64, 0.5, true)
+	h.strikeLightning(players, dimOverworld, 0.5, 64, 0.5, true)
 	if pl.health != hp {
 		t.Fatal("a visual-only bolt must not hurt anyone")
 	}
@@ -271,7 +271,7 @@ func TestLightningStrikeTriggerReach(t *testing.T) {
 	players := map[int32]*tracked{1: pl}
 	h.playersRef = players
 	h.spawnMob(players, entityVillager, 5.5, 180, 0.5)
-	h.strikeLightning(players, 0.5, 180, 0.5, false)
+	h.strikeLightning(players, dimOverworld, 0.5, 180, 0.5, false)
 	if !pl.adv.done(advByID["minecraft:adventure/lightning_rod_with_villager_no_fire"]) {
 		t.Fatal("a player 100 blocks from the bolt was not credited")
 	}

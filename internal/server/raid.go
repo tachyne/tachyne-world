@@ -51,14 +51,15 @@ func canBeLeader(etype int) bool {
 // (a drop chance of 2.0).
 func (h *hub) makeCaptain(players map[int32]*tracked, m *mob) {
 	m.patrolCaptain = true
-	m.gear[0] = invStack{item: itemByName["white_banner"], count: 1}
+	m.gear[0] = ominousBanner()
 	m.gearSure[0] = true
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(), invStack{}, m.gear))
 }
 
-// isCaptain is Raider.isCaptain: the group's leader, wearing the banner.
+// isCaptain is Raider.isCaptain: the group's leader, wearing the ominous
+// banner (ItemStack.matches: a plain or renamed banner is not it).
 func isCaptain(m *mob) bool {
-	return m.patrolCaptain && m.gear[0].item != 0 && m.gear[0].item == itemByName["white_banner"]
+	return m.patrolCaptain && m.gear[0].count == 1 && sameItemComponents(m.gear[0], ominousBanner())
 }
 
 type raid struct {

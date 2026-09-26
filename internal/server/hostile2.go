@@ -338,7 +338,8 @@ func isAmphibious(etype int) bool { return etype == entityDrowned }
 // teleport onto (#entities_can_teleport_to, i.e. anything that blocks
 // motion), keeping the point's height above it; the ground must not be in
 // #enderman_does_not_teleport_to, the whole 2.9-block box must be free of
-// blocks and liquid, and the block under it must not be water. Otherwise
+// blocks and liquid and hold nothing of that tag (fire, a berry bush), and
+// the block under it must not be water. Otherwise
 // the enderman stays put. It never goes looking for the surface: an
 // enderman in a cave blinks about the cave, one in the sun may land in
 // shade — which is how daylight clears them.
@@ -378,6 +379,20 @@ func (h *hub) endermanTeleportTo(players map[int32]*tracked, m *mob, x, y, z flo
 			for cz := floorInt(z - hw); cz <= floorInt(z+hw-1e-7); cz++ {
 				for cy := floorInt(y); cy <= floorInt(y+b.h-1e-7); cy++ {
 					if s := w.At(cx, cy, cz); worldgen.Collides(s) || worldgen.IsFluid(s) {
+						return false
+					}
+				}
+			}
+		}
+		// findBlocksIn(aabb).filterState(isInvalidPosition): nothing in the
+		// box may be #enderman_does_not_teleport_to either — no landing in
+		// fire, a berry bush or powder snow, which have no collision. The
+		// cells run from the box's min corner to its max corner inclusive
+		// (BlockPos.containing), a face touching a cell included.
+		for cx := floorInt(x - hw); cx <= floorInt(x+hw); cx++ {
+			for cz := floorInt(z - hw); cz <= floorInt(z+hw); cz++ {
+				for cy := floorInt(y); cy <= floorInt(y+b.h); cy++ {
+					if inRanges2(w.At(cx, cy, cz), endermanNoTeleport) {
 						return false
 					}
 				}

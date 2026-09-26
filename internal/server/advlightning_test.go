@@ -21,7 +21,7 @@ func TestLightningBystanderBox(t *testing.T) {
 		h.playersRef = players
 		v := h.spawnMob(players, entityVillager, vx, 200, 0)
 		v.dim = vdim
-		h.strikeLightning(players, 0, 200, 0, false)
+		h.strikeLightning(players, dimOverworld, 0, 200, 0, false)
 		_, ok := pl.adv[adv][crit]
 		return ok
 	}

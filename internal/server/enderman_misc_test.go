@@ -319,3 +319,31 @@ func TestOutlineTableCoversRegistry(t *testing.T) {
 		t.Errorf("state %d exists but the outline table stops before it", outlineStateCount)
 	}
 }
+
+// LivingEntity.randomTeleport: after the collision and liquid checks, the
+// landing box must hold nothing of #enderman_does_not_teleport_to — fire
+// or a berry bush in the way refuses the landing, even though neither
+// blocks the box, and even a cell the box only touches with a face counts.
+func TestEndermanWillNotLandInFireOrBerries(t *testing.T) {
+	h, players := preyFixture(t)
+	m := h.spawnHostileY(players, entityEnderman, 0.5, 180, 0.5)
+	tx := 5.5
+	try := func(what string, x, y, z int, s uint32, want bool) {
+		t.Helper()
+		h.world.SetBlock(x, y, z, s)
+		m.x, m.y, m.z = 0.5, 180, 0.5
+		if got := h.endermanTeleportTo(players, m, tx, 180, -2.5); got != want {
+			t.Errorf("%s: teleport %v, want %v", what, got, want)
+		}
+		h.world.SetBlock(x, y, z, worldgen.Air)
+	}
+	try("fire in the feet cell", 5, 180, -3, worldgen.BlockBase("fire"), false)
+	try("a berry bush at head height", 5, 182, -3, worldgen.BlockBase("sweet_berry_bush"), false)
+	// y 180 + 2.9 = 182.9: the box's top face stays in cell 182; a wither
+	// rose at 183 is outside it.
+	try("a wither rose above the box", 5, 183, -3, worldgen.BlockBase("wither_rose"), true)
+	try("nothing in the way", 5, 180, -3, worldgen.Air, true)
+	// At x 5.7 the box's east face lies on x = 6: fire in that cell counts.
+	tx = 5.7
+	try("fire against the box's face", 6, 180, -3, worldgen.BlockBase("fire"), false)
+}

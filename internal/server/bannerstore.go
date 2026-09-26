@@ -121,6 +121,14 @@ func (h *hub) bannersOnBlockChange(players map[int32]*tracked, dim, x, y, z int,
 	}
 	held := t.inv.slots[t.p.heldSlot()]
 	n := held.patCount()
+	if held.ominous && held.item == itemWhiteBanner {
+		// The ominous banner's eight layers go onto the block entity whole.
+		layers := append([]attachproto.BannerLayer(nil), ominousBannerLayers...)
+		h.banners.set(pos, layers)
+		h.toNearbyEv(players, dim, float64(x), float64(z), attachproto.BannerPatterns{
+			X: int32(x), Y: int32(y), Z: int32(z), Layers: layers})
+		return
+	}
 	if !bannerItems[held.item] || n == 0 {
 		return
 	}
@@ -174,6 +182,11 @@ func (h *hub) dropBannerLayers(players map[int32]*tracked, pos simPos, it *itemE
 
 // stampBannerLayers writes stored banner layers onto a dropped banner item.
 func (h *hub) stampBannerLayers(players map[int32]*tracked, it *itemEntity, layers []attachproto.BannerLayer) {
+	if it.item == itemWhiteBanner && isOminousLayers(layers) {
+		it.ominous = true
+		h.refreshItemMeta(players, it)
+		return
+	}
 	n := 0
 	for _, l := range layers {
 		id, ok := bannerPatternIDs[bannerPatternQualified(l.Pattern)]

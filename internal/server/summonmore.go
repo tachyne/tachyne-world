@@ -53,9 +53,7 @@ func (h *hub) summonNonLivingAt(players map[int32]*tracked, e evSummon) bool {
 		h.crystals[c.eid] = c
 		h.toDimEv(players, e.dim, entAdd(c.eid, entityEndCrystal, c.uuid, c.x, c.y, c.z, 0, 0))
 	case et == entityLightning:
-		if e.dim == dimOverworld { // the engine's bolts are the overworld's weather
-			h.strikeLightning(players, e.x, e.y, e.z, false)
-		}
+		h.strikeLightning(players, e.dim, e.x, e.y, e.z, false)
 	case et == entityFirework:
 		h.spawnRocket(players, e.dim, e.x, e.y, e.z, 0, invStack{})
 	default:

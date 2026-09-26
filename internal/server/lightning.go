@@ -68,7 +68,7 @@ func (h *hub) channelingStrike(players map[int32]*tracked, a *arrowEntity, dim i
 	if !a.channeling || !h.thundering || !h.skyOpen(dim, x, y, z) {
 		return
 	}
-	h.strikeLightning(players, x, y, z, false)
+	h.strikeLightning(players, dim, x, y, z, false)
 	h.playSoundDim(players, a.dim, "minecraft:item.trident.thunder", sndNeutral, x, y, z, 5, 1)
 	if t := players[a.shooter]; t != nil && struck != nil {
 		// "Very Very Frightening": the bolt's victim, by species.

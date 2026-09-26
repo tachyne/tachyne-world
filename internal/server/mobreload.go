@@ -119,15 +119,15 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	if sm.Held != 0 {
 		m.held = sm.Held
 		if sm.HeldSt[0] == sm.Held {
-			st := unpackStack(sm.HeldSt)
-			m.heldEnch, m.heldDmg, m.heldCount = st.ench, st.dmg, st.count
+			m.setHeld(unpackStack(sm.HeldSt))
 		}
 	}
 	m.gearSure = sm.GearSure
-	if m.patrolCaptain && m.gear[0].item == 0 {
-		// A captain saved before the banner was worn as gear: it goes back
-		// on its head, and still always drops.
-		m.gear[0] = invStack{item: itemByName["white_banner"], count: 1}
+	if m.patrolCaptain && (m.gear[0].item == 0 || m.gear[0] == invStack{item: itemWhiteBanner, count: 1}) {
+		// A captain saved before the banner was worn as gear, or while it
+		// was a plain white one: the ominous banner goes back on its head,
+		// and still always drops.
+		m.gear[0] = ominousBanner()
 		m.gearSure[0] = true
 	}
 	m.harness = sm.Harness

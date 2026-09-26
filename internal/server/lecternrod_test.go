@@ -51,7 +51,7 @@ func TestLightningRodPowersEightTicks(t *testing.T) {
 	rod := worldgen.BlockID("lightning_rod")
 	w.SetBlock(x, y, z, rod)
 	w.SetBlock(x+1, y, z, lampOff)
-	h.strikeLightning(players, float64(x)+0.5, float64(y)+1, float64(z)+0.5, false)
+	h.strikeLightning(players, dimOverworld, float64(x)+0.5, float64(y)+1, float64(z)+0.5, false)
 	if !boolProp(w.At(x, y, z), "powered") {
 		t.Fatal("a struck rod is powered")
 	}

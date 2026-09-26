@@ -192,7 +192,7 @@ func TestPushedRodStillTurnsOff(t *testing.T) {
 	rod = worldgen.SetProperty(info, rod, "facing", "up")
 	rod = setBoolProp(rod, "powered", false)
 	w.SetBlock(x+1, y, z, rod)
-	h.rodStruck(players, blockPos{x + 1, y, z})
+	h.rodStruck(players, dimOverworld, blockPos{x + 1, y, z})
 	if !boolProp(w.At(x+1, y, z), "powered") {
 		t.Fatal("the struck rod should be powered")
 	}

@@ -211,19 +211,25 @@ func (h *hub) dragonCheckCrystals(m *mob, now uint64) {
 	}
 }
 
-// dragonContact is aiStep's part contact: anything inside a wing's box
-// grown four across and two up, and lowered two, is shoved away from the
+// dragonContact is aiStep's part contact: any living thing inside a wing's
+// box grown four across and two up, and lowered two, is shoved away from the
 // body (and, unless the dragon sits, takes five); anything in the head's or
-// neck's box grown by one takes ten.
+// neck's box grown by one takes ten. knockBack and hurt take every
+// LivingEntity the boxes touch — players, other mobs, armor stands — and
+// nothing else, so a painting or an item frame is never struck.
 func (h *hub) dragonContact(players map[int32]*tracked, m *mob, sitting bool, now uint64) {
 	parts := dragonPartsOf(m)
 	body := parts[2]
-	inBox := func(t *tracked, p dragonPart, gx, gyDown, gyUp float64) bool {
+	touches := func(x, y, z, hw, ht float64, p dragonPart, gx, gyDown, gyUp float64) bool {
 		minX, maxX := p.x-p.w/2-gx, p.x+p.w/2+gx
 		minZ, maxZ := p.z-p.w/2-gx, p.z+p.w/2+gx
 		minY, maxY := p.y-gyDown, p.y+p.h+gyUp
-		return t.x+0.3 > minX && t.x-0.3 < maxX && t.z+0.3 > minZ && t.z-0.3 < maxZ && t.y+1.8 > minY && t.y < maxY
+		return x+hw > minX && x-hw < maxX && z+hw > minZ && z-hw < maxZ && y+ht > minY && y < maxY
 	}
+	inBox := func(t *tracked, p dragonPart, gx, gyDown, gyUp float64) bool {
+		return touches(t.x, t.y, t.z, 0.3, 1.8, p, gx, gyDown, gyUp)
+	}
+	h.dragonContactMobs(players, m, parts, sitting, touches)
 	for _, t := range players {
 		if t.dim != m.dim || t.dead || !isSurvival(t.gamemode) || now < t.graceUntil {
 			continue
@@ -246,6 +252,54 @@ func (h *hub) dragonContact(players map[int32]*tracked, m *mob, sitting bool, no
 					h.knockback(t, m.x, m.z)
 				}
 			}
+		}
+	}
+}
+
+// dragonContactMobs is dragonContact for the mobs: a wing pushes one away
+// from the body (Entity.push adds to its motion) and, unless the dragon
+// sits, hurts it for five; the head and neck hurt it for ten. The other
+// living things the boxes can touch take nothing: an armor stand refuses a
+// mob's attack (mob_attack is not #can_break_armor_stand), and a painting or
+// an item frame is no LivingEntity.
+func (h *hub) dragonContactMobs(players map[int32]*tracked, m *mob, parts []dragonPart, sitting bool,
+	touches func(x, y, z, hw, ht float64, p dragonPart, gx, gyDown, gyUp float64) bool) {
+	body := parts[2]
+	type blow struct {
+		o   *mob
+		dmg float64
+	}
+	var blows []blow
+	for _, o := range h.mobs {
+		if o == m || o.dim != m.dim || o.dying > 0 || o.health <= 0 {
+			continue
+		}
+		b := o.box()
+		for _, wing := range parts[6:8] {
+			if !touches(o.x, o.y, o.z, b.w/2, b.h, wing, 4, 4, 0) {
+				continue
+			}
+			xd, zd := o.x-body.x, o.z-body.z
+			dd := math.Max(xd*xd+zd*zd, 0.1)
+			o.vx += xd / dd * dragonWingPush
+			o.vy += 0.2
+			o.vz += zd / dd * dragonWingPush
+			if !sitting {
+				blows = append(blows, blow{o, dragonWingDamage})
+			}
+		}
+		for _, p := range parts[0:2] {
+			if touches(o.x, o.y, o.z, b.w/2, b.h, p, 1, 1, 1) {
+				blows = append(blows, blow{o, dragonContact})
+			}
+		}
+	}
+	// Hurt after the scan: a kill or a conversion changes h.mobs. The hurt
+	// cooldown (invulnerableTime) keeps a mob caught every tick from taking
+	// every blow.
+	for _, bl := range blows {
+		if h.mobs[bl.o.eid] == bl.o && bl.o.dying == 0 {
+			h.hurtMobOf(players, bl.o, bl.dmg, dtMobAttack)
 		}
 	}
 }

@@ -3,6 +3,7 @@ package server
 import (
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/world"
 )
 
@@ -152,5 +153,68 @@ func TestMobGearReplacementRules(t *testing.T) {
 	}
 	if n != 5 {
 		t.Errorf("%d sticks dropped, want 5", n)
+	}
+}
+
+// Mob.equipItemIfPossible keeps the whole stack: a named sword a zombie
+// picks up stays named in its hand (the equipment frame), across a save and
+// reload, in the drop when it dies — and a player it kills with it is slain
+// "using" it (death.attack.mob.item).
+func TestMobHeldItemKeepsItsName(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	pl.gamemode = gmSurvival
+	pl.x, pl.y, pl.z = 0.5, 64, 0.5
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.rules.MobGriefing = true
+	z := h.spawnHostile(players, entityZombie, 0, 0)
+	z.held, z.heldEnch = 0, enchList{} // whatever it spawned holding
+	z.canPickup = true
+	sword := int32(itemByName["iron_sword"])
+	it := h.spawnItem(players, sword, 1, 0.5, 64, 0.5)
+	if it == nil {
+		t.Fatal("could not drop a test sword")
+	}
+	it.name, it.noPickupUntil = "Excalibur", 0
+	z.x, z.y, z.z = it.x, it.y, it.z
+	h.mobPickupScan(players, z)
+	if z.held != sword || z.heldStack().name != "Excalibur" {
+		t.Fatalf("picked-up sword: held %d name %q", z.held, z.heldStack().name)
+	}
+	if eq := equipEv(z.eid, z.handShown(), invStack{}, z.gear); len(eq.Slots[attachproto.EquipMainHand].Components) == len(stackEv(invStack{item: sword, count: 1}).Components) {
+		t.Error("the equipment frame's sword carries no name")
+	}
+
+	sm := toSavedMob(z) // the name goes into the hub's name store by id
+	h.reloading = true
+	back := h.reloadMob(map[int32]*tracked{}, &sm)
+	h.reloading = false
+	if back == nil || back.heldStack().name != "Excalibur" {
+		t.Fatal("the sword's name did not survive a reload")
+	}
+	h.removeMob(map[int32]*tracked{}, back)
+
+	// The blow names it.
+	z.x, z.y, z.z = 1.0, 64, 0.5
+	z.attackCD = 0
+	h.mobMelee(players, z)
+	if pl.lastCause.weapon != "Excalibur" {
+		t.Fatalf("a named weapon's blow: cause %+v", pl.lastCause)
+	}
+	if got, want := deathMessage("Steve", pl.lastCause), "Steve was slain by Zombie using Excalibur"; got != want {
+		t.Errorf("death message %q, want %q", got, want)
+	}
+
+	// Picked up, so a certain drop — as itself.
+	z.health, z.hitByPlayer = 0, true
+	h.despawnMob(players, z)
+	named := false
+	for _, d := range h.items {
+		if d.item == sword && d.name == "Excalibur" {
+			named = true
+		}
+	}
+	if !named {
+		t.Error("the dead zombie's sword dropped without its name")
 	}
 }
