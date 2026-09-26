@@ -117,7 +117,7 @@ func (h *hub) updateWeather(players map[int32]*tracked) {
 	h.thunderLevel = rampLevel(h.thunderLevel, h.thunderFlag)
 	h.rainLevel = rampLevel(h.rainLevel, h.rainFlag)
 	h.raining = h.rainLevel > 0.2       // vanilla Level.isRaining
-	h.thundering = h.thunderLevel > 0.9 // vanilla Level.isThundering
+	h.thundering = h.stormLevel() > 0.9 // vanilla Level.isThundering
 
 	if h.rainLevel != oldRain {
 		h.broadcastEv(players, attachproto.GameEvent{Event: gameEventRainLevel, Value: h.rainLevel})
@@ -152,6 +152,13 @@ func boolTicks(active bool) int {
 }
 
 // rampLevel steps a weather level one vanilla tick toward its flag.
+// stormLevel is Level.getThunderLevel: the thunder level scaled by the rain
+// level. The thunder timer runs on its own, so its flag is often on while no
+// rain falls; that dry spell is no storm at all. It does not darken the sky,
+// isThundering stays false, and a bed still refuses you at noon. The raw
+// thunderLevel is only what the clients are sent, and they scale it too.
+func (h *hub) stormLevel() float32 { return h.thunderLevel * h.rainLevel }
+
 func rampLevel(v float32, up bool) float32 {
 	if up {
 		v += 0.01

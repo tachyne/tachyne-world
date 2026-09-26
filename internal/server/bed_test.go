@@ -255,6 +255,7 @@ func TestSleepWindowFollowsTheSky(t *testing.T) {
 		{"clear", 0, 0, true},
 		{"raining", 1, 0, true},
 		{"thundering", 1, 1, false},
+		{"dry thunder", 0, 1, true}, // the thunder timer with no rain is no storm
 	} {
 		h.rainLevel, h.thunderLevel = tc.rain, tc.thunder
 		if got := h.isDaylight(); got != tc.day {

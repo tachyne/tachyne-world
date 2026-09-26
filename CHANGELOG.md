@@ -37,6 +37,14 @@ the public history since the project was open-sourced on 2026-07-10.
   dawn and bad weather had been a level darker than they should be, which
   let monsters spawn, and kept the undead from burning, where vanilla's
   sky is already bright enough.
+- **Thunder without rain is no storm.** The thunder and rain timers run
+  apart, so the thunder spell often comes round under a clear sky. Vanilla
+  scales thunder by rain, so that dry spell changes nothing; the engine
+  counted it in full. For the length of one, the whole world's sky was
+  darkened by six, every zombie and skeleton stood unburnt in the morning
+  sun, monsters spawned in open daylight as in a thunderstorm, and foxes,
+  pandas and channeling tridents behaved as if one were raging. A dry
+  thunder spell now leaves the sky, the undead and the rest alone.
 - **Item pickup reaches the next block.** Players now collect what touches
   their box widened by a block each way and half a block up and down (and,
   riding, the box stretched over the boat, cart or mount), instead of a

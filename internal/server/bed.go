@@ -589,7 +589,7 @@ func (h *hub) worldSpawn() (x, y, z float64) {
 // 26.x curve reaches 4 at noon in plain RAIN, which would let a player sleep
 // through a shower. On canonical 1.21.11 it has to be the cosine.
 func (h *hub) isDaylight() bool {
-	return canonicalSkyDarken(h.dayTime.Load(), h.rainLevel, h.thunderLevel) < 4
+	return canonicalSkyDarken(h.dayTime.Load(), h.rainLevel, h.stormLevel()) < 4
 }
 
 // canonicalSkyDarken is Level.updateSkyBrightness on 1.21.x: how dark the sky

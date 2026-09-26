@@ -445,7 +445,7 @@ func (h *hub) skyDarken() int {
 	// The storm layer reads getThunderLevel, which is the thunder scaled by
 	// the rain, and the rain layer only what rain the thunder leaves: a full
 	// storm is the thunder blend alone, not the rain's and then the thunder's.
-	thunder := float64(h.thunderLevel) * float64(h.rainLevel)
+	thunder := float64(h.stormLevel())
 	if rain := float64(h.rainLevel) - thunder; rain > 0 {
 		level += (4 - level) * 0.3125 * rain
 	}
