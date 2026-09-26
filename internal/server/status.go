@@ -25,8 +25,12 @@ const (
 // reports an empty roster rather than holding the ping open — a server-list
 // entry that will not draw is worse than a stale count.
 func (s *Server) statusRoster() attachproto.Status {
-	st := attachproto.Status{Max: statusMaxPlayers}
-	s.hub.runOnHub(func() {
+	// The hub fills its own copy and hands it over; a query that times out
+	// returns the empty roster, and the hub's late write lands in a value
+	// nobody reads any more.
+	got := make(chan attachproto.Status, 1)
+	ok := s.hub.runOnHub(func() {
+		st := attachproto.Status{Max: statusMaxPlayers}
 		st.Online = len(s.hub.playersRef)
 		// buildPlayerStatus: up to twelve names, taken as a window starting
 		// at a random offset so a big server shows a different dozen each
@@ -47,8 +51,12 @@ func (s *Server) statusRoster() attachproto.Status {
 			}
 			i++
 		}
+		got <- st
 	})
-	return st
+	if ok {
+		return <-got
+	}
+	return attachproto.Status{Max: statusMaxPlayers}
 }
 
 // dashedUUID renders a raw uuid in the 8-4-4-4-12 form the status schema wants.

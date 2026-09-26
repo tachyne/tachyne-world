@@ -6,6 +6,16 @@ import (
 	"github.com/tachyne/tachyne-world/internal/world"
 )
 
+// loadAround loads the chunks within r of (cx, cz), as a player's view would:
+// the spawner seeds and spawns only in loaded chunks.
+func loadAround(w *world.World, cx, cz, r int32) {
+	for x := cx - r; x <= cx+r; x++ {
+		for z := cz - r; z <= cz+r; z++ {
+			w.Reader(x, z)
+		}
+	}
+}
+
 // TestVanillaSeedChunksOnceAndBudget: the chunk-generation pass seeds at most
 // chunkSeedBudget new chunks per tick, seeds every chunk exactly once, and never
 // re-seeds a chunk it has already handled.
@@ -18,6 +28,7 @@ func TestVanillaSeedChunksOnceAndBudget(t *testing.T) {
 	chunkSet := map[[2]int32]bool{}
 	for x := int32(0); x < 20; x++ {
 		chunkSet[[2]int32{x, 0}] = true
+		h.world.Reader(x, 0) // loaded, as seeding needs
 	}
 	var counts [catCount]int
 
@@ -47,6 +58,7 @@ func TestVanillaSpawnerSeedsChunks(t *testing.T) {
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 64, 0.5
 	players := map[int32]*tracked{1: pl}
+	loadAround(h.world, 0, 0, 2)
 	for i := 0; i < 30; i++ {
 		h.tick.Store(uint64(i))
 		h.naturalSpawn(players)
@@ -85,6 +97,7 @@ func TestVanillaSpawnerFillsCaves(t *testing.T) {
 	pl.x, pl.y, pl.z = 0.5, 64, 0.5
 	players := map[int32]*tracked{1: pl}
 	h.dayTime.Store(18000) // midnight: caves and surface both eligible
+	loadAround(h.world, 0, 0, 6)
 	for i := 0; i < 400; i++ {
 		h.tick.Store(uint64(i))
 		h.naturalSpawn(players)

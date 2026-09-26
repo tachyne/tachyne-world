@@ -208,6 +208,7 @@ func (h *hub) seedChunkGeneration(players map[int32]*tracked, dim int, chunkSet 
 		return
 	}
 	budget := chunkSeedBudget
+	w := h.worldFor(dim)
 	for c := range chunkSet {
 		if budget <= 0 {
 			return // seed the rest on later ticks (map order is random — no starvation)
@@ -223,6 +224,13 @@ func (h *hub) seedChunkGeneration(players map[int32]*tracked, dim int, chunkSet 
 		// races ahead of the reload), doubling animals on every restart.
 		if h.mobstore != nil && h.mobstore.has(dimOverworld, c[0], c[1]) {
 			h.seededChunks[c] = true
+			continue
+		}
+		if !w.Loaded(c[0], c[1]) {
+			// Vanilla lays these as the chunk generates, and a chunk generates
+			// only when a player's view loads it. Seeding reads the terrain, so
+			// seeding an unloaded chunk generated it for nobody — across the
+			// whole simulation window. It is seeded once it has loaded.
 			continue
 		}
 		h.seededChunks[c] = true
@@ -247,8 +255,8 @@ func (h *hub) seedNetherGeneration(players map[int32]*tracked, chunkSet map[[2]i
 		if budget <= 0 {
 			return
 		}
-		if h.seededNether[c] {
-			continue
+		if h.seededNether[c] || !w.Loaded(c[0], c[1]) {
+			continue // as the overworld's: only a chunk a player has loaded
 		}
 		h.seededNether[c] = true
 		budget--

@@ -302,7 +302,8 @@ func TestNaturalSpawnFillsCaves(t *testing.T) {
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 64, 0.5
 	players := map[int32]*tracked{1: pl}
-	h.dayTime.Store(18000)      // midnight: surface and caves both eligible
+	h.dayTime.Store(18000) // midnight: surface and caves both eligible
+	loadAround(h.world, 0, 0, 6)
 	for i := 0; i < 1200; i++ { // one simulated minute
 		h.tick.Store(uint64(i))
 		h.naturalSpawn(players)

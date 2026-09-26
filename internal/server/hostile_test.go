@@ -264,6 +264,7 @@ func TestNightSpawnsHostiles(t *testing.T) {
 	pl := testTracked()
 	pl.x, pl.z = 0.5, 0.5
 	players[1] = pl
+	loadAround(h.world, 0, 0, 4) // the player's view: only loaded chunks spawn
 
 	// Daytime: the spawner must never produce hostiles.
 	h.dayTime.Store(2000)
