@@ -287,35 +287,6 @@ func (h *hub) pearlLand(players map[int32]*tracked, a *arrowEntity) {
 var itemCarvedPumpkin = int32(itemByName["carved_pumpkin"])
 var itemJackOLantern = int32(itemByName["jack_o_lantern"])
 
-// staredAt implements EnderMan.isBeingStaredBy (vanilla behavior): a survival player
-// within follow range whose view vector points at the enderman's eyes —
-// dot(view, dir) > 1 − 0.025/d — unless they wear a carved pumpkin.
-func (h *hub) staredAt(players map[int32]*tracked, m *mob) bool {
-	reach := m.followRange() // endermen carry FOLLOW_RANGE 64
-	for _, t := range players {
-		if t.dim != m.dim || !isSurvival(t.gamemode) || t.dead {
-			continue
-		}
-		if t.armor[0].item == itemCarvedPumpkin {
-			continue // the disguise works
-		}
-		ex, ey, ez := m.x-t.x, (m.y+2.55)-(t.y+1.62), m.z-t.z // eye to eye
-		d := math.Sqrt(ex*ex + ey*ey + ez*ez)
-		if d < 1e-6 || d > reach {
-			continue
-		}
-		yawR := float64(t.yaw) * math.Pi / 180
-		pitchR := float64(t.pitch) * math.Pi / 180
-		vx := -math.Sin(yawR) * math.Cos(pitchR)
-		vy := -math.Sin(pitchR)
-		vz := math.Cos(yawR) * math.Cos(pitchR)
-		if (vx*ex+vy*ey+vz*ez)/d > 1-0.025/d {
-			return true
-		}
-	}
-	return false
-}
-
 // setClimbing syncs a spider's climbing flag, and only when it changed — the
 // client renders a climbing spider clinging to the wall, and re-sending an
 // unchanged flag every update would be pure noise.

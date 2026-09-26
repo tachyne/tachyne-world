@@ -141,6 +141,15 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 			m.ownerUUID = ids.remapUUID(m.ownerUUID) // uuidmap.json: the owner moved to a new UUID
 		}
 	}
+	if sm.AngryAt != "" {
+		if b, err := hex.DecodeString(sm.AngryAt); err == nil && len(b) == 16 {
+			copy(m.angryUUID[:], b)                  // the grudge re-resolves to that player's eid on sight
+			m.angryUUID = ids.remapUUID(m.angryUUID) // uuidmap.json: they moved to a new UUID
+		}
+		if t := h.endermanGrudge(players, m); t != nil && m.anger > 0 {
+			h.endermanSetTarget(m, t) // readPersistentAngerSaveData: the grudge, if here, is the target again
+		}
+	}
 	h.restoreLeash(players, m, sm.LeashPos)    // re-tie to its fence knot, rebuilding it
 	if horseFamily(m.etype) && sm.HSpeed > 0 { // the rolled horse survives a restart as itself
 		m.setMoveSpeed(sm.HSpeed)

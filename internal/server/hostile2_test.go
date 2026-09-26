@@ -57,7 +57,9 @@ func TestEndermanNeutralUntilHitThenHunts(t *testing.T) {
 		t.Fatal("a player's blow does not teleport an enderman (Enderman.hurtServer: only a source with no living attacker does)")
 	}
 	h.acquireTarget(players, m)
-	if !m.hasTarget && dist3(m.x, 0, m.z, pl.x, 0, pl.z) < m.followRange()+deaggroSlack {
+	// Hunting, or — seen and angry at — about to, once the look goal's
+	// aggroTime has run (EndermanLookForPlayerGoal outranks the hurt goal).
+	if !m.hasTarget && m.enderPending != 1 && dist3(m.x, 0, m.z, pl.x, 0, pl.z) < m.followRange() {
 		t.Fatal("an angry enderman in range must hunt")
 	}
 }

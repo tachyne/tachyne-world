@@ -42,6 +42,7 @@ TAGS = {
     "item": ["boats", "clonable_maps", "wooden_tool_materials",
              "dampens_vibrations",  # sculk.go: ItemEntity.dampensVibrations
              "piglin_loved", "piglin_safe_armor",  # piglin.go: admire, barter, distract_piglin
+             "gaze_disguise_equipment",  # endermanstare.go: PLAYER_NOT_WEARING_DISGUISE_ITEM
              # sulfurcube.go: what a sulfur cube swallows, what a baby eats,
              # and which archetype each swallowed block gives it.
              "sulfur_cube_food", "sulfur_cube_swallowable",

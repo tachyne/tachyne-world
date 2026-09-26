@@ -101,6 +101,12 @@ func (h *hub) provokedTarget(players map[int32]*tracked, m *mob) bool {
 func (h *hub) calmDown(m *mob) {
 	m.anger, m.targetEID, m.angryAt, m.unseenTicks = 0, 0, 0, 0
 	m.llamaDefending, m.zpHeld = false, false
+	if m.etype == entityEnderman {
+		// Enderman.setTarget(null): the look goal lets go, the daylight
+		// clock reads from zero and STARED_AT comes down (endermanSync
+		// tells the viewers).
+		m.angryUUID, m.enderLook, m.enderTargetAt, m.enderStared, m.enderHeld = [16]byte{}, false, 0, false, false
+	}
 	if m.etype == entityZombifiedPiglin || m.etype == entityEnderman {
 		m.hasTarget = false // a monster calms down but stays one
 		return

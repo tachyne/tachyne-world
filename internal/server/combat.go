@@ -552,10 +552,11 @@ func (h *hub) mobStruck(players map[int32]*tracked, m *mob, t *tracked, dt dmgTy
 				h.piglinRetaliate(players, m, t) // PiglinAi.wasHurtBy: 600 ticks, and the others join in
 			} else if m.etype == entityZombifiedPiglin {
 				h.zombifiedPiglinAngerAt(m, t) // HurtByTargetGoal + the persistent grudge
+			} else if m.etype == entityEnderman {
+				h.endermanHurtBy(m, t) // HurtByTargetGoal + the persistent grudge
 			} else {
-				m.anger = spiderAnger                   // a hit spider/enderman retaliates
+				m.anger = spiderAnger                   // a hit spider retaliates
 				m.targetEID, m.unseenTicks = t.p.eid, 0 // HurtByTargetGoal: the attacker, seen or not
-				m.settled = 0                           // a new target restarts the enderman's daylight clock
 			}
 		}
 	}

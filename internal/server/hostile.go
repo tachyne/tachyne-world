@@ -414,11 +414,9 @@ func (h *hub) acquireTarget(players map[int32]*tracked, m *mob) {
 			m.anger--
 		}
 	}
-	// Endermen also aggro on a STARE (vanilla isBeingStaredBy): a player's
-	// crosshair on their eyes provokes them; a carved pumpkin exempts.
-	if m.etype == entityEnderman && m.anger == 0 && h.staredAt(players, m) {
-		m.anger = 200 // hunts ~20 s per provocation (refreshed while stared at)
-		m.settled = 0 // targetChangeTime: the daylight flight waits 600 ticks from here
+	if m.etype == entityEnderman {
+		h.endermanTarget(players, m) // a stare or a grudge, held its own way (endermanstare.go)
+		return
 	}
 	if m.etype == entityZombifiedPiglin {
 		h.zombifiedPiglinTarget(players, m) // its attacker, then whoever it is angry at

@@ -78,8 +78,16 @@ type mob struct {
 	swellHold       bool         // creeper: SwellGoal is running, which holds it still (Flag.MOVE)
 	ignited         bool         // creeper: lit by flint and steel or a fire charge — it swells whatever happens
 	anger           int          // spider: mob-updates it stays hostile in daylight after a hit
-	stareTicks      int          // enderman: ticks a distant target has gone unwatched (teleportTowards)
-	settled         int          // enderman: ticks since its target last changed (the daylight flight waits 600)
+	stareTicks      int          // enderman: the look goal's teleportTime, in updates (teleportTowards)
+	enderTargetAt   uint64       // enderman: targetChangeTime, the tick its target was last set (0 = cleared)
+	enderLook       bool         // enderman: EndermanLookForPlayerGoal holds the target (no sight or range test)
+	enderPending    int32        // enderman: the look goal's pendingTarget (0 = none)
+	enderAggroIn    int          // …and the updates of aggroTime before it is taken
+	enderStared     bool         // enderman: DATA_STARED_AT (set when the look goal starts)
+	enderSent       uint8        // enderman: the CREEPY/STARED_AT bits its viewers were last sent
+	enderHeld       bool         // enderman: EndermanFreezeWhenLookedAt holds it this update
+	enderPitch      float32      // enderman: the head pitch last sent while it stares back
+	angryUUID       [16]byte     // NeutralMob angry_at: the grudge's stable identity (persisted)
 	dragonAI        *dragonState // ender dragon: its phase machine and flight (dragonphase.go)
 	fangNextAt      uint64       // evoker: tick its fang spell comes off cooldown
 	vexNextAt       uint64       // evoker: tick its summon spell comes off cooldown
@@ -865,6 +873,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			m.kb--
 			m.vx *= 0.6
 			m.vz *= 0.6
+		case m.etype == entityEnderman && m.enderHeld:
+			// EndermanFreezeWhenLookedAt.start: the navigation stops.
+			m.vx, m.vz = 0, 0
 		case m.etype == entityFox && (h.foxPounceStep(players, m) || h.foxFaceplantStep(players, m)):
 			// A fox in the air on its pounce (FoxPounceGoal cannot be
 			// interrupted), or face down in the snow it came down in
@@ -1310,6 +1321,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		// LookAtPlayerGoal / RandomLookAroundGoal: the head watches a player
 		// or glances around while the body goes on about its business.
 		h.idleLook(players, m)
+		if m.etype == entityEnderman {
+			h.endermanFaceTarget(players, m) // a held enderman looks its starer in the eye
+		}
 
 		// Only emit when the mob actually moved — broadcasting a no-op move
 		// every tick for every mob overflows slow clients' send queues. The
@@ -1351,8 +1365,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		if m.etype == entityEnderman {
 			h.endermanCarry(players, m) // pick up / put down blocks (even while neutral)
-			if h.endermanStareStep(players, m) {
-				continue // EndermanFreezeWhenLookedAt: held by the stare
+			if m.enderHeld {
+				continue // EndermanFreezeWhenLookedAt holds MOVE: no melee while it stares back
 			}
 		}
 		if m.etype == entityFrog {

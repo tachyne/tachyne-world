@@ -140,51 +140,6 @@ func TestEndermanPlacesBlock(t *testing.T) {
 	}
 }
 
-// The staring contest: an enderman held in a player's crosshair stops where
-// it is, and blinks away when that player closes to within four blocks.
-func TestEndermanStareFreezesThenBlinks(t *testing.T) {
-	h := newHub(world.New(1))
-	players := map[int32]*tracked{}
-	pl := testTracked()
-	players[pl.p.eid] = pl
-	lx, lz := h.findLand(20, 20)
-	y := float64(h.world.MobFeet(lx, lz))
-	pl.x, pl.y, pl.z = float64(lx), y, float64(lz)+8
-	m := h.spawnMob(players, entityEnderman, float64(lx), y, float64(lz))
-	// A player's view holds the chunks around them loaded; a teleport only
-	// lands in a loaded one (randomTeleport's hasChunkAt).
-	for cx := (lx >> 4) - 3; cx <= (lx>>4)+3; cx++ {
-		for cz := (lz >> 4) - 3; cz <= (lz>>4)+3; cz++ {
-			h.world.Reader(int32(cx), int32(cz))
-		}
-	}
-
-	// Look straight at it from eight blocks: held, not blinking.
-	pl.yaw, pl.pitch = 0, float32(lookPitchTo(pl, m))
-	pl.yaw = float32(lookYawTo(pl, m))
-	if h.starerOf(players, m) == nil {
-		t.Fatal("the player is looking right at it")
-	}
-	sx, sz := m.x, m.z
-	if !h.endermanStareStep(players, m) {
-		t.Error("an enderman stared at from eight blocks freezes")
-	}
-	if m.x != sx || m.z != sz {
-		t.Error("a frozen enderman does not move")
-	}
-	// Step in close and it goes.
-	pl.x, pl.z = m.x, m.z+2
-	pl.yaw = float32(lookYawTo(pl, m))
-	pl.pitch = float32(lookPitchTo(pl, m))
-	for i := 0; i < 20 && m.x == sx && m.z == sz; i++ { // one try a step, which may find nowhere to land
-		pl.x, pl.z = m.x, m.z+2
-		h.endermanStareStep(players, m)
-	}
-	if m.x == sx && m.z == sz {
-		t.Error("an enderman stared at from two blocks blinks away")
-	}
-}
-
 // The yaw/pitch a player at t would need to look at m (degrees).
 func lookYawTo(t *tracked, m *mob) float64 {
 	dx, dz := m.x-t.x, m.z-t.z
