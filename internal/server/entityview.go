@@ -14,8 +14,12 @@ import "math"
 // The set is also what makes a spawn exact: an entity is announced to the
 // players who can see it, once, rather than broadcast and hoped for.
 //
-// It owns the entities that move and come and go — mobs, dropped items and
-// experience orbs. The fixed furniture (paintings, item frames, armour
+// It owns the entities that move and come and go — other players, mobs,
+// dropped items and experience orbs. Players were the last in: their bodies
+// were spawned for the whole dimension at join while their moves reached only
+// viewers within six chunks, and nothing removed them on leaving range — so
+// a player who flew or teleported away stayed standing, frozen, wherever
+// another client had last seen them (bug #41). The fixed furniture (paintings, item frames, armour
 // stands, vehicles, end crystals) is sent at join and removed by id when it
 // is destroyed; none of it wanders, so none of it goes stale.
 
@@ -74,6 +78,11 @@ func (h *hub) syncTracking(players map[int32]*tracked) {
 			t.tracked = map[int32]bool{}
 		}
 		clear(want)
+		for eid, o := range players {
+			if eid != t.p.eid && playerVisibleTo(t, o) {
+				want[eid] = true
+			}
+		}
 		for _, m := range h.mobs {
 			if m != h.dragon && inRangeOf(t, m.dim, m.x, m.z, m.etype) {
 				want[m.eid] = true
@@ -106,7 +115,82 @@ func (h *hub) syncTracking(players map[int32]*tracked) {
 				continue
 			}
 			t.tracked[eid] = true
+			if o := players[eid]; o != nil {
+				h.showPlayerTo(t, o)
+				continue
+			}
 			h.showEntityTo(t, eid)
+		}
+	}
+}
+
+// playerVisibleTo is TrackedEntity.updatePlayer for a player's body: the
+// same horizontal range test as any entity (a player's clientTrackingRange is
+// 32 chunks, so in practice the viewer's render distance decides), then
+// ServerPlayer.broadcastToPlayer — a spectating viewer sees every player not
+// looking through another entity's eyes, and anyone else sees no spectator.
+func playerVisibleTo(v, o *tracked) bool {
+	if !inRangeOf(v, o.dim, o.x, o.z, playerEntityType) {
+		return false
+	}
+	if v.gamemode == gmSpectator {
+		return o.camera == 0
+	}
+	return o.gamemode != gmSpectator
+}
+
+// showPlayerTo is ServerEntity.sendPairingData for another player's body: the
+// spawn, then everything a client would otherwise only learn when it next
+// changed — what they hold and wear, their attributes, the flags byte
+// (crouch, sprint, swim, glide, fire, invisibility, glow), the crouch pose,
+// sleep, shoulder parrots, effect swirls, and the seat they ride in.
+func (h *hub) showPlayerTo(v, o *tracked) {
+	v.p.sendEvReliable(bundleOpen{})
+	defer v.p.sendEvReliable(bundleClose{})
+	v.p.trySendEv(entAdd(o.p.eid, playerEntityType, o.p.uuid, o.x, o.y, o.z, o.yaw, o.pitch))
+	v.p.trySendEv(equipEv(o.p.eid, heldStack(o), o.offhand, o.armor))
+	sendAttrsTo(v, playerAttrFrame(o))
+	if playerEntityFlags(o) != 0 {
+		v.p.trySendEv(metaEv(playerFlagsMeta(o)))
+	}
+	if o.sneaking && !o.flying {
+		v.p.trySendEv(metaEv(poseMeta(o.p.eid, poseSneaking)))
+	}
+	if o.sleeping {
+		v.p.trySendEv(metaEv(sleepMetadata(o.p.eid, o.sleepPos)))
+	}
+	if o.shoulderOccupied() {
+		v.p.trySendEv(metaEv(shoulderMeta(o)))
+	}
+	if len(o.effects) > 0 {
+		v.p.trySendEv(metaEv(effectSwirlMeta(o.p.eid, o.effects)))
+	}
+	if o.ridingEID != 0 { // Entity.isPassenger: the vehicle's passenger list
+		if m := h.mobs[o.ridingEID]; m != nil && v.tracked[m.eid] {
+			v.p.trySendEv(passengersBody(m.eid, m.playerPassengers()...))
+		} else if veh := h.vehicles[o.ridingEID]; veh != nil {
+			v.p.trySendEv(passengersBody(veh.eid, veh.passengers()...))
+		}
+	}
+}
+
+// untrackPlayer takes a player's body out of every viewer's set — they left,
+// or changed dimension — sending the removal to those still holding it.
+func (h *hub) untrackPlayer(players map[int32]*tracked, eid int32) {
+	for _, v := range players {
+		if v.tracked[eid] {
+			delete(v.tracked, eid)
+			v.p.trySendEv(entGone(eid))
+		}
+	}
+}
+
+// toPlayerViewers sends a frame about a player's body to the viewers whose
+// clients are holding it.
+func toPlayerViewers(players map[int32]*tracked, eid int32, ev any) {
+	for _, v := range players {
+		if v.tracked[eid] {
+			v.p.trySendEv(ev)
 		}
 	}
 }
@@ -262,6 +346,10 @@ func (h *hub) dropTracked(t *tracked) {
 // is left rendering it where it last stood. Kinds the tracker does not own
 // yet fall back to the positional broadcast they have always used.
 func (h *hub) toTracking(players map[int32]*tracked, eid int32, dim int, x, z float64, ev any) {
+	if _, isPlayer := players[eid]; isPlayer {
+		toPlayerViewers(players, eid, ev)
+		return
+	}
 	if _, managed := h.trackable(eid); !managed {
 		h.toNearbyEv(players, dim, x, z, ev)
 		return

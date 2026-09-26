@@ -1650,7 +1650,7 @@ func (h *hub) run() {
 							if fly {
 								pose = poseStanding
 							}
-							h.toNearbyEv(players, t.dim, t.x, t.z, metaEv(poseMeta(t.p.eid, pose)))
+							toPlayerViewers(players, t.p.eid, metaEv(poseMeta(t.p.eid, pose)))
 						}
 					}
 				}
@@ -2376,7 +2376,7 @@ func (h *hub) run() {
 					if e.sneaking && t.camera != 0 {
 						h.setCamera(t, 0) // ServerPlayer.tick: shift leaves the camera entity
 					}
-					h.toNearbyEv(players, t.dim, t.x, t.z, metaEv(poseMeta(t.p.eid, pose)))
+					toPlayerViewers(players, t.p.eid, metaEv(poseMeta(t.p.eid, pose)))
 				}
 			case evStopSleep:
 				if t := players[e.eid]; t != nil {
@@ -2674,37 +2674,12 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 	// skin from that entry's textures — without it, a default skin.
 	e.p.trySendEv(infoAdd(e.p, nt.gamemode))
 	for _, t := range players {
-		// Tab-list entries are global; entity visibility is per-dimension
-		// (cross-dim views swap on dimension switch, not at join).
+		// Tab-list entries are global. Bodies are not: each player's comes
+		// and goes with the tracking pass (entityview.go), in both directions,
+		// by range — spawned in full as it comes into view, removed as it
+		// leaves.
 		t.p.trySendEv(infoAdd(e.p, nt.gamemode))
 		e.p.trySendEv(infoAdd(t.p, t.gamemode))
-		if t.dim != nt.dim {
-			continue
-		}
-		t.p.trySendEv(entAdd(e.p.eid, playerEntityType, e.p.uuid, nt.x, nt.y, nt.z, nt.yaw, nt.pitch))
-		// Gear rides with the spawn in BOTH directions (vanilla sends
-		// set_equipment right after add_entity; without this the newcomer's
-		// armor is invisible to others until the 2 s resync).
-		t.p.trySendEv(equipEv(e.p.eid, heldStack(nt), nt.offhand, nt.armor))
-		sendAttrsTo(t, playerAttrFrame(nt))
-		e.p.trySendEv(entAdd(t.p.eid, playerEntityType, t.p.uuid, t.x, t.y, t.z, t.yaw, t.pitch))
-		e.p.trySendEv(equipEv(t.p.eid, heldStack(t), t.offhand, t.armor))
-		sendAttrsTo(nt, playerAttrFrame(t))
-		if t.sleeping { // …lying down, if they're mid-sleep
-			e.p.trySendEv(metaEv(sleepMetadata(t.p.eid, t.sleepPos)))
-		}
-		if t.shoulderOccupied() { // …and their parrots
-			e.p.trySendEv(metaEv(shoulderMeta(t)))
-		}
-		if len(t.effects) > 0 { // …and their effect swirls
-			e.p.trySendEv(metaEv(effectSwirlMeta(t.p.eid, t.effects)))
-		}
-		if nt.shoulderOccupied() {
-			t.p.trySendEv(metaEv(shoulderMeta(nt)))
-		}
-		if len(nt.effects) > 0 {
-			t.p.trySendEv(metaEv(effectSwirlMeta(nt.p.eid, nt.effects)))
-		}
 	}
 	players[e.p.eid] = nt
 	if nt.shoulderOccupied() { // a relog keeps the parrots where they were
@@ -2790,29 +2765,13 @@ func (h *hub) onMove(players map[int32]*tracked, t *tracked, e evMove) {
 	h.frostWalk(players, t)
 	h.refreshSoulSpeed(t)
 
-	// Interest management: relay this move only to players whose loaded-chunk
-	// window overlaps ours. A player N chunks away can't see us, so forwarding
-	// them 20 moves/sec is pure waste — and unfiltered it's O(players²) packets
-	// per tick, the first thing that buckles under load (mobs already filter via
-	// toNearby; players used to broadcast to everyone). Entities out of range
-	// simply hold their last position; the 2 s absolute resync (broadcastSync,
-	// itself range-filtered) re-baselines anyone who comes back into view.
-	move := entMove(e.eid, t.x, t.y, t.z, e.yaw, e.pitch, e.onGround)
-	head := entHead(e.eid, e.yaw)
-	cx, cz := chunkFloor(t.x), chunkFloor(t.z)
-	for eid, other := range players {
-		if other.dim != t.dim {
-			continue // another dimension — invisible to each other
-		}
-		if eid == e.eid {
-			continue
-		}
-		if abs(chunkFloor(other.x)-cx) > viewRadius || abs(chunkFloor(other.z)-cz) > viewRadius {
-			continue
-		}
-		other.p.trySendEv(move)
-		other.p.trySendEv(head)
-	}
+	// The move goes to the viewers holding this player's body — the tracked
+	// set, not a radius of its own. The two used to differ, and a viewer
+	// whose client still held the body stopped hearing about it: the player
+	// stood frozen where that client last saw them (bug #41). Leaving range
+	// is the tracking pass's to handle, with a removal.
+	toPlayerViewers(players, e.eid, entMove(e.eid, t.x, t.y, t.z, e.yaw, e.pitch, e.onGround))
+	toPlayerViewers(players, e.eid, entHead(e.eid, e.yaw))
 	h.waypointOnMove(players, t, wpMoved)
 	if plugin.Has[*plugin.PlayerMoveEvent](h.plugins) { // hot path: never build the event unheard
 		h.plugins.Fire(&plugin.PlayerMoveEvent{EID: e.eid, Name: t.p.name,
@@ -2883,9 +2842,9 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 	//                        loop's updateSleep turns the night on its own)
 	rm := infoGone(p.uuid)
 	h.waypointOnLeave(players, p)
+	h.untrackPlayer(players, p.eid)
 	for _, t := range players {
 		t.p.trySendEv(rm)
-		t.p.trySendEv(entGone(p.eid))
 	}
 	h.shadowGoneAll(p.eid) // retract any cross-seam shadow of the leaver
 	h.plugins.Fire(&plugin.PlayerQuitEvent{EID: p.eid, Name: p.name})
@@ -3095,13 +3054,9 @@ func (h *hub) setBlockLive(players map[int32]*tracked, dim, x, y, z int, state u
 func (h *hub) teleportPlayer(players map[int32]*tracked, t *tracked, x, y, z float64) {
 	t.x, t.y, t.z = x, y, z
 	t.p.trySendEv(teleportEv(x, y, z, t.yaw, t.pitch))
-	move := entMove(t.p.eid, x, y, z, t.yaw, t.pitch, true)
-	for eid, other := range players {
-		if eid == t.p.eid || other.dim != t.dim {
-			continue
-		}
-		other.p.trySendEv(move)
-	}
+	// Its viewers see it go; the tracking pass removes it for those it has
+	// left behind and spawns it for those it has arrived among.
+	toPlayerViewers(players, t.p.eid, entMove(t.p.eid, x, y, z, t.yaw, t.pitch, true))
 }
 
 // setDayTime sets the day clock explicitly (command, bus, plugin) and fires

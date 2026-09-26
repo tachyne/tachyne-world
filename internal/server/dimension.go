@@ -130,38 +130,10 @@ func (h *hub) onDimSwitch(players map[int32]*tracked, t *tracked, e evDim) {
 	}
 	t.graceUntil = h.tick.Load() + 60 // vanilla-style arrival invulnerability
 	t.fireSecs, t.peakY = 0, t.y      // and no burn/fall carries across the portal
-	gone := entGone(t.p.eid)
-	for _, o := range players {
-		if o.p.eid == t.p.eid {
-			continue
-		}
-		switch o.dim {
-		case old: // they lose sight of the switcher, and the switcher of them
-			o.p.trySendEv(gone)
-			t.p.trySendEv(entGone(o.p.eid))
-		case e.dim: // both sides gain sight (gear rides with the spawn)
-			o.p.trySendEv(entAdd(t.p.eid, playerEntityType, t.p.uuid, t.x, t.y, t.z, t.yaw, t.pitch))
-			o.p.trySendEv(equipEv(t.p.eid, heldStack(t), t.offhand, t.armor))
-			sendAttrsTo(o, playerAttrFrame(t))
-			// The switcher's queue is mid-chunk-flood: a trySend here silently
-			// drops and the other player stays invisible until relog. Block.
-			t.p.sendEv(entAdd(o.p.eid, playerEntityType, o.p.uuid, o.x, o.y, o.z, o.yaw, o.pitch))
-			t.p.sendEv(equipEv(o.p.eid, heldStack(o), o.offhand, o.armor))
-			sendAttrsTo(t, playerAttrFrame(o))
-			if t.shoulderOccupied() {
-				o.p.trySendEv(metaEv(shoulderMeta(t)))
-			}
-			if len(t.effects) > 0 {
-				o.p.trySendEv(metaEv(effectSwirlMeta(t.p.eid, t.effects)))
-			}
-			if len(o.effects) > 0 {
-				t.p.sendEv(metaEv(effectSwirlMeta(o.p.eid, o.effects)))
-			}
-			if o.shoulderOccupied() {
-				t.p.sendEv(metaEv(shoulderMeta(o)))
-			}
-		}
-	}
+	// The old dimension's viewers lose the switcher's body now; the switcher's
+	// own view (other players included) is dropped below, and the tracking
+	// pass spawns whoever is in range in the new dimension, both ways.
+	h.untrackPlayer(players, t.p.eid)
 	// Swap entity views: hide the old dimension's mobs/items/projectiles,
 	// show the new dimension's. Vehicles are overworld-only.
 	// Mobs, items and orbs are the tracker's: drop the whole view the

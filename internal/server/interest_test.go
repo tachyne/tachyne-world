@@ -19,8 +19,9 @@ func drain(p *player) int {
 	}
 }
 
-// TestMoveRelayIsInterestManaged: a move is relayed to a nearby player but NOT
-// to one far outside the view radius — the O(n²) fan-out fix.
+// TestMoveRelayIsInterestManaged: a move is relayed to a player holding the
+// mover's body but NOT to one far outside tracking range — the O(n²) fan-out
+// fix, now carried by the tracked set.
 func TestMoveRelayIsInterestManaged(t *testing.T) {
 	h := newHub(world.New(1))
 	h.tick.Store(100)          // a live clock: at tick 0 the movement budget has no bank yet
@@ -31,6 +32,7 @@ func TestMoveRelayIsInterestManaged(t *testing.T) {
 	near := &tracked{p: newPlayer(2, "near", [16]byte{}), x: 8, z: 8}                   // same chunk-ish
 	far := &tracked{p: newPlayer(3, "far", [16]byte{}), x: (viewRadius + 5) * 16, z: 0} // well out of range
 	players[1], players[2], players[3] = mover, near, far
+	h.syncTracking(players) // the tracking pass: near and mover pair up, far stays out
 	drain(near.p)
 	drain(far.p)
 

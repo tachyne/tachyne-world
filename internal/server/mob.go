@@ -1761,22 +1761,12 @@ func (h *hub) broadcastSync(players map[int32]*tracked) {
 		}
 	}
 	// Players relay to each other with the same lossy relative moves, so resync
-	// each player's authoritative position to every other in-range player.
+	// each player's authoritative position to every viewer holding their body.
 	// Equipment rides along: it's one-shot state a full send queue can drop,
 	// so the periodic resync keeps everyone's worn armor/held item honest.
 	for _, t := range players {
-		sync := entMove(t.p.eid, t.x, t.y, t.z, t.yaw, t.pitch, true)
-		equip := equipEv(t.p.eid, heldStack(t), t.offhand, t.armor)
-		cx, cz := chunkFloor(t.x), chunkFloor(t.z)
-		for eid, other := range players {
-			if eid == t.p.eid || other.dim != t.dim {
-				continue
-			}
-			if abs(chunkFloor(other.x)-cx) <= viewRadius && abs(chunkFloor(other.z)-cz) <= viewRadius {
-				other.p.trySendEv(sync)
-				other.p.trySendEv(equip)
-			}
-		}
+		toPlayerViewers(players, t.p.eid, entMove(t.p.eid, t.x, t.y, t.z, t.yaw, t.pitch, true))
+		toPlayerViewers(players, t.p.eid, equipEv(t.p.eid, heldStack(t), t.offhand, t.armor))
 	}
 }
 

@@ -72,6 +72,6 @@ func entityFlagsMeta(eid int32, flags byte) []byte {
 // the translucency of its own invisibility).
 func (h *hub) broadcastPlayerFlags(players map[int32]*tracked, t *tracked) {
 	ev := metaEv(playerFlagsMeta(t))
-	h.toNearbyEv(players, t.dim, t.x, t.z, ev)
+	toPlayerViewers(players, t.p.eid, ev)
 	t.p.trySendEv(ev)
 }

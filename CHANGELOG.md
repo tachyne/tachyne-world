@@ -11,6 +11,19 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-26
+
+### Fixed
+- **Other players no longer linger as frozen copies.** A player's body is now
+  shown and hidden by range, the way vanilla tracks it: it appears in full
+  (gear, pose, parrots, effects, seat) as they come into view and is removed
+  as they leave. Before, a player who flew or teleported away stayed standing
+  wherever another client had last seen them. Spectators are now seen only by
+  other spectators.
+- **Endermen set carried blocks down only where they can stay.** A flower
+  needs soil and nothing may be standing in the spot, as in vanilla. Before,
+  a carried poppy could land on bare stone.
+
 ## 2026-09-25
 
 ### Added
