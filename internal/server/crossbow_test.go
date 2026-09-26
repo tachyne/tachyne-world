@@ -36,7 +36,7 @@ func TestCrossbowChargeLoadFire(t *testing.T) {
 	// A full charge, released, latches the loaded shot and spends one arrow.
 	h.tick.Add(xbowBaseCharge)
 	h.finishXbowCharge(players, pl)
-	if !pl.xbowLoaded {
+	if pl.inv.slots[0].load.n == 0 {
 		t.Fatal("a full charge should latch the crossbow loaded")
 	}
 	if pl.inv.slots[1].count != 4 {
@@ -48,7 +48,7 @@ func TestCrossbowChargeLoadFire(t *testing.T) {
 
 	// The next use fires the loaded bolt.
 	h.useXbow(players, pl)
-	if pl.xbowLoaded {
+	if pl.inv.slots[0].load.n > 0 {
 		t.Fatal("firing should clear the loaded shot")
 	}
 	if len(h.arrows) != 1 {
@@ -66,7 +66,7 @@ func TestCrossbowEarlyReleaseFizzles(t *testing.T) {
 	h.startXbowCharge(pl)
 	h.tick.Add(3) // released well before the crossbow finishes charging
 	h.finishXbowCharge(players, pl)
-	if pl.xbowLoaded {
+	if pl.inv.slots[0].load.n > 0 {
 		t.Fatal("an early release must not load the crossbow")
 	}
 	if pl.inv.slots[1].count != 5 {
@@ -86,14 +86,14 @@ func TestCrossbowQuickCharge(t *testing.T) {
 	h.startXbowCharge(pl)
 	h.tick.Add(10)
 	h.finishXbowCharge(players, pl)
-	if !pl.xbowLoaded {
+	if pl.inv.slots[0].load.n == 0 {
 		t.Fatal("quick_charge III should be fully charged after 10 ticks")
 	}
 }
 
 func TestCrossbowMultishot(t *testing.T) {
 	h, pl, players := xbowSetup()
-	pl.xbowLoaded, pl.xbowMulti = true, true // a multishot-loaded crossbow
+	pl.inv.slots[0].load = xbowLoad{item: itemArrowAmmo, n: 3} // a multishot-loaded crossbow
 	h.fireXbow(players, pl)
 	if len(h.arrows) != 3 {
 		t.Fatalf("multishot should loose three bolts, got %d", len(h.arrows))
@@ -158,8 +158,8 @@ func TestCrossbowFiresRockets(t *testing.T) {
 	h.useXbow(players, pl)
 	h.tick.Add(xbowBaseCharge)
 	h.finishXbowCharge(players, pl)
-	if !pl.xbowLoaded || pl.xbowAmmo.item != itemFireworkRocket || pl.offhand.count != 1 {
-		t.Fatalf("loaded=%v ammo=%d offhand=%d", pl.xbowLoaded, pl.xbowAmmo.item, pl.offhand.count)
+	if l := pl.inv.slots[0].load; l.n != 1 || l.item != itemFireworkRocket || pl.offhand.count != 1 {
+		t.Fatalf("load=%+v offhand=%d", l, pl.offhand.count)
 	}
 	z := h.spawnMob(players, entityZombie, 0.5, 80, 8.5)
 	z.health = 100

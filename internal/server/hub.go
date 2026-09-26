@@ -310,14 +310,9 @@ type tracked struct {
 	useOffhand bool
 
 	// Crossbow (two-phase: charge → loaded → fire). xbowAt is the tick a charge
-	// began (0 = not charging); once the charge completes the shot is latched in
-	// xbowLoaded and fired on the next use, baking in the multishot/piercing the
-	// crossbow carried at load time (vanilla stores these on the item stack).
-	xbowAt     uint64
-	xbowLoaded bool
-	xbowAmmo   invStack // what is loaded (CHARGED_PROJECTILES): a tipped or spectral arrow flies as one
-	xbowMulti  bool
-	xbowPierce int
+	// began (0 = not charging); a completed charge loads the crossbow stack
+	// itself (invStack.load, charged_projectiles), and the next use fires it.
+	xbowAt uint64
 
 	// Trident: tridentAt is the tick a throw-charge began (0 = not charging);
 	// spinUntil is the tick a riptide auto-spin-attack ends (movement authority

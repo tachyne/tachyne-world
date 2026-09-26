@@ -64,6 +64,7 @@ type itemEntity struct {
 	shieldBase    int8        // a decorated shield's banner base (dye + 1)
 	cube          cubeContent // a sulfur cube bucket's cube
 	ominous       bool        // the ominous banner
+	load          xbowLoad    // a crossbow's charged_projectiles
 	vx, vy, vz    float64     // motion per tick (tickItem); all 0 at rest
 	born          uint64      // world tick spawned
 	age           int         // ItemEntity.age: ticks it has lain (despawns at 6000; saved)
@@ -82,7 +83,7 @@ func (it *itemEntity) stack() invStack {
 		hiveID: it.hiveID, bundleID: it.bundleID, potion: it.potion, repairCost: it.repairCost,
 		instrument: it.instrument, name: it.name, lode: it.lode, color: it.color, stew: it.stew,
 		shieldBase: it.shieldBase, sherds: it.sherds, flight: it.flight, starID: it.starID, cube: it.cube,
-		ominous: it.ominous}
+		ominous: it.ominous, load: it.load}
 }
 
 // setFrom is stack()'s inverse: everything a slot carries, onto the dropped
@@ -98,7 +99,7 @@ func (it *itemEntity) setFrom(st invStack) {
 	it.potion, it.repairCost, it.instrument = st.potion, st.repairCost, st.instrument
 	it.name, it.lode, it.stew, it.shieldBase = st.name, st.lode, st.stew, st.shieldBase
 	it.sherds, it.flight, it.starID = st.sherds, st.flight, st.starID
-	it.cube, it.ominous = st.cube, st.ominous
+	it.cube, it.ominous, it.load = st.cube, st.ominous, st.load
 }
 
 // refreshItemMeta re-sends a ground item's stack after a drop site has
@@ -383,6 +384,8 @@ func stackComponents(st invStack) []byte {
 			comps++
 		}
 	}
+	extraN, extraBytes := extraComponents(st) // the ominous banner's set, a crossbow's load, a mob bucket's data
+	comps += extraN
 	b = protocol.AppendVarInt(b, comps) // components to add
 	b = protocol.AppendVarInt(b, 0)     // components to remove
 	if st.item == itemGoatHorn {
@@ -526,6 +529,7 @@ func stackComponents(st invStack) []byte {
 		b = protocol.AppendVarInt(b, componentBaseColor)
 		b = protocol.AppendVarInt(b, int32(st.shieldBase-1))
 	}
+	b = append(b, extraBytes...)
 	b = append(b, bookBytes...) // writable/written book content (see book.go)
 	return b
 }

@@ -80,6 +80,32 @@ type invStack struct {
 	// carrying the raid's eight layers, its item name and uncommon rarity.
 	// One flag for the whole component set (ominousbanner.go).
 	ominous bool
+	// A crossbow's charged_projectiles: what it is loaded with. On the stack,
+	// as vanilla keeps it, so a loaded crossbow stays loaded in a chest or
+	// across a restart, and a second crossbow does not fire the first's load.
+	load xbowLoad
+}
+
+// xbowLoad is a crossbow's charged_projectiles: the projectile it holds and
+// how many of it (three with Multishot — the two copies intangible). The
+// fields are what a loaded arrow or rocket carries: a tipped arrow's potion,
+// a rocket's flight and bursts. The zero value is an empty crossbow.
+type xbowLoad struct {
+	item   int32
+	n      int8
+	potion int8
+	flight int8
+	starID int32
+}
+
+// loadOf is the load n projectiles of ammo make.
+func loadOf(ammo invStack, n int) xbowLoad {
+	return xbowLoad{item: ammo.item, n: int8(n), potion: ammo.potion, flight: ammo.flight, starID: ammo.starID}
+}
+
+// ammo is one of the loaded projectiles as a stack.
+func (l xbowLoad) ammo() invStack {
+	return invStack{item: l.item, count: 1, potion: l.potion, flight: l.flight, starID: l.starID}
 }
 
 // cubeContent is what a sulfur cube bucket holds besides the cube itself.

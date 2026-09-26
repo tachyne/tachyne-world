@@ -20,7 +20,7 @@ func TestCrossbowShotsScatter(t *testing.T) {
 	spread := 0.0
 	for i := 0; i < 20; i++ {
 		h.arrows = map[int32]*arrowEntity{}
-		pl.xbowLoaded = true
+		pl.inv.slots[0].load = xbowLoad{item: itemArrowAmmo, n: 1}
 		h.useXbow(players, pl)
 		a := onlyProjectile(t, h)
 		if sp := math.Sqrt(a.vx*a.vx + a.vy*a.vy + a.vz*a.vz); math.Abs(sp-xbowSpeed) > 0.1 {
@@ -48,7 +48,7 @@ func TestCrossbowMultishotFanFollowsPitch(t *testing.T) {
 	sum, n := 0.0, 0
 	for i := 0; i < 40; i++ {
 		h.arrows = map[int32]*arrowEntity{}
-		pl.xbowLoaded, pl.xbowMulti = true, true
+		pl.inv.slots[0].load = xbowLoad{item: itemArrowAmmo, n: 3}
 		h.useXbow(players, pl)
 		if len(h.arrows) != 3 {
 			t.Fatalf("multishot loosed %d bolts", len(h.arrows))

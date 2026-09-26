@@ -3,8 +3,9 @@ package server
 import "math"
 
 // The crossbow: a two-phase ranged weapon. A first use HOLDS to charge; when
-// the charge completes on release the shot latches "loaded" (consuming one
-// arrow) and stays ready even across a hotbar switch; a later use fires the
+// the charge completes on release the crossbow is loaded (consuming one
+// arrow) — the load is the stack's charged_projectiles, so it stays with that
+// crossbow through a hotbar switch, a chest or a restart; a later use fires the
 // loaded bolt(s) instantly. quick_charge shortens the charge, multishot looses
 // three bolts in a spread, piercing lets a bolt pass through several mobs.
 // Unlike the bow, a crossbow shot is fixed-power (no draw-scaled damage) and
@@ -23,7 +24,7 @@ var itemCrossbow = int32(itemByName["crossbow"])
 var xbowDamage = int(math.Ceil(2 * xbowSpeed))
 
 // evXbowUse is one crossbow right-click. The hub decides charge-vs-fire from the
-// player's latched loaded state (session-side code can't read hub-owned fields).
+// crossbow's load (session-side code can't read hub-owned stacks).
 type evXbowUse struct {
 	eid int32
 	off bool
@@ -40,9 +41,10 @@ func xbowChargeTicks(t *tracked) uint64 {
 	return uint64(d)
 }
 
-// useXbow routes a crossbow use: fire if it's loaded, otherwise begin charging.
+// useXbow routes a crossbow use (CrossbowItem.use): fire if it's loaded,
+// otherwise begin charging.
 func (h *hub) useXbow(players map[int32]*tracked, t *tracked) {
-	if t.xbowLoaded {
+	if usedStack(t).load.n > 0 {
 		h.fireXbow(players, t)
 		return
 	}
@@ -52,7 +54,7 @@ func (h *hub) useXbow(players map[int32]*tracked, t *tracked) {
 // startXbowCharge begins loading the crossbow (needs ammo in survival). The
 // client keeps the item "in use" until it releases, which finishes the charge.
 func (h *hub) startXbowCharge(t *tracked) {
-	if t.dead || usedStack(t).item != itemCrossbow || t.xbowLoaded {
+	if st := usedStack(t); t.dead || st.item != itemCrossbow || st.load.n > 0 {
 		return
 	}
 	if isSurvival(t.gamemode) && xbowAmmoSlot(t) < 0 {
@@ -62,14 +64,15 @@ func (h *hub) startXbowCharge(t *tracked) {
 }
 
 // finishXbowCharge completes (or, if released early, cancels) the charge on the
-// release_use_item path. A full charge consumes one arrow and latches the shot.
+// release_use_item path. A full charge consumes one arrow and loads it onto the
+// crossbow (CrossbowItem.releaseUsing → tryLoadProjectiles).
 func (h *hub) finishXbowCharge(players map[int32]*tracked, t *tracked) {
 	if t.xbowAt == 0 {
 		return
 	}
 	held := h.tick.Load() - t.xbowAt
 	t.xbowAt = 0
-	if t.dead || usedStack(t).item != itemCrossbow || t.xbowLoaded {
+	if st := usedStack(t); t.dead || st.item != itemCrossbow || st.load.n > 0 {
 		return
 	}
 	if held < xbowChargeTicks(t) {
@@ -86,31 +89,40 @@ func (h *hub) finishXbowCharge(players map[int32]*tracked, t *tracked) {
 	} else if isSurvival(t.gamemode) {
 		return
 	}
-	st := usedStack(t)
-	t.xbowLoaded, t.xbowAmmo = true, ammo
-	t.xbowMulti = st.enchLvl(enchMultishot) > 0
-	t.xbowPierce = st.enchLvl(enchPiercing)
+	slot := t.useSlot()
+	st := t.handStack(slot)
+	if st == nil || st.item != itemCrossbow {
+		return
+	}
+	// draw: Multishot loads three — the arrow and two copies.
+	n := 1
+	if st.enchLvl(enchMultishot) > 0 {
+		n = 3
+	}
+	st.load = loadOf(ammo, n)
+	h.syncUsedHand(players, t, slot) // the loaded model, for the holder and everyone watching
 	h.playSoundDim(players, t.dim, "minecraft:item.crossbow.loading_end", sndPlayer, t.x, t.y, t.z, 1, 1)
 }
 
 // xbowRocketSpeed is CrossbowItem's FIREWORK_POWER.
 const xbowRocketSpeed = 1.6
 
-// fireXbow looses the loaded bolt(s) (vanilla performShooting): one bolt, or a
-// three-bolt spread with multishot. Piercing rides along on each bolt. Each
-// projectile costs its own durability wear and plays its own shot sound.
+// fireXbow looses the loaded bolt(s) (vanilla performShooting): the load is
+// emptied first, then each loaded projectile flies — one bolt, or a three-bolt
+// spread with multishot. Piercing is the crossbow's own, read as it fires.
+// Each projectile costs its own durability wear and plays its own shot sound.
 func (h *hub) fireXbow(players map[int32]*tracked, t *tracked) {
-	if t.dead || !t.xbowLoaded || usedStack(t).item != itemCrossbow {
+	slot := t.useSlot()
+	st := t.handStack(slot)
+	if t.dead || st == nil || st.item != itemCrossbow || st.load.n <= 0 {
 		return
 	}
-	multi, pierce := t.xbowMulti, t.xbowPierce
-	t.xbowLoaded, t.xbowMulti, t.xbowPierce = false, false, 0
+	load, pierce := st.load, st.enchLvl(enchPiercing)
+	st.load = xbowLoad{}
+	ammo := load.ammo()
 	h.advance(players, t, "shot_crossbow", advMatch{item: itemCrossbow})
-	n := 1
-	if multi {
-		n = 3
-	}
-	rocket := t.xbowAmmo.item == itemFireworkRocket
+	n := int(load.n)
+	rocket := ammo.item == itemFireworkRocket
 	for i, angle := range xbowShotAngles(n) {
 		// CrossbowItem.getDurabilityUse: each projectile costs its own wear,
 		// three for a rocket and one for an arrow.
@@ -125,14 +137,14 @@ func (h *hub) fireXbow(players map[int32]*tracked, t *tracked) {
 		// then Projectile.shoot at the crossbow's power with uncertainty 1.
 		dx, dy, dz := xbowShotVector(t.yaw, t.pitch, angle)
 		if rocket { // FireworkRocketEntity shot at an angle, at FIREWORK_POWER 1.6
-			if r := h.spawnRocket(players, t.dim, t.x, t.y+playerEyeHeightStand-0.15, t.z, 0, t.xbowAmmo); r != nil {
+			if r := h.spawnRocket(players, t.dim, t.x, t.y+playerEyeHeightStand-0.15, t.z, 0, ammo); r != nil {
 				r.angled, r.shooter = true, t.p.eid
 				r.vx, r.vy, r.vz = h.shootVector(dx, dy, dz, xbowRocketSpeed, throwUncertainty)
 			}
 		} else {
 			vx, vy, vz := h.shootVector(dx, dy, dz, xbowSpeed, throwUncertainty)
-			a := h.launchProjectileIn(players, arrowEntityFor(t.xbowAmmo), t.dim, t.x, t.y+1.5, t.z, vx, vy, vz)
-			loadArrow(a, t.xbowAmmo)
+			a := h.launchProjectileIn(players, arrowEntityFor(ammo), t.dim, t.x, t.y+1.5, t.z, vx, vy, vz)
+			loadArrow(a, ammo)
 			a.weapon = itemCrossbow
 			a.shooter, a.dmg, a.noHitUntil = t.p.eid, xbowDamage, h.tick.Load()+arrowNoSelfHT
 			a.playerShot = true
@@ -142,6 +154,16 @@ func (h *hub) fireXbow(players map[int32]*tracked, t *tracked) {
 			a.noPickup = i != 0 // the first is the loaded arrow; multishot's copies are intangible
 		}
 		h.playSoundDim(players, t.dim, "minecraft:item.crossbow.shoot", sndPlayer, t.x, t.y, t.z, 1, h.xbowShotPitch(i))
+	}
+	h.syncUsedHand(players, t, slot) // unloaded (or broken)
+}
+
+// syncUsedHand resyncs the hand a use came from after its stack changed in a
+// way others can see — a crossbow loading or firing changes its model.
+func (h *hub) syncUsedHand(players map[int32]*tracked, t *tracked, slot int) {
+	h.sendHandSlot(t, slot) // the offhand path broadcasts itself
+	if slot != offhandSlot {
+		h.broadcastEquipment(players, t)
 	}
 }
 

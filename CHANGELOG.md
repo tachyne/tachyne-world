@@ -125,8 +125,20 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Raid and patrol captains wear the Ominous Banner.** A captain's banner
   used to be a plain white one. It is now the Ominous Banner: it drops as
   one, shows its pattern when placed and comes back as one when broken, and
-  killing a raider who wears it earns Voluntary Exile. Held in the hand or
-  worn by a captain, it still looks like a white banner for now.
+  killing a raider who wears it earns Voluntary Exile. It looks the part
+  everywhere now, on a captain's head, in the hand and in the inventory: its
+  pattern shows, it is called "Ominous Banner" in yellow (uncommon) and, as
+  in vanilla, its tooltip leaves the pattern list out.
+- **A loaded crossbow looks loaded.** A crossbow's charge is kept on the
+  crossbow itself, as in vanilla. It shows the drawn string and the bolt or
+  rocket, for you and for other players, and its tooltip names what is
+  loaded. A second crossbow no longer fires the first one's bolt, and a
+  loaded crossbow stays loaded when it is put in a chest, dropped or the
+  server restarts.
+- **Tropical fish buckets say what is in them.** The bucket's tooltip names
+  the fish's pattern and colours, as in vanilla. Salmon and axolotl buckets
+  carry the size and colour, and every mob bucket carries the mob's health,
+  the way vanilla's do.
 - **Mobs keep the names of the items they hold.** A named sword that a
   zombie picks up keeps its name in the zombie's hand, in its drop and
   across a restart. Foxes, pandas, dolphins and allays keep an item's name

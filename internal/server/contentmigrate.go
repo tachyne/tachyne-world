@@ -23,7 +23,8 @@ import (
 // covered without anyone remembering to list it:
 //
 //   - stackRow and containerRow are defined types; their item columns are
-//     known (packStack): col 0 and the four pot sherds.
+//     known (packStack): col 0, the four pot sherds, a sulfur cube's block
+//     and a crossbow's loaded projectile.
 //   - potSherds is four item ids.
 //   - a scalar field names its registry with a `mig` struct tag — "item",
 //     "entity" or "state" — and "item0" marks rows of (item, …) arrays.
@@ -83,7 +84,7 @@ var (
 )
 
 // stackItemCols are the stackRow columns that hold item ids (packStack).
-var stackItemCols = []int{0, 32, 33, 34, 35, 36}
+var stackItemCols = []int{0, 32, 33, 34, 35, 36, 41}
 
 // walk rewrites every id reachable from v, which must be addressable.
 func (m *contentMigrator) walk(v reflect.Value) {
