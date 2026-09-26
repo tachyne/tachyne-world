@@ -30,6 +30,18 @@ the public history since the project was open-sourced on 2026-07-10.
   every server restart began at sunrise; now it resumes where it was, as a
   vanilla world does. The weather is also saved at shutdown, not only every
   thirty seconds.
+- **Storms and dusk are no longer darker than vanilla.** The sky's
+  darkening now truncates as vanilla does (a sky at 12.5 darkens by 2, not
+  3), and a thunderstorm applies only the storm's blend instead of rain's
+  and then the storm's on top: a storm at noon darkens by 5, not 8. Dusk,
+  dawn and bad weather had been a level darker than they should be, which
+  let monsters spawn, and kept the undead from burning, where vanilla's
+  sky is already bright enough.
+- **Item pickup reaches the next block.** Players now collect what touches
+  their box widened by a block each way and half a block up and down (and,
+  riding, the box stretched over the boat, cart or mount), instead of a
+  one-block radius around their feet. An item resting on the block in front
+  is picked up from the edge of your own.
 - **Placed spawners work.** A spawner set with a spawn egg, placed with
   `/setblock` (with `SpawnData` and `Delay`) or copied with `/clone` now
   spawns its mob as in vanilla: a player within 16 blocks, four tries every

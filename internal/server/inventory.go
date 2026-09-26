@@ -2,7 +2,6 @@ package server
 
 import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
-	"math"
 
 	"github.com/tachyne/tachyne-common/protocol"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
@@ -308,6 +307,7 @@ func (h *hub) pickupItems(players map[int32]*tracked) {
 		if t.gamemode == gmSpectator || t.dead || t.inv == nil {
 			continue
 		}
+		lo, hi := h.pickupArea(t)
 		for eid, it := range h.items {
 			if now < it.noPickupUntil || it.dim != t.dim {
 				continue
@@ -315,8 +315,8 @@ func (h *hub) pickupItems(players map[int32]*tracked) {
 			if it.owner != ([16]byte{}) && it.owner != t.p.uuid {
 				continue // ItemEntity.playerTouch: another player's item (a /give overflow)
 			}
-			if math.Abs(it.x-t.x) > 1 || math.Abs(it.z-t.z) > 1 || math.Abs(it.y-t.y) > 1.5 {
-				continue
+			if !psBoxHits(lo, hi, it.x, it.y, it.z, itemBoxSize, itemBoxSize) {
+				continue // Player.aiStep: only what touches the pickup area
 			}
 			changed, leftover := t.inv.addStack(it.stack())
 			picked := it.count - leftover
@@ -343,6 +343,56 @@ func (h *hub) pickupItems(players map[int32]*tracked) {
 			}
 		}
 	}
+}
+
+// itemBoxSize is the item entity's box (EntityType ITEM, 0.25 × 0.25).
+const itemBoxSize = 0.25
+
+// pickupArea is Player.aiStep's reach for touching entities: the player's
+// own box inflated a block each way sideways and half a block up and down,
+// so an item lying on the next block over is picked up from the edge of
+// this one. A rider's box is first stretched over its vehicle's, and then
+// widened sideways only.
+func (h *hub) pickupArea(t *tracked) (lo, hi [3]float64) {
+	w, ht := playerPoseBox(t)
+	lo = [3]float64{t.x - w/2, t.y, t.z - w/2}
+	hi = [3]float64{t.x + w/2, t.y + ht, t.z + w/2}
+	vx, vy, vz, vw, vh, riding := h.ridingBox(t)
+	if !riding {
+		return [3]float64{lo[0] - 1, lo[1] - 0.5, lo[2] - 1}, [3]float64{hi[0] + 1, hi[1] + 0.5, hi[2] + 1}
+	}
+	lo = [3]float64{min(lo[0], vx-vw/2), min(lo[1], vy), min(lo[2], vz-vw/2)}
+	hi = [3]float64{max(hi[0], vx+vw/2), max(hi[1], vy+vh), max(hi[2], vz+vw/2)}
+	return [3]float64{lo[0] - 1, lo[1], lo[2] - 1}, [3]float64{hi[0] + 1, hi[1], hi[2] + 1}
+}
+
+// playerPoseBox is the player's box for its pose (Player.getDefaultDimensions):
+// flat for swimming and gliding, tiny asleep, shorter crouched.
+func playerPoseBox(t *tracked) (w, ht float64) {
+	s := t.scale()
+	switch {
+	case t.sleeping:
+		return 0.2 * s, 0.2 * s
+	case t.swimming || t.fallFlying:
+		return psPlayerWidth * s, psPlayerWidth * s
+	}
+	return playerWidth(t), playerHeight(t)
+}
+
+// ridingBox is the box of whatever the player rides, a vehicle or a mount.
+func (h *hub) ridingBox(t *tracked) (x, y, z, w, ht float64, ok bool) {
+	if t.ridingEID == 0 {
+		return 0, 0, 0, 0, 0, false
+	}
+	if v := h.vehicles[t.ridingEID]; v != nil {
+		w, ht = v.box()
+		return v.x, v.y, v.z, w, ht, true
+	}
+	if m := h.mobs[t.ridingEID]; m != nil {
+		b := m.box()
+		return m.x, m.y, m.z, b.w, b.h, true
+	}
+	return 0, 0, 0, 0, 0, false
 }
 
 // throwerName is the advancement entity type of an item's thrower ("" when
