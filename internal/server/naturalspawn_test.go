@@ -41,8 +41,17 @@ func TestSkyDarken(t *testing.T) {
 	}
 	h.dayTime.Store(6000)
 	h.rainLevel, h.thunderLevel = 1, 1 // full thunderstorm at noon
-	if d := h.skyDarken(); d < 5 {
-		t.Fatalf("storm noon skyDarken = %d, want >= 5", d)
+	if d := h.skyDarken(); d != 5 {
+		t.Fatalf("storm noon skyDarken = %d, want 5 (the thunder blend alone: 15→9.2)", d)
+	}
+	h.thunderLevel = 0 // plain rain at noon: 15→11.5625
+	if d := h.skyDarken(); d != 3 {
+		t.Fatalf("rainy noon skyDarken = %d, want 3", d)
+	}
+	h.rainLevel = 0
+	h.dayTime.Store(12500) // dusk: the level is 11.14, so the sky darkens by 3
+	if d := h.skyDarken(); d != 3 {
+		t.Fatalf("dusk skyDarken = %d, want 3 (truncate 15-level, not the level)", d)
 	}
 }
 

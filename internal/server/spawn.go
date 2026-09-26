@@ -442,9 +442,19 @@ func (h *hub) skyDarken() int {
 		level = 4 + (15-4)*(day-22330)/(133+24000-22330)
 	}
 	// Weather blends toward the night level (alphas from WeatherAttributes).
-	level += (4 - level) * 0.3125 * float64(h.rainLevel)
-	level += (4 - level) * 0.52734375 * float64(h.thunderLevel)
-	return 15 - int(level)
+	// The storm layer reads getThunderLevel, which is the thunder scaled by
+	// the rain, and the rain layer only what rain the thunder leaves: a full
+	// storm is the thunder blend alone, not the rain's and then the thunder's.
+	thunder := float64(h.thunderLevel) * float64(h.rainLevel)
+	if rain := float64(h.rainLevel) - thunder; rain > 0 {
+		level += (4 - level) * 0.3125 * rain
+	}
+	if thunder > 0 {
+		level += (4 - level) * 0.52734375 * thunder
+	}
+	// Level.updateSkyBrightness truncates the darkening, not the level:
+	// a sky at 12.5 darkens by 2, not 3.
+	return int(15 - level)
 }
 
 // rawBrightness is vanilla getRawBrightness(pos, amount): the larger of block
