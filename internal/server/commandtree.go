@@ -164,7 +164,7 @@ func modelledCommands() []cmdNode {
 		gm("gamemode"),
 		gm("gm"),
 		lit("give", false, argEntity("targets", 0, false,
-			argItem("item", true, argInt("count", 1, 6400, true)))),
+			argItem("item", true, argInt("count", 1, math.MaxInt32, true)))),
 		lit("kill", true, target),
 		// ClearInventoryCommands: [targets [item [maxCount]]].
 		lit("clear", true, argEntity("targets", entityPlayers, true,
@@ -289,6 +289,7 @@ func modelledCommands() []cmdNode {
 			lit("value", false, argWord("range", true, argGreedy("sequence", true))),
 			lit("roll", false, argWord("range", true, argGreedy("sequence", true))),
 			lit("reset", false, argGreedy("sequence", true))),
+		computeTree(),
 		lit("swing", true, argEntity("targets", 0, true, lits("mainhand", "offhand")...)),
 		lit("setidletimeout", false, argInt("minutes", 0, math.MaxInt32, true)),
 		lit("stopwatch", false,
@@ -299,6 +300,21 @@ func modelledCommands() []cmdNode {
 		lit("teammsg", false, argGreedy("message", true)),
 		lit("tm", false, argGreedy("message", true)),
 	}
+}
+
+// computeTree is ComputeCommand: a context source (default, block <pos>,
+// entity <target>) then float <provider> [<scale>] or integer <provider>.
+// A provider may be inline SNBT with spaces in it, and the scale follows it,
+// so each rides one greedy argument the dispatcher splits.
+func computeTree() cmdNode {
+	kinds := []cmdNode{
+		lit("float", false, argGreedy("provider [scale]", true)),
+		lit("integer", false, argGreedy("provider", true)),
+	}
+	return lit("compute", false,
+		lit("default", false, kinds...),
+		lit("block", false, argBlockPos("computePos", false, kinds...)),
+		lit("entity", false, argEntity("computeTarget", entitySingle, false, kinds...)))
 }
 
 // gameruleNodes is a literal per rule: the boolean ones take true|false, the

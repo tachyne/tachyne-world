@@ -168,7 +168,7 @@ func (s *Server) cmdFill(p *player, args []string) {
 				}
 				f, ok := parseBlockPredicate(arg)
 				if !ok {
-					p.tell(fmt.Sprintf("Unknown block type '%s'", nsID(rest[0])))
+					p.tell(blockPredicateError(rest[0]))
 					return
 				}
 				e.filter = f

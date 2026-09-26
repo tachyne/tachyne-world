@@ -127,6 +127,18 @@ func parseBlockPredicate(arg string) (func(uint32) bool, bool) {
 	}, true
 }
 
+// blockPredicateError is BlockStateParser's refusal of a predicate
+// parseBlockPredicate did not take: an unknown tag or an unknown block.
+func blockPredicateError(arg string) string {
+	if i := strings.IndexAny(arg, "[{"); i >= 0 {
+		arg = arg[:i]
+	}
+	if tag, ok := strings.CutPrefix(arg, "#"); ok {
+		return "Unknown block tag '" + nsID(tag) + "'"
+	}
+	return "Unknown block type '" + nsID(arg) + "'"
+}
+
 // blockTagMembers is a generated block tag's member names; a tag the engine
 // was not generated with is an unknown tag, not a crash.
 func blockTagMembers(name string) (names []string, ok bool) {
@@ -216,7 +228,7 @@ func parseClone(args []string, p *player) (cloneReq, string) {
 			}
 			f, ok := parseBlockPredicate(args[1])
 			if !ok {
-				return req, "Unknown block type '" + args[1] + "'"
+				return req, blockPredicateError(args[1])
 			}
 			req.mask = f
 			args = args[2:]

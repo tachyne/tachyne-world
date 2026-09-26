@@ -225,11 +225,54 @@ func (s *Server) cmdGive(p *player, args []string) {
 			p.tell(fmt.Sprintf("Invalid integer '%s'", countArg))
 			return
 		}
-		count = min(n, 6400)
+		count = n
+	}
+	// GiveCommand: at most a hundred full stacks of the item.
+	if limit := stackCap(st.item) * 100; count > limit {
+		p.tell(fmt.Sprintf("Can't give more than %d of %s", limit, stackDisplay(st)))
+		return
 	}
 	st.count = count
 	s.hub.post(evGive{target: args[0], by: p.eid, item: st.item, count: count, stack: st})
-	s.ok(p, fmt.Sprintf("Gave %d × %s to %s", count, itemArg, args[0]))
+}
+
+// stackDisplay is ItemStack.getDisplayName in plain text: the stack's name —
+// its custom name when it has one — in square brackets.
+func stackDisplay(st invStack) string {
+	if st.name != "" {
+		return "[" + st.name + "]"
+	}
+	return itemDisplay(st.item)
+}
+
+// onGive runs /give on the hub: the item to every target, then
+// commands.give.success.single or .multiple, as CommandResponseTracker picks.
+func (h *hub) onGive(players map[int32]*tracked, e evGive) {
+	targets := h.commandTargets(players, e.by, e.target)
+	var by *player
+	if t := players[e.by]; t != nil {
+		by = t.p
+	}
+	if len(targets) == 0 {
+		cmdFail(by, "No player was found")
+		return
+	}
+	for _, t := range targets {
+		if e.stack.item != 0 {
+			h.giveStack(players, t, e.stack)
+			continue
+		}
+		h.giveTo(players, t, e.item, e.count)
+	}
+	st := e.stack
+	if st.item == 0 {
+		st = invStack{item: e.item}
+	}
+	if len(targets) == 1 {
+		h.cmdSuccess(players, by, fmt.Sprintf("Gave %d %s to %s", e.count, stackDisplay(st), targets[0].p.name), true)
+	} else {
+		h.cmdSuccess(players, by, fmt.Sprintf("Gave %d %s to %d players", e.count, stackDisplay(st), len(targets)), true)
+	}
 }
 
 // matchBracket finds the ']' closing the '[' at open, skipping quoted text

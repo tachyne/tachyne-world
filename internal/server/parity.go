@@ -22,7 +22,7 @@ const (
 // The tree is advisory — it buys client-side tab-completion and un-reddened
 // input; execution still validates ops and arguments server-side.
 var commandNames = []string{
-	"advancement", "attribute", "ban", "ban-ip", "banlist", "bossbar", "bug", "clear", "clone", "damage", "defaultgamemode", "deop",
+	"advancement", "attribute", "ban", "ban-ip", "banlist", "bossbar", "bug", "clear", "clone", "compute", "damage", "defaultgamemode", "deop",
 	"difficulty", "effect", "end", "experience", "forceload", "gamemode", "gamerule",
 	"give", "gm", "help", "hud", "item", "kick", "kill", "list", "locate", "loot", "msg", "nether", "op",
 	"pardon", "pardon-ip", "particle", "playsound", "plugin", "posteffect", "random", "recipe", "refresh",
