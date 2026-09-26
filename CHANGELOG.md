@@ -26,6 +26,18 @@ the public history since the project was open-sourced on 2026-07-10.
   clocks) are refused.
 
 ### Fixed
+- **An iron golem can climb down from a village fountain.** A village's golem
+  may appear on the fountain's pillar (the water on top counts as room to
+  stand, as in vanilla), but mobs refused any drop deeper than one block, so
+  it paced the pillar top for good. Walkers now step off drops of up to
+  three blocks, the same drop their routes were already planned with, as
+  vanilla's mobs do.
+- **No more lone doors around villages.** A door a villager opened and shut
+  was saved as a change to the world even though it ended as the door the
+  village was built with, so when a later world-generation update laid a
+  village out again, the doors stayed behind where the old houses had
+  stood. A block set back to exactly what generation made there is no
+  longer stored as a change.
 - **Placed spawners work.** A spawner set with a spawn egg, placed with
   `/setblock` (with `SpawnData` and `Delay`) or copied with `/clone` now
   spawns its mob as in vanilla: a player within 16 blocks, four tries every
