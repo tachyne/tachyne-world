@@ -135,3 +135,47 @@ func TestSpectatorBodyOnlyForSpectators(t *testing.T) {
 		t.Fatal("a spectator sees other spectators and everyone else")
 	}
 }
+
+// The range is the viewer's render distance as the gateway honours it (the
+// Want radius), not a fixed interest radius — and only in a chunk the client
+// has actually been sent (ChunkMap.isChunkTracked).
+func TestPlayerTrackingFollowsTheClientsChunkView(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	viewer := &tracked{p: newPlayer(1, "viewer", [16]byte{1}), x: 8, y: 80, z: 8}
+	far := &tracked{p: newPlayer(2, "far", [16]byte{2}), x: 10*16 + 8, y: 80, z: 8} // ten chunks east
+	players[1], players[2] = viewer, far
+	viewer.p.viewWindow(0, 0, 0, 12) // a render distance of 12
+
+	h.syncTracking(players)
+	if viewer.tracked[2] {
+		t.Fatal("the far player's chunk has not been sent yet: not trackable")
+	}
+	viewer.p.chunkSent(0, 10, 0)
+	h.syncTracking(players)
+	if !viewer.tracked[2] {
+		t.Fatal("ten chunks away, inside a render distance of 12 and in a sent chunk: tracked")
+	}
+	viewer.p.viewWindow(0, 0, 0, 8) // the viewer turns the slider down
+	h.syncTracking(players)
+	if viewer.tracked[2] {
+		t.Fatal("render distance 8 puts a player 160 blocks away out of range")
+	}
+}
+
+// ChunkTrackingView.isWithinDistance: a circle of the view distance with a
+// buffer of one chunk (two with neighbours) around the centre.
+func TestChunkWithinDistance(t *testing.T) {
+	for _, c := range []struct {
+		dx, dz int32
+		nb     bool
+		want   bool
+	}{
+		{0, 0, false, true}, {10, 0, false, true}, {11, 0, false, false},
+		{11, 0, true, true}, {12, 0, true, false}, {9, 9, true, true}, {10, 10, true, false},
+	} {
+		if got := chunkWithinDistance(0, 0, 10, c.dx, c.dz, c.nb); got != c.want {
+			t.Errorf("(%d,%d) neighbours=%v: got %v, want %v", c.dx, c.dz, c.nb, got, c.want)
+		}
+	}
+}

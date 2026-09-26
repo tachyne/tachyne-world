@@ -18,8 +18,10 @@ the public history since the project was open-sourced on 2026-07-10.
   shown and hidden by range, the way vanilla tracks it: it appears in full
   (gear, pose, parrots, effects, seat) as they come into view and is removed
   as they leave. Before, a player who flew or teleported away stayed standing
-  wherever another client had last seen them. Spectators are now seen only by
-  other spectators.
+  wherever another client had last seen them. Players, mobs and drops are now
+  visible out to your own render distance (up to the server's cap) and each
+  type's vanilla tracking range, once the chunk they stand in has reached you.
+  Spectators are now seen only by other spectators.
 - **Endermen set carried blocks down only where they can stay.** A flower
   needs soil and nothing may be standing in the spot, as in vanilla. Before,
   a carried poppy could land on bare stone.

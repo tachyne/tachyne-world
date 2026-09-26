@@ -55,16 +55,43 @@ func trackRange(etype int) float64 {
 	return trackRangeDefault * 16
 }
 
-// inRangeOf is ChunkMap.TrackedEntity.updatePlayer's visibility test: the
-// HORIZONTAL distance only, height ignored, against the smaller of the
-// entity type's own range and the viewer's render distance.
+// inRangeOf is ChunkMap.TrackedEntity.updatePlayer's visibility test for
+// one entity type, taking the viewer's chunk view itself.
 func inRangeOf(t *tracked, dim int, x, z float64, etype int) bool {
+	v := t.p.lockView()
+	defer t.p.unlockView()
+	return visibleIn(t, v, dim, x, z, trackRange(etype))
+}
+
+// visibleIn is the test itself: the HORIZONTAL distance only, height
+// ignored, within the smaller of the entity's effective range and the
+// viewer's render distance (getPlayerViewDistance × 16) — and the entity's
+// chunk one the viewer's client holds (isChunkTracked: inside its tracking
+// view and already sent).
+func visibleIn(t *tracked, v chunkView, dim int, x, z, rng float64) bool {
 	if t.dim != dim {
 		return false
 	}
-	r := math.Min(trackRange(etype), float64(t.p.radius())*16)
+	r := math.Min(rng, float64(v.trackingDistance())*16)
 	dx, dz := t.x-x, t.z-z
-	return dx*dx+dz*dz <= r*r
+	if dx*dx+dz*dz > r*r {
+		return false
+	}
+	return v.holds(int32(dim), int32(chunkFloor(x)), int32(chunkFloor(z)))
+}
+
+// mobTrackRange is TrackedEntity.getEffectiveRange for a mob: its type's
+// range, or a passenger's if that is longer — a player riding a horse
+// carries the horse out to the player's own 32 chunks.
+func (h *hub) mobTrackRange(m *mob) float64 {
+	r := trackRange(m.etype)
+	if m.rider != 0 || m.rider2 != 0 || len(m.riders) > 0 {
+		r = math.Max(r, trackRange(playerEntityType))
+	}
+	if p := h.mobs[m.mobRider]; m.mobRider != 0 && p != nil {
+		r = math.Max(r, trackRange(p.etype))
+	}
+	return r
 }
 
 // syncTracking is the pass: one reconciliation per viewer.
@@ -78,26 +105,29 @@ func (h *hub) syncTracking(players map[int32]*tracked) {
 			t.tracked = map[int32]bool{}
 		}
 		clear(want)
+		v := t.p.lockView()
 		for eid, o := range players {
-			if eid != t.p.eid && playerVisibleTo(t, o) {
+			if eid != t.p.eid && playerVisibleIn(t, v, o) {
 				want[eid] = true
 			}
 		}
 		for _, m := range h.mobs {
-			if m != h.dragon && inRangeOf(t, m.dim, m.x, m.z, m.etype) {
+			if m != h.dragon && visibleIn(t, v, m.dim, m.x, m.z, h.mobTrackRange(m)) {
 				want[m.eid] = true
 			}
 		}
+		itemR, orbR := trackRange(entityItem), trackRange(entityXPOrb)
 		for _, it := range h.items {
-			if inRangeOf(t, it.dim, it.x, it.z, entityItem) {
+			if visibleIn(t, v, it.dim, it.x, it.z, itemR) {
 				want[it.eid] = true
 			}
 		}
 		for _, o := range h.orbs {
-			if inRangeOf(t, o.dim, o.x, o.z, entityXPOrb) {
+			if visibleIn(t, v, o.dim, o.x, o.z, orbR) {
 				want[o.eid] = true
 			}
 		}
+		t.p.unlockView()
 		// Out of view or out of the world: one removal frame for the lot.
 		var gone []int32
 		for eid := range t.tracked {
@@ -124,13 +154,15 @@ func (h *hub) syncTracking(players map[int32]*tracked) {
 	}
 }
 
-// playerVisibleTo is TrackedEntity.updatePlayer for a player's body: the
+// playerVisibleIn is TrackedEntity.updatePlayer for a player's body: the
 // same horizontal range test as any entity (a player's clientTrackingRange is
 // 32 chunks, so in practice the viewer's render distance decides), then
 // ServerPlayer.broadcastToPlayer — a spectating viewer sees every player not
 // looking through another entity's eyes, and anyone else sees no spectator.
-func playerVisibleTo(v, o *tracked) bool {
-	if !inRangeOf(v, o.dim, o.x, o.z, playerEntityType) {
+func playerVisibleIn(v *tracked, view chunkView, o *tracked) bool {
+	// A player's own range (32 chunks) is the longest there is, so no
+	// passenger can lengthen it: getEffectiveRange is just the type's.
+	if !visibleIn(v, view, o.dim, o.x, o.z, trackRange(playerEntityType)) {
 		return false
 	}
 	if v.gamemode == gmSpectator {

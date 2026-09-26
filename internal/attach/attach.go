@@ -103,6 +103,18 @@ type Remote interface {
 	Leave()
 }
 
+// ChunkViewer is the optional half of a Remote that follows the client's
+// chunk view — what vanilla's ChunkMap.isChunkTracked asks of a player: the
+// view window (the render distance the gateway honours, clamped to the
+// server's cap, around the chunk it last centred on) and which chunks in it
+// have actually been sent rather than still waiting in the build queue.
+// Entity tracking reads both: an entity is shown to a player only inside
+// their render distance and only in a chunk their client holds.
+type ChunkViewer interface {
+	ViewWindow(w proto.Want)
+	ChunkSent(dim, cx, cz int32)
+}
+
 // timeInterval is how often sessions get a Time frame (the client clock
 // interpolates between them).
 const timeInterval = 5 * time.Second
@@ -318,6 +330,7 @@ func session(c net.Conn, cfg Config) {
 	if workers > 16 {
 		workers = 16
 	}
+	viewer, _ := remote.(ChunkViewer)
 	for range workers {
 		go func() {
 			for cc := range wants {
@@ -332,6 +345,9 @@ func session(c net.Conn, cfg Config) {
 				}
 				if !send(b) {
 					return
+				}
+				if viewer != nil {
+					viewer.ChunkSent(cc[0], cc[1], cc[2])
 				}
 			}
 		}()
@@ -353,6 +369,9 @@ func session(c net.Conn, cfg Config) {
 			}
 			if w.Radius > maxRadius {
 				w.Radius = maxRadius
+			}
+			if viewer != nil {
+				viewer.ViewWindow(w)
 			}
 			// The client trims chunks outside its view window as it moves (and
 			// drops everything on a dimension switch); forget those too so a

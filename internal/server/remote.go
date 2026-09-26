@@ -77,6 +77,12 @@ type remotePlayer struct {
 func (r *remotePlayer) EID() int32                   { return r.p.eid }
 func (r *remotePlayer) Spawn() (x, y, z float64)     { return r.x, r.y, r.z }
 func (r *remotePlayer) Death() *attachproto.DeathPos { return r.s.deathOf(r.p.key()) }
+
+// ViewWindow and ChunkSent make a remote player an attach.ChunkViewer: the
+// session reports the client's chunk view for entity tracking.
+func (r *remotePlayer) ViewWindow(w attachproto.Want) { r.p.viewWindow(w.Dim, w.CX, w.CZ, w.Radius) }
+func (r *remotePlayer) ChunkSent(dim, cx, cz int32)   { r.p.chunkSent(dim, cx, cz) }
+
 func (r *remotePlayer) Gamemode() int32 {
 	if r.gm >= 0 {
 		return r.gm

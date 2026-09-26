@@ -85,6 +85,19 @@ type player struct {
 	// atomic because config/play readers and streamChunks may differ.
 	viewDist atomic.Int32
 
+	// view is the client's chunk view as its attach session reports it
+	// (attach.ChunkViewer): the window centre and render distance from the
+	// latest Want, and the chunks actually sent within it. Entity tracking
+	// reads it on the hub goroutine; the session writes it from its reader and
+	// build-pool goroutines. A player with no session (tests, the local path)
+	// never sets known and is treated as holding every chunk.
+	view struct {
+		sync.Mutex
+		known          bool
+		dim, cx, cz, r int32
+		sent           map[[3]int32]bool
+	}
+
 	out      chan outPkt   // outbound packets; the writer goroutine owns the socket
 	quit     chan struct{} // closed when the connection is tearing down
 	quitOnce sync.Once     // quit closes exactly once (session teardown OR /kick)
@@ -398,4 +411,93 @@ func (p *player) noteAck(seq int32) {
 func (p *player) takeAck() (int32, bool) {
 	v := p.ackSeq.Swap(0)
 	return v - 1, v != 0
+}
+
+// viewWindow records a Want: the window's centre and radius, and forgets the
+// chunks the client has dropped — outside the window's +2 margin or in
+// another dimension, the same rule the attach session uses to re-send.
+func (p *player) viewWindow(dim, cx, cz, r int32) {
+	p.view.Lock()
+	defer p.view.Unlock()
+	p.view.known = true
+	p.view.dim, p.view.cx, p.view.cz, p.view.r = dim, cx, cz, r
+	if p.view.sent == nil {
+		p.view.sent = map[[3]int32]bool{}
+	}
+	for cc := range p.view.sent {
+		if cc[0] != dim || abs32(cc[1]-cx) > r+2 || abs32(cc[2]-cz) > r+2 {
+			delete(p.view.sent, cc)
+		}
+	}
+}
+
+// chunkSent records a chunk the attach session has written to the client.
+func (p *player) chunkSent(dim, cx, cz int32) {
+	p.view.Lock()
+	if p.view.sent == nil {
+		p.view.sent = map[[3]int32]bool{}
+	}
+	p.view.sent[[3]int32{dim, cx, cz}] = true
+	p.view.Unlock()
+}
+
+// chunkView is the view as one tracking pass reads it, under the lock taken
+// once per viewer so the pass does not lock per entity.
+type chunkView struct {
+	known          bool
+	dim, cx, cz, r int32
+	sent           map[[3]int32]bool
+}
+
+// lockView takes the view's lock and returns it as a chunkView (the sent set
+// by reference: the pass only reads it, and holds the lock the writers take
+// until unlockView).
+func (p *player) lockView() chunkView {
+	p.view.Lock()
+	return chunkView{p.view.known, p.view.dim, p.view.cx, p.view.cz, p.view.r, p.view.sent}
+}
+
+func (p *player) unlockView() { p.view.Unlock() }
+
+// trackingDistance is ChunkMap.getPlayerViewDistance: the client's render
+// distance clamped to [2, the server's] — the gateway has already applied
+// that clamp to the radius it asks for, so the Want radius is the answer.
+// Before any Want it is the default interest radius.
+func (v chunkView) trackingDistance() int32 {
+	if !v.known {
+		return viewRadius
+	}
+	return max(v.r, 2)
+}
+
+// holds is ChunkMap.isChunkTracked: the chunk is inside the player's chunk
+// tracking view (ChunkTrackingView.contains, neighbours included — a circle
+// of the render distance with a two-chunk buffer) and is not still pending,
+// i.e. it has been sent.
+func (v chunkView) holds(dim, cx, cz int32) bool {
+	if !v.known {
+		return true
+	}
+	if dim != v.dim || !chunkWithinDistance(v.cx, v.cz, v.r, cx, cz, true) {
+		return false
+	}
+	return v.sent[[3]int32{dim, cx, cz}]
+}
+
+// chunkWithinDistance is ChunkTrackingView.isWithinDistance.
+func chunkWithinDistance(centerX, centerZ, viewDistance, chunkX, chunkZ int32, includeNeighbors bool) bool {
+	buffer := int64(1)
+	if includeNeighbors {
+		buffer = 2
+	}
+	dx := max(0, absI64(int64(chunkX-centerX))-buffer)
+	dz := max(0, absI64(int64(chunkZ-centerZ))-buffer)
+	return dx*dx+dz*dz < int64(viewDistance)*int64(viewDistance)
+}
+
+func absI64(v int64) int64 {
+	if v < 0 {
+		return -v
+	}
+	return v
 }
