@@ -409,6 +409,7 @@ func (s *Server) Serve() error {
 		if err := s.migrateContentIDSpace(); err != nil {
 			log.Fatalf("content id-space migration failed, nothing written: %v", err)
 		}
+		s.repairPlacedLeaves() // hedges saved before placed leaves were persistent
 		// Generation's build guard reads the builds as they stood when this
 		// GenVersion first booted, not as they are now (world/guardsnap.go).
 		dir := filepath.Dir(s.WorldFile)

@@ -3,6 +3,7 @@ package server
 import (
 	"strings"
 
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -622,7 +623,12 @@ func (h *hub) tickLeaf(players map[int32]*tracked, dim, x, y, z int, state uint3
 // trunk block, up to the six steps that matter. Bounded by construction:
 // at most the ball of radius 6 through leaf blocks.
 func (h *hub) leafTrueDistance(dim, x, y, z int) int {
-	w := h.worldFor(dim)
+	return leafChainDistance(h.worldFor(dim), x, y, z)
+}
+
+// leafChainDistance is that walk over one world, for the hub and for the
+// boot-time leaf repair alike.
+func leafChainDistance(w *world.World, x, y, z int) int {
 	seen := map[blockPos]bool{{x, y, z}: true}
 	frontier := []blockPos{{x, y, z}}
 	for d := 1; d <= 6; d++ {
