@@ -88,4 +88,10 @@ package worldgen
 // solid ground — so one on a cliff edge sinks into the cliff instead of
 // hanging off it. A portal whose settled box holds a build stays put.
 // Only chunks with a portal change.
-const GenVersion = 24
+//
+// v25: the sulfur caves' rooted springs and pools join the build guard. They
+// came with v22, before the guard, and a spring stamped under a player's
+// build left its ring hanging over the ground they had dug and built in. A
+// spring or pool with a build or a dug-out cell in its box is now left out
+// whole (every draw still made); only chunks near such a build change.
+const GenVersion = 25

@@ -42,6 +42,11 @@ var (
 
 const sulfurCaves = "minecraft:sulfur_caves"
 
+// sulfurGuardMargin is how far round a spring's or a pool's box the build
+// guard looks (buildguard.go): such a feature is left out whole where a
+// player built or dug.
+const sulfurGuardMargin = 2
+
 // sulfurCfg is SULFUR_SPIKE_CLUSTER / SULFUR_SPIKE's configuration: sulfur
 // spikes on sulfur, replacing #sulfur_spike_replaceable_blocks.
 var sulfurCfg = &speleothemCfg{
@@ -238,6 +243,8 @@ func (g *Generator) sulfurPool(r TreeRNG, reg *owRegion, x, y, z int) {
 // seven ellipsoids in a 16×8×16 box around the origin (8 west, 4 down, 8
 // north), refused if its wall would be open or fluid; water in the bottom
 // half, air above, and a sulfur shell (the upper half's at one in two).
+// A lake whose box a player built or dug in draws as before and places
+// nothing.
 func (g *Generator) sulfurLake(r TreeRNG, reg *owRegion, x, y, z int) bool {
 	if y <= MinY+4 {
 		return false
@@ -290,7 +297,9 @@ func (g *Generator) sulfurLake(r TreeRNG, reg *owRegion, x, y, z int) bool {
 			}
 		}
 	}
-	for xx := 0; xx < 16; xx++ {
+	guarded := g.touchedIn(bx-sulfurGuardMargin, by-sulfurGuardMargin, bz-sulfurGuardMargin,
+		bx+15+sulfurGuardMargin, by+7+sulfurGuardMargin, bz+15+sulfurGuardMargin)
+	for xx := 0; xx < 16 && !guarded; xx++ {
 		for zz := 0; zz < 16; zz++ {
 			for yy := 0; yy < 8; yy++ {
 				if !grid[idx(xx, zz, yy)] || inAnyRange(reg.read(bx+xx, by+yy, bz+zz), featuresCannotReplace) {
@@ -307,8 +316,8 @@ func (g *Generator) sulfurLake(r TreeRNG, reg *owRegion, x, y, z int) bool {
 	for xx := 0; xx < 16; xx++ {
 		for zz := 0; zz < 16; zz++ {
 			for yy := 0; yy < 8; yy++ {
-				if !edge(xx, zz, yy) || (yy >= 4 && r.Intn(2) == 0) {
-					continue
+				if !edge(xx, zz, yy) || (yy >= 4 && r.Intn(2) == 0) || guarded {
+					continue // the shell's draws are made either way
 				}
 				s := reg.read(bx+xx, by+yy, bz+zz)
 				if solid(s) && !inAnyRange(s, featuresCannotReplace) && !IsLeaves(s) && !IsLog(s) {
@@ -317,7 +326,7 @@ func (g *Generator) sulfurLake(r TreeRNG, reg *owRegion, x, y, z int) bool {
 			}
 		}
 	}
-	return true
+	return !guarded
 }
 
 // sulfurSpringSizes is SULFUR_SPRING's weighted choice: each size's weight,
@@ -338,7 +347,9 @@ var sulfurSpringSizes = []struct {
 // (solid two below, air two above) eight out in each direction, standing on
 // solid ground that is not lava, takes the spring; the column below it
 // takes sulfur roots (twenty tries a level within three), and a sulfur
-// block hangs at the origin under a sturdy ceiling.
+// block hangs at the origin under a sturdy ceiling. A spring whose box a
+// player built or dug in (springGuarded) makes every draw and places
+// nothing.
 func (g *Generator) rootedSulfurSpring(r TreeRNG, reg *owRegion, x, y, z int) {
 	if reg.read(x, y, z) != Air {
 		return
@@ -359,17 +370,18 @@ func (g *Generator) rootedSulfurSpring(r TreeRNG, reg *owRegion, x, y, z int) {
 		if below := reg.read(x, wy-1, z); IsLava(below) || !solid(below) {
 			return
 		}
-		if g.sulfurSpring(r, reg, x, wy, z) {
+		guarded := g.springGuarded(x, y, z, wy)
+		if g.sulfurSpring(r, reg, x, wy, z, !guarded) {
 			for py := y; py < y+i; py++ { // the roots, up the column
 				for k := 0; k < 20; k++ {
 					px := x + r.Intn(3) - r.Intn(3)
 					pz := z + r.Intn(3) - r.Intn(3)
-					if azaleaRootReplaceable(reg.read(px, py, pz)) {
+					if !guarded && azaleaRootReplaceable(reg.read(px, py, pz)) {
 						reg.set(px, py, pz, SulfurBlock)
 					}
 				}
 			}
-			placed = true
+			placed = !guarded
 			break
 		}
 	}
@@ -380,6 +392,17 @@ func (g *Generator) rootedSulfurSpring(r TreeRNG, reg *owRegion, x, y, z int) {
 	if reg.read(x, y, z) == Air && holdsFace(reg.read(x, y+1, z)) {
 		reg.set(x, y, z, SulfurBlock)
 	}
+}
+
+// springGuarded reports whether a player built or dug in the box a spring
+// at (x, wy, z), rooted from y, could write: the tuff's widest scatter (ten
+// each way, which covers the largest template's eight), from the lower of
+// the root column's foot and the template's floor seven below to the
+// template's top (eleven high) — and the guard's margin round it all.
+func (g *Generator) springGuarded(x, y, z, wy int) bool {
+	const reach = 10 + sulfurGuardMargin
+	return g.touchedIn(x-reach, min(y, wy-7)-sulfurGuardMargin, z-reach,
+		x+reach, wy+3+sulfurGuardMargin, z+reach)
 }
 
 // springOpen is the root system's "air": vanilla places the spring at the
@@ -409,8 +432,10 @@ func (g *Generator) springSpace(reg *owRegion, x, y, z int) bool {
 // 20 large, 5 extra large), then the sequence — tuff scattered on solid
 // ground about the spot (a trapezoid spread, three up or down, dropping up
 // to four to land), and, if any went down, one of the size's templates
-// under a random rotation, centred on the spot seven below it.
-func (g *Generator) sulfurSpring(r TreeRNG, reg *owRegion, x, y, z int) bool {
+// under a random rotation, centred on the spot seven below it. With place
+// false it makes the same draws and answers the same, writing nothing (the
+// tuff lands on solid cells, so the scan never reads its own writes).
+func (g *Generator) sulfurSpring(r TreeRNG, reg *owRegion, x, y, z int, place bool) bool {
 	w := r.Intn(315)
 	size := sulfurSpringSizes[len(sulfurSpringSizes)-1]
 	for _, s := range sulfurSpringSizes {
@@ -430,7 +455,9 @@ func (g *Generator) sulfurSpring(r TreeRNG, reg *owRegion, x, y, z int) bool {
 		if !ok {
 			continue
 		}
-		reg.set(px, fy, pz, stoneTuff)
+		if place {
+			reg.set(px, fy, pz, stoneTuff)
+		}
 		any = true
 	}
 	if !any {
@@ -441,7 +468,9 @@ func (g *Generator) sulfurSpring(r TreeRNG, reg *owRegion, x, y, z int) bool {
 		return false
 	}
 	rot := r.Intn(4)
-	g.stampSpringTemplate(reg, t, x, y-7, z, rot)
+	if place {
+		g.stampSpringTemplate(reg, t, x, y-7, z, rot)
+	}
 	return true
 }
 

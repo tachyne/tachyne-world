@@ -14,7 +14,9 @@ package worldgen
 //     natural grass. A garden open to the sky still grows.
 //   - Generator.builtIn, for anything that moves terrain (a ravine, a lake,
 //     an ice spike, a boulder): a build block anywhere in the feature's box
-//     and it is not placed at all.
+//     and it is not placed at all. Generator.touchedIn is the same with the
+//     cells a player dug out counted too, for features that fill the ground
+//     they stand in (the sulfur springs and pools).
 //
 // "Build block" is isBuildBlock (treeguard.go): not air, fluid, fire or a
 // replaceable plant — never the changes the world makes on its own.
@@ -78,6 +80,20 @@ func (bg *buildGuard) decorationBlocked(x, y, z int) bool {
 // builtIn reports whether any build block lies in the box (inclusive) —
 // for features that reshape terrain, which are skipped whole if so.
 func (g *Generator) builtIn(x0, y0, z0, x1, y1, z1 int) bool {
+	return g.editIn(x0, y0, z0, x1, y1, z1, isBuildBlock)
+}
+
+// touchedIn reports whether a build block or a dug-out cell (an air edit)
+// lies in the box (inclusive). A feature that stamps a body into the ground
+// cannot stand in ground a player dug away: its top would be left hanging
+// over the hole. The world's own changes (fluids, fire, plants) still do
+// not count.
+func (g *Generator) touchedIn(x0, y0, z0, x1, y1, z1 int) bool {
+	return g.editIn(x0, y0, z0, x1, y1, z1, func(s uint32) bool { return s == Air || isBuildBlock(s) })
+}
+
+// editIn reports whether an edit that passes counts lies in the box.
+func (g *Generator) editIn(x0, y0, z0, x1, y1, z1 int, counts func(uint32) bool) bool {
 	if g.editsIn == nil {
 		return false
 	}
@@ -91,7 +107,7 @@ func (g *Generator) builtIn(x0, y0, z0, x1, y1, z1 int) bool {
 	for cx := int32(floorDiv16(x0)); cx <= int32(floorDiv16(x1)) && !found; cx++ {
 		for cz := int32(floorDiv16(z0)); cz <= int32(floorDiv16(z1)) && !found; cz++ {
 			g.editsIn(cx, cz, func(x, y, z int, s uint32) {
-				if !found && x >= x0 && x <= x1 && y >= y0 && y <= y1 && z >= z0 && z <= z1 && isBuildBlock(s) {
+				if !found && x >= x0 && x <= x1 && y >= y0 && y <= y1 && z >= z0 && z <= z1 && counts(s) {
 					found = true
 				}
 			})
