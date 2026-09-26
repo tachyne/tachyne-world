@@ -153,7 +153,10 @@ func (h *hub) endermanTakeable(m *mob, x, y, z int) (uint32, bool) {
 
 // endermanPlaceBlock is EnderMan.EndermanLeaveBlockGoal: much more rarely, set
 // the carried block down on a solid full block in a random cell (x±1, y..y+2,
-// z±1) whose target cell is empty.
+// z±1) whose target cell is empty — and only where the block can stay
+// (carried.canSurvive: a flower needs soil, a cactus clear sides) with no
+// entity in the cell but the enderman itself. Without those two checks a
+// carried poppy was set down on bare stone.
 func (h *hub) endermanPlaceBlock(players map[int32]*tracked, m *mob) {
 	if h.rng.Intn(endermanPlaceOdds) != 0 {
 		return
@@ -172,8 +175,45 @@ func (h *hub) endermanPlaceBlock(players map[int32]*tracked, m *mob) {
 		return
 	}
 	pos := blockPos{x, y, z}
+	if !supported(h.worldFor(m.dim), pos, m.carriedBlock) {
+		return
+	}
+	if h.entityInCell(players, m.dim, pos, m.eid) {
+		return
+	}
 	h.setBlockAt(players, m.dim, pos, m.carriedBlock)
 	h.scheduleAroundIn(m.dim, pos, 1)
 	m.carriedBlock = 0
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(enderCarryMeta(m.eid, 0)))
+}
+
+// entityInCell is level.getEntities(except, AABB.unitCubeFromLowerCorner(pos))
+// being non-empty: any player, mob, dropped item or end crystal whose box
+// overlaps the cell, other than the entity asking.
+func (h *hub) entityInCell(players map[int32]*tracked, dim int, pos blockPos, except int32) bool {
+	bx, by, bz := float64(pos.x), float64(pos.y), float64(pos.z)
+	hits := func(d int, x, y, z, hw, ht float64) bool {
+		return d == dim && x+hw > bx && x-hw < bx+1 && z+hw > bz && z-hw < bz+1 && y+ht > by && y < by+1
+	}
+	for _, o := range players {
+		if !o.dead && o.p.eid != except && hits(o.dim, o.x, o.y, o.z, 0.3, 1.8) {
+			return true
+		}
+	}
+	for _, o := range h.mobs {
+		if b := o.box(); o.eid != except && o.dying == 0 && hits(o.dim, o.x, o.y, o.z, b.w/2, b.h) {
+			return true
+		}
+	}
+	for _, it := range h.items {
+		if hits(it.dim, it.x, it.y, it.z, 0.125, 0.25) {
+			return true
+		}
+	}
+	for _, c := range h.crystals {
+		if hits(c.dim, c.x, c.y, c.z, 1, 2) {
+			return true
+		}
+	}
+	return false
 }

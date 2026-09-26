@@ -387,3 +387,83 @@ func TestEndermanDropsItsCarriedBlock(t *testing.T) {
 	}
 	t.Fatal("the enderman's grass block was lost with it")
 }
+
+// Bug #39: an enderman set a carried flower down on bare stone. Vanilla's
+// LeaveBlockGoal needs carried.canSurvive at the cell — a poppy on stone
+// never lands, the same poppy over grass does.
+func TestEndermanPlacesFlowerOnlyWhereItSurvives(t *testing.T) {
+	poppy := worldgen.BlockID("poppy")
+	for _, tc := range []struct {
+		floor string
+		want  bool
+	}{{"stone", false}, {"grass_block", true}} {
+		h := newHub(world.New(1))
+		players := map[int32]*tracked{}
+		ex, ez := h.findLand(30, 30)
+		ey := h.world.SurfaceFeet(ex, ez) + 10
+		m := h.spawnMob(players, entityEnderman, float64(ex)+0.5, float64(ey), float64(ez)+0.5)
+		if m == nil {
+			t.Fatal("failed to spawn enderman")
+		}
+		m.carriedBlock = poppy
+		floor := worldgen.BlockID(tc.floor)
+		for dx := -1; dx <= 1; dx++ {
+			for dz := -1; dz <= 1; dz++ {
+				h.world.SetBlock(ex+dx, ey-1, ez+dz, floor)
+				h.world.SetBlock(ex+dx, ey, ez+dz, worldgen.Air)
+				h.world.SetBlock(ex+dx, ey+1, ez+dz, worldgen.Air)
+			}
+		}
+		for i := 0; i < 500000 && m.carriedBlock != 0; i++ {
+			h.endermanPlaceBlock(players, m)
+		}
+		if placed := m.carriedBlock == 0; placed != tc.want {
+			t.Errorf("poppy over %s: placed=%v, want %v", tc.floor, placed, tc.want)
+		}
+	}
+}
+
+// LeaveBlockGoal also refuses a cell another entity stands in: with a mob
+// filling every target cell but the enderman's own, the block stays held.
+func TestEndermanWillNotPlaceIntoAnEntity(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	ex, ez := h.findLand(30, 30)
+	ey := h.world.SurfaceFeet(ex, ez) + 10
+	m := h.spawnMob(players, entityEnderman, float64(ex)+0.5, float64(ey), float64(ez)+0.5)
+	if m == nil {
+		t.Fatal("failed to spawn enderman")
+	}
+	dirt := worldgen.BlockID("dirt")
+	m.carriedBlock = dirt
+	for dx := -1; dx <= 1; dx++ {
+		for dz := -1; dz <= 1; dz++ {
+			h.world.SetBlock(ex+dx, ey-1, ez+dz, worldgen.Stone)
+			h.world.SetBlock(ex+dx, ey, ez+dz, worldgen.Air)
+			h.world.SetBlock(ex+dx, ey+1, ez+dz, worldgen.Air)
+		}
+	}
+	// getEntities(this.enderman, …) skips the enderman itself, so its own cell
+	// stays open; a pig stands in each of the eight around it.
+	for dx := -1; dx <= 1; dx++ {
+		for dz := -1; dz <= 1; dz++ {
+			if dx == 0 && dz == 0 {
+				continue
+			}
+			if h.spawnMob(players, entityPig, float64(ex+dx)+0.5, float64(ey), float64(ez+dz)+0.5) == nil {
+				t.Fatal("failed to spawn pig")
+			}
+		}
+	}
+	for i := 0; i < 500000 && m.carriedBlock != 0; i++ {
+		h.endermanPlaceBlock(players, m)
+	}
+	// It may place only in its own column (ey or ey+1 at ex,ez), never under a pig.
+	for dx := -1; dx <= 1; dx++ {
+		for dz := -1; dz <= 1; dz++ {
+			if (dx != 0 || dz != 0) && (h.world.At(ex+dx, ey, ez+dz) == dirt || h.world.At(ex+dx, ey+1, ez+dz) == dirt) {
+				t.Fatalf("dirt placed into a pig's cell at %+d,%+d", dx, dz)
+			}
+		}
+	}
+}
