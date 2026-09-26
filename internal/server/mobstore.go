@@ -113,6 +113,7 @@ type savedMob struct {
 
 	Hostile       bool   `json:"host,omitempty"`
 	Anger         int    `json:"anger,omitempty"`
+	AngryAt       string `json:"angry_at,omitempty"` // enderman: the grudge's player UUID (NeutralMob angry_at)
 	Neutral       bool   `json:"neut,omitempty"`
 	PatrolCaptain bool   `json:"capt,omitempty"`
 	CarriedBlk    uint32 `json:"eblk,omitempty" mig:"state"` // enderman: held block state
@@ -834,6 +835,9 @@ func toSavedMob(m *mob) savedMob {
 	}
 	if m.tamed {
 		sm.OwnerUUID = hex.EncodeToString(m.ownerUUID[:])
+	}
+	if m.etype == entityEnderman && m.angryUUID != ([16]byte{}) {
+		sm.AngryAt = hex.EncodeToString(m.angryUUID[:]) // addPersistentAngerSaveData: the anger time rides Anger
 	}
 	sm.Profession, sm.TradeLevel, sm.TradeXP = m.profession, m.tradeLevel, m.tradeXP
 	sm.Restocks, sm.LastStock = m.restocksToday, m.lastRestockTick

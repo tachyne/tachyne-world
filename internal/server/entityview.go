@@ -319,6 +319,9 @@ func (h *hub) showMobTo(t *tracked, m *mob) {
 	if m.etype == entityEnderman && m.carriedBlock != 0 {
 		t.p.trySendEv(metaEv(enderCarryMeta(m.eid, m.carriedBlock)))
 	}
+	if m.etype == entityEnderman && m.enderSent != 0 { // creepy, stared at
+		t.p.trySendEv(metaEv(endermanFlagsMeta(m.eid, m.enderSent, m.enderSent)))
+	}
 	if m.etype == entityBee {
 		if m.beeSentFlags != 0 {
 			t.p.trySendEv(metaEv(beeFlagsMeta(m.eid, m.beeSentFlags)))

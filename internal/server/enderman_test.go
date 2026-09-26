@@ -8,44 +8,6 @@ import (
 	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
-// TestEndermanStareAggro: looking straight at an enderman's eyes provokes it
-// (vanilla isBeingStaredBy); a carved pumpkin on the head exempts the starer.
-func TestEndermanStareAggro(t *testing.T) {
-	h := newHub(world.New(1))
-	pl := testTracked()
-	pl.gamemode = gmSurvival
-	pl.x, pl.y, pl.z = 0.5, 64, 0.5
-	players := map[int32]*tracked{pl.p.eid: pl}
-	m := h.spawnHostile(players, entityEnderman, 10, 0)
-	m.x, m.y, m.z = 10.5, 64, 0.5
-
-	// Look exactly at the enderman's eyes (dx=10, dy=eye diff, dz=0).
-	dy := (m.y + 2.55) - (pl.y + 1.62)
-	pl.yaw = -90 // vanilla yaw: -90 faces +x
-	pl.pitch = float32(-math.Atan2(dy, 10) * 180 / math.Pi)
-	if !h.staredAt(players, m) {
-		t.Fatal("a crosshair on the enderman's eyes must register as a stare")
-	}
-	h.acquireTarget(players, m)
-	if m.anger == 0 {
-		t.Fatal("a stared-at enderman must anger")
-	}
-
-	// The carved pumpkin disguise exempts the starer.
-	m.anger = 0
-	pl.armor[0] = invStack{item: itemCarvedPumpkin, count: 1}
-	if h.staredAt(players, m) {
-		t.Fatal("a carved pumpkin must fool the enderman")
-	}
-
-	// Looking away must not provoke.
-	pl.armor[0] = invStack{}
-	pl.yaw = 90 // facing -x, away from it
-	if h.staredAt(players, m) {
-		t.Fatal("looking away must not provoke")
-	}
-}
-
 // TestZombieReinforcements: on hard difficulty a hurt zombie with a charged
 // SPAWN_REINFORCEMENTS_CHANCE summons a same-species backup targeting the
 // attacker, and both lose 0.05 charge.

@@ -14,6 +14,16 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-26
 
 ### Fixed
+- **Endermen pick their fights the vanilla way.** The player who stares at
+  an enderman is the one it goes for, not whoever happens to be nearest, and
+  it keeps after them out of sight and out of range until they die or leave
+  survival. The stare needs a clear line from your real eyes (a crouch sits
+  lower) and a carved pumpkin still hides you. It freezes and blinks away only
+  for its own target, looks back at you while frozen, closes on a distant
+  target with a blink aimed in three dimensions, and moves faster while it
+  has one. A hit or a stare leaves a 20-39 second grudge that survives a
+  restart, and its jaw drops, it shakes, screams, and plays the stare sound
+  as in vanilla. Daylight drives off angry endermen too.
 - **Other players no longer linger as frozen copies.** A player's body is now
   shown and hidden by range, the way vanilla tracks it: it appears in full
   (gear, pose, parrots, effects, seat) as they come into view and is removed
