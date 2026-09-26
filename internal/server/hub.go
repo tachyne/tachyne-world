@@ -2450,6 +2450,7 @@ func (h *hub) run() {
 					h.mobstore.bucketLive(h.mobs, h.persistMob, h.activeChunks)
 					h.mobstore.flush()
 				}
+				h.saveRules() // the day clock and weather, as they stand at shutdown
 				if h.containers != nil {
 					// Mob gear was packed after the containers were written, and
 					// a name it interned lives in their table. The autosave picks

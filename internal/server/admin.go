@@ -74,6 +74,10 @@ type worldRules struct {
 	// fight in progress"; a live fight writes what it has left.
 	DragonHealth int           `json:"dragonHealth,omitempty"`
 	Weather      *weatherSave  `json:"weather,omitempty"`
+	// DayTime is level.dat's DayTime: the day clock. Unsaved, every restart
+	// began at sunrise — mobs caught out at night found it morning, and the
+	// time of day jumped under anyone online through a deploy.
+	DayTime *uint64 `json:"dayTime,omitempty"`
 	Border       *worldBorder  `json:"border,omitempty"`
 	EndGateways  []gatewayExit `json:"endGateways,omitempty"` // each gateway's remembered exit
 	// SpawnerMobs are the spawners a spawn egg was used on: "dim,x,y,z" → the
@@ -631,6 +635,9 @@ func (h *hub) loadRules() {
 		h.border = *h.rules.Border
 		h.publishBorder()
 	}
+	if dt := h.rules.DayTime; dt != nil {
+		h.dayTime.Store(*dt)
+	}
 	if ws := h.rules.Weather; ws != nil {
 		h.clearTime, h.rainTime, h.thunderTime = ws.ClearTime, ws.RainTime, ws.ThunderTime
 		h.rainFlag, h.thunderFlag = ws.Raining, ws.Thundering
@@ -659,6 +666,8 @@ func (h *hub) saveRules() {
 		ClearTime: h.clearTime, RainTime: h.rainTime, ThunderTime: h.thunderTime,
 		Raining: h.rainFlag, Thundering: h.thunderFlag,
 	}
+	dt := h.dayTime.Load()
+	h.rules.DayTime = &dt
 	h.packStopwatches()
 	data, _ := json.MarshalIndent(h.rules, "", "  ")
 	writeStore(h.rulesPath, data)

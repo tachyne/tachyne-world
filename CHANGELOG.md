@@ -26,6 +26,10 @@ the public history since the project was open-sourced on 2026-07-10.
   clocks) are refused.
 
 ### Fixed
+- **The time of day survives a restart.** The day clock was never saved, so
+  every server restart began at sunrise; now it resumes where it was, as a
+  vanilla world does. The weather is also saved at shutdown, not only every
+  thirty seconds.
 - **Placed spawners work.** A spawner set with a spawn egg, placed with
   `/setblock` (with `SpawnData` and `Delay`) or copied with `/clone` now
   spawns its mob as in vanilla: a player within 16 blocks, four tries every
