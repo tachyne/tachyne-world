@@ -167,6 +167,25 @@ func (h *hub) argCandidates(players map[int32]*tracked, cmd string, prev []strin
 		if n == 7 {
 			return []string{"destroy", "hollow", "keep", "outline", "replace", "strict"}
 		}
+		if n == 8 && at(7) == "replace" { // a BlockPredicate: a block or any #tag
+			out := nsNames(worldgen.AllBlockNames())
+			for _, t := range worldgen.BlockTagList() {
+				out = append(out, "#minecraft:"+t)
+			}
+			return out
+		}
+	case "compute":
+		kindAt := map[string]int{"default": 1, "block": 4, "entity": 2}[at(0)]
+		switch {
+		case n == 0:
+			return []string{"default", "block", "entity"}
+		case n == 1 && at(0) == "entity":
+			return names()
+		case kindAt > 0 && n == kindAt:
+			return []string{"float", "integer"}
+		case kindAt > 0 && n == kindAt+1:
+			return computeProviderIDs(at(kindAt) == "float")
+		}
 	case "particle":
 		if n == 0 {
 			return nsNames(mapKeys(particleByName))

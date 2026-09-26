@@ -1,5 +1,7 @@
 package worldgen
 
+import "sort"
+
 // BlockTag is a vanilla block tag's members as block-state ranges (every
 // state of each member block). The tag must be one gen_tags.py emits; any
 // other name panics.
@@ -35,4 +37,14 @@ func BlockTagNames(name string) []string {
 		panic("worldgen: block tag " + name + " is not generated (add it to scripts/gen_tags.py)")
 	}
 	return names
+}
+
+// BlockTagList is every generated block tag's name, sorted.
+func BlockTagList() []string {
+	out := make([]string, 0, len(blockTags))
+	for n := range blockTags {
+		out = append(out, n)
+	}
+	sort.Strings(out)
+	return out
 }

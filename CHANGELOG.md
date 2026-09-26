@@ -13,6 +13,18 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ## 2026-09-26
 
+### Added
+- **/compute.** The 26.3 command that evaluates a number provider and prints
+  the value: `/compute default|block <pos>|entity <target> float <provider>
+  [<scale>]` or `… integer <provider>`. A provider is a registry id
+  (`minecraft:cooking/time_coal`) or written inline, such as
+  `{type:"minecraft:div",left:5,right:2}`; a float is floored after scaling,
+  and a division by zero or an overflow is reported as an invalid value, as
+  in vanilla. The block source lets conditions test the block there (a
+  smoker halves the coal time). Environment attributes and a few conditions
+  that need data the engine does not keep (entity properties, locations,
+  clocks) are refused.
+
 ### Fixed
 - **Endermen pick their fights the vanilla way.** The player who stares at
   an enderman is the one it goes for, not whoever happens to be nearest, and
@@ -80,6 +92,14 @@ the public history since the project was open-sourced on 2026-07-10.
   without leaving a door item behind.
 - **Endermen leave a purple particle trail when they teleport** (26.3
   clients), and never teleport past the world border.
+- **/fill and /clone take every block tag.** `/fill … replace #logs`,
+  `#wool`, `#mineable/pickaxe` and every other vanilla block tag now work as
+  filters (tags inside tags included), and the replace argument suggests
+  them. An unknown tag is refused with "Unknown block tag".
+- **/give answers in vanilla's words.** "Gave 3 [Diamond] to Steve", or "to
+  4 players", with the item's name (its custom name if it has one), and a
+  request for more than a hundred stacks is refused ("Can't give more than
+  6400 of [Stone]") instead of being quietly capped.
 
 ## 2026-09-25
 

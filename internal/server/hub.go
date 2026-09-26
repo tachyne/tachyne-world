@@ -1699,13 +1699,7 @@ func (h *hub) run() {
 			case evPopItem:
 				h.spawnItemIn(players, e.dim, e.item, e.count, e.x, e.y, e.z)
 			case evGive:
-				for _, t := range h.commandTargets(players, e.by, e.target) {
-					if e.stack.item != 0 {
-						h.giveStack(players, t, e.stack)
-						continue
-					}
-					h.giveTo(players, t, e.item, e.count)
-				}
+				h.onGive(players, e)
 			case evKill:
 				for _, t := range h.commandTargets(players, e.by, e.target) {
 					h.damageOf(players, t, 100000, dtGenericKill)

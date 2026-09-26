@@ -87,3 +87,38 @@ func TestEnchantCommand(t *testing.T) {
 		t.Error("a sword took Efficiency")
 	}
 }
+
+// /fill … replace #tag takes any vanilla block tag, nested tags resolved:
+// #logs holds #oak_logs, #cherry_logs … and reaches their blocks.
+func TestFillReplaceAnyBlockTag(t *testing.T) {
+	s, h, ps, logs := feedbackServer(t)
+	alice := ps["alice"]
+	row := []string{"oak_log", "cherry_wood", "stripped_crimson_stem", "stone", "oak_planks"}
+	onHub(t, h, func() {
+		for i, n := range row {
+			h.world.SetBlock(i, 200, 0, worldgen.BlockBase(n))
+		}
+	})
+	s.handleCommand(alice, "fill 0 200 0 4 200 0 glass replace #minecraft:logs")
+	s.handleCommand(alice, "fill 0 200 0 4 200 0 dirt replace #mineable/axe")
+	s.handleCommand(alice, "fill 0 200 0 4 200 0 dirt replace #minecraft:no_such_tag")
+	settle(t, h, logs, "F1")
+	glass := worldgen.BlockID("glass")
+	onHub(t, h, func() {
+		want := []uint32{glass, glass, glass, worldgen.Stone, worldgen.Dirt}
+		for i, st := range want {
+			if got := h.world.At(i, 200, 0); got != st {
+				n, _ := worldgen.StateName(got)
+				t.Errorf("x=%d (%s) is %s, want state %d", i, row[i], n, st)
+			}
+		}
+	})
+	if a := linesBetween(logs["alice"], "", "F1"); !hasLine(a, "Unknown block tag 'minecraft:no_such_tag'") {
+		t.Errorf("an unknown tag was not refused: %q", a)
+	}
+	for _, tag := range []string{"#logs", "#minecraft:wool", "#base_stone_overworld", "#mineable/pickaxe", "#logs[axis=y]"} {
+		if _, ok := parseBlockPredicate(tag); !ok {
+			t.Errorf("%s is not a block predicate", tag)
+		}
+	}
+}

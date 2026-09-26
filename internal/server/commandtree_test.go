@@ -237,6 +237,9 @@ func TestCommandTreeCoversTheNewForms(t *testing.T) {
 		{"tellraw", "targets", "message"},
 		{"stopsound", "targets", "record", "sound"},
 		{"stopsound", "targets", "*"},
+		{"compute", "default", "integer", "provider"},
+		{"compute", "block", "computePos", "float", "provider [scale]"},
+		{"compute", "entity", "computeTarget", "integer", "provider"},
 	} {
 		if !walk(p...) {
 			t.Errorf("%v does not end the command", p)

@@ -134,9 +134,27 @@ func jDouble(v float64) string {
 	return s
 }
 
-// jFloat is jDouble for a float argument (Float.toString).
+// jFloat is jDouble for a float argument (Float.toString): the shortest
+// digits that read back as the float, NaN and Infinity spelled as Java does.
 func jFloat(v float32) string {
-	s := strconv.FormatFloat(float64(v), 'f', -1, 32)
+	f := float64(v)
+	switch {
+	case math.IsNaN(f):
+		return "NaN"
+	case math.IsInf(f, 1):
+		return "Infinity"
+	case math.IsInf(f, -1):
+		return "-Infinity"
+	}
+	if a := math.Abs(f); a != 0 && (a < 1e-3 || a >= 1e7) {
+		mant, exp, _ := strings.Cut(strconv.FormatFloat(f, 'E', -1, 32), "E")
+		if !strings.Contains(mant, ".") {
+			mant += ".0"
+		}
+		e, _ := strconv.Atoi(exp)
+		return mant + "E" + strconv.Itoa(e)
+	}
+	s := strconv.FormatFloat(f, 'f', -1, 32)
 	if !strings.Contains(s, ".") {
 		s += ".0"
 	}

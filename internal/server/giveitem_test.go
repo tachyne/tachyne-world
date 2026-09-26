@@ -70,3 +70,31 @@ func TestParseSNBT(t *testing.T) {
 		t.Error("an unclosed compound parsed")
 	}
 }
+
+// /give answers with commands.give.success.single / .multiple — the count,
+// the item's display name and the one target, or how many — and refuses more
+// than a hundred stacks with commands.give.failed.toomanyitems.
+func TestGiveFeedbackWording(t *testing.T) {
+	s, h, ps, logs := feedbackServer(t)
+	alice := ps["alice"]
+	s.handleCommand(alice, "give bob diamond 3")
+	s.handleCommand(alice, "give @a minecraft:stick 2")
+	s.handleCommand(alice, `give bob diamond_sword[custom_name="The Big One"]`)
+	s.handleCommand(alice, "give bob diamond_sword 101")
+	s.handleCommand(alice, "give bob ender_pearl 1601")
+	s.handleCommand(alice, "give nobody diamond")
+	settle(t, h, logs, "G2")
+	a := linesBetween(logs["alice"], "", "G2")
+	for _, want := range []string{
+		"Gave 3 [Diamond] to bob",
+		"Gave 2 [Stick] to 3 players",
+		"Gave 1 [The Big One] to bob",
+		"Can't give more than 100 of [Diamond Sword]",
+		"Can't give more than 1600 of [Ender Pearl]",
+		"No player was found",
+	} {
+		if !hasLine(a, want) {
+			t.Errorf("no %q in %q", want, a)
+		}
+	}
+}
