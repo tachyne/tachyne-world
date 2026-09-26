@@ -38,6 +38,11 @@ the public history since the project was open-sourced on 2026-07-10.
   player. The monster cap is vanilla's 70 (it was 40). A monster left
   behind now despawns at 128 blocks before its chunk unloads, instead of
   being saved and waiting for you to come back.
+- **Sulfur springs and pools no longer generate into player builds.** A
+  spring placed where a player had already built or dug had its base cut
+  away by their edits and hung in the air. Springs and sulfur pools now
+  skip any spot holding a player's changes (world generation version 25;
+  only chunks where one overlapped a build change).
 - **Hedges built before 24 September stop rotting.** Leaves placed by hand
   used to be saved like tree leaves, so a hedge with no log nearby decayed.
   A one-time repair at startup makes those leaves permanent. Leaves that
