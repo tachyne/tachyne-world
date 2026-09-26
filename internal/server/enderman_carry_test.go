@@ -151,6 +151,13 @@ func TestEndermanStareFreezesThenBlinks(t *testing.T) {
 	y := float64(h.world.MobFeet(lx, lz))
 	pl.x, pl.y, pl.z = float64(lx), y, float64(lz)+8
 	m := h.spawnMob(players, entityEnderman, float64(lx), y, float64(lz))
+	// A player's view holds the chunks around them loaded; a teleport only
+	// lands in a loaded one (randomTeleport's hasChunkAt).
+	for cx := (lx >> 4) - 3; cx <= (lx>>4)+3; cx++ {
+		for cz := (lz >> 4) - 3; cz <= (lz>>4)+3; cz++ {
+			h.world.Reader(int32(cx), int32(cz))
+		}
+	}
 
 	// Look straight at it from eight blocks: held, not blinking.
 	pl.yaw, pl.pitch = 0, float32(lookPitchTo(pl, m))

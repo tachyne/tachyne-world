@@ -22,6 +22,14 @@ the public history since the project was open-sourced on 2026-07-10.
   visible out to your own render distance (up to the server's cap) and each
   type's vanilla tracking range, once the chunk they stand in has reached you.
   Spectators are now seen only by other spectators.
+- **Mobs no longer multiply when their chunks unload and reload.** A mob
+  that walked or teleported out of the loaded area was saved into a chunk
+  nothing had loaded, and that chunk's next load brought back a copy beside
+  the original. Endermen, whose teleports reach 32 blocks and who never
+  despawn while holding a block, piled up this way. Nether and End mobs are
+  now saved with their own dimension's chunks instead of the overworld's at
+  the same coordinates, and an enderman no longer teleports into a chunk
+  that isn't loaded.
 - **Hedges built before 24 September stop rotting.** Leaves placed by hand
   used to be saved like tree leaves, so a hedge with no log nearby decayed.
   A one-time repair at startup makes those leaves permanent. Leaves that

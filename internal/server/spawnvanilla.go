@@ -221,7 +221,7 @@ func (h *hub) seedChunkGeneration(players map[int32]*tracked, dim int, chunkSet 
 		// one-time generation herd is re-laid on top of the reloaded persisted
 		// herd (reconcileMobChunks reloads it a few chunks per tick, so seeding
 		// races ahead of the reload), doubling animals on every restart.
-		if h.mobstore != nil && h.mobstore.has(c[0], c[1]) {
+		if h.mobstore != nil && h.mobstore.has(dimOverworld, c[0], c[1]) {
 			h.seededChunks[c] = true
 			continue
 		}

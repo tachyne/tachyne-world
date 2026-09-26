@@ -498,13 +498,13 @@ type hub struct {
 	waveWet map[blockPos]uint32
 
 	// Per-chunk mob load/unload (mobstore.go). activeChunks are the chunks whose
-	// mobs are live in h.mobs; chunkOutAt records when a live chunk left every
+	// mobs are live in h.mobs ({dim, cx, cz}); chunkOutAt records when a live chunk left every
 	// player's range, so its mobs unload only after a grace window (no border
 	// thrash). Mobs load/unload with their chunk, bounding the live set.
-	activeChunks map[[2]int32]bool
+	activeChunks map[[3]int32]bool
 	// scratchEntityChunks is reconcileEntityChunks' reusable chunk set.
-	scratchEntityChunks map[[2]int32]bool
-	chunkOutAt          map[[2]int32]uint64
+	scratchEntityChunks map[[3]int32]bool
+	chunkOutAt          map[[3]int32]uint64
 
 	// reloading is true only while loadMobs reconstructs persisted mobs at boot:
 	// it suppresses MobSpawnEvent (these entities already existed — they are being

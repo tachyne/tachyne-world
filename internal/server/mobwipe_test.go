@@ -15,14 +15,14 @@ func TestWipeWildKeepsVillageTiedAndTamed(t *testing.T) {
 	st := newMobStore(path)
 
 	// Chunk 0,0: two cows (wild), a villager, a tamed wolf.
-	st.stash(0, 0, []savedMob{
+	st.stash(0, 0, 0, []savedMob{
 		{Etype: entityCow, X: 1, Z: 1, Health: 10},
 		{Etype: entityCow, X: 2, Z: 2, Health: 10},
 		{Etype: entityVillager, X: 3, Z: 3, Health: 20, Profession: 1},
 		{Etype: entityWolf, X: 4, Z: 4, Health: 20, Tamed: true},
 	})
 	// Chunk 5,-3: a lone hostile — wiped, but the chunk still gets seeded.
-	st.stash(5, -3, []savedMob{{Etype: entityZombie, X: 85, Z: -40, Health: 20}})
+	st.stash(0, 5, -3, []savedMob{{Etype: entityZombie, X: 85, Z: -40, Health: 20}})
 
 	before, after := st.wipeWild()
 	if before != 5 {
@@ -32,7 +32,7 @@ func TestWipeWildKeepsVillageTiedAndTamed(t *testing.T) {
 		t.Fatalf("after = %d, want 2 (villager + tamed wolf)", after)
 	}
 
-	kept := st.take(0, 0)
+	kept := st.take(0, 0, 0)
 	if len(kept) != 2 {
 		t.Fatalf("chunk 0,0 kept %d mobs, want 2", len(kept))
 	}
@@ -41,7 +41,7 @@ func TestWipeWildKeepsVillageTiedAndTamed(t *testing.T) {
 			t.Fatalf("a wild cow survived the wipe")
 		}
 	}
-	if got := st.take(5, -3); len(got) != 0 {
+	if got := st.take(0, 5, -3); len(got) != 0 {
 		t.Fatalf("hostile chunk kept %d mobs, want 0", len(got))
 	}
 

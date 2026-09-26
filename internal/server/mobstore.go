@@ -297,8 +297,24 @@ func unpackOffer(s savedOffer) mobOffer {
 func packPos(p blockPos) [3]int   { return [3]int{p.x, p.y, p.z} }
 func unpackPos(a [3]int) blockPos { return blockPos{a[0], a[1], a[2]} }
 
-func mobChunkKey(cx, cz int32) string {
-	return strconv.Itoa(int(cx)) + "," + strconv.Itoa(int(cz))
+// mobChunkKey names a chunk's bucket. Each dimension has its own buckets —
+// vanilla keeps each level's entities with that level's chunks. Overworld keys
+// keep their original "cx,cz" form; the Nether and End are "d<dim>:cx,cz".
+// (Buckets were once keyed by x/z alone: a Nether or End mob was filed under
+// the overworld chunk at the same coordinates and only came back when an
+// overworld player loaded it — alongside the original, which never unloaded.)
+func mobChunkKey(dim, cx, cz int32) string {
+	k := strconv.Itoa(int(cx)) + "," + strconv.Itoa(int(cz))
+	if dim != 0 {
+		k = "d" + strconv.Itoa(int(dim)) + ":" + k
+	}
+	return k
+}
+
+// savedMobKey is the bucket a saved mob belongs in, from its own dimension and
+// position.
+func savedMobKey(sm savedMob) string {
+	return mobChunkKey(int32(sm.Dim), int32(chunkFloor(sm.X)), int32(chunkFloor(sm.Z)))
 }
 
 func newMobStore(path string) *mobStore {
@@ -311,11 +327,22 @@ func newMobStore(path string) *mobStore {
 	if s.m.Chunks == nil {
 		s.m.Chunks = map[string][]savedMob{}
 	}
-	// Migrate the v1 flat list into per-chunk buckets by saved position.
-	for _, sm := range s.m.Mobs {
-		k := mobChunkKey(int32(chunkFloor(sm.X)), int32(chunkFloor(sm.Z)))
-		s.m.Chunks[k] = append(s.m.Chunks[k], sm)
+	// Migrate the v1 flat list into per-chunk buckets by saved position, and
+	// re-file every bucketed mob by its own dimension and position — which
+	// moves the Nether and End mobs out of the overworld buckets they were
+	// once filed under.
+	chunks := make(map[string][]savedMob, len(s.m.Chunks))
+	for _, bucket := range s.m.Chunks {
+		for _, sm := range bucket {
+			k := savedMobKey(sm)
+			chunks[k] = append(chunks[k], sm)
+		}
 	}
+	for _, sm := range s.m.Mobs {
+		k := savedMobKey(sm)
+		chunks[k] = append(chunks[k], sm)
+	}
+	s.m.Chunks = chunks
 	s.m.Mobs = nil
 	s.seeded = make(map[[2]int32]bool, len(s.m.Seeded))
 	for _, c := range s.m.Seeded {
@@ -454,31 +481,31 @@ func keepMob(m savedMob) bool {
 }
 
 // take returns and removes a chunk's saved mobs (called when the chunk reloads).
-func (s *mobStore) take(cx, cz int32) []savedMob {
+func (s *mobStore) take(dim, cx, cz int32) []savedMob {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	k := mobChunkKey(cx, cz)
+	k := mobChunkKey(dim, cx, cz)
 	mobs := s.m.Chunks[k]
 	delete(s.m.Chunks, k)
 	return mobs
 }
 
 // has reports whether a chunk currently holds saved (unloaded) mobs.
-func (s *mobStore) has(cx, cz int32) bool {
+func (s *mobStore) has(dim, cx, cz int32) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return len(s.m.Chunks[mobChunkKey(cx, cz)]) > 0
+	return len(s.m.Chunks[mobChunkKey(dim, cx, cz)]) > 0
 }
 
 // stash writes a chunk's saved mobs (called when the chunk unloads); an empty
 // slice clears the bucket.
-func (s *mobStore) stash(cx, cz int32, mobs []savedMob) {
+func (s *mobStore) stash(dim, cx, cz int32, mobs []savedMob) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.m.Chunks == nil {
 		s.m.Chunks = map[string][]savedMob{}
 	}
-	k := mobChunkKey(cx, cz)
+	k := mobChunkKey(dim, cx, cz)
 	if len(mobs) == 0 {
 		delete(s.m.Chunks, k)
 		return
@@ -490,11 +517,18 @@ func (s *mobStore) stash(cx, cz int32, mobs []savedMob) {
 // autosave / shutdown crash-window save). Chunks in `active` that hold no live
 // mob are cleared, so a loaded-then-emptied chunk never resurrects dead mobs;
 // unloaded chunks (not in `active`) keep the buckets stash() already wrote.
-func (s *mobStore) bucketLive(mobs map[int32]*mob, keep func(*mob) bool, active map[[2]int32]bool) {
+//
+// Only a live mob in an ACTIVE chunk is written. A mob in a chunk that is not
+// active is one that has just walked or teleported out of the loaded area
+// (reconcileMobChunks activates its chunk on the next pass); writing it would
+// overwrite that chunk's saved mobs and leave a copy the chunk's next load
+// brings back beside the original — how endermen multiplied (bug #45).
+func (s *mobStore) bucketLive(mobs map[int32]*mob, keep func(*mob) bool, active map[[3]int32]bool) {
 	live := map[string][]savedMob{}
 	for _, m := range mobs {
-		if keep(m) {
-			k := mobChunkKey(int32(chunkFloor(m.x)), int32(chunkFloor(m.z)))
+		if keep(m) && active[mobChunkOf(m)] {
+			c := mobChunkOf(m)
+			k := mobChunkKey(c[0], c[1], c[2])
 			live[k] = append(live[k], toSavedMob(m))
 		}
 	}
@@ -507,7 +541,7 @@ func (s *mobStore) bucketLive(mobs map[int32]*mob, keep func(*mob) bool, active 
 		s.m.Chunks[k] = v
 	}
 	for c := range active {
-		k := mobChunkKey(c[0], c[1])
+		k := mobChunkKey(c[0], c[1], c[2])
 		if _, ok := live[k]; !ok {
 			delete(s.m.Chunks, k)
 		}

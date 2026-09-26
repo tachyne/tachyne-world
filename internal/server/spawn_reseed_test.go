@@ -20,7 +20,7 @@ func TestSeedSkipsPersistedChunks(t *testing.T) {
 
 	// Park a cow herd in chunk (0,0)'s store bucket, as a boot-time restore
 	// would have (mobs.json → chunk buckets).
-	h.mobstore.stash(0, 0, []savedMob{
+	h.mobstore.stash(0, 0, 0, []savedMob{
 		{Etype: entityCow, X: 5, Y: 70, Z: 5, Health: 10},
 		{Etype: entityCow, X: 6, Y: 70, Z: 6, Health: 10},
 	})
@@ -37,7 +37,7 @@ func TestSeedSkipsPersistedChunks(t *testing.T) {
 		t.Fatal("a store-backed chunk must still be marked seeded (never re-seed it)")
 	}
 	// The persisted herd is untouched — it reloads via reconcile.
-	if !h.mobstore.has(0, 0) {
+	if !h.mobstore.has(0, 0, 0) {
 		t.Fatal("seeding must not consume the parked persisted mobs")
 	}
 }

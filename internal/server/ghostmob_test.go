@@ -75,12 +75,12 @@ func TestChunkUnloadStillTellsViewers(t *testing.T) {
 		t.Fatal("no cow")
 	}
 	c := mobChunkOf(cow)
-	h.activeChunks = map[[2]int32]bool{c: true}
-	h.chunkOutAt = map[[2]int32]uint64{c: 1}
+	h.activeChunks = map[[3]int32]bool{c: true}
+	h.chunkOutAt = map[[3]int32]uint64{c: 1}
 	h.tick.Store(1 + mobUnloadGrace)
 	drainEvents(pl)
 
-	h.reconcileMobChunks(players, map[[2]int32]bool{}) // the chunk is out of range
+	h.reconcileMobChunks(players, map[[3]int32]bool{}) // the chunk is out of range
 	if _, live := h.mobs[cow.eid]; live {
 		t.Fatal("the cow's chunk left range: its mobs should unload")
 	}

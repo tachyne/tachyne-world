@@ -381,6 +381,12 @@ func (h *hub) endermanTeleportTo(players map[int32]*tracked, m *mob, x, y, z flo
 	if !h.inWorldYIn(m.dim, py) {
 		return false
 	}
+	// LivingEntity.randomTeleport: level.hasChunkAt(target) — never into a
+	// chunk that is not loaded. Reading one generated it on the spot, and the
+	// enderman landed outside the loaded area.
+	if !w.Loaded(int32(bx>>4), int32(bz>>4)) {
+		return false
+	}
 	for py > worldgen.MinY {
 		py--
 		ground := w.At(bx, py, bz)

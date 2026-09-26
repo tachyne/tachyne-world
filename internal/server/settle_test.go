@@ -27,11 +27,11 @@ func TestChunkActivationSettlesFloatingGrowths(t *testing.T) {
 		}
 	}
 	tip := dripstoneState(dripTip, true, false)
-	w.SetBlock(82, 175, 82, tip)                                   // floating: air below
-	w.SetBlock(84, 172, 84, worldgen.Stone)                        // a floor…
-	w.SetBlock(84, 173, 84, tip)                                   // …with a stalagmite on it
-	w.SetBlock(86, 176, 86, worldgen.BlockBase("snow"))            // floating snow: left alone
-	h.reconcileMobChunks(players, map[[2]int32]bool{{5, 5}: true}) // chunk (5,5) comes into range
+	w.SetBlock(82, 175, 82, tip)                                      // floating: air below
+	w.SetBlock(84, 172, 84, worldgen.Stone)                           // a floor…
+	w.SetBlock(84, 173, 84, tip)                                      // …with a stalagmite on it
+	w.SetBlock(86, 176, 86, worldgen.BlockBase("snow"))               // floating snow: left alone
+	h.reconcileMobChunks(players, map[[3]int32]bool{{0, 5, 5}: true}) // chunk (5,5) comes into range
 	if w.At(82, 175, 82) != worldgen.Air {
 		t.Error("the floating stalagmite survived its chunk coming into range")
 	}

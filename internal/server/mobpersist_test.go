@@ -31,7 +31,7 @@ func TestMobPersistRoundTrip(t *testing.T) {
 	zombie.gear[0] = invStack{item: helmet, count: 1}
 
 	// Their chunks are "loaded"; snapshot the live set and flush.
-	active := map[[2]int32]bool{{0, 0}: true, {1, 1}: true}
+	active := map[[3]int32]bool{{0, 0, 0}: true, {0, 1, 1}: true}
 	h.activeChunks = active
 	h.mobstore.bucketLive(h.mobs, h.persistMob, active)
 	h.mobstore.flush()
@@ -39,7 +39,7 @@ func TestMobPersistRoundTrip(t *testing.T) {
 	// A fresh hub reloads them when those chunks enter range.
 	h2 := newHub(world.New(1))
 	h2.mobstore = newMobStore(path)
-	chunkSet := map[[2]int32]bool{{0, 0}: true, {1, 1}: true}
+	chunkSet := map[[3]int32]bool{{0, 0, 0}: true, {0, 1, 1}: true}
 	h2.reconcileMobChunks(players, chunkSet)
 
 	if len(h2.mobs) != 3 {
@@ -80,7 +80,7 @@ func TestMobUnloadReload(t *testing.T) {
 
 	cow := h.spawnMob(players, entityCow, 85.5, 70, 85.5) // chunk (5,5)
 	cid := cow.eid
-	inRange := map[[2]int32]bool{{5, 5}: true}
+	inRange := map[[3]int32]bool{{0, 5, 5}: true}
 
 	h.reconcileMobChunks(players, inRange) // (5,5) becomes active, cow stays live
 	if _, ok := h.mobs[cid]; !ok {
@@ -88,7 +88,7 @@ func TestMobUnloadReload(t *testing.T) {
 	}
 
 	// Chunk leaves range: within the grace window the mob is retained.
-	empty := map[[2]int32]bool{}
+	empty := map[[3]int32]bool{}
 	h.reconcileMobChunks(players, empty)
 	if _, ok := h.mobs[cid]; !ok {
 		t.Fatal("a just-departed chunk keeps its mobs during the grace window")
@@ -100,7 +100,7 @@ func TestMobUnloadReload(t *testing.T) {
 	if _, ok := h.mobs[cid]; ok {
 		t.Fatal("past the grace window the mob should unload")
 	}
-	if !h.mobstore.has(5, 5) {
+	if !h.mobstore.has(0, 5, 5) {
 		t.Fatal("an unloaded mob must be saved to its chunk bucket")
 	}
 
@@ -115,7 +115,7 @@ func TestMobUnloadReload(t *testing.T) {
 	if got != 1 {
 		t.Fatalf("returning to the chunk should reload exactly one cow, got %d", got)
 	}
-	if h.mobstore.has(5, 5) {
+	if h.mobstore.has(0, 5, 5) {
 		t.Fatal("reloading a chunk must clear its saved bucket")
 	}
 }
@@ -184,14 +184,14 @@ func TestVillagerPersistRoundTrip(t *testing.T) {
 	wantOffers := append([]mobOffer(nil), v.offers...)
 	v.home, v.bed, v.work, v.meet = blockPos{10, 70, 10}, blockPos{9, 70, 10}, blockPos{11, 70, 9}, blockPos{40, 70, 40}
 
-	active := map[[2]int32]bool{{0, 0}: true}
+	active := map[[3]int32]bool{{0, 0, 0}: true}
 	h.activeChunks = active
 	h.mobstore.bucketLive(h.mobs, h.persistMob, active)
 	h.mobstore.flush()
 
 	h2 := newHub(world.New(1))
 	h2.mobstore = newMobStore(path)
-	h2.reconcileMobChunks(players, map[[2]int32]bool{{0, 0}: true})
+	h2.reconcileMobChunks(players, map[[3]int32]bool{{0, 0, 0}: true})
 
 	var got *mob
 	for _, m := range h2.mobs {
@@ -315,14 +315,14 @@ func TestCullAnimals(t *testing.T) {
 	// Fill several chunks with cows so coverage-thinning has something to thin.
 	s.m.Chunks = map[string][]savedMob{}
 	for cx := 0; cx < 10; cx++ {
-		key := mobChunkKey(int32(cx), 0)
+		key := mobChunkKey(0, int32(cx), 0)
 		var b []savedMob
 		for i := 0; i < 8; i++ {
 			b = append(b, savedMob{Etype: entityCow, X: float64(cx*16 + i), Y: 70, Z: 0})
 		}
 		s.m.Chunks[key] = b
 	}
-	s.m.Chunks[mobChunkKey(0, 0)] = dense // overwrite chunk 0 with the mixed dense one
+	s.m.Chunks[mobChunkKey(0, 0, 0)] = dense // overwrite chunk 0 with the mixed dense one
 
 	before, after := s.cullAnimals(4, 5)
 	if after >= before {
@@ -330,7 +330,7 @@ func TestCullAnimals(t *testing.T) {
 	}
 
 	// Chunk 0 keeps cows (0%5==0): ≤4 cows, both sheep, the pet, the villager.
-	c0 := s.m.Chunks[mobChunkKey(0, 0)]
+	c0 := s.m.Chunks[mobChunkKey(0, 0, 0)]
 	cows, sheep, wolf, vill := 0, 0, 0, 0
 	for _, m := range c0 {
 		switch m.Etype {
