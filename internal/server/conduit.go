@@ -249,7 +249,7 @@ func (h *hub) inWaterOrRain(dim int, x, y, z, ht float64) bool {
 	if h.inWater(dim, x, y, z) {
 		return true
 	}
-	if dim != dimOverworld || !h.raining {
+	if !dimType(dim).HasWeather() || !h.raining {
 		return false
 	}
 	bx, bz := floorInt(x), floorInt(z)

@@ -79,11 +79,17 @@ func TestDimensionTableIsStable(t *testing.T) {
 		if d == nil || d.ID != w.id || d.Key != w.key || d.File != w.file || d.CoordinateScale != w.scale {
 			t.Fatalf("dimension %d = %+v", w.id, d)
 		}
+		if bedWorks(w.id) != w.bed || anchorWorks(w.id) != w.anchor {
+			t.Errorf("dimension %d: bed %v anchor %v", w.id, bedWorks(w.id), anchorWorks(w.id))
+		}
 		if id, ok := parseDimension(w.key); !ok || id != w.id {
 			t.Errorf("parseDimension(%q) = %d, %v", w.key, id, ok)
 		}
 		if dimRegistryName(w.id) != w.key {
 			t.Errorf("dimRegistryName(%d) = %q", w.id, dimRegistryName(w.id))
 		}
+	}
+	if !dimType(dimOverworld).HasWeather() || dimType(dimNether).HasWeather() || dimType(dimEnd).HasWeather() {
+		t.Error("only the overworld has weather")
 	}
 }

@@ -156,7 +156,7 @@ func mapSamplePixel(w *world.World, md *mapData, imgX, imgZ int) mapSample {
 	baseX := (int(md.CenterX)/scale + imgX - 64) * scale
 	baseZ := (int(md.CenterZ)/scale + imgZ - 64) * scale
 
-	if md.Dim == 1 {
+	if dimType(md.Dim).HasCeiling {
 		n := baseX + baseZ*231871
 		n = n*n*31287121 + n*11
 		if n>>20&1 == 0 {
@@ -235,7 +235,7 @@ func (h *hub) mapUpdateHeld(md *mapData, t *tracked) {
 	pImgX := (int(math.Floor(t.x))-int(md.CenterX))/scale + 64
 	pImgZ := (int(math.Floor(t.z))-int(md.CenterZ))/scale + 64
 	radius := mapSize / scale
-	if md.Dim == 1 { // the nether's ceiling halves the scan radius
+	if dimType(md.Dim).HasCeiling { // the nether's ceiling halves the scan radius
 		radius /= 2
 	}
 	w := h.worldFor(md.Dim)

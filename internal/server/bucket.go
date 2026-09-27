@@ -88,7 +88,7 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 		h.swapBucket(t, slot, itemBucket)
 		return
 	}
-	if held != itemBucketLav && t.dim == 1 {
+	if held != itemBucketLav && dimType(t.dim).WaterEvaporates {
 		// The nether boils water off the moment it leaves the bucket — and a
 		// bucketed mob still comes out (checkExtraContent runs regardless).
 		h.playSoundDim(players, t.dim, "minecraft:block.fire.extinguish", sndBlock,

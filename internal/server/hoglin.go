@@ -51,7 +51,7 @@ func (h *hub) zombifyTick(players map[int32]*tracked, m *mob) {
 	if !ok {
 		return
 	}
-	if m.dim == 1 || m.immuneZombify {
+	if !dimType(m.dim).PiglinsZombify || m.immuneZombify {
 		m.overworldTicks = 0
 		return
 	}

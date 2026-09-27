@@ -362,7 +362,7 @@ func (h *hub) isRainingAt(x, y, z int) bool { return h.rainAt(dimOverworld, x, y
 
 // rainAt is isRainingAt in any dimension (only the overworld has weather).
 func (h *hub) rainAt(dim, x, y, z int) bool {
-	return dim == dimOverworld && h.raining && h.canSeeSky(dim, x, y, z) &&
+	return dimType(dim).HasWeather() && h.raining && h.canSeeSky(dim, x, y, z) &&
 		h.motionBlockingTop(dim, x, z) <= y &&
 		h.precipAt(dim, x, y, z) == worldgen.PrecipRain
 }

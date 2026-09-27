@@ -24,8 +24,8 @@ const (
 // bedWorks and anchorWorks are DimensionType.bedWorks / respawnAnchorWorks: the
 // two respawn blocks each work in exactly one dimension and detonate in the
 // others. Anywhere they do not work, using one is an explosion, not a refusal.
-func bedWorks(dim int) bool    { return dim == dimOverworld }
-func anchorWorks(dim int) bool { return dim == dimNether }
+func bedWorks(dim int) bool    { d := dimType(dim); return d != nil && d.BedWorks }
+func anchorWorks(dim int) bool { d := dimType(dim); return d != nil && d.RespawnAnchorWorks }
 
 type evDim struct {
 	eid     int32
@@ -43,12 +43,12 @@ func (s *Server) switchDimension(p *player, dim int) {
 	}
 	var x, z float64
 	switch {
-	case dim == 1 && p.dim == 0:
-		x, z = p.x/8, p.z/8 // 8:1 only between overworld and nether
-	case dim == 0 && p.dim == 1:
-		x, z = p.x*8, p.z*8
-	case dim == 0: // returning from the End: the overworld spawn
+	case dim == dimOverworld && p.dim == dimEnd: // returning from the End: the overworld spawn
 		x, z = 0.5, 0.5
+	case dim != dimEnd && p.dim != dimEnd:
+		// DimensionType.getTeleportationScale: 8:1 between overworld and nether.
+		scale := dimType(p.dim).CoordinateScale / dimType(dim).CoordinateScale
+		x, z = p.x*scale, p.z*scale
 	default:
 		x, z = p.x, p.z
 	}

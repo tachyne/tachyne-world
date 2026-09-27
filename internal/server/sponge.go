@@ -96,7 +96,7 @@ func (h *hub) soakSponge(players map[int32]*tracked, dim int, pos blockPos) {
 	if w == nil {
 		return
 	}
-	if dim == dimNether && w.At(pos.x, pos.y, pos.z) == wetSpongeState {
+	if dimType(dim).WaterEvaporates && w.At(pos.x, pos.y, pos.z) == wetSpongeState {
 		h.setBlockAt(players, dim, pos, spongeState)
 		h.playSoundDim(players, dim, "minecraft:block.wet_sponge.dries", sndBlock,
 			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, (1+h.rng.Float32()*0.2)*0.7)

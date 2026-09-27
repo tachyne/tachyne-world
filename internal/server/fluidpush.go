@@ -94,7 +94,7 @@ func (h *hub) applyFluidPush(m *mob) {
 		m.pushZ += a.fz * step
 	}
 	apply(water, waterPushPerTick)
-	if m.dim == dimNether { // FAST_LAVA
+	if dimType(m.dim).FastLava { // FAST_LAVA
 		apply(lava, lavaFastPushPerTick)
 	} else {
 		apply(lava, lavaSlowPushPerTick)

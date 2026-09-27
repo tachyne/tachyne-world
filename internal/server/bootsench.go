@@ -128,7 +128,7 @@ func (h *hub) frostedBrightness(dim int, pos blockPos) int {
 // blue ice do not melt, and neither does ice broken in the Nether, where
 // the water would evaporate anyway.
 func (h *hub) iceMeltsOnBreak(players map[int32]*tracked, dim int, pos blockPos, state uint32) {
-	if state != iceBlock || dim == dimNether {
+	if state != iceBlock || dimType(dim).WaterEvaporates {
 		return
 	}
 	w := h.worldFor(dim)

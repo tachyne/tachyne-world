@@ -55,10 +55,10 @@ func creeperPoweredMeta(eid int32, on bool) []byte {
 // skyOpen reports whether a cell can see the sky (LevelReader.canSeeSky):
 // nothing but air between it and the top of the world.
 func (h *hub) skyOpen(dim int, x, y, z float64) bool {
-	if dim != dimOverworld {
+	if !dimType(dim).HasWeather() {
 		return false // the Nether and End have no weather
 	}
-	return floorInt(y) >= h.world.SurfaceFeet(floorInt(x), floorInt(z))
+	return floorInt(y) >= h.worldFor(dim).SurfaceFeet(floorInt(x), floorInt(z))
 }
 
 // channelingStrike is ThrownTrident's Channeling: in a thunderstorm, a hit

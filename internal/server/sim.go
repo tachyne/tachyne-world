@@ -282,7 +282,7 @@ func (h *hub) updateFluid(players map[int32]*tracked, dim int, pos blockPos, sta
 	base, delay, dropOff, slopeFind := worldgen.WaterBase, uint64(waterDelay), 1, 4
 	if !water {
 		base, delay, dropOff, slopeFind = worldgen.LavaBase, uint64(lavaDelay), 2, 2
-		if dim == dimNether {
+		if dimType(dim).FastLava {
 			// LavaFluid in an ultra-warm dimension (the Nether's fast lava):
 			// a step every 10 ticks, one level lost a block, slopes sought
 			// four away — it runs as far and nearly as fast as water.

@@ -61,14 +61,15 @@ func (h *hub) netherPortalExit(players map[int32]*tracked, fromDim int, entry bl
 		return portalArrival{}, false
 	}
 	toDim := dimNether
-	scale := 1.0 / 8
 	if fromDim == dimNether {
-		toDim, scale = dimOverworld, 8
+		toDim = dimOverworld
 	}
 	toNether := toDim == dimNether
 	if !h.hasDim(toDim) {
 		return portalArrival{}, false
 	}
+	// DimensionType.getTeleportationScale: 1/8 into the Nether, 8 back out.
+	scale := dimType(fromDim).CoordinateScale / dimType(toDim).CoordinateScale
 	// WorldBorder.clampToBounds, then BlockPos.containing.
 	ax, az := h.clampToBorder(toDim, x*scale, z*scale)
 	approx := blockPos{floorInt(ax), floorInt(y), floorInt(az)}
