@@ -77,9 +77,12 @@ type worldRules struct {
 	// DayTime is level.dat's DayTime: the day clock. Unsaved, every restart
 	// began at sunrise — mobs caught out at night found it morning, and the
 	// time of day jumped under anyone online through a deploy.
-	DayTime     *uint64       `json:"dayTime,omitempty"`
-	Border      *worldBorder  `json:"border,omitempty"`
-	EndGateways []gatewayExit `json:"endGateways,omitempty"` // each gateway's remembered exit
+	DayTime *uint64 `json:"dayTime,omitempty"`
+	// Clocks are the world clocks (ServerClockManager's world_clocks): the
+	// overworld's rate and pause (its total is DayTime), the End's total too.
+	Clocks      map[string]*clockRun `json:"worldClocks,omitempty"`
+	Border      *worldBorder         `json:"border,omitempty"`
+	EndGateways []gatewayExit        `json:"endGateways,omitempty"` // each gateway's remembered exit
 	// SpawnerMobs are the spawners a spawn egg was used on: "dim,x,y,z" → the
 	// entity name they spawn instead of their dungeon's (SpawnEggItem.useOn).
 	SpawnerMobs map[string]string `json:"spawnerMobs,omitempty"`
@@ -638,6 +641,7 @@ func (h *hub) loadRules() {
 	if dt := h.rules.DayTime; dt != nil {
 		h.dayTime.Store(*dt)
 	}
+	h.unpackClocks()
 	if ws := h.rules.Weather; ws != nil {
 		h.clearTime, h.rainTime, h.thunderTime = ws.ClearTime, ws.RainTime, ws.ThunderTime
 		h.rainFlag, h.thunderFlag = ws.Raining, ws.Thundering
@@ -668,6 +672,7 @@ func (h *hub) saveRules() {
 	}
 	dt := h.dayTime.Load()
 	h.rules.DayTime = &dt
+	h.packClocks()
 	h.packStopwatches()
 	data, _ := json.MarshalIndent(h.rules, "", "  ")
 	writeStore(h.rulesPath, data)

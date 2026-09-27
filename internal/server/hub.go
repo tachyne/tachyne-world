@@ -425,15 +425,16 @@ type hub struct {
 	world        *world.World // the overworld
 	dims         dimensions   // every other dimension's world, by id (dimtable.go)
 	events       chan hubEvent
-	stop         chan struct{}    // closed to end run(); production never closes it, tests do (t.Cleanup)
-	eidCounter   int64            // per-pod eid mint counter, fed through shard.MintEID when sharded
-	tick         atomic.Uint64    // world age (ticks); atomic so connections can read it
-	lastTick     atomic.Int64     // unix nanos of the last COMPLETED tick — the liveness heartbeat (health.go)
-	tickStats    tickHist         // recent tick durations for /debug/vars + the slow-tick log
-	ticks        tickState        // /tick: target rate, freeze, step, sprint (TickRateManager)
-	ticker       *time.Ticker     // the loop's tick clock, reset by /tick
-	postFX       *postEffectStore // /posteffect: each player's screen shaders
-	dayTime      atomic.Uint64    // time of day (ticks); advances with tick, settable by /time
+	stop         chan struct{}       // closed to end run(); production never closes it, tests do (t.Cleanup)
+	eidCounter   int64               // per-pod eid mint counter, fed through shard.MintEID when sharded
+	tick         atomic.Uint64       // world age (ticks); atomic so connections can read it
+	lastTick     atomic.Int64        // unix nanos of the last COMPLETED tick — the liveness heartbeat (health.go)
+	tickStats    tickHist            // recent tick durations for /debug/vars + the slow-tick log
+	ticks        tickState           // /tick: target rate, freeze, step, sprint (TickRateManager)
+	ticker       *time.Ticker        // the loop's tick clock, reset by /tick
+	postFX       *postEffectStore    // /posteffect: each player's screen shaders
+	dayTime      atomic.Uint64       // time of day (ticks); advances with tick, settable by /time
+	clocks       [numClocks]clockRun // the world clocks' rate, pause and partial tick; the End's total (timecmd.go)
 
 	// owned reports whether this pod owns a chunk in a sharded world. nil means
 	// unsharded — own the whole world (the default for a single-pod or test hub).
@@ -1115,11 +1116,8 @@ func (h *hub) run() {
 				w.Tick() // LRU epoch: cached chunks promote at most once per tick
 			}
 			dueNow := len(h.pending[age])
-			dt := h.dayTime.Load()
-			if h.rules.DoDaylight {
-				dt = h.dayTime.Add(1)
-			}
-			if age%600 == 0 { // PlayerList.tick: everyone's latency, every 600 ticks
+			dt := h.tickClocks() // the world clocks advance (timecmd.go)
+			if age%600 == 0 {    // PlayerList.tick: everyone's latency, every 600 ticks
 				h.broadcastLatency(players)
 			}
 			if age%20 == 0 { // broadcast the time once a second; client interpolates

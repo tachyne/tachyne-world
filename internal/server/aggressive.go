@@ -14,15 +14,33 @@ import "github.com/tachyne/tachyne-common/protocol"
 // the same on every version we serve.
 const (
 	metaIndexMobFlags = 15
+	mobFlagNoAI       = 0x01
 	mobFlagAggressive = 0x04
 )
 
-// mobFlagsMeta builds the flags byte for a mob.
+// mobFlagsMeta builds the flags byte for a mob with only the aggressive bit.
 func mobFlagsMeta(eid int32, aggressive bool) []byte {
 	var flags byte
 	if aggressive {
 		flags |= mobFlagAggressive
 	}
+	return mobFlagsByte(eid, flags)
+}
+
+// mobFlags is the mob's whole flags byte: NoAI and aggressive.
+func (m *mob) mobFlags() byte {
+	var flags byte
+	if m.noAI {
+		flags |= mobFlagNoAI
+	}
+	if m.aggressive {
+		flags |= mobFlagAggressive
+	}
+	return flags
+}
+
+// mobFlagsByte builds the flags entry for a given byte.
+func mobFlagsByte(eid int32, flags byte) []byte {
 	b := protocol.AppendVarInt(nil, eid)
 	b = protocol.AppendU8(b, metaIndexMobFlags)
 	b = protocol.AppendVarInt(b, metaTypeByteFox) // serializer 0: byte
@@ -36,7 +54,7 @@ func (h *hub) setAggressive(players map[int32]*tracked, m *mob, on bool) {
 		return
 	}
 	m.aggressive = on
-	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(mobFlagsMeta(m.eid, on)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(mobFlagsByte(m.eid, m.mobFlags())))
 }
 
 // updateAggression runs with the mob step: the zombie family raises its arms

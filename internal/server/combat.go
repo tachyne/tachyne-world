@@ -319,6 +319,16 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		}
 	}
 	t := players[attacker]
+	if m.invulnerable { // Entity.isInvulnerableToBase: only a creative player's blow lands
+		if t == nil || t.gamemode != gmCreative {
+			if t != nil {
+				h.playSoundDim(players, t.dim, "minecraft:entity.player.attack.nodamage", sndPlayer, t.x, t.y, t.z, 1, 1)
+			}
+			return
+		}
+		m.invulnerable = false
+		defer func() { m.invulnerable = true }()
+	}
 	// A mob-on-mob hit has no attacker player, so there is no held stack to
 	// read a Smite or Bane bonus off — the nil check has to happen HERE, not
 	// inside the swing helper, because heldStack itself dereferences.

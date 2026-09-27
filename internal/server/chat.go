@@ -125,6 +125,8 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		s.cmdPlugin(p, fields[1:])
 	case "time":
 		s.cmdTime(p, fields[1:])
+	case "waypoint":
+		s.cmdWaypoint(p, fields[1:])
 	case "tp", "teleport":
 		s.cmdTeleport(p, fields[1:])
 	case "locate":
@@ -340,75 +342,6 @@ func (s *Server) cmdHud(p *player, args []string) {
 	} else {
 		p.tell("HUD disabled.")
 	}
-}
-
-// cmdTime sets or queries the day/night clock.
-func (s *Server) cmdTime(p *player, args []string) {
-	// TimeCommand requires LEVEL_GAMEMASTERS.
-	if !s.isOp(p.name) {
-		p.tell("You don't have permission to change the time.")
-		return
-	}
-	now := s.hub.dayTime.Load()
-	usage := "Usage: /time set <time|day|noon|night|midnight> | /time add <time> | /time query <daytime|gametime|day>"
-	if len(args) == 0 {
-		p.tell(usage)
-		return
-	}
-	switch args[0] {
-	case "query":
-		if len(args) < 2 {
-			p.tell(usage)
-			return
-		}
-		switch args[1] {
-		case "daytime":
-			s.info(p, fmt.Sprintf("The time is %d", now%dayLengthTicks))
-		case "gametime":
-			s.info(p, fmt.Sprintf("The time is %d", s.hub.tick.Load()))
-		case "day":
-			s.info(p, fmt.Sprintf("The time is %d", now/dayLengthTicks))
-		default:
-			p.tell(usage)
-		}
-		return
-	case "add":
-		n, ok := parseTimeTicks(args[1:])
-		if !ok {
-			p.tell(usage)
-			return
-		}
-		t := uint64(int64(now) + n)
-		s.hub.post(evSetTime{t: t})
-		s.ok(p, fmt.Sprintf("Set the time to %d", t%dayLengthTicks))
-		return
-	case "set":
-		args = args[1:] // the marker or number follows
-	}
-	if len(args) == 0 {
-		p.tell(usage)
-		return
-	}
-	var t uint64
-	switch args[0] { // the overworld clock's time markers
-	case "day":
-		t = 1000
-	case "noon":
-		t = 6000
-	case "night":
-		t = 13000
-	case "midnight":
-		t = 18000
-	default:
-		n, ok := parseTimeTicks(args)
-		if !ok || n < 0 {
-			p.tell(usage)
-			return
-		}
-		t = uint64(n)
-	}
-	s.hub.post(evSetTime{t: t}) // through the hub so the plugin TimeSetEvent fires
-	s.ok(p, fmt.Sprintf("Set the time to %d", t%dayLengthTicks))
 }
 
 // parseTimeTicks is TimeArgument: a number of ticks, or with a unit suffix

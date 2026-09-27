@@ -80,6 +80,9 @@ func (h *hub) hurtMobNoBlink(players map[int32]*tracked, m *mob, dmg float64, dt
 // hurtMobKind is hurtMobOf; blink says whether an enderman may roll its
 // one-in-ten teleport.
 func (h *hub) hurtMobKind(players map[int32]*tracked, m *mob, dmg float64, dt dmgType, blink bool) {
+	if m.invulnerable && !dt.has(tagBypassesInvulnerability) {
+		return // the Invulnerable tag: no hurt, no flash
+	}
 	if dt.has(tagIsFire) && m.resistsFire() {
 		return // LivingEntity.hurtServer: Fire Resistance refuses #is_fire outright
 	}

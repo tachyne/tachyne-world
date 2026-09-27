@@ -60,6 +60,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	m.collar = sm.Collar
 	m.stew = sm.Stew
 	m.persistent = sm.Persistent
+	m.nameHidden, m.noAI, m.silent, m.invulnerable = sm.NameHidden, sm.NoAI, sm.Silent, sm.Invulner
 	m.raidCenter = unpackPos(sm.Raid)
 	m.raidWave = sm.RaidWave
 	if sm.RestrictR > 0 {

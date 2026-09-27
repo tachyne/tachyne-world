@@ -27,6 +27,10 @@ func summonNonLiving(name string) (int, bool) {
 		return et, true
 	case et == entityTNT, et == entityEndCrystal, et == entityLightning, et == entityFirework:
 		return et, true
+	case et == entityXPOrb, et == entityItem, et == entityByName["armor_stand"]:
+		return et, true
+	case et == entityFallingBlock, et == entityEvokerFangs, summonThrown[et]:
+		return et, true
 	}
 	for _, b := range boatEntities {
 		if b == et {

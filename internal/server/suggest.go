@@ -150,8 +150,14 @@ func (h *hub) argCandidates(players map[int32]*tracked, cmd string, prev []strin
 			return out
 		}
 	case "summon":
-		if n == 0 {
-			return nsNames(keysOfInt(entityByName))
+		if n == 0 { // SUMMONABLE_ENTITIES, of the types the engine models
+			var out []string
+			for name, et := range entityByName {
+				if _, ok := summonableType(name); ok && !notSummonable[et] {
+					out = append(out, name)
+				}
+			}
+			return nsNames(out)
 		}
 	case "setblock":
 		if n == 3 {
@@ -212,13 +218,44 @@ func (h *hub) argCandidates(players map[int32]*tracked, cmd string, prev []strin
 			return []string{"survival", "creative", "adventure", "spectator"}
 		}
 	case "time":
+		verbs := []string{"add", "pause", "query", "rate", "resume", "set"}
+		i := 0 // where the verb is: after of <clock>, two further on
+		if at(0) == "of" {
+			if n == 1 {
+				return clockKeys[:]
+			}
+			i = 2
+		}
 		switch {
 		case n == 0:
-			return []string{"add", "query", "set"}
-		case n == 1 && at(0) == "set":
+			return append(verbs, "of")
+		case n == i:
+			return verbs
+		case n == i+1 && at(i) == "set": // commandTimeMarkersForClock: the ones shown in commands
 			return []string{"day", "midnight", "night", "noon"}
-		case n == 1 && at(0) == "query":
-			return []string{"day", "daytime", "gametime"}
+		case n == i+1 && at(i) == "query":
+			out := []string{"time"}
+			if i == 0 {
+				out = append(out, "gametime")
+			}
+			return append(out, mapKeys(timelines)...)
+		case n == i+2 && at(i) == "query" && at(i+1) != "time" && at(i+1) != "gametime":
+			return []string{"repetition"}
+		}
+	case "waypoint":
+		switch {
+		case n == 0:
+			return []string{"list", "modify"}
+		case n == 1 && at(0) == "modify":
+			return names()
+		case n == 2 && at(0) == "modify":
+			return []string{"color", "style"}
+		case n == 3 && at(2) == "color":
+			return append(teamColorNames(), "hex", "reset")
+		case n == 3 && at(2) == "style":
+			return []string{"reset", "set"}
+		case n == 4 && at(2) == "style" && at(3) == "set":
+			return []string{"minecraft:bowtie", "minecraft:default"}
 		}
 	case "tick":
 		switch {

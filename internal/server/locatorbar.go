@@ -22,7 +22,8 @@ const (
 
 // waypointFor builds a track/untrack frame for a transmitter.
 func waypointFor(t *tracked, op int8) attachproto.Waypoint {
-	return attachproto.Waypoint{Op: op, UUID: t.p.uuid,
+	return attachproto.Waypoint{Op: op, UUID: t.p.uuid, Style: t.wpIcon.style,
+		Color: t.wpIcon.color, HasColor: t.wpIcon.hasColor,
 		X: int32(t.x), Y: int32(t.y), Z: int32(t.z)}
 }
 

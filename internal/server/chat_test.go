@@ -47,7 +47,7 @@ func TestCommandTime(t *testing.T) {
 	startHub(t, s.hub)             // /time routes through the hub (plugin TimeSetEvent)
 	p := newPlayer(1, "tester", [16]byte{})
 
-	s.handleCommand(p, "time night")
+	s.handleCommand(p, "time set night")
 	waitDayTime(t, s.hub, 13000)
 	// The player should have received a confirmation system-chat packet
 	// (a command success, which the hub delivers after the change).

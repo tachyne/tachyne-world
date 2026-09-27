@@ -16,11 +16,14 @@ import (
 // advisory — the dispatcher still validates everything — so it has to agree
 // with the dispatcher or the client reddens input that would have worked.
 //
-// ONLY parser ids 0-15 are used. Those are identical on every protocol
-// tachyne serves; 1.21.6 inserted minecraft:style at 19 and shifted every id
-// above it, and nothing translates parser ids per version. Enumerations are
-// literals rather than the (shifted) minecraft:gamemode and minecraft:time
-// parsers, which completes better anyway.
+// ONLY parser ids that are identical on every protocol tachyne serves are
+// used: nothing translates parser ids per version. Since the 26.2/26.3 pair
+// became the whole served range that is 0-53 (id 54 is dialog on 26.2 but
+// context_float_provider on 26.3); 0-15 were the old 1.21.5-stable set. Enumerations are
+// literals rather than the minecraft:gamemode and minecraft:time parsers,
+// which completes better anyway, and the parsers with properties the tree
+// has no writer for (minecraft:time's minimum, minecraft:resource's
+// registry) are left out.
 const (
 	parserBool      = 0
 	parserFloat     = 1
@@ -33,6 +36,13 @@ const (
 	parserVec3      = 10
 	parserVec2      = 11
 	parserItemStack = 14
+	parserTeamColor = 16 // minecraft:team_color
+	parserHexColor  = 17 // minecraft:hex_color
+	parserNBT       = 21 // minecraft:nbt_compound_tag
+	parserResLoc    = 36 // minecraft:resource_location: any namespaced id
+
+	// maxStableParser is the last parser id 26.2 and 26.3 agree on.
+	maxStableParser = 53
 )
 
 // String parser properties.
@@ -118,6 +128,20 @@ func argProfile(name string, exec bool, kids ...cmdNode) cmdNode {
 	return argN(name, parserProfile, nil, exec, kids...)
 }
 
+// argResLoc is minecraft:resource_location, which takes a namespaced id (a
+// word refuses the ':'); the world completes it.
+func argResLoc(name string, exec bool, kids ...cmdNode) cmdNode {
+	n := argN(name, parserResLoc, nil, exec, kids...)
+	n.suggest = true
+	return n
+}
+
+// argFloatRange is brigadier:float with both bounds.
+func argFloatRange(name string, lo, hi float32, exec bool, kids ...cmdNode) cmdNode {
+	p := protocol.AppendF32([]byte{0x03}, lo)
+	return argN(name, parserFloat, protocol.AppendF32(p, hi), exec, kids...)
+}
+
 // lits makes one exec-leaf literal per name — an enumeration.
 func lits(names ...string) []cmdNode {
 	out := make([]cmdNode, 0, len(names))
@@ -176,21 +200,15 @@ func modelledCommands() []cmdNode {
 		lit("effect", false,
 			lit("give", false, argEntity("targets", 0, false, effectName)),
 			lit("clear", true, argEntity("targets", 0, true, argWord("effect", true)))),
-		// TimeCommand: set <day|noon|night|midnight|time>, add <time>,
-		// query <daytime|gametime|day>; the bare shorthand the dispatcher
-		// also takes stays.
-		lit("time", true, append(lits("day", "noon", "night", "midnight"),
-			argInt("value", 0, 24000000, true),
-			lit("set", false, append(lits("day", "noon", "night", "midnight"), argInt("time", 0, 2147483647, true))...),
-			lit("add", false, argInt("time", -2147483648, 2147483647, true)),
-			lit("query", false, lits("daytime", "gametime", "day")...))...),
+		timeTree(),
 		lit("weather", false,
 			lit("clear", true, argInt("duration", 0, 1000000, true)),
 			lit("rain", true, argInt("duration", 0, 1000000, true)),
 			lit("thunder", true, argInt("duration", 0, 1000000, true))),
 		lit("difficulty", true, lits("peaceful", "easy", "normal", "hard")...),
 		lit("gamerule", true, gameruleNodes()...),
-		lit("summon", false, argWord("entity", true, argVec3("pos", true))),
+		lit("summon", false, argResLoc("entity", true, argVec3("pos", true, argN("nbt", parserNBT, nil, true)))),
+		waypointTree(),
 		lit("setblock", false, argVec3("pos", false, argGreedy("block", true))),
 		lit("fill", false, argVec3("from", false, argVec3("to", false, argGreedy("block", true)))),
 		// Bar ids carry ':', which a word refuses, so the id and what follows
@@ -300,6 +318,45 @@ func modelledCommands() []cmdNode {
 		lit("teammsg", false, argGreedy("message", true)),
 		lit("tm", false, argGreedy("message", true)),
 	}
+}
+
+// timeTree is TimeCommand (26.3): the default clock's verbs, the same verbs
+// after of <clock>, and query gametime at the root only. A time is a number
+// with an optional d/s/t unit, which a word carries; a time marker, clock or
+// timeline is a namespaced id.
+func timeTree() cmdNode {
+	verbs := func(root bool) []cmdNode {
+		query := []cmdNode{lit("time", true), argResLoc("timeline", true, lit("repetition", true))}
+		if root {
+			query = append(query, lit("gametime", true))
+		}
+		return []cmdNode{
+			lit("set", false, append(lits("day", "noon", "night", "midnight"),
+				argWord("time", true), argResLoc("timemarker", true))...),
+			lit("add", false, argWord("time", true)),
+			lit("pause", true),
+			lit("resume", true),
+			lit("rate", false, argFloatRange("rate", timeRateMin, timeRateMax, true)),
+			lit("query", false, query...),
+		}
+	}
+	return lit("time", false, append(verbs(true), lit("of", false, argResLoc("clock", false, verbs(false)...)))...)
+}
+
+// waypointTree is WaypointCommand: list, and modify <waypoint> color
+// <team colour> | color hex <rrggbb> | color reset | style reset | style set
+// <style>.
+func waypointTree() cmdNode {
+	return lit("waypoint", false,
+		lit("list", true),
+		lit("modify", false, argEntity("waypoint", entitySingle, false,
+			lit("color", false,
+				argN("color", parserTeamColor, nil, true),
+				lit("hex", false, argN("color", parserHexColor, nil, true)),
+				lit("reset", true)),
+			lit("style", false,
+				lit("reset", true),
+				lit("set", false, argResLoc("style", true))))))
 }
 
 // computeTree is ComputeCommand: a context source (default, block <pos>,

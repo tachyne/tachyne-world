@@ -276,8 +276,8 @@ func (h *hub) showMobTo(t *tracked, m *mob) {
 	if m.celebrating {
 		t.p.trySendEv(metaEv(boolMeta(m.eid, metaIndexRaiderCelebrating, true)))
 	}
-	if m.sheared {
-		t.p.trySendEv(metaEv(sheepMeta(m, true)))
+	if m.etype == entitySheep && (m.sheared || m.color != 0) { // a dyed fleece, or none
+		t.p.trySendEv(metaEv(sheepMeta(m, m.sheared)))
 	}
 	if m.etype == entitySulfurCube {
 		// Its own fields at their 26.x indices (size 18, not the slime's
@@ -307,8 +307,17 @@ func (h *hub) showMobTo(t *tracked, m *mob) {
 	if len(m.effects) > 0 { // its effect swirls
 		t.p.trySendEv(metaEv(effectSwirlMeta(m.eid, m.effects)))
 	}
-	if m.aggressive { // arms already up when it comes into view
-		t.p.trySendEv(metaEv(mobFlagsMeta(m.eid, true)))
+	if f := m.mobFlags(); f != 0 { // arms already up, or no AI, when it comes into view
+		t.p.trySendEv(metaEv(mobFlagsByte(m.eid, f)))
+	}
+	if m.customName != "" { // its name tag, for a viewer who was not there when it was named
+		t.p.trySendEv(metaEv(nameMetaVis(m.eid, m.customName, !m.nameHidden)))
+	}
+	if m.silent {
+		t.p.trySendEv(metaEv(boolMeta(m.eid, metaIndexSilent, true)))
+	}
+	if m.etype == entityCreeper && m.charged {
+		t.p.trySendEv(metaEv(creeperPoweredMeta(m.eid, true)))
 	}
 	if m.harness != 0 {
 		t.p.trySendEv(ghastHarnessEquip(m.eid, m.harness))

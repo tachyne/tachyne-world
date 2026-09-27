@@ -176,16 +176,16 @@ func TestCommandTreeShape(t *testing.T) {
 }
 
 // Only parser ids that mean the same thing on every protocol tachyne serves
-// may appear: 1.21.6 inserted minecraft:style at 19 and shifted everything
-// above it, and nothing translates parser ids per version.
+// (26.2 and 26.3: 0-53) may appear, and nothing translates parser ids per
+// version.
 func TestCommandTreeUsesVersionStableParsers(t *testing.T) {
 	nodes, _ := decodeCommandTree(t, buildCommandTree())
 	for i, n := range nodes {
 		if n.flags&0x03 != 2 {
 			continue
 		}
-		if n.parser > 15 {
-			t.Errorf("node %d (%s) uses parser %d, which is not stable across 770-777",
+		if n.parser > maxStableParser {
+			t.Errorf("node %d (%s) uses parser %d, which is not stable across 776-777",
 				i, n.name, n.parser)
 		}
 	}
@@ -231,8 +231,23 @@ func TestCommandTreeCoversTheNewForms(t *testing.T) {
 		{"tp", "targets", "location", "facing", "entity", "facingEntity", "eyes"},
 		{"teleport", "targets", "destination"},
 		{"time", "set", "noon"},
+		{"time", "set", "timemarker"},
 		{"time", "add", "time"},
 		{"time", "query", "gametime"},
+		{"time", "query", "time"},
+		{"time", "query", "timeline", "repetition"},
+		{"time", "pause"},
+		{"time", "resume"},
+		{"time", "rate", "rate"},
+		{"time", "of", "clock", "set", "time"},
+		{"time", "of", "clock", "query", "timeline"},
+		{"summon", "entity", "pos", "nbt"},
+		{"waypoint", "list"},
+		{"waypoint", "modify", "waypoint", "color", "color"},
+		{"waypoint", "modify", "waypoint", "color", "hex", "color"},
+		{"waypoint", "modify", "waypoint", "color", "reset"},
+		{"waypoint", "modify", "waypoint", "style", "reset"},
+		{"waypoint", "modify", "waypoint", "style", "set", "style"},
 		{"clear", "targets", "item", "maxCount"},
 		{"tellraw", "targets", "message"},
 		{"stopsound", "targets", "record", "sound"},
