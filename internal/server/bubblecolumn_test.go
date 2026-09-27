@@ -69,6 +69,41 @@ func TestBubbleColumnFormsAndCollapses(t *testing.T) {
 	}
 }
 
+// TestBubbleColumnWaterFillsEmptiedCell: take the block under a column away
+// and the column falls back to water — which then runs down into the empty
+// cell (BubbleColumnBlock.updateShape schedules the water tick either way).
+// The engine dropped that tick once the cell stopped being a column, so a
+// sticky piston that pulled a lift's magma stopper back left a hole of air
+// under a column of still water for good.
+func TestBubbleColumnWaterFillsEmptiedCell(t *testing.T) {
+	w := world.New(1)
+	h := newTestHub(w)
+	players := map[int32]*tracked{}
+	w.ForceLoad(0, 0, 1)
+	q := worldgen.BlockBase("quartz_bricks")
+	for y := 178; y <= 186; y++ { // a sealed one-block shaft
+		for x := -1; x <= 1; x++ {
+			for z := -1; z <= 1; z++ {
+				w.SetBlock(x, y, z, q)
+			}
+		}
+	}
+	w.SetBlock(0, 180, 0, magmaBlockState)
+	for y := 181; y <= 184; y++ {
+		w.SetBlock(0, y, 0, worldgen.BubbleColumnDrag)
+	}
+	w.SetBlock(0, 185, 0, worldgen.Air)
+	w.SetBlock(0, 180, 0, worldgen.Air) // the magma pulled away
+	h.scheduleAround(blockPos{0, 180, 0}, 1)
+	stepTicks(h, players, 20)
+	if got := w.At(0, 181, 0); got != worldgen.WaterBase {
+		t.Fatalf("the cell over the emptied one is %s, want still source water", describeState(got))
+	}
+	if got := w.At(0, 180, 0); !worldgen.IsWater(got) || worldgen.IsFluidSource(got, worldgen.WaterBase) {
+		t.Errorf("the emptied cell is %s, want water falling into it", describeState(got))
+	}
+}
+
 // TestBubbleColumnBreathable: eyes in a column do not drown.
 func TestBubbleColumnBreathable(t *testing.T) {
 	h := newTestHub(world.New(1))

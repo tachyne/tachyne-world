@@ -149,11 +149,13 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		// Soul sand or magma with water above raises (or drops) its column.
 	case worldgen.IsBubbleColumn(state):
 		// The column keeps itself: it collapses to water without its source
-		// and climbs into source water above; then it spreads as the water
-		// source it is.
-		if h.updateBubbleColumn(players, dim, pos) {
-			h.updateFluid(players, dim, pos, h.worldFor(dim).Block(pos.x, pos.y, pos.z))
-		}
+		// and climbs into source water above. Column or plain water, the
+		// cell then runs as the water source it is: BubbleColumnBlock.
+		// updateShape schedules the water tick whatever becomes of the
+		// column, so the water a collapse leaves runs into the cell a piston
+		// or a pickaxe emptied under it.
+		h.updateBubbleColumn(players, dim, pos)
+		h.updateFluid(players, dim, pos, h.worldFor(dim).Block(pos.x, pos.y, pos.z))
 	case worldgen.IsFluid(state):
 		h.updateFluid(players, dim, pos, state)
 	case state == soulFire:

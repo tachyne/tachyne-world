@@ -43,6 +43,12 @@ the public history since the project was open-sourced on 2026-07-10.
   world is refused, all in vanilla's words.
 
 ### Fixed
+- **Water runs back under a bubble column.** When the block under a
+  bubble column is taken away (a sticky piston pulling a lift's magma
+  stopper back, or a pickaxe), the column falls back to still water and
+  that water now runs down into the emptied cell, as vanilla's does. It
+  used to stay put above a hole of air, so a lift's shaft never filled
+  again under it.
 - **A block a piston is sliding survives a restart.** The block in a
   moving piston is saved with the world and lands where it was going after
   the server comes back, as vanilla's does; it used to vanish, leaving air.
