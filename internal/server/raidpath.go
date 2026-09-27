@@ -31,7 +31,7 @@ func (h *hub) raidPathStep(players map[int32]*tracked, m *mob) bool {
 	if !isRaider(m) || m.hasTarget || m.mount != 0 || m.rider != 0 {
 		return false // a passenger is steered by its mount; a hunter hunts
 	}
-	r := h.raids[m.raidCenter]
+	r := h.raidOf(m)
 	if r == nil || r.lostLeft > 0 {
 		return false // the raid is over: the goal stops (canContinueToUse)
 	}

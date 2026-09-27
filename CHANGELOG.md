@@ -11,6 +11,14 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-27
+
+### Fixed
+- **Raids in the End.** A village built in the End can now be raided, as in
+  vanilla, where only the Nether forbids raids. Carrying Bad Omen into a
+  Nether village still turns it into a Raid Omen, but the fuse burns out
+  without a raid. Each raid keeps its dimension across a restart.
+
 ## 2026-09-26
 
 ### Added

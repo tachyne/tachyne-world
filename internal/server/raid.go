@@ -14,6 +14,10 @@ import (
 // the omen and triggers a raid: waves of illagers spawn around the village and
 // attack. Clear every wave to win. (Hero of the Village, the warning bell, and
 // save/restore persistence are follow-ups.)
+//
+// Each dimension keeps its own raids (ServerLevel.getRaids): a raid runs in
+// the dimension its omen was carried into, and gameplay/can_start_raid (off
+// only in the Nether) decides whether one may start there at all.
 
 const (
 	raidSpawnRadius     = 24   // raiders spawn within this of the village centre
@@ -64,6 +68,7 @@ func isCaptain(m *mob) bool {
 
 type raid struct {
 	center      blockPos
+	dim         int // the dimension the raid runs in (each level has its own Raids)
 	uuid        [16]byte
 	omenLevel   int            // the Raid Omen level that started it (Raid.raidOmenLevel, 1-5)
 	bonusDone   bool           // the omen-level bonus wave has spawned
@@ -93,14 +98,22 @@ const raidDefeatSecs = 600 / 20
 // bar filling as it runs down.
 const raidCooldownSecs = 300 / 20
 
-// isVillage is ServerLevel.isVillage: a village point of interest (a bed,
-// a bell, a workstation) in the centre's section or one next to it.
-func (h *hub) isVillage(center blockPos) bool { return h.closeToVillage(center, 1) }
+// isVillage is ServerLevel.isVillage in the overworld.
+func (h *hub) isVillage(center blockPos) bool { return h.isVillageIn(dimOverworld, center) }
 
-// closeToVillage is ServerLevel.isCloseToVillage: a village point of
-// interest within n sections of the position's.
+// isVillageIn is ServerLevel.isVillage: a village point of interest (a bed,
+// a bell, a workstation) in the centre's section or one next to it.
+func (h *hub) isVillageIn(dim int, center blockPos) bool { return h.closeToVillageIn(dim, center, 1) }
+
+// closeToVillage is ServerLevel.isCloseToVillage in the overworld.
 func (h *hub) closeToVillage(pos blockPos, n int) bool {
-	w := h.poiWorld(dimOverworld)
+	return h.closeToVillageIn(dimOverworld, pos, n)
+}
+
+// closeToVillageIn is ServerLevel.isCloseToVillage: a village point of
+// interest within n sections of the position's.
+func (h *hub) closeToVillageIn(dim int, pos blockPos, n int) bool {
+	w := h.poiWorld(dim)
 	if w == nil {
 		return false
 	}
@@ -113,14 +126,14 @@ func (h *hub) closeToVillage(pos blockPos, n int) bool {
 // nearbyVillageSection is moveRaidCenterToNearbyVillageSection's search: of
 // the sections in the 5×5×5 cube around the centre's, the nearest village
 // one, by its centre.
-func (h *hub) nearbyVillageSection(center blockPos) (blockPos, bool) {
+func (h *hub) nearbyVillageSection(dim int, center blockPos) (blockPos, bool) {
 	cx, cy, cz := center.x>>4, center.y>>4, center.z>>4
 	best, bestD, found := blockPos{}, 0, false
 	for sx := cx - 2; sx <= cx+2; sx++ {
 		for sy := cy - 2; sy <= cy+2; sy++ {
 			for sz := cz - 2; sz <= cz+2; sz++ {
 				c := blockPos{sx*16 + 8, sy*16 + 8, sz*16 + 8}
-				if !h.isVillage(c) {
+				if !h.isVillageIn(dim, c) {
 					continue
 				}
 				dx, dy, dz := c.x-center.x, c.y-center.y, c.z-center.z
@@ -154,24 +167,41 @@ func raidWaveCount(diff int) int {
 	}
 }
 
-// startRaid begins a raid at a village centre (no-op if one is already active).
+// startRaid begins an overworld raid at a village centre (no-op if one is
+// already active).
 func (h *hub) startRaid(players map[int32]*tracked, center blockPos) {
-	h.startRaidLevel(players, center, 1)
+	h.startRaidLevel(players, dimOverworld, center, 1)
+}
+
+// raidOf is the raid a raider belongs to, in its own dimension.
+func (h *hub) raidOf(m *mob) *raid {
+	if m.raidCenter == (blockPos{}) {
+		return nil
+	}
+	if r := h.raids[m.raidCenter]; r != nil && r.dim == m.dim {
+		return r
+	}
+	return nil
 }
 
 // startRaidLevel starts a raid at a Raid Omen level: above one it brings a
-// bonus wave after the last, and a stronger Hero of the Village.
-func (h *hub) startRaidLevel(players map[int32]*tracked, center blockPos, omenLevel int) {
-	if h.raids[center] != nil {
+// bonus wave after the last, and a stronger Hero of the Village. It is
+// Raids.createOrExtendRaid's gate: the raids rule, and a dimension whose
+// can_start_raid is on.
+func (h *hub) startRaidLevel(players map[int32]*tracked, dim int, center blockPos, omenLevel int) {
+	if h.raids[center] != nil || !h.rules.Raids {
+		return
+	}
+	if dt := dimType(dim); dt == nil || !dt.CanStartRaid {
 		return
 	}
 	omenLevel = max(1, min(raidOmenMax, omenLevel))
 	for _, t := range players { // Raid.absorbRaidOmen: everyone the raid wakes for is a trigger
-		if t.dim == dimOverworld && t.hasEffect(effRaidOmen) > 0 {
+		if t.dim == dim && t.hasEffect(effRaidOmen) > 0 {
 			h.incCustom(t, "raid_trigger", 1)
 		}
 	}
-	r := &raid{center: center, numGroups: raidWaveCount(h.rules.Difficulty), omenLevel: omenLevel,
+	r := &raid{center: center, dim: dim, numGroups: raidWaveCount(h.rules.Difficulty), omenLevel: omenLevel,
 		alive: map[int32]bool{}, shown: map[int32]bool{}}
 	r.uuid = raidUUID(center)
 	h.raids[center] = r
@@ -194,6 +224,10 @@ func (h *hub) spawnWave(players map[int32]*tracked, r *raid) {
 		r.bonusDone = true
 	}
 	leaderSet := false
+	w := h.worldFor(r.dim)
+	if w == nil {
+		return
+	}
 	for _, etype := range raiderOrder {
 		counts := raiderWaves[etype]
 		ravagerN := 0 // successful ravagers this wave (first one gets the evoker rider)
@@ -207,11 +241,11 @@ func (h *hub) spawnWave(players map[int32]*tracked, r *raid) {
 			d := 8 + h.rng.Float64()*raidSpawnRadius
 			x := r.center.x + int(math.Cos(ang)*d)
 			z := r.center.z + int(math.Sin(ang)*d)
-			if !h.world.Spawnable(x, z) {
+			if !w.Spawnable(x, z) {
 				continue
 			}
-			m := h.spawnHostileYIn(players, etype, dimOverworld,
-				float64(x)+0.5, float64(h.world.SurfaceFeet(x, z)), float64(z)+0.5)
+			m := h.spawnHostileYIn(players, etype, r.dim,
+				float64(x)+0.5, float64(w.SurfaceFeet(x, z)), float64(z)+0.5)
 			if m == nil {
 				continue
 			}
@@ -298,8 +332,8 @@ func (h *hub) updateRaids(players map[int32]*tracked) {
 		// Raid.tick: a raid whose centre is no longer a village first moves to
 		// the nearest village section around it (the villagers' beds broken,
 		// the village still standing beside them)…
-		if !h.isVillage(center) {
-			if nc, ok := h.nearbyVillageSection(center); ok {
+		if !h.isVillageIn(r.dim, center) {
+			if nc, ok := h.nearbyVillageSection(r.dim, center); ok {
 				delete(h.raids, center)
 				r.center, center = nc, nc
 				h.raids[nc] = r
@@ -307,7 +341,7 @@ func (h *hub) updateRaids(players map[int32]*tracked) {
 		}
 		// …and is lost once a wave has come (stopped quietly before), and
 		// every raid ends at 48000 ticks.
-		if !h.isVillage(center) {
+		if !h.isVillageIn(r.dim, center) {
 			if r.wave > 0 {
 				r.lostLeft = raidDefeatSecs
 				h.retitleRaid(players, r, "Raid - Defeat", aliveN)
@@ -328,7 +362,7 @@ func (h *hub) updateRaids(players map[int32]*tracked) {
 		}
 		h.retitleRaid(players, r, title, aliveN)
 		h.showRaidBar(players, r, h.raidProgress(r, aliveN))
-		if !h.anyPlayerNear(players, center, raidBarRange) {
+		if !h.anyPlayerNear(players, r.dim, center, raidBarRange) {
 			if r.idleTicks++; r.idleTicks > raidNoPlayerTimeout {
 				h.endRaid(players, r)
 				delete(h.raids, center)
@@ -347,7 +381,7 @@ func (h *hub) updateRaids(players map[int32]*tracked) {
 				// amplifier, which discounts villager trades via
 				// updateSpecialPrices and moves the villagers to give gifts.
 				for _, t := range players {
-					if t.dim == 0 && dist3(t.x, t.y, t.z, float64(center.x), float64(center.y), float64(center.z)) <= raidBarRange {
+					if t.dim == r.dim && dist3(t.x, t.y, t.z, float64(center.x), float64(center.y), float64(center.z)) <= raidBarRange {
 						h.applyEffect(players, t, effHeroOfVillage, r.omenLevel-1, 2400)
 						h.incCustom(t, "raid_win", 1)
 					}
@@ -377,7 +411,7 @@ func (h *hub) showRaidBar(players map[int32]*tracked, r *raid, frac float32) {
 		title = "Raid"
 	}
 	for _, t := range players {
-		near := t.dim == 0 && dist3(t.x, t.y, t.z, float64(r.center.x), float64(r.center.y), float64(r.center.z)) <= raidBarRange
+		near := t.dim == r.dim && dist3(t.x, t.y, t.z, float64(r.center.x), float64(r.center.y), float64(r.center.z)) <= raidBarRange
 		if near {
 			if !r.shown[t.p.eid] {
 				r.shown[t.p.eid] = true
@@ -428,10 +462,10 @@ func (h *hub) broadcastChat(players map[int32]*tracked, text string) {
 	}
 }
 
-// anyPlayerNear reports whether a live overworld player is within r of a point.
-func (h *hub) anyPlayerNear(players map[int32]*tracked, pos blockPos, r float64) bool {
+// anyPlayerNear reports whether a live player in dim is within r of a point.
+func (h *hub) anyPlayerNear(players map[int32]*tracked, dim int, pos blockPos, r float64) bool {
 	for _, t := range players {
-		if t.dim == 0 && !t.dead &&
+		if t.dim == dim && !t.dead &&
 			dist3(t.x, t.y, t.z, float64(pos.x), float64(pos.y), float64(pos.z)) <= r {
 			return true
 		}
@@ -446,15 +480,18 @@ func (h *hub) anyPlayerNear(players map[int32]*tracked, pos blockPos, r float64)
 // get ready or get out.
 func (h *hub) checkRaidTrigger(players map[int32]*tracked, t *tracked) {
 	lvl := t.hasEffect(effBadOmen)
-	if lvl == 0 || h.rules.Difficulty == diffPeaceful || !h.rules.Raids || t.gamemode == gmSpectator {
+	if lvl == 0 || h.rules.Difficulty == diffPeaceful || t.gamemode == gmSpectator {
 		return
 	}
 	// BadOmenMobEffect.applyEffectTick: the player's own block must be a
 	// village (ServerLevel.isVillage: a village point of interest within a
 	// section — a built village counts, a ruin does not), and the Raid Omen
-	// remembers where they stood. Raids here are overworld-only.
+	// remembers where they stood. The omen turns in any dimension and with
+	// raids off: whether a raid may start there is the fuse's question
+	// (Raids.createOrExtendRaid), so a Nether village eats the omen for
+	// nothing, as vanilla's does.
 	center := blockPos{floorInt(t.x), floorInt(t.y), floorInt(t.z)}
-	if t.dim != dimOverworld || !h.isVillage(center) {
+	if !h.isVillageIn(t.dim, center) {
 		return
 	}
 	h.removeEffect(t, effBadOmen)
@@ -469,16 +506,18 @@ func (h *hub) raidOmenExpired(players map[int32]*tracked, t *tracked) {
 		return
 	}
 	t.raidOmenSet = false
-	h.startRaidLevel(players, t.raidOmenPos, max(1, t.hasEffect(effRaidOmen))) // hasEffect = amplifier+1 = the omen level
+	// RaidOmenMobEffect.applyEffectTick asks the level the player is in now:
+	// the remembered block, in whichever dimension the fuse burns out.
+	h.startRaidLevel(players, t.dim, t.raidOmenPos, max(1, t.hasEffect(effRaidOmen))) // hasEffect = amplifier+1 = the omen level
 }
 
 // raidNear reports whether an active raid's village is within vanilla's
 // raid reach (Raids.getNearbyRaid: 96 blocks) of a point.
 func (h *hub) raidNear(dim int, x, z float64) bool {
-	if dim != dimOverworld {
-		return false
-	}
-	for c := range h.raids {
+	for c, r := range h.raids {
+		if r.dim != dim {
+			continue
+		}
 		dx, dz := float64(c.x)-x, float64(c.z)-z
 		if dx*dx+dz*dz <= 96*96 {
 			return true

@@ -215,6 +215,7 @@ var notIDs = map[string]string{
 	"server.mobFile.Mansions[][]":                       whyPos,
 	"server.mobFile.OceanRuins[][]":                     whyPos,
 	"server.mobFile.Raids[].Center[]":                   whyPos,
+	"server.mobFile.Raids[].Dim":                        whyPos,
 	"server.mobFile.Raids[].NumGroups":                  whyCount,
 	"server.mobFile.Raids[].Omen":                       whyCount,
 	"server.mobFile.Raids[].Spawned":                    whyCount,

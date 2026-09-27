@@ -97,7 +97,7 @@ func (h *hub) raiderInActiveRaid(m *mob) bool {
 	if !isRaider(m) {
 		return false
 	}
-	r := h.raids[m.raidCenter]
+	r := h.raidOf(m)
 	return r != nil && r.lostLeft == 0 && r.wonLeft == 0
 }
 

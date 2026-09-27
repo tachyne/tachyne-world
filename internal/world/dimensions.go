@@ -30,6 +30,7 @@ type DimensionType struct {
 	WaterEvaporates    bool // ultrawarm: placed water, melted ice and wet sponges dry away
 	FastLava           bool // lava flows and pushes at the Nether's pace
 	PiglinsZombify     bool // piglins and hoglins turn to zombified kin over time
+	CanStartRaid       bool // gameplay/can_start_raid: a Raid Omen may start a raid here
 }
 
 // HasWeather is Level.canHaveWeather: rain, snow and lightning happen only
@@ -52,7 +53,7 @@ var Dimensions = []DimensionType{
 		ID: DimOverworld, Key: "minecraft:overworld", Name: "overworld",
 		File: "world.gob", AnvilDir: "", Open: NewWithStore,
 		CoordinateScale: 1, MinY: worldgen.MinY, HasSkyLight: true,
-		BedWorks: true, PiglinsZombify: true,
+		BedWorks: true, PiglinsZombify: true, CanStartRaid: true,
 	},
 	{
 		ID: DimNether, Key: "minecraft:the_nether", Name: "nether",
@@ -63,7 +64,7 @@ var Dimensions = []DimensionType{
 	{
 		ID: DimEnd, Key: "minecraft:the_end", Name: "end",
 		File: "end.gob", AnvilDir: "DIM1", Open: NewEnd,
-		CoordinateScale: 1, MinY: 0, PiglinsZombify: true,
+		CoordinateScale: 1, MinY: 0, PiglinsZombify: true, CanStartRaid: true,
 	},
 }
 
