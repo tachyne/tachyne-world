@@ -120,6 +120,10 @@ type mob struct {
 	customName      string       // name-tagged: shown above the mob, and it never despawns
 	fromBucket      bool         // released from a mob bucket: persistent (Bucketable.setFromBucket)
 	persistent      bool         // Mob.persistenceRequired: picked up gear (never despawns)
+	nameHidden      bool         // the name shows only when looked at (CustomNameVisible false; /summon's default)
+	noAI            bool         // Mob.setNoAi: no goals and no movement of its own (/summon NoAI)
+	silent          bool         // Entity.setSilent: makes no sound (/summon Silent)
+	invulnerable    bool         // Entity.invulnerable: only #bypasses_invulnerability hurts it (/summon Invulnerable)
 	pregnant        bool         // frog: IS_PREGNANT — carrying a clutch until it finds water to lay on
 	aggressive      bool         // Mob.setAggressive: the zombie family's raised arms while it chases
 	drifting        bool         // MoveThroughVillageGoal: walking to a spot in the village, not chasing
@@ -821,6 +825,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		if m.spawnInvuln > 0 {
 			continue // wither charging its spawn: hold still until updateWithers releases it
+		}
+		if m.noAI {
+			m.vx, m.vz = 0, 0
+			continue // Mob.isNoAi: no goals run and nothing moves it (vanilla's NoAI mob hangs where it is)
 		}
 		if m.frozen {
 			m.vx, m.vz = 0, 0
@@ -1593,6 +1601,9 @@ func (m *mob) hurtBreach(dmg, breachFrac float64) { m.hurtOf(dmg, breachFrac, dt
 
 // hurtOf is the full form: breach fraction and damage type.
 func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
+	if m.invulnerable && !dt.has(tagBypassesInvulnerability) {
+		return // Entity.isInvulnerableToBase: the Invulnerable tag
+	}
 	if m.spawnInvuln > 0 {
 		return // wither spawn-charge: immune while it powers up
 	}

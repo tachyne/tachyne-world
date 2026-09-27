@@ -11,11 +11,18 @@ import (
 const (
 	metaIndexCustomName        = 2 // Optional<Component>
 	metaIndexCustomNameVisible = 3 // boolean
+	metaIndexSilent            = 4 // boolean: Entity.DATA_SILENT
 	metaTypeOptionalComponent  = 6
 )
 
 // nameMeta builds the two metadata fields that show a name over a mob.
 func nameMeta(eid int32, name string) []byte {
+	return nameMetaVis(eid, name, name != "")
+}
+
+// nameMetaVis is nameMeta with CustomNameVisible given: false leaves the
+// name to show only while the entity is looked at.
+func nameMetaVis(eid int32, name string, visible bool) []byte {
 	b := protocol.AppendVarInt(nil, eid)
 	b = protocol.AppendU8(b, metaIndexCustomName)
 	b = protocol.AppendVarInt(b, metaTypeOptionalComponent)
@@ -27,7 +34,7 @@ func nameMeta(eid int32, name string) []byte {
 	}
 	b = protocol.AppendU8(b, metaIndexCustomNameVisible)
 	b = protocol.AppendVarInt(b, metaTypeBool)
-	b = protocol.AppendBool(b, name != "")
+	b = protocol.AppendBool(b, visible)
 	return protocol.AppendU8(b, itemMetaEnd)
 }
 
@@ -39,7 +46,7 @@ func (h *hub) tryNameTag(players map[int32]*tracked, t *tracked, m *mob) bool {
 	if held.item != int32(itemByName["name_tag"]) || held.name == "" {
 		return false
 	}
-	m.customName = held.name
+	m.customName, m.nameHidden = held.name, false
 	m.persistent = true // NameTagItem: setPersistenceRequired
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(nameMeta(m.eid, m.customName)))
 	if isSurvival(t.gamemode) {

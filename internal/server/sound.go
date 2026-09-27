@@ -138,6 +138,9 @@ func mobSounds(etype int) (hurt, death, ambient string) {
 // depends on its state (getAmbientSound/getHurtSound overrides that pick by
 // water, age, held item, flight or the creaking's sway).
 func (h *hub) mobSoundsFor(m *mob) (hurt, death, ambient string) {
+	if m.silent {
+		return "", "", "" // Entity.isSilent: playSound makes nothing
+	}
 	hurt, death, ambient = mobSounds(m.etype)
 	switch m.etype {
 	case entityDrowned: // Drowned: its own voice under water

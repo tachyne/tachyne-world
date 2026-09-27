@@ -11,6 +11,43 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-27
+
+### Added
+- **/time speaks 26.3.** The world has clocks now, as 26.3 does: the
+  overworld's and the End's, each with its own rate and a pause. `/time set`
+  takes a number of ticks or a time marker (day, noon, night, midnight —
+  moving forward to the next one), `add`, `pause`, `resume` and `rate`
+  change the clock of the dimension you are in (the Nether has none), and
+  `of <clock>` names another. `/time query time|gametime` and
+  `/time query <timeline> [repetition]` read the clock and the day, moon and
+  villager-schedule timelines. The feedback and refusals are vanilla's, the
+  1.21 `query daytime|day` forms are gone, and a clock's rate and pause are
+  saved with the world.
+- **/waypoint.** `/waypoint list` names the players transmitting in your
+  dimension; `/waypoint modify <player> color <colour>|hex <rrggbb>|reset`
+  and `style set <style>|reset` restyle their locator-bar marker for
+  everyone at once, and the player keeps it across relogs.
+- **/summon covers what the engine models.** Iron golems and villagers,
+  falling blocks, evoker fangs, thrown potions, bottles o' enchanting and
+  ender pearls join the mobs, boats, carts, TNT, arrows and fireballs. A
+  summoned entity reads the common NBT: NoAI (it stands where it is put),
+  Silent, Invulnerable (only a creative player's blow or /kill gets
+  through), CustomName with CustomNameVisible, PersistenceRequired, Tags,
+  Health, Rotation, Motion, a TNT `fuse`, an item's `Item`, a falling
+  block's `BlockState`, and the species' own: Age, IsBaby, a sheep's Color,
+  a charged creeper, and the variant of cats, wolves, frogs, pigs, cows,
+  chickens, axolotls, horses, llamas, parrots, rabbits, foxes and
+  mooshrooms. A key the engine does not model is refused by name instead of
+  ignored, monsters are refused on Peaceful, and a position outside the
+  world is refused, all in vanilla's words.
+
+### Fixed
+- **A named mob keeps its name for late arrivals.** A mob's name tag, a
+  dyed sheep's fleece and a charged creeper's aura were sent only to the
+  players watching when they changed; anyone who came into range later saw
+  an unnamed mob, a white sheep and a plain creeper.
+
 ## 2026-09-26
 
 ### Added

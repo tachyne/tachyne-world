@@ -128,14 +128,20 @@ func (h *hub) placeFang(players map[int32]*tracked, m *mob, x, z, minY, maxY flo
 		if worldgen.Collides(w.At(bx, y, bz)) {
 			return // the standing space itself is blocked
 		}
-		f := &evokerFang{eid: h.allocEID(), dim: m.dim,
-			x: x, y: float64(y), z: z, delay: delay, life: delay + fangLife, owner: m.eid}
-		var uuid [16]byte
-		binary.BigEndian.PutUint32(uuid[12:], uint32(f.eid))
-		h.fangs = append(h.fangs, f)
-		h.toTracking(players, f.eid, f.dim, f.x, f.z, entAdd(f.eid, entityEvokerFangs, uuid, f.x, f.y, f.z, float32(0), 0))
+		h.addFang(players, m.dim, x, float64(y), z, delay, m.eid)
 		return
 	}
+}
+
+// addFang stands one fang (EvokerFangs) where it is put: it bites once its
+// warmup runs out, then sinks. owner is the evoker that conjured it, 0 for
+// none (a summoned fang bites whatever stands on it).
+func (h *hub) addFang(players map[int32]*tracked, dim int, x, y, z float64, delay int, owner int32) {
+	f := &evokerFang{eid: h.allocEID(), dim: dim, x: x, y: y, z: z, delay: delay, life: delay + fangLife, owner: owner}
+	var uuid [16]byte
+	binary.BigEndian.PutUint32(uuid[12:], uint32(f.eid))
+	h.fangs = append(h.fangs, f)
+	h.toTracking(players, f.eid, f.dim, f.x, f.z, entAdd(f.eid, entityEvokerFangs, uuid, f.x, f.y, f.z, float32(0), 0))
 }
 
 // updateFangs ticks every standing fang: it bites once, a moment after its

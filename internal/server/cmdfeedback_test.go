@@ -164,9 +164,9 @@ func TestCommandFeedbackRules(t *testing.T) {
 		t.Error("log_admin_commands on: the server log should record the command")
 	}
 	// A query is sendSuccess(false): its caller only.
-	s.handleCommand(alice, "time query daytime")
+	s.handleCommand(alice, "time query time")
 	settle(t, h, logs, "M2")
-	if a := linesBetween(logs["alice"], "M1", "M2"); len(a) != 1 || !strings.HasPrefix(a[0], "The time is ") {
+	if a := linesBetween(logs["alice"], "M1", "M2"); len(a) != 1 || !strings.HasPrefix(a[0], "Clock minecraft:overworld is at ") {
 		t.Fatalf("a query answers its caller: %q", a)
 	}
 	if b := linesBetween(logs["bob"], "M1", "M2"); len(b) != 0 {

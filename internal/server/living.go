@@ -20,6 +20,9 @@ type living struct {
 	// tag= predicate reads. Vanilla keeps them on every entity; here only the
 	// living ones (players and mobs) can be selected, so they live here.
 	tags map[string]bool
+	// wpIcon is LivingEntity.locatorBarIcon: how its waypoint draws on a
+	// locator bar (/waypoint modify).
+	wpIcon waypointIcon
 }
 
 // hasEffect returns the 1-based level of an active effect (0 = none).
