@@ -1625,7 +1625,9 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 		// ticks later everything breakable around it comes down.
 		m.witherSmash = 20
 	}
-	if m.etype == entitySilverfish { // Silverfish.hurtServer: notifyHurt
+	if m.etype == entitySilverfish && (attributedDamage(dt) || dt.has(tagAlwaysTriggersSilverfish)) {
+		// Silverfish.hurtServer: notifyHurt for a blow with a source entity
+		// or of #always_triggers_silverfish (magic) — not for a fall or a burn.
 		m.silverHurt = true
 	}
 	if m.etype == entitySquid || m.etype == entityGlowSquid { // Squid.hurtServer: spawnInk + the flee goal
@@ -1658,7 +1660,8 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 	// before calling super (the armadillo's roll-up), and before the wolf's
 	// armour, which vanilla soaks inside actuallyHurt. The counter is wound
 	// down by updateMobs, so a test that hits without ticking must clear it.
-	if m.invulnTicks > 10 {
+	// #bypasses_cooldown skips it (the tag is empty in vanilla's data).
+	if m.invulnTicks > 10 && !dt.has(tagBypassesCooldown) {
 		if dmg <= m.lastHurt {
 			return
 		}

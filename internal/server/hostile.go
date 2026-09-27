@@ -631,7 +631,7 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	extraKB := m.mobAttrs().Value(attr.AttackKnockback) + float64(m.heldStack().enchLvl(enchKnockback))
 	h.knockbackScaled(t, m.x, m.z, 1+1.25*extraKB)
 	if landed {
-		t.lastHurtByMob = m.eid // the owner's wolves take note
+		h.hurtByMob(t, m, mobMeleeDamage(m.etype)) // the owner's wolves take note
 		if lvl := m.heldStack().enchLvl(enchFireAspect); lvl > 0 {
 			h.setBurning(players, t, 4*lvl) // Fire Aspect: 4 s per level
 		}
@@ -946,4 +946,15 @@ func mobMeleeDamage(etype int) dmgType {
 		return dtSting
 	}
 	return dtMobAttack
+}
+
+// hurtByMob is LivingEntity.resolveMobResponsibleForDamage for a player: the
+// mob behind a blow that landed becomes the one they were last hurt by —
+// what a tamed wolf's OwnerHurtByTargetGoal answers — unless the blow's type
+// is #no_anger (a goat's ram).
+func (h *hub) hurtByMob(t *tracked, m *mob, dt dmgType) {
+	if dt.has(tagNoAnger) {
+		return
+	}
+	t.lastHurtByMob = m.eid
 }

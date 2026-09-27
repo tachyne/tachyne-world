@@ -1267,6 +1267,8 @@ func (h *hub) cubeTouch(players map[int32]*tracked, m *mob) {
 // cubeBurn is the hot archetype's contact damage on a player: 1 of
 // sulfur_cube_hot, from the cube (a player is always told who burnt them).
 func (h *hub) cubeBurn(players map[int32]*tracked, m *mob, t *tracked) {
-	h.hurtFrom(players, t, sulfurHotDamage, dtSulfurCubeHot,
-		deathCause{by: mobDisplayName(m.etype)}, fromMob(m.x, m.z))
+	if h.hurtFrom(players, t, sulfurHotDamage, dtSulfurCubeHot,
+		deathCause{by: mobDisplayName(m.etype)}, fromMob(m.x, m.z)) {
+		h.hurtByMob(t, m, dtSulfurCubeHot) // remembered, though no wolf answers it (#no_wolf_retaliation)
+	}
 }

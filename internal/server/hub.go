@@ -352,6 +352,8 @@ type tracked struct {
 	shoulders     [2]*savedMob // parrots riding the left and right shoulder (shoulder.go)
 	shoulderAt    uint64       // the tick the last one landed (removeEntitiesOnShoulder waits 20)
 	lastHurtByMob int32        // the mob whose bite last landed on them (a tamed wolf's OwnerHurtByTargetGoal)
+	lastHurtDT    dmgType      // the type of the last damage that landed (LivingEntity.lastDamageSource)
+	lastHurtSet   bool         // lastHurtDT is set
 	lastHitMob    int32        // the mob they last struck (OwnerHurtTargetGoal)
 	sleepPos      blockPos     // the bed being slept in (drifting away wakes)
 	sleepingAt    uint64       // tick they lay down (night turns after sleepSkipTicks)

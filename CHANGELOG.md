@@ -29,6 +29,12 @@ the public history since the project was open-sourced on 2026-07-10.
   shovel used in creative counts too, and cauldron statistics follow
   vanilla: pouring a water bottle in is "Cauldrons used", and washing an
   item counts only as the washing.
+- **Damage types decide more reactions.** Silverfish call their friends out
+  of the stone only when something hurts them (or magic does), not when they
+  fall or burn; tamed wolves no longer go after a hot sulfur cube that burnt
+  their owner, while a goat's ram still names nobody for them to answer; and
+  the vanilla damage-type tags behind these (and a guardian's thorns and the
+  Over-Overkill advancement) are now read wherever vanilla reads them.
 
 ## 2026-09-26
 
