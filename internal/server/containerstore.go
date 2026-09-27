@@ -67,6 +67,7 @@ type containerFile struct {
 	Items       []savedItem               `json:"items,omitempty"`    // dropped item entities
 	Vehicles    []savedVehicle            `json:"vehicles,omitempty"` // boats and minecarts (2026-09-06)
 	Falling     []savedFalling            `json:"falling,omitempty"`  // falling blocks in the air (2026-09-25)
+	Moving      []savedMoving             `json:"moving,omitempty"`   // blocks mid-slide in moving_piston cells (2026-09-27)
 	Paintings   []savedPainting           `json:"paintings,omitempty"`
 	Frames      []savedFrame              `json:"frames,omitempty"`
 	Jukeboxes   map[string]stackRow       `json:"jukeboxes,omitempty"`
@@ -501,6 +502,34 @@ func (s *containerStore) loadFalling() []savedFalling {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.m.Falling
+}
+
+// savedMoving is one moving_piston cell, as PistonMovingBlockEntity saves
+// itself: the block it carries, the piston's facing (Direction's legacy id),
+// which way it moves, whether it is the piston's own head or base, and the
+// ticks left before it lands.
+type savedMoving struct {
+	Dim       int    `json:"dim,omitempty"`
+	X         int    `json:"x"`
+	Y         int    `json:"y"`
+	Z         int    `json:"z"`
+	State     uint32 `json:"state" mig:"state"`
+	Facing    int32  `json:"facing"`
+	Extending bool   `json:"extending,omitempty"`
+	Source    bool   `json:"source,omitempty"`
+	Left      int    `json:"left,omitempty"`
+}
+
+func (s *containerStore) recordMoving(m []savedMoving) {
+	s.mu.Lock()
+	s.m.Moving = m
+	s.mu.Unlock()
+}
+
+func (s *containerStore) loadMoving() []savedMoving {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.m.Moving
 }
 
 func (s *containerStore) loadItems() []savedItem {

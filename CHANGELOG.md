@@ -43,6 +43,12 @@ the public history since the project was open-sourced on 2026-07-10.
   world is refused, all in vanilla's words.
 
 ### Fixed
+- **A block a piston is sliding survives a restart.** The block in a
+  moving piston is saved with the world and lands where it was going after
+  the server comes back, as vanilla's does; it used to vanish, leaving air.
+  A moved block also lands in the shape its new neighbours give it (a fence
+  joins the wall beside it, a stair turns its corner) and arrives dry,
+  without the water it held.
 - **Droppers, hoppers and comparators ask the block that is there.** A
   dropper facing a cell where a container used to stand now throws its item
   out, as vanilla's does, instead of pushing it into storage the removed

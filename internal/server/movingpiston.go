@@ -2,6 +2,7 @@ package server
 
 import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -125,9 +126,22 @@ func landedStateOf(state uint32) uint32 {
 	return state
 }
 
-// finishMoving is the block entity's last tick: the carried block replaces
-// the moving cell (air when the record is gone — a cell left over from
-// before a restart) and the neighbours hear about it at once.
+// landingShape is Block.updateFromNeighbourShapes on the carried block, which
+// both of PistonMovingBlockEntity's landings run: it arrives with the shape
+// its new neighbours give it (a stair beside another turns a corner, a wall
+// or a fence joins what is there), not the one it had where it left.
+func landingShape(w *world.World, pos blockPos, moved uint32) uint32 {
+	if s := updateFromNeighbourShapes(w, pos, moved); s != worldgen.Air {
+		return s
+	}
+	return moved
+}
+
+// finishMoving is the block entity's last tick (PistonMovingBlockEntity.tick):
+// the carried block replaces the moving cell, in the shape its neighbours
+// give it and without the water it carried (its waterlogging is dropped),
+// and the neighbours hear about it at once. A cell with no record — one a
+// save caught before records were kept — clears to air.
 func (h *hub) finishMoving(players map[int32]*tracked, pos blockPos) {
 	key := simPos{dim: h.rsDim, blockPos: pos}
 	mb, ok := h.movingBlocks[key]
@@ -137,7 +151,10 @@ func (h *hub) finishMoving(players map[int32]*tracked, pos blockPos) {
 	delete(h.movingBlocks, key)
 	final := uint32(worldgen.Air)
 	if ok {
-		final = landedStateOf(mb.moved)
+		final = landedStateOf(landingShape(h.rsWorld(), pos, mb.moved))
+		if worldgen.IsWaterlogged(final) && !worldgen.IsFluid(final) {
+			final = setBoolProp(final, "waterlogged", false) // the water does not travel
+		}
 	}
 	h.rsSet(players, pos, final)
 	h.rodOnPlace(pos, final)
@@ -161,8 +178,9 @@ func (h *hub) finalTickMoving(players map[int32]*tracked, pos blockPos) bool {
 	if mb.source {
 		h.rsSet(players, pos, worldgen.Air)
 	} else {
-		h.rsSet(players, pos, landedStateOf(mb.moved))
-		h.rodOnPlace(pos, landedStateOf(mb.moved))
+		final := landedStateOf(landingShape(h.rsWorld(), pos, mb.moved))
+		h.rsSet(players, pos, final)
+		h.rodOnPlace(pos, final)
 	}
 	h.notifyAround(players, h.rsDim, pos)
 	return true
@@ -207,4 +225,43 @@ func (h *hub) onUseMovingPiston(players map[int32]*tracked, e evUseMovingPiston)
 		return
 	}
 	h.inDim(t.dim, func() { h.finishMoving(players, pos) })
+}
+
+// snapshotMoving saves the moving cells with the rest of the world's block
+// entities (PistonMovingBlockEntity.saveAdditional), so a block caught
+// mid-slide by a save still lands after a restart instead of being lost.
+func (h *hub) snapshotMoving() []savedMoving {
+	out := make([]savedMoving, 0, len(h.movingOrder))
+	now := h.tick.Load()
+	for _, key := range h.movingOrder {
+		mb, ok := h.movingBlocks[key]
+		if !ok {
+			continue
+		}
+		left := 0
+		if mb.due > now {
+			left = int(mb.due - now)
+		}
+		out = append(out, savedMoving{Dim: key.dim, X: key.x, Y: key.y, Z: key.z, State: mb.moved,
+			Facing: legacyDirID(mb.facing), Extending: mb.extending, Source: mb.source, Left: left})
+	}
+	return out
+}
+
+// restoreMoving puts the saved moving cells back at boot
+// (PistonMovingBlockEntity.loadAdditional): each lands on its own clock.
+func (h *hub) restoreMoving(saved []savedMoving) {
+	for _, sm := range saved {
+		if sm.Facing < 0 || sm.Facing > 5 {
+			continue
+		}
+		dx, dy, dz := rsDir(sm.Facing).delta()
+		key := simPos{dim: sm.Dim, blockPos: blockPos{sm.X, sm.Y, sm.Z}}
+		if _, dup := h.movingBlocks[key]; dup {
+			continue
+		}
+		h.movingBlocks[key] = movingBlock{moved: sm.State, facing: [3]int{dx, dy, dz},
+			extending: sm.Extending, source: sm.Source, due: h.tick.Load() + uint64(sm.Left)}
+		h.movingOrder = append(h.movingOrder, key)
+	}
 }
