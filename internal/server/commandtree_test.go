@@ -176,7 +176,7 @@ func TestCommandTreeShape(t *testing.T) {
 }
 
 // Only parser ids that mean the same thing on every protocol tachyne serves
-// (26.2 and 26.3: 0-54) may appear, and nothing translates parser ids per
+// (26.2 and 26.3: 0-53) may appear, and nothing translates parser ids per
 // version.
 func TestCommandTreeUsesVersionStableParsers(t *testing.T) {
 	nodes, _ := decodeCommandTree(t, buildCommandTree())

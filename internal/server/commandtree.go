@@ -18,8 +18,8 @@ import (
 //
 // ONLY parser ids that are identical on every protocol tachyne serves are
 // used: nothing translates parser ids per version. Since the 26.2/26.3 pair
-// became the whole served range that is 0-54 (26.3 inserted its first new
-// parser at 55); 0-15 were the old 1.21.5-stable set. Enumerations are
+// became the whole served range that is 0-53 (id 54 is dialog on 26.2 but
+// context_float_provider on 26.3); 0-15 were the old 1.21.5-stable set. Enumerations are
 // literals rather than the minecraft:gamemode and minecraft:time parsers,
 // which completes better anyway, and the parsers with properties the tree
 // has no writer for (minecraft:time's minimum, minecraft:resource's
@@ -42,7 +42,7 @@ const (
 	parserResLoc    = 36 // minecraft:resource_location: any namespaced id
 
 	// maxStableParser is the last parser id 26.2 and 26.3 agree on.
-	maxStableParser = 54
+	maxStableParser = 53
 )
 
 // String parser properties.
