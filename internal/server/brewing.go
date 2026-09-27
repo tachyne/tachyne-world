@@ -279,7 +279,7 @@ func (h *hub) updateBrewing(players map[int32]*tracked) {
 			if b.slots[4].count--; b.slots[4].count <= 0 {
 				b.slots[4] = invStack{}
 			}
-			h.refreshBinViewers(players, pos)
+			h.containerChanged(players, pos)
 		}
 		outs, brewable := brewResult(b)
 		switch {
@@ -321,7 +321,7 @@ func (h *hub) finishBrew(players map[int32]*tracked, pos simPos, b *bin, outs [3
 	delete(h.brewIng, pos)
 	h.playSoundDim(players, pos.dim, "minecraft:block.brewing_stand.brew", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.6, 1)
-	h.refreshBinViewers(players, pos)
+	h.containerChanged(players, pos)
 	for _, t := range players {
 		// vanilla fires brewed_potion on taking the potion; the taker is
 		// anonymous in our generic window path, so credit the players

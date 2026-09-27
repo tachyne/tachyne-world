@@ -280,8 +280,8 @@ func cartFuelMeta(eid int32, lit bool) []byte {
 func (h *hub) cartSuckItems(players map[int32]*tracked, v *vehicle) bool {
 	above := simPos{dim: v.dim, blockPos: blockPos{floorInt(v.x), floorInt(v.y) + 1, floorInt(v.z)}}
 	src := h.containerSlots(above)
-	if f := h.furnaces[above]; f != nil {
-		src = f.slots[2:3] // only a furnace's output
+	if w := h.worldFor(v.dim); src != nil && w != nil && isCookerBlock(w.At(above.x, above.y, above.z)) {
+		src = h.furnaces[above].slots[2:3] // only a furnace's output
 	}
 	if src != nil {
 		for i := range src {
@@ -296,7 +296,7 @@ func (h *hub) cartSuckItems(players map[int32]*tracked, v *vehicle) bool {
 				if s.count <= 0 {
 					*s = invStack{}
 				}
-				h.refreshBinViewers(players, above)
+				h.containerChanged(players, above)
 				h.refreshCartViewers(players, v)
 				return true
 			}

@@ -67,6 +67,7 @@ func TestDropperPushesToContainer(t *testing.T) {
 	dropper := &bin{slots: make([]invStack, 9)}
 	dropper.slots[0] = invStack{item: int32(itemByName["stone"]), count: 5}
 	h.bins[simPos{blockPos: pos}] = dropper
+	h.world.SetBlock(front.x, front.y, front.z, withProps(t, worldgen.BlockBase("chest"), map[string]string{"waterlogged": "false"}))
 	dst := &chest{}
 	h.chests[simPos{blockPos: front}] = dst
 

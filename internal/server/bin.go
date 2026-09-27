@@ -1,6 +1,7 @@
 package server
 
 import (
+	"log"
 	"slices"
 	"strings"
 
@@ -353,9 +354,9 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 				if st.count--; st.count <= 0 {
 					*st = invStack{}
 				}
-				h.refreshBinViewers(players, pos.at(front)) // update anyone viewing the target
+				h.containerChanged(players, pos.at(front)) // update anyone viewing the target
 			}
-			h.refreshBinViewers(players, pos)
+			h.containerChanged(players, pos)
 			return
 		}
 	}
@@ -363,8 +364,21 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 	// a potion keeps its brew, dyed or named armour its colour and name, a
 	// filled bundle its contents. Every behaviour that falls back to a toss
 	// uses it.
+	//
+	// DefaultDispenseItemBehavior.spawnItem: the item starts 0.7 out of the
+	// face, dropped an eighth (up or down) or 5/32 (sideways) so it clears
+	// the rim, and is thrown — outward at 0.2-0.3 along the facing, 0.2
+	// upward whatever the facing, each spread by triangle(·, 0.0172275 × 6).
+	// It flies and lands under the item physics like any other drop.
 	toss := func() {
-		if it := h.spawnItemIn(players, h.rsDim, item, 1, fx, fy, fz); it != nil {
+		sy := fy - 0.15625
+		if dy != 0 {
+			sy = fy - 0.125
+		}
+		pow := h.rng.Float64()*0.1 + 0.2
+		const spread = 0.0172275 * 6
+		vx, vy, vz := h.triangle(float64(dx)*pow, spread), h.triangle(0.2, spread), h.triangle(float64(dz)*pow, spread)
+		if it := h.spawnItemAt(players, h.rsDim, item, 1, fx, sy, fz, vx, vy, vz); it != nil {
 			one := *st
 			one.count = 1
 			it.setFrom(one)
@@ -702,7 +716,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 	h.rsSound(players, snd, sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 1)
 	h.levelEvent(players, pos.dim, worldEventDispenserSmoke, pos.x, pos.y, pos.z, dir3D(dx, dy, dz)) // the puff out of the face
-	h.refreshBinViewers(players, pos)
+	h.containerChanged(players, pos)
 }
 
 // hopperPowerCheck is HopperBlock.checkPoweredState: ENABLED is the inverse
@@ -786,7 +800,7 @@ func (h *hub) tickHoppers(players map[int32]*tracked) {
 		}
 		if moved {
 			c.cooldown = hopperCadence
-			h.refreshBinViewers(players, pos)
+			h.containerChanged(players, pos)
 		}
 	}
 	h.hopperOrder = keep
@@ -874,7 +888,7 @@ func (h *hub) hopperPull(players map[int32]*tracked, pos simPos, c *bin) bool {
 				if s.count <= 0 {
 					*s = invStack{}
 				}
-				h.refreshBinViewers(players, pos.at(above))
+				h.containerChanged(players, pos.at(above))
 				return true
 			}
 		}
@@ -956,7 +970,7 @@ func (h *hub) hopperPush(players map[int32]*tracked, pos simPos, state uint32, c
 			if fed != nil {
 				h.hopperFed(fed, c)
 			}
-			h.refreshBinViewers(players, pos.at(target))
+			h.containerChanged(players, pos.at(target))
 			return true
 		}
 	}
@@ -974,27 +988,74 @@ func (h *hub) containerSlots(pos simPos) []invStack {
 }
 
 // blockContainerSlots is containerSlots without the carts: the block
-// entity's own storage.
+// entity's own storage. It is the BLOCK that decides (HopperBlockEntity
+// .getContainerAt asks the block entity the block there owns): storage left
+// in a hub map at a cell whose block has gone is no container, and a
+// container block nobody has opened yet is one all the same — vanilla's
+// block entity exists from placement, so a new dropper takes an item from
+// the one below it before anyone looks inside.
 func (h *hub) blockContainerSlots(pos simPos) []invStack {
-	if c := h.chests[pos]; c != nil {
+	w := h.worldFor(pos.dim)
+	if w == nil {
+		return nil
+	}
+	state := w.At(pos.x, pos.y, pos.z)
+	switch {
+	case containerOpenFor(state) == openChestWindow:
+		c := h.chests[pos]
+		if c == nil {
+			c = &chest{}
+			h.fillStructureChestIn(pos.dim, pos.blockPos, c)
+			h.chests[pos] = c
+		}
 		return c.slots[:]
-	}
-	// A chest, barrel or shulker box that nobody has opened yet is still a
-	// container to a hopper, dropper or comparator (vanilla's block entity
-	// exists from placement); give it its storage now.
-	if w := h.worldFor(pos.dim); w != nil && containerOpenFor(w.At(pos.x, pos.y, pos.z)) == openChestWindow {
-		c := &chest{}
-		h.fillStructureChestIn(pos.dim, pos.blockPos, c)
-		h.chests[pos] = c
-		return c.slots[:]
-	}
-	if f := h.furnaces[pos]; f != nil {
-		return f.slots[:]
-	}
-	if b := h.bins[pos]; b != nil {
-		return b.slots
+	case isCookerBlock(state):
+		return h.furnaceAt(pos, state).slots[:]
+	case isBinBlock(state):
+		return h.binAt(pos, state).slots
 	}
 	return nil
+}
+
+// dropOrphanStorage is the boot sweep for dispenser, dropper, hopper,
+// brewing-stand, crafter and furnace storage whose block has gone. A block
+// entity lives and dies with its block, but a container snapshot and a world
+// save taken on either side of a block change can leave storage at a cell
+// that is now air or stone — where the next container placed in that cell
+// would find it. Its contents fall out where the block stood, as they would
+// have when it was broken.
+func (h *hub) dropOrphanStorage() {
+	n := 0
+	drop := func(pos simPos, slots []invStack) {
+		n++
+		for _, st := range slots {
+			if st.item != 0 && st.count > 0 {
+				if it := h.spawnItemIn(nil, pos.dim, st.item, st.count, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5); it != nil {
+					it.setFrom(st)
+				}
+			}
+		}
+	}
+	for pos, b := range h.bins {
+		if w := h.worldFor(pos.dim); w != nil && !isBinBlock(w.At(pos.x, pos.y, pos.z)) {
+			drop(pos, b.slots)
+			delete(h.bins, pos)
+		}
+	}
+	for pos, f := range h.furnaces {
+		if w := h.worldFor(pos.dim); w != nil && !isCookerBlock(w.At(pos.x, pos.y, pos.z)) {
+			drop(pos, f.slots[:])
+			delete(h.furnaces, pos)
+		}
+	}
+	if n > 0 {
+		log.Printf("container boot sweep: %d store(s) with no block left, contents dropped", n)
+	}
+}
+
+// isBinBlock reports whether a block keeps its storage in h.bins.
+func isBinBlock(state uint32) bool {
+	return isDispenser(state) || isDropper(state) || isHopper(state) || isBrewStand(state) || isCrafter(state)
 }
 
 // containerSignal is the comparator's read of a container: 0 when empty, else
@@ -1058,6 +1119,38 @@ func fullnessSignal(slots []invStack) int {
 	return 1 + int(full/float64(len(slots))*14)
 }
 
+// containerChanged is BlockEntity.setChanged for a container whose contents
+// moved: anyone looking in sees it, and a comparator reading it hears of it
+// (Level.updateNeighbourForOutputSignal) and takes its 2 ticks to answer.
+// Without this a comparator behind a dropper or a hopper only noticed the
+// items when something else happened to update it.
+func (h *hub) containerChanged(players map[int32]*tracked, pos simPos) {
+	h.refreshBinViewers(players, pos)
+	h.inDim(pos.dim, func() { h.updateNeighbourForOutputSignal(players, pos.blockPos) })
+}
+
+// windowContentsChanged is Slot.setChanged for a click in a block
+// container's window: the container's comparators hear of it. (The window
+// itself is the click's business, so no viewer refresh here.)
+func (h *hub) windowContentsChanged(players map[int32]*tracked, t *tracked) {
+	var at []simPos
+	switch t.winKind {
+	case winDoubleChest:
+		at = []simPos{t.winPos, t.winPos2}
+	case winChest, winFurnace, winBin, winCrafter:
+		at = []simPos{t.winPos}
+	}
+	for _, pos := range at {
+		w := h.worldFor(pos.dim)
+		if w == nil {
+			continue
+		}
+		if st := w.At(pos.x, pos.y, pos.z); containerOpenFor(st) == openChestWindow || isCookerBlock(st) || isBinBlock(st) {
+			h.inDim(pos.dim, func() { h.updateNeighbourForOutputSignal(players, pos.blockPos) })
+		}
+	}
+}
+
 // refreshBinViewers resyncs any player looking at a container we just mutated.
 func (h *hub) refreshBinViewers(players map[int32]*tracked, pos simPos) {
 	for _, t := range players {
@@ -1104,7 +1197,13 @@ func (h *hub) refreshBinViewers(players map[int32]*tracked, pos simPos) {
 // direction the item travels: negative from above, positive from below,
 // zero from a side.
 func (h *hub) insertByFace(target simPos, dy int, one invStack) bool {
-	if f := h.furnaces[target]; f != nil {
+	w := h.worldFor(target.dim)
+	var ts uint32
+	if w != nil {
+		ts = w.At(target.x, target.y, target.z)
+	}
+	if isCookerBlock(ts) {
+		f := h.furnaceAt(target, ts)
 		if dy < 0 {
 			return binInsert(f.slots[0:1], one) == 0
 		}
@@ -1115,8 +1214,8 @@ func (h *hub) insertByFace(target simPos, dy int, one invStack) bool {
 		}
 		return false
 	}
-	w := h.worldFor(target.dim)
-	if b := h.bins[target]; b != nil && len(b.slots) == 5 && w != nil && isBrewStand(w.At(target.x, target.y, target.z)) {
+	if isBrewStand(ts) {
+		b := h.binAt(target, ts)
 		var slots []int
 		switch {
 		case dy < 0:
@@ -1187,7 +1286,8 @@ func brewIsIngredient(item int32) bool {
 // fuel has become an empty bucket; a brewing stand yields its bottles, its
 // ingredient only as a glass bottle, and never its fuel.
 func (h *hub) canTakeFromBelow(src simPos, slot int, item int32) bool {
-	if f := h.furnaces[src]; f != nil {
+	w := h.worldFor(src.dim)
+	if w != nil && isCookerBlock(w.At(src.x, src.y, src.z)) {
 		switch slot {
 		case 2:
 			return true
@@ -1196,7 +1296,6 @@ func (h *hub) canTakeFromBelow(src simPos, slot int, item int32) bool {
 		}
 		return false
 	}
-	w := h.worldFor(src.dim)
 	if b := h.bins[src]; b != nil && len(b.slots) == 5 && w != nil && isBrewStand(w.At(src.x, src.y, src.z)) {
 		switch slot {
 		case 3:

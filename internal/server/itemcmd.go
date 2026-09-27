@@ -205,7 +205,7 @@ func (h *hub) blockItemTarget(dim int, pos blockPos) (itemTarget, bool) {
 			}
 			return stackSlot(slots[id], true)
 		},
-		changed:  func(players map[int32]*tracked) { h.refreshBinViewers(players, sp) },
+		changed:  func(players map[int32]*tracked) { h.containerChanged(players, sp) },
 		canPlace: canPlace,
 	}, true
 }

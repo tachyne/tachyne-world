@@ -140,7 +140,7 @@ func (h *hub) crafterCraft(players map[int32]*tracked, pos simPos, state uint32)
 	for _, st := range remains { // dispenseFrom ejects the remainders after the result
 		h.ejectCrafted(players, pos, state, st)
 	}
-	h.refreshBinViewers(players, pos)
+	h.containerChanged(players, pos)
 	h.playSoundDim(players, pos.dim, "minecraft:block.crafter.craft", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 	return true
@@ -390,10 +390,10 @@ func (h *hub) ejectCrafted(players map[int32]*tracked, pos simPos, state uint32,
 			left = binInsert(dst, st)
 		}
 		if left == 0 {
-			h.refreshBinViewers(players, pos.at(target))
+			h.containerChanged(players, pos.at(target))
 			return
 		} else if left < st.count {
-			h.refreshBinViewers(players, pos.at(target))
+			h.containerChanged(players, pos.at(target))
 			st.count = left
 		}
 	}

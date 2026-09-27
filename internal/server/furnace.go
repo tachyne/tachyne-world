@@ -132,6 +132,18 @@ type evOpenFurnace struct {
 
 func (evOpenFurnace) isHubEvent() {}
 
+// furnaceAt is the cooker block entity at pos, made on first touch (vanilla's
+// exists from placement), re-learning its kind from the block.
+func (h *hub) furnaceAt(pos simPos, state uint32) *furnace {
+	f := h.furnaces[pos]
+	if f == nil {
+		f = &furnace{cookMax: 200}
+		h.furnaces[pos] = f
+	}
+	f.kind, _ = furnaceKindOf(state)
+	return f
+}
+
 // openFurnace opens the furnace window at a block position for a player.
 func (h *hub) openFurnace(t *tracked, x, y, z int) {
 	if t.inv == nil {
@@ -140,13 +152,7 @@ func (h *hub) openFurnace(t *tracked, x, y, z int) {
 	h.releaseContainerView(t)
 	h.reclaimCraft(nil, t)
 	pos := simPos{dim: t.dim, blockPos: blockPos{x, y, z}}
-	kind, _ := furnaceKindOf(h.worldFor(t.dim).At(x, y, z))
-	f := h.furnaces[pos]
-	if f == nil {
-		f = &furnace{cookMax: 200}
-		h.furnaces[pos] = f
-	}
-	f.kind = kind
+	f := h.furnaceAt(pos, h.worldFor(t.dim).At(x, y, z))
 	h.nextWin++
 	if h.nextWin > 100 {
 		h.nextWin = 1
@@ -158,7 +164,7 @@ func (h *hub) openFurnace(t *tracked, x, y, z int) {
 	f.viewers[t.p.eid] = &[4]int{-1, -1, -1, -1} // a full bar sync to the new window
 
 	menu, title := int32(menuFurnace), "Furnace"
-	switch kind {
+	switch f.kind {
 	case cookBlast:
 		menu, title = menuBlast, "Blast Furnace"
 	case cookSmoker:
@@ -247,6 +253,9 @@ func (h *hub) updateFurnaces(players map[int32]*tracked) {
 			continue
 		}
 
+		if changedSlots { // setChanged: a comparator reading the furnace hears of it
+			h.inDim(pos.dim, func() { h.updateNeighbourForOutputSignal(players, pos.blockPos) })
+		}
 		for eid := range f.viewers {
 			t := players[eid]
 			if t == nil || t.winKind != winFurnace || t.winPos != pos {

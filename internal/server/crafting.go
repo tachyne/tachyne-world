@@ -427,6 +427,7 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		h.resyncWindow(t) // clicked a window we no longer consider open
 		return
 	}
+	defer h.windowContentsChanged(players, t)
 	if t.winKind == winPlugin { // the plugin browser: read-only, clicks are actions
 		h.pluginUIClick(players, t, e)
 		return

@@ -1040,6 +1040,7 @@ func (h *hub) run() {
 		h.spawnerDelays = h.containers.loadSpawnerDelays()
 		h.bins = h.containers.loadBins()
 		h.restoreItems(h.containers.loadItems())
+		h.dropOrphanStorage()
 		h.restoreVehicles(h.containers.loadVehicles())
 		h.restoreFalling(h.containers.loadFalling())
 		h.paintings = h.containers.loadPaintings(h.allocEID)
