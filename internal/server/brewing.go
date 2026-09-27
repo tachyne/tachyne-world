@@ -422,6 +422,7 @@ func (h *hub) drinkPotion(players map[int32]*tracked, t *tracked, slot int) {
 		return
 	}
 	p := s.potion
+	h.usedItem(t, s.item) // Consumable.onConsume
 	h.vibAt(t.dim, freqDrink, t.x, t.y, t.z, t.p.eid)
 	if t.gamemode != gmCreative { // PotionItem: a creative player keeps the potion and gets no bottle
 		*s = invStack{item: itemGlassBottle, count: 1}

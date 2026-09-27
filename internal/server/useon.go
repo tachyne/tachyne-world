@@ -119,6 +119,7 @@ func (h *hub) trimPlant(players map[int32]*tracked, e evTrimPlant) {
 	berries := g.berryStride == 2 && (state-g.headLo)%2 == 0
 	h.setBlockLive(players, t.dim, e.x, e.y, e.z, g.headAt(growingPlantMaxAge, berries))
 	h.playSoundDim(players, t.dim, "minecraft:block.growing_plant.crop", sndBlock, float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 1, 1)
+	h.usedItem(t, usedStack(t).item) // ShearsItem.useOn
 	if isSurvival(t.gamemode) {
 		h.applyToolWear(t, t.useSlot(), 1)
 	}
@@ -139,6 +140,7 @@ func (h *hub) mudBottle(players map[int32]*tracked, e evMudBottle) {
 	h.playSoundDim(players, t.dim, "minecraft:entity.generic.splash", sndBlock, x, y, z, 1, 1)
 	h.playSoundDim(players, t.dim, "minecraft:item.bottle.empty", sndBlock, x, y, z, 1, 1)
 	h.spawnParticles(players, t.dim, particleSplash, x, y, z, 0.5, 0, 5)
+	h.usedItem(t, itemPotion) // PotionItem.useOn
 	if isSurvival(t.gamemode) {
 		h.consumeUsed(t)
 		if changed, left := t.inv.addStack(invStack{item: itemGlassBottle, count: 1}); left == 0 {
@@ -170,6 +172,7 @@ func (h *hub) eggSpawner(players map[int32]*tracked, e evEggSpawner) {
 	// The cage shows what it will spawn from now on, without waiting for the
 	// spawner's own cadence to come round.
 	h.showSpawner(players, t.dim, blockPos{e.x, e.y, e.z}, et)
+	h.usedItem(t, usedStack(t).item) // SpawnEggItem.useOn
 	if isSurvival(t.gamemode) {
 		h.consumeUsed(t)
 	}
@@ -211,6 +214,7 @@ func (h *hub) useSpawnEgg(players map[int32]*tracked, e evSpawnEgg) {
 	// SpawnEggItem.spawnMob: ENTITY_PLACE where it went, and no sound of its
 	// own (the egg-throw sound is a thrown egg's).
 	h.vib(t.dim, freqEntityPlace, x, y, z, t.p.eid)
+	h.usedItem(t, usedStack(t).item) // SpawnEggItem.useOn
 	if isSurvival(t.gamemode) {
 		h.consumeUsed(t)
 	}
@@ -274,6 +278,7 @@ func (h *hub) placeCrystal(players map[int32]*tracked, e evPlaceCrystal) {
 	h.crystals[c.eid] = c
 	h.toDimEv(players, t.dim, entAdd(c.eid, entityEndCrystal, c.uuid, c.x, c.y, c.z, 0, 0))
 	h.vib(t.dim, freqEntityPlace, e.x, e.y+1, e.z, t.p.eid) // ENTITY_PLACE
+	h.usedItem(t, itemEndCrystal)                           // EndCrystalItem.useOn
 	if isSurvival(t.gamemode) {
 		h.consumeUsed(t)
 	}
@@ -337,4 +342,5 @@ func (h *hub) placeRocket(players map[int32]*tracked, e evPlaceRocket) {
 		h.consumeUsed(t)
 	}
 	h.spawnRocket(players, t.dim, x, y, z, 0, st)
+	h.usedItem(t, itemFireworkRocket) // FireworkRocketItem.useOn, through ItemStack.useOn
 }

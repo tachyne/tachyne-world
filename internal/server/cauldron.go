@@ -57,18 +57,24 @@ func (h *hub) useCauldron(players map[int32]*tracked, t *tracked, slot int32, x,
 	if !ok {
 		return
 	}
-	// Vanilla keeps two counters: FILL_CAULDRON for pouring in, USE_CAULDRON
-	// for everything taken out or washed.
+	// Vanilla keeps its counters per interaction: FILL_CAULDRON for a bucket
+	// poured in, USE_CAULDRON for a bucket or bottle filled or a water bottle
+	// poured (each with the item's ITEM_USED), and only the CLEAN_ stat for
+	// a wash.
+	held := *t.handStack(int(slot))
 	setStat := func(state uint32, snd, stat string) {
 		h.setBlockLive(players, t.dim, x, y, z, state)
 		if snd != "" {
 			h.playSoundDim(players, t.dim, snd, sndBlock, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
 		}
-		h.incCustom(t, stat, 1)
+		if stat != "" {
+			h.incCustom(t, stat, 1)
+			h.usedItem(t, held.item)
+		}
 	}
 	set := func(state uint32, snd string) { setStat(state, snd, "use_cauldron") }
 	fill := func(state uint32, snd string) { setStat(state, snd, "fill_cauldron") }
-	held := *t.handStack(int(slot))
+	wash := func(state uint32) { setStat(state, "", "") }
 	switch held.item {
 	case itemBucketH2O: // fills with water regardless of prior content
 		fill(waterCauldronBase+2, "minecraft:item.bucket.empty")
@@ -106,7 +112,7 @@ func (h *hub) useCauldron(players map[int32]*tracked, t *tracked, slot int32, x,
 			if kind == cauldronWater {
 				next = waterCauldronBase + uint32(level) // level+1
 			}
-			fill(next, "minecraft:item.bottle.empty")
+			set(next, "minecraft:item.bottle.empty") // a poured bottle is USE_CAULDRON
 			h.giveFilled(players, t, slot, itemGlassBottle)
 		}
 	default:
@@ -121,7 +127,7 @@ func (h *hub) useCauldron(players map[int32]*tracked, t *tracked, slot int32, x,
 			if level > 1 {
 				next = waterCauldronBase + uint32(level-2)
 			}
-			set(next, "")
+			wash(next)
 			return
 		}
 		// Washing a dyed shulker box back to plain (CauldronInteraction
@@ -135,7 +141,7 @@ func (h *hub) useCauldron(players map[int32]*tracked, t *tracked, slot int32, x,
 			if level > 1 {
 				next = waterCauldronBase + uint32(level-2)
 			}
-			set(next, "")
+			wash(next)
 			return
 		}
 		// Washing: a patterned banner loses its TOP layer for one water level.
@@ -148,7 +154,7 @@ func (h *hub) useCauldron(players map[int32]*tracked, t *tracked, slot int32, x,
 			if level > 1 {
 				next = waterCauldronBase + uint32(level-2)
 			}
-			set(next, "")
+			wash(next)
 		}
 	}
 }

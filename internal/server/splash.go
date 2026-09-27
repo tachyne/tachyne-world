@@ -357,6 +357,7 @@ func (h *hub) throwSplashPotion(players map[int32]*tracked, t *tracked, slot int
 	a.shooter, a.splash, a.breaks, a.potion, a.lingering = t.p.eid, true, true, kind, lingering
 	a.playerShot, a.noHitUntil = true, h.tick.Load()+2 // don't shatter on the thrower at launch
 	h.playSoundDim(players, t.dim, "minecraft:entity.splash_potion.throw", sndPlayer, t.x, t.y, t.z, 0.5, 1)
+	h.usedItem(t, s.item) // ThrowablePotionItem.use
 	if t.gamemode != gmCreative {
 		if s.count--; s.count <= 0 {
 			*s = invStack{}

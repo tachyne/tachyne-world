@@ -75,6 +75,17 @@ func isHoe(item int32) bool {
 	return false
 }
 
+// toolUsedOn is the tail of a tool's useOn: survival wears the tool, and
+// the wear event counts the ITEM_USED; creative spends no durability but
+// the use counts all the same (ItemStack.useOn).
+func (s *Server) toolUsedOn(p *player, off bool) {
+	if isSurvival(s.modes.get(p.key())) {
+		s.hub.post(evToolWear{eid: p.eid, slot: int(p.handSlot(off))})
+	} else {
+		s.itemUsed(p, p.handItem(off))
+	}
+}
+
 // tryTill handles a hoe used on a block. Reports whether it consumed the click;
 // a non-tillable block returns false so normal placement carries on, matching
 // vanilla's InteractionResult.PASS.
@@ -98,9 +109,7 @@ func (s *Server) tryTill(p *player, off bool, x, y, z int, dir int32, seq int32)
 		s.hub.post(evPopItem{item: res.drop, count: 1, dim: p.dim,
 			x: float64(x) + 0.5, y: float64(y) + 0.5, z: float64(z) + 0.5})
 	}
-	if isSurvival(s.modes.get(p.key())) {
-		s.hub.post(evToolWear{eid: p.eid, slot: int(p.handSlot(off))})
-	}
+	s.toolUsedOn(p, off)
 	return true
 }
 
@@ -164,9 +173,7 @@ func (s *Server) tryFlatten(p *player, off bool, x, y, z int, dir int32, seq int
 	}
 
 	s.putBlock(p, x, y, z, into, true, seq)
-	if isSurvival(s.modes.get(p.key())) {
-		s.hub.post(evToolWear{eid: p.eid, slot: int(p.handSlot(off))})
-	}
+	s.toolUsedOn(p, off)
 	return true
 }
 

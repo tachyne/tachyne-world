@@ -168,6 +168,11 @@ func (h *hub) onPlaceFrame(players map[int32]*tracked, e evPlaceFrame) {
 		dir: e.dir, glow: e.glow}
 	h.itemFrames[f.eid] = f
 	h.showFrame(players, f)
+	if e.glow {
+		h.usedItem(t, itemGlowItemFrame) // HangingEntityItem.useOn
+	} else {
+		h.usedItem(t, itemItemFrame)
+	}
 	h.playSoundDim(players, t.dim, frameSound(f, "place"), sndPlayer,
 		float64(e.x), float64(e.y), float64(e.z), 1, 1)
 	if t.gamemode != gmCreative {

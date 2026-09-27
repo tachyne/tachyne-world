@@ -455,6 +455,7 @@ func (h *hub) onUseSign(players map[int32]*tracked, e evUseSign) {
 		return
 	}
 	h.signs.set(t.dim, e.x, e.y, e.z, sd)
+	h.usedItem(t, e.item) // SignBlock.useItemOn: an applicator that took
 	h.signConsume(t, e.slot)
 	h.playSoundDim(players, t.dim, sound, sndBlock, float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 1, 1)
 	h.signBroadcast(players, t.dim, e.x, e.y, e.z, sd)

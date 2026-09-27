@@ -2094,7 +2094,9 @@ func (h *hub) run() {
 			case evLeashFence:
 				if t := players[e.eid]; t != nil &&
 					isFence(h.worldFor(t.dim).At(e.pos.x, e.pos.y, e.pos.z)) {
-					h.leashToFence(players, t, e.pos)
+					if h.leashToFence(players, t, e.pos) {
+						h.usedItem(t, itemLead) // LeadItem.useOn: mobs tied up
+					}
 				}
 			case evInteractMob:
 				if t := players[e.eid]; t != nil && !h.targetOutsideBorder(players, e.target) {

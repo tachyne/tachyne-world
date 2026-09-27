@@ -80,6 +80,7 @@ func (h *hub) riptideLaunch(players map[int32]*tracked, t *tracked, riptide int)
 	if riptide > 3 {
 		riptide = 3
 	}
+	h.usedItem(t, itemTrident)        // TridentItem.releaseUsing: a riptide launch is a use too
 	h.dropShoulderParrots(players, t) // startAutoSpinAttack
 	if isSurvival(t.gamemode) {
 		h.applyToolWear(t, t.useSlot(), 1)
@@ -95,6 +96,7 @@ func (h *hub) riptideLaunch(players map[int32]*tracked, t *tracked, riptide int)
 // throwTrident looses the trident as a projectile carrying the whole stack (so
 // it returns enchanted), consuming it from a survival hand.
 func (h *hub) throwTrident(players map[int32]*tracked, t *tracked, st invStack) {
+	h.usedItem(t, itemTrident)                                              // TridentItem.releaseUsing
 	vx, vy, vz := h.throwFromRotation(t, 0, tridentSpeed, throwUncertainty) // TridentItem.releaseUsing
 	a := h.launchProjectileIn(players, entityTrident, t.dim, t.x, t.y+1.5, t.z, vx, vy, vz)
 	a.shooter, a.dmg, a.noHitUntil = t.p.eid, tridentDamage, h.tick.Load()+arrowNoSelfHT

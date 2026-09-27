@@ -27,6 +27,7 @@ func (h *hub) raiseSpyglass(players map[int32]*tracked, t *tracked) {
 	}
 	t.scopeUntil = h.tick.Load() + spyglassUseTicks
 	h.playSoundDim(players, t.dim, "minecraft:item.spyglass.use", sndPlayer, t.x, t.y, t.z, 1, 1)
+	h.usedItem(t, itemSpyglass) // SpyglassItem.use
 	h.advance(players, t, "using_item", advMatch{item: itemSpyglass, lookingAt: h.mobInSightName(t, 256)})
 }
 

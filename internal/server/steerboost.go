@@ -54,19 +54,25 @@ func (evSteerBoost) isHubEvent() {}
 // stick for it.
 func (h *hub) steerBoost(players map[int32]*tracked, t *tracked, slot int) {
 	s := t.handStack(slot)
-	if s == nil || s.count == 0 || t.dead || t.ridingEID == 0 {
+	if s == nil || s.count == 0 || t.dead {
 		return
 	}
+	// FoodOnAStickItem.use counts ITEM_USED on the branch that does NOT
+	// boost — waved on foot, at the wrong mount, or mid-sprint — and never
+	// on a boost itself.
 	m := h.mobs[t.ridingEID]
-	if m == nil || m.rider != t.p.eid {
+	if t.ridingEID == 0 || m == nil || m.rider != t.p.eid {
+		h.usedItem(t, s.item)
 		return
 	}
 	// A stick only works on the species it names (getType() == canInteractWith):
 	// waving a carrot from a strider's back does nothing at all.
 	if _, steers := rideable(m.etype); steers == 0 || steers != s.item {
+		h.usedItem(t, s.item)
 		return
 	}
 	if !h.startBoost(players, m) {
+		h.usedItem(t, s.item)
 		return // already sprinting: vanilla's use PASSes and the stick is spared
 	}
 	h.wearSteerStick(players, t, slot, m)

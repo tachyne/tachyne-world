@@ -57,6 +57,7 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 			return
 		}
 		st := *hs
+		h.usedItem(t, held) // BucketItem.use: every emptied bucket is ITEM_USED
 		h.swapBucket(t, slot, itemBucket)
 		h.releaseSulfurBucket(players, t.dim, st, x, y, z)
 		return
@@ -71,6 +72,7 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 			h.setBlockLive(players, t.dim, cx, cy, cz, withWaterlogged(st, true))
 			h.playSoundDim(players, t.dim, "minecraft:item.bucket.empty", sndBlock,
 				float64(cx)+0.5, float64(cy)+0.5, float64(cz)+0.5, 1, 1)
+			h.usedItem(t, held) // BucketItem.use: every emptied bucket is ITEM_USED
 			h.swapBucket(t, slot, itemBucket)
 			return
 		}
@@ -85,6 +87,7 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 		h.setBlockLive(players, t.dim, x, y, z, powderSnowBlock)
 		h.playSoundDim(players, t.dim, "minecraft:item.bucket.empty_powder_snow", sndBlock,
 			float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
+		h.usedItem(t, held) // BucketItem.use: every emptied bucket is ITEM_USED
 		h.swapBucket(t, slot, itemBucket)
 		return
 	}
@@ -93,6 +96,7 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 		// bucketed mob still comes out (checkExtraContent runs regardless).
 		h.playSoundDim(players, t.dim, "minecraft:block.fire.extinguish", sndBlock,
 			float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 0.5, 2.6+(h.rng.Float32()-h.rng.Float32())*0.8)
+		h.usedItem(t, held) // BucketItem.use: every emptied bucket is ITEM_USED
 		h.swapBucket(t, slot, itemBucket)
 		if mobBucket {
 			h.releaseBucketMob(players, t.dim, mobData, x, y, z)
@@ -107,6 +111,7 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 	if !mobBucket { // a mob bucket's empty sound is the mob's own (playEmptySound override)
 		h.playSoundDim(players, t.dim, snd, sndBlock, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
 	}
+	h.usedItem(t, held) // BucketItem.use: every emptied bucket is ITEM_USED
 	h.swapBucket(t, slot, itemBucket)
 	if mobBucket {
 		h.releaseBucketMob(players, t.dim, mobData, x, y, z)
@@ -142,12 +147,14 @@ func (h *hub) bucketFill(players map[int32]*tracked, t *tracked, slot int32) {
 			h.setBlockLive(players, t.dim, p.x, p.y, p.z, worldgen.Air)
 			h.playSoundDim(players, t.dim, "minecraft:item.bucket.fill", sndBlock,
 				float64(p.x)+0.5, float64(p.y)+0.5, float64(p.z)+0.5, 1, 1)
+			h.usedItem(t, itemBucket) // a scoop is ITEM_USED too
 			h.giveFilled(players, t, slot, itemBucketH2O)
 			return
 		case st == worldgen.LavaBase:
 			h.setBlockLive(players, t.dim, p.x, p.y, p.z, worldgen.Air)
 			h.playSoundDim(players, t.dim, "minecraft:item.bucket.fill_lava", sndBlock,
 				float64(p.x)+0.5, float64(p.y)+0.5, float64(p.z)+0.5, 1, 1)
+			h.usedItem(t, itemBucket) // a scoop is ITEM_USED too
 			h.giveFilled(players, t, slot, itemBucketLav)
 			return
 		case isPowderSnow(st):
@@ -157,6 +164,7 @@ func (h *hub) bucketFill(players map[int32]*tracked, t *tracked, slot int32) {
 			h.setBlockLive(players, t.dim, p.x, p.y, p.z, worldgen.Air)
 			h.playSoundDim(players, t.dim, "minecraft:item.bucket.fill_powder_snow", sndBlock,
 				float64(p.x)+0.5, float64(p.y)+0.5, float64(p.z)+0.5, 1, 1)
+			h.usedItem(t, itemBucket) // a scoop is ITEM_USED too
 			h.giveFilled(players, t, slot, itemBucketSnow)
 			return
 		case waterloggable(st) && isWaterlogged(st):
@@ -166,6 +174,7 @@ func (h *hub) bucketFill(players map[int32]*tracked, t *tracked, slot int32) {
 			h.setBlockLive(players, t.dim, p.x, p.y, p.z, withWaterlogged(st, false))
 			h.playSoundDim(players, t.dim, "minecraft:item.bucket.fill", sndBlock,
 				float64(p.x)+0.5, float64(p.y)+0.5, float64(p.z)+0.5, 1, 1)
+			h.usedItem(t, itemBucket) // a scoop is ITEM_USED too
 			h.giveFilled(players, t, slot, itemBucketH2O)
 			return
 		case !outlineEmpty(st):

@@ -231,6 +231,7 @@ func (h *hub) releaseDraw(players map[int32]*tracked, t *tracked) {
 	}
 	a.playerShot = true
 	h.playSoundDim(players, t.dim, "minecraft:entity.arrow.shoot", sndPlayer, t.x, t.y, t.z, 1, 0.8+float32(power)*0.4)
+	h.usedItem(t, itemBow) // BowItem.releaseUsing: a loosed arrow is ITEM_USED
 }
 
 // consumeArrow takes one arrow from where the shot draws it (the off hand,
@@ -279,4 +280,5 @@ func (h *hub) throwProjectile(players map[int32]*tracked, t *tracked, item int32
 		snd = "minecraft:entity.egg.throw" // EggItem.use
 	}
 	h.playSoundDim(players, t.dim, snd, sndPlayer, t.x, t.y, t.z, 0.5, 0.4/(h.rng.Float32()*0.4+0.8))
+	h.usedItem(t, item) // Snowball/EggItem.use
 }

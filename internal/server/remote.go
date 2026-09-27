@@ -198,6 +198,7 @@ func (r *remotePlayer) Action(v any) {
 			h.post(evUseMap{eid: p.eid, slot: slot})
 		case itemWrittenBook, itemWritableBook:
 			r.emitEvNow(attachproto.OpenBook{Hand: 0}) // the reader/editor UI is client-side
+			h.post(evItemUsed{eid: p.eid, item: item}) // Writable/WrittenBookItem.use
 		default:
 			// BoatItem.use: the crosshair is on water, which the client
 			// reports as a plain use because a fluid is not a clickable block.

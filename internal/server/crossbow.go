@@ -121,6 +121,7 @@ func (h *hub) fireXbow(players map[int32]*tracked, t *tracked) {
 	st.load = xbowLoad{}
 	ammo := load.ammo()
 	h.advance(players, t, "shot_crossbow", advMatch{item: itemCrossbow})
+	h.usedItem(t, itemCrossbow) // CrossbowItem.performShooting, beside SHOT_CROSSBOW
 	n := int(load.n)
 	rocket := ammo.item == itemFireworkRocket
 	for i, angle := range xbowShotAngles(n) {
