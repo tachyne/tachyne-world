@@ -42,6 +42,14 @@ the public history since the project was open-sourced on 2026-07-10.
   ignored, monsters are refused on Peaceful, and a position outside the
   world is refused, all in vanilla's words.
 
+### Changed
+- **Dimensions are a table.** The overworld, the Nether and the End are now
+  entries in one dimension table — each with its name, save file and the
+  rules the engine reads (coordinate scale, sky light, ceiling, beds and
+  respawn anchors, raids) — instead of three worlds wired in by hand. A new
+  dimension is one more entry and its generator. An unknown dimension is now
+  refused wherever it appears rather than quietly treated as the overworld.
+
 ### Fixed
 - **Water runs back under a bubble column.** When the block under a
   bubble column is taken away (a sticky piston pulling a lift's magma
