@@ -13,25 +13,25 @@ func TestFenceConnections(t *testing.T) {
 	gate := worldgen.BlockID("oak_fence_gate")
 	gi, _ := worldgen.InfoForState(gate)
 	across := worldgen.SetProperty(gi, gate, "facing", "north") // spans east-west
-	if !connectsTo(fence, across, true) {
+	if !connectsTo(fence, across, worldgen.FaceWest) {
 		t.Error("a fence should join a gate beside it on the gate's line")
 	}
-	if connectsTo(fence, across, false) {
+	if connectsTo(fence, across, worldgen.FaceNorth) {
 		t.Error("a fence should not join the end of a gate")
 	}
-	if connectsTo(fence, worldgen.BlockID("glass_pane"), true) {
+	if connectsTo(fence, worldgen.BlockID("glass_pane"), worldgen.FaceWest) {
 		t.Error("a fence joined a glass pane")
 	}
-	if connectsTo(fence, worldgen.BlockID("oak_leaves"), true) {
+	if connectsTo(fence, worldgen.BlockID("oak_leaves"), worldgen.FaceWest) {
 		t.Error("a fence joined leaves")
 	}
-	if connectsTo(fence, worldgen.BlockID("nether_brick_fence"), true) {
+	if connectsTo(fence, worldgen.BlockID("nether_brick_fence"), worldgen.FaceWest) {
 		t.Error("an oak fence joined a nether-brick fence")
 	}
-	if !connectsTo(fence, worldgen.BlockID("spruce_fence"), true) || !connectsTo(fence, worldgen.Stone, true) {
+	if !connectsTo(fence, worldgen.BlockID("spruce_fence"), worldgen.FaceWest) || !connectsTo(fence, worldgen.Stone, worldgen.FaceWest) {
 		t.Error("a fence should join another wooden fence and stone")
 	}
-	if !connectsTo(worldgen.BlockID("glass_pane"), worldgen.BlockID("copper_bars"), true) {
+	if !connectsTo(worldgen.BlockID("glass_pane"), worldgen.BlockID("copper_bars"), worldgen.FaceWest) {
 		t.Error("a pane should join copper bars")
 	}
 }

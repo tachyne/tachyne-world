@@ -15,15 +15,17 @@ import (
 // any block is placed or broken next to them.
 
 // hConnectDirs are the four horizontal neighbours a connector links across, named
-// by the block-state property each one drives.
+// by the block-state property each one drives; back is the neighbour's face
+// turned toward the connector, the one whose sturdiness it asks about.
 var hConnectDirs = []struct {
 	name   string
 	dx, dz int
+	back   int
 }{
-	{"north", 0, -1},
-	{"south", 0, 1},
-	{"west", -1, 0},
-	{"east", 1, 0},
+	{"north", 0, -1, worldgen.FaceSouth},
+	{"south", 0, 1, worldgen.FaceNorth},
+	{"west", -1, 0, worldgen.FaceEast},
+	{"east", 1, 0, worldgen.FaceWest},
 }
 
 // connectState sets the connections of a connector block at (x,y,z) from its
@@ -64,7 +66,7 @@ func connectStateAt(w *world.World, x, y, z int, state uint32) uint32 {
 	}
 	for _, d := range hConnectDirs {
 		v := "false"
-		if connectsTo(state, w.Block(x+d.dx, y, z+d.dz), d.dx != 0) {
+		if connectsTo(state, w.Block(x+d.dx, y, z+d.dz), d.back) {
 			v = "true"
 		}
 		state = worldgen.SetProperty(info, state, d.name, v)
@@ -73,7 +75,7 @@ func connectStateAt(w *world.World, x, y, z int, state uint32) uint32 {
 }
 
 // connectsTo reports whether a fence, pane or bars block attaches to the
-// neighbour nb on a side along the X axis (sideAxisX) or the Z axis.
+// neighbour nb, whose face toward it is back (worldgen.FaceNorth …).
 //
 // FenceBlock.connectsTo: another fence of its kind (wooden to wooden, the
 // nether-brick fence to its own), a fence gate hung across that side, or a
@@ -81,7 +83,8 @@ func connectStateAt(w *world.World, x, y, z int, state uint32) uint32 {
 // IronBarsBlock.attachsTo (panes, iron and copper bars): any other pane or
 // bars, a wall, or such a sturdy face. A pane never joins a fence, nor a
 // fence a pane.
-func connectsTo(self, nb uint32, sideAxisX bool) bool {
+func connectsTo(self, nb uint32, back int) bool {
+	sideAxisX := back == worldgen.FaceWest || back == worldgen.FaceEast
 	if isPaneOrBars(self) {
 		if isPaneOrBars(nb) {
 			return true
@@ -89,7 +92,7 @@ func connectsTo(self, nb uint32, sideAxisX bool) bool {
 		if _, ok := wallInfo(nb); ok {
 			return true
 		}
-		return !connectException(nb) && worldgen.IsSolidFull(nb)
+		return !connectException(nb) && worldgen.IsFaceSturdy(nb, back)
 	}
 	if isFenceBlock(nb) {
 		return isFenceBlock(self) && isWoodenFence(self) == isWoodenFence(nb)
@@ -102,7 +105,7 @@ func connectsTo(self, nb uint32, sideAxisX bool) bool {
 	if info, ok := worldgen.InfoForState(nb); ok && worldgen.IsHorizontalConnector(info) {
 		return false // a pane, bars or tripwire beside a fence
 	}
-	return !connectException(nb) && worldgen.IsSolidFull(nb)
+	return !connectException(nb) && worldgen.IsFaceSturdy(nb, back)
 }
 
 var netherBrickFence = worldgen.BlockBase("nether_brick_fence")

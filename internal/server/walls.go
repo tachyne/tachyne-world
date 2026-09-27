@@ -3,7 +3,7 @@ package server
 // walls.go — vanilla WallBlock connection logic. Walls carry a three-valued
 // none/low/tall enum per side plus an "up" center-post boolean, so they need
 // their own state math beside the boolean fence/pane connectors:
-//   - a side connects to walls, iron bars / glass panes, sturdy full faces,
+//   - a side connects to walls, iron bars / glass panes, sturdy faces,
 //     and fence gates whose facing runs across the connection axis
 //     (WallBlock.connectsTo);
 //   - a connected side is TALL when covered from above (a solid block, or a
@@ -81,9 +81,12 @@ func gateInfo(state uint32) (worldgen.BlockInfo, bool) {
 	return info, true
 }
 
-// wallConnectsTo mirrors WallBlock.connectsTo for the neighbour on a side
-// whose connection axis is X (east/west) or Z (north/south).
-func wallConnectsTo(nb uint32, sideAxisX bool) bool {
+// wallConnectsTo mirrors WallBlock.connectsTo for the neighbour nb, whose
+// face toward the wall is back: its sturdiness is asked of that face alone
+// (isFaceSturdy), so the hinge side of an open trapdoor or the back of a
+// stair holds a wall, and glass does, though none of them is an opaque cube.
+func wallConnectsTo(nb uint32, back int) bool {
+	sideAxisX := back == worldgen.FaceWest || back == worldgen.FaceEast
 	if _, ok := wallInfo(nb); ok {
 		return true
 	}
@@ -94,7 +97,7 @@ func wallConnectsTo(nb uint32, sideAxisX bool) bool {
 		// a gate connects when its facing runs across the wall line
 		return facingAxisX(worldgen.GetProperty(info, nb, "facing")) != sideAxisX
 	}
-	return !connectException(nb) && worldgen.IsSolidFull(nb)
+	return !connectException(nb) && worldgen.IsFaceSturdy(nb, back)
 }
 
 // wallState recomputes a wall's four sides and post from its neighbours —
@@ -106,7 +109,7 @@ func wallState(w *world.World, x, y, z int, info worldgen.BlockInfo, state uint3
 	side := map[string]string{}
 	for _, d := range hConnectDirs {
 		v := "none"
-		if wallConnectsTo(w.Block(x+d.dx, y, z+d.dz), d.dx != 0) {
+		if wallConnectsTo(w.Block(x+d.dx, y, z+d.dz), d.back) {
 			v = "low"
 			if aboveSolid || (aboveWall && worldgen.GetProperty(aboveInfo, above, d.name) != "none") {
 				v = "tall"

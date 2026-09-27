@@ -43,6 +43,12 @@ the public history since the project was open-sourced on 2026-07-10.
   world is refused, all in vanilla's words.
 
 ### Fixed
+- **Walls join the faces vanilla joins.** A wall, fence or glass pane now
+  connects to any neighbour whose facing side is a full, sturdy face, read
+  from the game's own block shapes: the hinge side of an open trapdoor, the
+  back of a stair, glass. It used to want an opaque full cube, so a button
+  that opened a trapdoor against a wall to signal down the wall column (the
+  post trick lift call panels use) clicked and did nothing.
 - **Bubble columns under boats, items on honey, fish at the top of a
   column.** A boat floating over a bubble column rocks on it (the client's
   bubble wobble), and after three seconds a whirlpool throws its riders out
