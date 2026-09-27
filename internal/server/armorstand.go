@@ -128,8 +128,8 @@ func (h *hub) interactStand(players map[int32]*tracked, t *tracked, st *armorSta
 	if t.inv == nil {
 		return
 	}
-	heldSlot := t.p.heldSlot()
-	held := t.inv.slots[heldSlot]
+	heldSlot := t.useSlot()
+	held := *t.handStack(heldSlot)
 	if held.item == int32(itemByName["name_tag"]) {
 		// ArmorStand.interactAt passes a name tag, and NameTagItem names any
 		// living entity but a player: a named tag names the stand.
@@ -142,8 +142,8 @@ func (h *hub) interactStand(players map[int32]*tracked, t *tracked, st *armorSta
 			if held.count--; held.count <= 0 {
 				held = invStack{}
 			}
-			t.inv.slots[heldSlot] = held
-			h.sendSlot(t, heldSlot)
+			*t.handStack(heldSlot) = held
+			h.sendHandSlot(t, heldSlot)
 		}
 		return
 	}
@@ -160,7 +160,7 @@ func (h *hub) interactStand(players map[int32]*tracked, t *tracked, st *armorSta
 			if held.count--; held.count <= 0 {
 				held = invStack{}
 			}
-			t.inv.slots[heldSlot] = held
+			*t.handStack(heldSlot) = held
 			if prev.item != 0 { // the swapped-out piece comes back
 				changed, leftover := t.inv.addStack(prev)
 				for _, s := range changed {
@@ -170,7 +170,7 @@ func (h *hub) interactStand(players map[int32]*tracked, t *tracked, st *armorSta
 					h.tossItem(players, t, prev)
 				}
 			}
-			h.sendSlot(t, heldSlot)
+			h.sendHandSlot(t, heldSlot)
 		}
 	} else {
 		// Undress head-down (no click height in the domain event).

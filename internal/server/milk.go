@@ -34,7 +34,7 @@ func milkSound(etype int) string {
 
 // tryMilk fills a held bucket from an adult cow, mooshroom or goat.
 func (h *hub) tryMilk(players map[int32]*tracked, t *tracked, m *mob) bool {
-	if heldStack(t).item != itemBucket || m.baby {
+	if usedStack(t).item != itemBucket || m.baby {
 		return false
 	}
 	switch m.etype {
@@ -43,23 +43,23 @@ func (h *hub) tryMilk(players map[int32]*tracked, t *tracked, m *mob) bool {
 		return false
 	}
 	h.playSoundDim(players, m.dim, milkSound(m.etype), sndNeutral, m.x, m.y, m.z, 1, 1)
-	h.giveFilled(players, t, int32(t.p.heldSlot()), itemMilkBucket)
+	h.giveFilled(players, t, int32(t.useSlot()), itemMilkBucket)
 	return true
 }
 
 // tryMilkStew is the mooshroom's other half: a bowl comes back as stew — the
 // suspicious kind when a brown mooshroom was fed a flower (stew.go).
 func (h *hub) tryMilkStew(players map[int32]*tracked, t *tracked, m *mob) bool {
-	if heldStack(t).item != itemBowlEmpty || m.etype != entityMooshroom || m.baby {
+	if usedStack(t).item != itemBowlEmpty || m.etype != entityMooshroom || m.baby {
 		return false
 	}
 	h.playSoundDim(players, m.dim, "minecraft:entity.mooshroom.milk", sndNeutral, m.x, m.y, m.z, 1, 1)
 	if m.stew != 0 { // a brown mooshroom fed a flower: suspicious stew, once
-		h.giveFilledStack(players, t, int32(t.p.heldSlot()), invStack{item: itemSuspiciousStew, count: 1, stew: m.stew})
+		h.giveFilledStack(players, t, int32(t.useSlot()), invStack{item: itemSuspiciousStew, count: 1, stew: m.stew})
 		m.stew = 0
 		return true
 	}
-	h.giveFilled(players, t, int32(t.p.heldSlot()), itemMushroomStew)
+	h.giveFilled(players, t, int32(t.useSlot()), itemMushroomStew)
 	return true
 }
 

@@ -57,7 +57,7 @@ func isMobBucket(item int32) bool {
 // tryBucketMob is Bucketable.bucketMobPickup: a water bucket on a bucketable
 // mob scoops it. Returns whether the interaction was consumed.
 func (h *hub) tryBucketMob(players map[int32]*tracked, t *tracked, m *mob) bool {
-	if heldStack(t).item != itemBucketH2O || m.dying > 0 {
+	if usedStack(t).item != itemBucketH2O || m.dying > 0 {
 		return false // canBePickedUpWithBucket: WATER_BUCKET only; isAlive
 	}
 	mb, ok := mobBucketBySpecies[m.etype]
@@ -74,7 +74,7 @@ func (h *hub) tryBucketMob(players map[int32]*tracked, t *tracked, m *mob) bool 
 	}
 	filled.cube.health = int32(m.health) + 1 // saveDefaultDataToBucketTag: Health
 	filled.name = m.customName               // bucket.copyFrom(CUSTOM_NAME, entity)
-	h.giveFilledStack(players, t, int32(t.p.heldSlot()), filled)
+	h.giveFilledStack(players, t, int32(t.useSlot()), filled)
 	h.advance(players, t, "filled_bucket", advMatch{item: mb.item})
 	h.dropLeash(players, m, true) // Leashable.dropLeash: the lead pops out
 	h.removeMob(players, m)

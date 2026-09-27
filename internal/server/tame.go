@@ -67,13 +67,13 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 	if m.tamed {
 		// A dye in the owner's hand recolours the collar (Wolf/Cat.mobInteract);
 		// the same colour again does nothing.
-		if dye, ok := dyeOrdinalByItem[heldStack(t).item]; ok && m.owner == t.p.eid && (m.etype == entityWolf || m.etype == entityCat) {
+		if dye, ok := dyeOrdinalByItem[usedStack(t).item]; ok && m.owner == t.p.eid && (m.etype == entityWolf || m.etype == entityCat) {
 			if dye == m.collar {
 				return false
 			}
 			m.collar = dye
 			if isSurvival(t.gamemode) {
-				h.consumeHeld(t)
+				h.consumeUsed(t)
 			}
 			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(variantMeta(m)))
 			return true
@@ -86,17 +86,17 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 		if m.owner != t.p.eid || m.etype == entityNautilus {
 			return false // a nautilus never sits: AbstractNautilus.mobInteract rides or feeds instead
 		}
-		if held := heldStack(t).item; held != 0 && isLoveFood(m.etype, held) {
+		if held := usedStack(t).item; held != 0 && isLoveFood(m.etype, held) {
 			return false
 		}
 		m.sitting = !m.sitting
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(petMeta(m)))
 		return true
 	}
-	if !isTameFood(m.etype, heldStack(t).item) {
+	if !isTameFood(m.etype, usedStack(t).item) {
 		return false
 	}
-	h.consumeFed(t, heldStack(t).item) // a pufferfish bucket leaves its water
+	h.consumeFed(t, usedStack(t).item) // a pufferfish bucket leaves its water
 	if h.rng.Intn(tameOdds) != 0 {
 		// Didn't take this time.
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameFail))

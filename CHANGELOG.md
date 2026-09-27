@@ -32,6 +32,13 @@ the public history since the project was open-sourced on 2026-07-10.
   keeps its colour and name. Unbreaking now protects a dispensed flint and
   steel, shears and brush. A dispensed flint and steel primes TNT and lights
   an explosive sulfur cube.
+- **The offhand works on mobs and more.** Items in your offhand now work on
+  mobs, armour stands, item frames and minecarts when your main hand has
+  nothing to do: name tags, leads, dyes, buckets, feed, shears, saddles and
+  the rest. The offhand is used up or worn, not the main hand. A fishing rod
+  in the offhand casts, reels in and wears there, and the line holds while
+  either hand has a rod. An offhand written book opens. Armour and frogspawn
+  used from the offhand are taken from the offhand.
 
 ## 2026-09-26
 

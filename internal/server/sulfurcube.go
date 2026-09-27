@@ -309,7 +309,7 @@ func (h *hub) trySulfurCube(players map[int32]*tracked, t *tracked, m *mob) bool
 	if m.etype != entitySulfurCube || m.dying > 0 {
 		return false
 	}
-	held := heldStack(t)
+	held := usedStack(t)
 	c := &m.cube
 	if m.baby {
 		// The slime ball ages it: a tenth of what is left, in whole seconds.
@@ -318,7 +318,7 @@ func (h *hub) trySulfurCube(players map[int32]*tracked, t *tracked, m *mob) bool
 		}
 		h.ageUp(m, m.growLeft/200*20)
 		if t.gamemode != gmCreative {
-			h.consumeHeld(t)
+			h.consumeUsed(t)
 		}
 		h.cubeSound(players, m, "minecraft:entity.small_sulfur_cube.eat", sulfurVolume(m), h.voicePitch(m))
 		return true
@@ -334,9 +334,9 @@ func (h *hub) trySulfurCube(players map[int32]*tracked, t *tracked, m *mob) bool
 		h.primeSulfurCube(players, m, false)
 		if t.gamemode != gmCreative {
 			if held.item == itemFlintAndSteel {
-				h.applyToolWear(t, t.p.heldSlot(), 1)
+				h.applyToolWear(t, t.useSlot(), 1)
 			} else {
-				h.consumeHeld(t)
+				h.consumeUsed(t)
 			}
 		}
 		h.incStat(t, attachproto.StatUsed, held.item, 1)
@@ -347,7 +347,7 @@ func (h *hub) trySulfurCube(players map[int32]*tracked, t *tracked, m *mob) bool
 		h.shearSulfurCube(players, m)
 		h.vibAt(m.dim, freqShear, m.x, m.y, m.z, t.p.eid)
 		if isSurvival(t.gamemode) {
-			h.applyToolWear(t, t.p.heldSlot(), 1)
+			h.applyToolWear(t, t.useSlot(), 1)
 		}
 		h.advance(players, t, "player_sheared_equipment", advMatch{entity: advEntityName[m.etype], item: st.item})
 		return true
@@ -357,7 +357,7 @@ func (h *hub) trySulfurCube(players map[int32]*tracked, t *tracked, m *mob) bool
 			return false
 		}
 		if t.gamemode != gmCreative {
-			h.consumeHeld(t)
+			h.consumeUsed(t)
 		}
 		return true
 	}
@@ -434,7 +434,7 @@ func (h *hub) bucketSulfurCube(players map[int32]*tracked, t *tracked, m *mob) b
 			}
 		}
 	} else {
-		h.giveFilledStack(players, t, int32(t.p.heldSlot()), st)
+		h.giveFilledStack(players, t, int32(t.useSlot()), st)
 	}
 	h.advance(players, t, "filled_bucket", advMatch{item: itemSulfurCubeBucket})
 	h.dropLeash(players, m, true)

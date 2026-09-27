@@ -93,14 +93,14 @@ func (h *hub) tryWolfArmor(players map[int32]*tracked, t *tracked, m *mob) bool 
 	if m.etype != entityWolf || !m.tamed || m.owner != t.p.eid || m.dying > 0 {
 		return false
 	}
-	held := heldStack(t)
+	held := usedStack(t)
 	switch {
 	case held.item == itemWolfArmor && m.armorSt.item == 0 && !m.baby:
 		piece := held
 		piece.count = 1
 		m.armorSt = piece
 		if isSurvival(t.gamemode) {
-			h.consumeHeld(t)
+			h.consumeUsed(t)
 		}
 		h.playSoundDim(players, m.dim, "minecraft:item.armor.equip_wolf", sndNeutral, m.x, m.y, m.z, 1, 1)
 		m.refreshGearArmor()
@@ -108,7 +108,7 @@ func (h *hub) tryWolfArmor(players map[int32]*tracked, t *tracked, m *mob) bool 
 		return true
 	case held.item == itemArmadilloScute && m.sitting && m.armorSt.item == itemWolfArmor && m.armorSt.dmg > 0:
 		if isSurvival(t.gamemode) {
-			h.consumeHeld(t)
+			h.consumeUsed(t)
 		}
 		h.playSoundDim(players, m.dim, "minecraft:item.wolf_armor.repair", sndNeutral, m.x, m.y, m.z, 1, 1)
 		m.armorSt.dmg = max(0, m.armorSt.dmg-int(float64(wolfArmorMax())*wolfArmorRepairPt))

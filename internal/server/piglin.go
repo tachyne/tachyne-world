@@ -150,11 +150,11 @@ func (h *hub) piglinAdmire(players map[int32]*tracked, m *mob, st invStack) {
 // tryBarter is PiglinAi.mobInteract: a gold ingot held out to an adult
 // piglin that is not busy admiring.
 func (h *hub) tryBarter(players map[int32]*tracked, t *tracked, m *mob) bool {
-	if m.etype != entityPiglin || m.dying > 0 || heldStack(t).item != itemGoldIngot || !m.canAdmire(h.tick.Load()) {
+	if m.etype != entityPiglin || m.dying > 0 || usedStack(t).item != itemGoldIngot || !m.canAdmire(h.tick.Load()) {
 		return false
 	}
 	if isSurvival(t.gamemode) {
-		h.consumeHeld(t)
+		h.consumeUsed(t)
 	}
 	h.piglinAdmire(players, m, invStack{item: itemGoldIngot, count: 1})
 	m.vx, m.vz = 0, 0

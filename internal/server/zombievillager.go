@@ -130,8 +130,8 @@ func (h *hub) cureZombieVillager(players map[int32]*tracked, t *tracked, m *mob)
 	if m.etype != entityZombieVillager || t.inv == nil {
 		return false
 	}
-	slot := t.p.heldSlot()
-	st := &t.inv.slots[slot]
+	slot := t.useSlot()
+	st := t.handStack(slot)
 	if st.count == 0 || st.item != itemByName["golden_apple"] {
 		return false
 	}
@@ -143,7 +143,7 @@ func (h *hub) cureZombieVillager(players map[int32]*tracked, t *tracked, m *mob)
 		if st.count == 0 {
 			*st = invStack{}
 		}
-		h.sendSlot(t, slot)
+		h.sendHandSlot(t, slot)
 	}
 	h.startCure(players, m, t.p.name, cureTimeMin+h.rng.Intn(cureTimeSpan))
 	return true

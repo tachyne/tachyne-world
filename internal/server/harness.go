@@ -55,12 +55,12 @@ func (h *hub) tryHappyGhast(players map[int32]*tracked, t *tracked, m *mob) bool
 	if m.etype != entityHappyGhast || m.dying > 0 || m.baby {
 		return false // ghastlings can't be harnessed or ridden
 	}
-	held := heldStack(t).item
+	held := usedStack(t).item
 	switch {
 	case m.harness == 0 && isHarness(held):
 		m.harness = held
 		if isSurvival(t.gamemode) {
-			h.consumeHeld(t)
+			h.consumeUsed(t)
 		}
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, ghastHarnessEquip(m.eid, m.harness))
 		h.playSoundDim(players, m.dim, harnessEquipSound, sndNeutral, m.x, m.y, m.z, 1, 1)

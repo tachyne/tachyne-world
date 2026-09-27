@@ -150,7 +150,7 @@ func (r *remotePlayer) Action(v any) {
 			item, slot = p.offhandItem(), offhandSlot
 		}
 		if equipSlotOnUse(item) >= 0 { // armour in hand goes on
-			h.post(evEquipHeld{eid: p.eid})
+			h.post(evEquipHeld{eid: p.eid, off: off})
 			return
 		}
 		if spearOf(item) != nil && e.Hand != handOffhand { // a spear is lowered for the charge
@@ -165,7 +165,7 @@ func (r *remotePlayer) Action(v any) {
 		case itemTrident:
 			h.post(evTridentUse{eid: p.eid, off: off})
 		case itemFishingRod:
-			h.post(evFishUse{eid: p.eid})
+			h.post(evFishUse{eid: p.eid, off: off})
 		case itemCarrotOnStick, itemWarpedFungusStick:
 			h.post(evSteerBoost{eid: p.eid, slot: int(slot)})
 		case itemBucket: // aiming at a fluid: the client sends plain use_item
@@ -187,7 +187,7 @@ func (r *remotePlayer) Action(v any) {
 		case itemGoatHorn:
 			h.post(evUseHorn{eid: p.eid, off: off})
 		case itemFrogspawn: // placed on the water surface, not against a face
-			h.post(evPlaceOnWater{eid: p.eid})
+			h.post(evPlaceOnWater{eid: p.eid, off: off})
 		case itemEnderPearl:
 			h.post(evThrowPearl{eid: p.eid, off: off})
 		case itemWindCharge:
@@ -197,7 +197,9 @@ func (r *remotePlayer) Action(v any) {
 		case itemEmptyMap:
 			h.post(evUseMap{eid: p.eid, slot: slot})
 		case itemWrittenBook, itemWritableBook:
-			r.emitEvNow(attachproto.OpenBook{Hand: 0}) // the reader/editor UI is client-side
+			// The reader/editor UI is client-side; it opens the book in the
+			// hand that was used (WrittenBookItem.use → openItemGui(hand)).
+			r.emitEvNow(attachproto.OpenBook{Hand: e.Hand})
 		default:
 			// BoatItem.use: the crosshair is on water, which the client
 			// reports as a plain use because a fluid is not a clickable block.
@@ -215,15 +217,10 @@ func (r *remotePlayer) Action(v any) {
 		switch {
 		case e.Attack:
 			h.post(evAttack{attacker: p.eid, target: e.Target})
-		case e.Hand == 1:
-			// The client sends an OFF_HAND interact only after the main
-			// hand's passed. Mob interaction here reads the main hand, so
-			// running it again would repeat the main-hand action (a
-			// sitting pet toggled twice, a second feed); until offhand
-			// items on mobs are threaded through, the offhand click is
-			// the pass it was on the client.
 		default:
-			h.post(evInteractMob{eid: p.eid, target: e.Target, sneak: p.sneaking})
+			// The client sends an OFF_HAND interact only after its main hand
+			// passed; the hub runs it with the offhand's item.
+			h.post(evInteractMob{eid: p.eid, target: e.Target, sneak: p.sneaking, off: e.Hand == 1})
 		}
 	case attachproto.VehicleMove:
 		h.post(evVehicleMove{eid: p.eid, x: e.X, y: e.Y, z: e.Z, yaw: e.Yaw})

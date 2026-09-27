@@ -141,6 +141,7 @@ type evAttack struct{ attacker, target int32 } // player melee-hit an entity
 type evInteractMob struct {                    // right-clicked a mob (feed/shear/mount screen)
 	eid, target int32
 	sneak       bool
+	off         bool // the OFF_HAND interact the client sends after its main hand passed
 }
 
 func (evInteractMob) isHubEvent() {}
@@ -2023,7 +2024,10 @@ func (h *hub) run() {
 				}
 			case evFishUse:
 				if t := players[e.eid]; t != nil {
+					prev := t.useOffhand
+					t.useOffhand = e.off
 					h.useRod(players, t)
+					t.useOffhand = prev
 				}
 			case evSpearUse:
 				if t := players[e.eid]; t != nil {
@@ -2041,7 +2045,10 @@ func (h *hub) run() {
 				}
 			case evPlaceOnWater:
 				if t := players[e.eid]; t != nil {
+					prev := t.useOffhand
+					t.useOffhand = e.off
 					h.placeFrogspawn(players, t)
+					t.useOffhand = prev
 				}
 			case evAttack:
 				if !h.targetOutsideBorder(players, e.target) {
@@ -2098,38 +2105,13 @@ func (h *hub) run() {
 				}
 			case evInteractMob:
 				if t := players[e.eid]; t != nil && !h.targetOutsideBorder(players, e.target) {
-					if st := h.armorStands[e.target]; st != nil {
-						h.interactStand(players, t, st)
-						break
-					}
-					if k := h.knots[e.target]; k != nil {
-						h.interactKnot(players, t, k, e.sneak)
-						break
-					}
-					if f := h.itemFrames[e.target]; f != nil {
-						h.interactFrame(players, t, f)
-						break
-					}
-					if v := h.vehicles[e.target]; v != nil {
-						if !v.isBoat() {
-							h.interactCart(players, t, v)
-							break
-						}
-						if e.sneak && v.chest != nil { // ChestBoat: sneak-click opens the cargo
-							h.openVehicleChest(players, t, v)
-							break
-						}
-						h.mountVehicle(players, t, v)
-						break
-					}
-					if m := h.mobs[e.target]; m != nil && (m.etype == entityVillager || m.etype == entityWanderingTrader) && m.dying == 0 &&
-						mobInReach(t, m) {
-						h.openTrades(t, m)
-						break
-					}
-					if m := h.mobs[e.target]; m != nil && m.dying == 0 && mobInReach(t, m) {
-						h.interactMob(players, t, m, e.sneak)
-					}
+					// ServerGamePacketListenerImpl.handleInteract: interactOn
+					// with the packet's hand, so an offhand name tag, lead or
+					// feed works when the main hand passed on the client.
+					prev := t.useOffhand
+					t.useOffhand = e.off
+					h.onInteractMob(players, t, e)
+					t.useOffhand = prev
 				}
 			case evClick:
 				h.handleClick(players, e)

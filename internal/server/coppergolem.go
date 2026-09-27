@@ -104,12 +104,12 @@ func (h *hub) tryCopperGolem(players map[int32]*tracked, t *tracked, m *mob) boo
 	if m.etype != entityCopperGolem || m.dying > 0 {
 		return false
 	}
-	held := heldStack(t).item
+	held := usedStack(t).item
 	switch {
 	case held == itemHoneycomb && !m.waxed:
 		m.waxed = true
 		if isSurvival(t.gamemode) {
-			h.consumeHeld(t)
+			h.consumeUsed(t)
 		}
 		h.playSoundDim(players, m.dim, "minecraft:item.honeycomb.wax_on", sndNeutral, m.x, m.y, m.z, 1, 1)
 		return true

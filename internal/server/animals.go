@@ -99,7 +99,7 @@ func sheepMeta(m *mob, sheared bool) []byte {
 // baby grows a tenth of its remaining time, an adult off cooldown starts
 // courting. Returns whether the food was taken.
 func (h *hub) feedAnimal(players map[int32]*tracked, t *tracked, m *mob) bool {
-	item := heldStack(t).item
+	item := usedStack(t).item
 	if m.dying > 0 {
 		return false
 	}
@@ -160,11 +160,11 @@ func (h *hub) shearMob(players map[int32]*tracked, m *mob) bool {
 
 // shearSheep handles a player using shears on an unsheared adult sheep.
 func (h *hub) shearSheep(players map[int32]*tracked, t *tracked, m *mob) bool {
-	if heldStack(t).item != itemShears || !h.shearMob(players, m) {
+	if usedStack(t).item != itemShears || !h.shearMob(players, m) {
 		return false
 	}
 	if isSurvival(t.gamemode) {
-		h.applyToolWear(t, t.p.heldSlot(), 1)
+		h.applyToolWear(t, t.useSlot(), 1)
 	}
 	return true
 }

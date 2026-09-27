@@ -39,7 +39,7 @@ var eggOffspring = func() map[int]bool {
 // mob's own species puts a baby of it where the mob stands, bred from the
 // mob as both parents, and the egg is spent (creative keeps it).
 func (h *hub) tryEggOffspring(players map[int32]*tracked, t *tracked, m *mob) bool {
-	et, ok := spawnEggEntity[heldStack(t).item]
+	et, ok := spawnEggEntity[usedStack(t).item]
 	if !ok || et != m.etype || m.dying > 0 {
 		return false
 	}
@@ -78,7 +78,7 @@ func (h *hub) tryEggOffspring(players map[int32]*tracked, t *tracked, m *mob) bo
 	}
 	h.toTracking(players, baby.eid, baby.dim, baby.x, baby.z, metaEv(babyMeta(baby.eid, true)))
 	if t.gamemode != gmCreative {
-		h.consumeHeld(t)
+		h.consumeUsed(t)
 	}
 	return true
 }
@@ -105,7 +105,7 @@ func (h *hub) eggSetBabyOffspring(players map[int32]*tracked, t *tracked, m *mob
 		h.toTracking(players, baby.eid, baby.dim, baby.x, baby.z, metaEv(mobBabyMeta(baby, true)))
 	}
 	if t.gamemode != gmCreative {
-		h.consumeHeld(t)
+		h.consumeUsed(t)
 	}
 	return true
 }

@@ -265,7 +265,7 @@ func (h *hub) tryAllay(players map[int32]*tracked, t *tracked, m *mob) bool {
 	if m.etype != entityAllay || m.dying > 0 || t.inv == nil {
 		return false
 	}
-	held := heldStack(t)
+	held := usedStack(t)
 	switch {
 	case m.dancing && held.item == itemAmethystShard && m.dupCD == 0:
 		if twin := h.spawnSpecies(players, entityAllay, m.dim, m.x, m.y, m.z); twin != nil {
@@ -278,7 +278,7 @@ func (h *hub) tryAllay(players map[int32]*tracked, t *tracked, m *mob) bool {
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameOK)) // hearts (event 18)
 		h.playSoundDim(players, m.dim, "minecraft:block.amethyst_block.chime", sndNeutral, m.x, m.y, m.z, 2, 1)
 		if isSurvival(t.gamemode) {
-			h.consumeHeld(t)
+			h.consumeUsed(t)
 		}
 		return true
 	case m.held == 0 && held.item != 0:
@@ -287,7 +287,7 @@ func (h *hub) tryAllay(players map[int32]*tracked, t *tracked, m *mob) bool {
 		m.setHeld(one)
 		m.owner, m.ownerUUID = t.p.eid, t.p.uuid
 		if isSurvival(t.gamemode) {
-			h.consumeHeld(t)
+			h.consumeUsed(t)
 		}
 		h.playSoundDim(players, m.dim, "minecraft:entity.allay.item_given", sndNeutral, m.x, m.y, m.z, 2, 1)
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(), invStack{}, m.gear))
