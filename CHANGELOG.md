@@ -43,6 +43,28 @@ the public history since the project was open-sourced on 2026-07-10.
   world is refused, all in vanilla's words.
 
 ### Fixed
+- **Droppers, hoppers and comparators ask the block that is there.** A
+  dropper facing a cell where a container used to stand now throws its item
+  out, as vanilla's does, instead of pushing it into storage the removed
+  block had left behind; a comparator no longer reads that leftover storage,
+  and the next container placed there starts empty. Storage left like that
+  is swept at start-up and its items fall where the block stood. A dropper,
+  hopper, brewing stand or furnace nobody has opened yet takes items from a
+  hopper or dropper as vanilla's does.
+- **Comparators notice containers filling and emptying.** A comparator
+  reading a dropper, hopper, chest, furnace or crafter lights two ticks
+  after the contents change — a hopper or dropper moving an item, a furnace
+  finishing a smelt, a player's click in the container's window. It used to
+  wait until something else happened to update it.
+- **Dropped items fly out of droppers.** A dropper or dispenser throws the
+  item out of its face with vanilla's speed and spread (up and away, a
+  little upward even when it faces sideways), where it used to set it down
+  on the floor below the face.
+- **Walls, fences and panes re-read only the side that changed.** When a
+  block beside one changes, only that side is looked at again, as vanilla
+  does; a wall also ignores the block under it. On a lift's call panel,
+  pressing one floor's button no longer fires the next lane too because its
+  wall suddenly noticed a dirt block it had been standing beside all along.
 - **Walls join the faces vanilla joins.** A wall, fence or glass pane now
   connects to any neighbour whose facing side is a full, sturdy face, read
   from the game's own block shapes: the hinge side of an open trapdoor, the

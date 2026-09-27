@@ -100,16 +100,48 @@ func wallConnectsTo(nb uint32, back int) bool {
 	return !connectException(nb) && worldgen.IsFaceSturdy(nb, back)
 }
 
-// wallState recomputes a wall's four sides and post from its neighbours —
-// vanilla WallBlock.updateShape/updateSides/shouldRaisePost.
+// wallState is a wall placed fresh (WallBlock.getStateForPlacement): all
+// four sides read from the neighbours, then the heights and the post.
 func wallState(w *world.World, x, y, z int, info worldgen.BlockInfo, state uint32) uint32 {
+	conn := map[string]bool{}
+	for _, d := range hConnectDirs {
+		conn[d.name] = wallConnectsTo(w.Block(x+d.dx, y, z+d.dz), d.back)
+	}
+	return wallShape(w, x, y, z, info, state, conn)
+}
+
+// wallUpdated is WallBlock.updateShape for a wall told that the cell one
+// step along d changed. The cell below is nothing to a wall; the cell above
+// re-reads the heights and the post over the sides it already has
+// (topUpdate); a side re-reads THAT side's connection alone and keeps the
+// other three as they are (sideUpdate). A side is never re-read because
+// some other neighbour changed: a wall set beside a block it did not join
+// stays unjoined until that block itself changes.
+func wallUpdated(w *world.World, n blockPos, info worldgen.BlockInfo, state uint32, d [3]int) uint32 {
+	if d[1] < 0 {
+		return state
+	}
+	conn := map[string]bool{}
+	for _, hd := range hConnectDirs {
+		conn[hd.name] = worldgen.GetProperty(info, state, hd.name) != "none" // isConnected
+		if d[1] == 0 && d[0] == hd.dx && d[2] == hd.dz {
+			conn[hd.name] = wallConnectsTo(w.Block(n.x+hd.dx, n.y, n.z+hd.dz), hd.back)
+		}
+	}
+	return wallShape(w, n.x, n.y, n.z, info, state, conn)
+}
+
+// wallShape is WallBlock.updateShape(…, north, east, south, west): each
+// joined side is TALL under cover and LOW otherwise (updateSides), then the
+// post (shouldRaisePost).
+func wallShape(w *world.World, x, y, z int, info worldgen.BlockInfo, state uint32, conn map[string]bool) uint32 {
 	above := w.Block(x, y+1, z)
 	aboveInfo, aboveWall := wallInfo(above)
 	aboveSolid := worldgen.IsSolidFull(above)
 	side := map[string]string{}
 	for _, d := range hConnectDirs {
 		v := "none"
-		if wallConnectsTo(w.Block(x+d.dx, y, z+d.dz), d.back) {
+		if conn[d.name] {
 			v = "low"
 			if aboveSolid || (aboveWall && worldgen.GetProperty(aboveInfo, above, d.name) != "none") {
 				v = "tall"
@@ -135,22 +167,23 @@ func wallState(w *world.World, x, y, z int, info worldgen.BlockInfo, state uint3
 	return worldgen.SetProperty(info, state, "up", up)
 }
 
-// refreshWallColumn recomputes the wall at (x,y,z) and cascades DOWNWARD
-// while states keep changing — a wall's tall sides and post depend on the
-// wall above it, so a change at the top of a stack ripples down.
-func (s *Server) refreshWallColumn(w *world.World, dim, x, y, z int) {
+// refreshWallColumn updates the wall at (x,y,z), told the cell one step
+// along d changed, and cascades DOWNWARD while states keep changing — a
+// wall's tall sides and post depend on the wall above it, so a change at the
+// top of a stack ripples down.
+func (s *Server) refreshWallColumn(w *world.World, dim, x, y, z int, d [3]int) {
 	for {
 		cur := w.Block(x, y, z)
 		info, ok := wallInfo(cur)
 		if !ok {
 			return
 		}
-		ns := wallState(w, x, y, z, info, cur)
+		ns := wallUpdated(w, blockPos{x, y, z}, info, cur, d)
 		if ns == cur {
 			return
 		}
 		w.SetBlock(x, y, z, ns)
 		s.hub.post(evBlock{x: x, y: y, z: z, dim: dim, state: ns, by: 0})
-		y--
+		y, d = y-1, [3]int{0, 1, 0}
 	}
 }

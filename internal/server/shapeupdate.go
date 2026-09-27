@@ -166,9 +166,9 @@ func shapeUpdated(w *world.World, n blockPos, st uint32, d [3]int) (uint32, bool
 		return worldgen.SetProperty(info, st, "thickness", speleothemThickness(w, n, st, tip, merge)), true
 	case shapeConnect:
 		// FenceBlock / IronBarsBlock / WallBlock / StairBlock / TripWireBlock
-		// .updateShape: any neighbour change, whoever made it, re-reads the
-		// connections — not only a player's edit.
-		return connectStateAt(w, n.x, n.y, n.z, st), true
+		// .updateShape: a neighbour change, whoever made it, re-reads the
+		// side it came from — not only a player's edit, and not the others.
+		return connectUpdated(w, n, info, st, d), true
 	case shapeBell:
 		// BellBlock.updateShape, along the facing's axis: a double-wall bell
 		// that loses one wall hangs on from the other; a single-wall bell that

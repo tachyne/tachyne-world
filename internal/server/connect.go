@@ -158,15 +158,56 @@ func (s *Server) updateConnectNeighbors(w *world.World, dim, x, y, z int) {
 		if _, ok := stairInfo(cur); ok {
 			isStair = true
 		}
+		toward := [3]int{-d.dx, 0, -d.dz} // from the neighbour to the edit
 		switch {
 		case worldgen.IsWallConnector(info):
-			s.refreshWallColumn(w, dim, nx, y, nz)
+			s.refreshWallColumn(w, dim, nx, y, nz, toward)
 		case worldgen.IsHorizontalConnector(info), isStair:
-			if ns := s.connectState(w, nx, y, nz, cur); ns != cur {
+			if ns := connectUpdated(w, blockPos{nx, y, nz}, info, cur, toward); ns != cur {
 				w.SetBlock(nx, y, nz, ns)
 				s.hub.post(evBlock{x: nx, y: y, z: nz, dim: dim, state: ns, by: 0})
 			}
 		}
 	}
-	s.refreshWallColumn(w, dim, x, y-1, z)
+	s.refreshWallColumn(w, dim, x, y-1, z, [3]int{0, 1, 0})
+}
+
+// connectUpdated is updateShape for a connector (FenceBlock, IronBarsBlock,
+// WallBlock, StairBlock, TripWireBlock) told that the cell one step along d
+// changed. Fences, panes, bars and tripwire re-read the one side that
+// changed and nothing else; stairs re-read their shape on any horizontal
+// change; walls follow wallUpdated. None of them answers the cell above or
+// below, walls apart.
+func connectUpdated(w *world.World, n blockPos, info worldgen.BlockInfo, state uint32, d [3]int) uint32 {
+	if worldgen.IsWallConnector(info) {
+		return wallUpdated(w, n, info, state, d)
+	}
+	if d[1] != 0 {
+		return state
+	}
+	if _, ok := stairInfo(state); ok {
+		return stairShape(w, n.x, n.y, n.z, info, state)
+	}
+	for _, hd := range hConnectDirs {
+		if d[0] != hd.dx || d[2] != hd.dz {
+			continue
+		}
+		nb := w.Block(n.x+hd.dx, n.y, n.z+hd.dz)
+		var v bool
+		switch {
+		case isTripwire(state):
+			// TripWireBlock.shouldConnectTo: more tripwire, or a hook
+			// facing back at it.
+			v = isTripwire(nb)
+			if isTripwireHook(nb) {
+				v = stateFacing(nb) == oppositeFacing(hd.name)
+			}
+		case worldgen.IsHorizontalConnector(info):
+			v = connectsTo(state, nb, hd.back)
+		default:
+			return state
+		}
+		return worldgen.SetProperty(info, state, hd.name, strconv.FormatBool(v))
+	}
+	return state
 }

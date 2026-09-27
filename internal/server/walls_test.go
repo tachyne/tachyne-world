@@ -142,20 +142,22 @@ func TestWallFencePaneAttachment(t *testing.T) {
 	}
 }
 
-// TestWallColumnCascade: refreshing the top of a wall stack ripples the
-// tall/post changes down the column.
+// TestWallColumnCascade: the top of a wall stack joining the stone beside
+// it ripples the tall/post changes down the column.
 func TestWallColumnCascade(t *testing.T) {
 	def, info := wallDefault(t)
 	w := world.New(1)
 	s := &Server{world: w, hub: newTestHub(w)}
-	// two stacked walls with stone beside both levels
-	w.SetBlock(0, 200, 0, def)
-	w.SetBlock(0, 201, 0, def)
+	// two stacked walls with stone beside both levels: the bottom one placed
+	// among its stones, the top one told of each stone in turn
 	w.SetBlock(1, 200, 0, stone)
 	w.SetBlock(1, 201, 0, stone)
 	w.SetBlock(-1, 200, 0, stone)
 	w.SetBlock(-1, 201, 0, stone)
-	s.refreshWallColumn(w, 0, 0, 201, 0)
+	w.SetBlock(0, 200, 0, wallState(w, 0, 200, 0, info, def))
+	w.SetBlock(0, 201, 0, def)
+	s.refreshWallColumn(w, 0, 0, 201, 0, [3]int{1, 0, 0})
+	s.refreshWallColumn(w, 0, 0, 201, 0, [3]int{-1, 0, 0})
 	top, bottom := w.Block(0, 201, 0), w.Block(0, 200, 0)
 	if sideOf(t, info, top, "east") != "low" || sideOf(t, info, top, "up") != "false" {
 		t.Fatalf("top wall: e=%s up=%s", sideOf(t, info, top, "east"), sideOf(t, info, top, "up"))
