@@ -4,6 +4,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/tachyne/tachyne-common/protocol"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -98,6 +99,19 @@ func (s *blockNameStore) restore(m map[string]string) {
 			s.m[k] = v
 		}
 	}
+}
+
+// placedStack is the stack a placement came from: the main hand's when it
+// holds this block's item, else the offhand's (the evBlock carries no hand).
+func placedStack(t *tracked, state uint32) invStack {
+	places := func(st invStack) bool {
+		base, ok := protocol.BlockForItem(st.item)
+		return ok && st.count > 0 && sameBlockKind(base, state)
+	}
+	if main := heldStack(t); places(main) || !places(t.offhand) {
+		return main
+	}
+	return t.offhand
 }
 
 // nameBlockFromStack records a renamed stack's name on the block it placed.

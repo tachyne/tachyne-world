@@ -123,13 +123,13 @@ func (h *hub) tryFlowerMooshroom(players map[int32]*tracked, t *tracked, m *mob)
 	if m.etype != entityMooshroom || m.variant != mooshroomBrown || m.baby {
 		return false
 	}
-	idx := stewIndexFor(heldStack(t).item)
+	idx := stewIndexFor(usedStack(t).item)
 	if idx == 0 {
 		return false
 	}
 	if m.stew == 0 {
 		if isSurvival(t.gamemode) {
-			h.consumeHeld(t)
+			h.consumeUsed(t)
 		}
 		m.stew = idx
 		h.playSoundDim(players, m.dim, "minecraft:entity.mooshroom.eat", sndNeutral, m.x, m.y, m.z, 2, 1)

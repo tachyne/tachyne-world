@@ -29,7 +29,7 @@ const (
 // colour), snow golems (the carved pumpkin drops, the head shows) and the
 // bogged (its two mushrooms, then never again).
 func (h *hub) tryShearOther(players map[int32]*tracked, t *tracked, m *mob) bool {
-	if heldStack(t).item != itemShears || m.dying > 0 {
+	if usedStack(t).item != itemShears || m.dying > 0 {
 		return false
 	}
 	switch m.etype {
@@ -72,7 +72,7 @@ func (h *hub) tryShearOther(players map[int32]*tracked, t *tracked, m *mob) bool
 		return false
 	}
 	if isSurvival(t.gamemode) {
-		h.applyToolWear(t, t.p.heldSlot(), 1)
+		h.applyToolWear(t, t.useSlot(), 1)
 	}
 	return true
 }
@@ -93,7 +93,7 @@ func snowGolemMeta(m *mob) []byte {
 // tryRepairGolem is IronGolem.mobInteract: an iron ingot heals 25 (nothing
 // happens to a golem at full health), with the repair clank.
 func (h *hub) tryRepairGolem(players map[int32]*tracked, t *tracked, m *mob) bool {
-	if m.etype != entityIronGolem || heldStack(t).item != itemIronIngot || m.dying > 0 {
+	if m.etype != entityIronGolem || usedStack(t).item != itemIronIngot || m.dying > 0 {
 		return false
 	}
 	maxHP := m.maxHP()
@@ -103,7 +103,7 @@ func (h *hub) tryRepairGolem(players map[int32]*tracked, t *tracked, m *mob) boo
 	m.health = min(maxHP, m.health+golemRepairHeal)
 	h.playSoundDim(players, m.dim, "minecraft:entity.iron_golem.repair", sndNeutral, m.x, m.y, m.z, 1, 1+(h.rng.Float32()-h.rng.Float32())*0.2)
 	if isSurvival(t.gamemode) {
-		h.consumeHeld(t)
+		h.consumeUsed(t)
 	}
 	return true
 }
@@ -114,7 +114,7 @@ func (h *hub) tryIgniteCreeper(players map[int32]*tracked, t *tracked, m *mob) b
 	if m.etype != entityCreeper || m.dying > 0 {
 		return false
 	}
-	held := heldStack(t).item
+	held := usedStack(t).item
 	if held != itemFlintAndSteel && held != itemFireCharge {
 		return false
 	}
@@ -127,9 +127,9 @@ func (h *hub) tryIgniteCreeper(players map[int32]*tracked, t *tracked, m *mob) b
 	h.creeperSetSwellDir(players, m, 1)
 	if isSurvival(t.gamemode) {
 		if held == itemFireCharge {
-			h.consumeHeld(t)
+			h.consumeUsed(t)
 		} else {
-			h.applyToolWear(t, t.p.heldSlot(), 1)
+			h.applyToolWear(t, t.useSlot(), 1)
 		}
 	}
 	return true
@@ -138,11 +138,11 @@ func (h *hub) tryIgniteCreeper(players map[int32]*tracked, t *tracked, m *mob) b
 // tryPoisonParrot is Parrot.mobInteract's #parrot_poisonous_food branch:
 // a cookie is eaten, poisons the bird and kills it outright.
 func (h *hub) tryPoisonParrot(players map[int32]*tracked, t *tracked, m *mob) bool {
-	if m.etype != entityParrot || heldStack(t).item != itemCookie || m.dying > 0 {
+	if m.etype != entityParrot || usedStack(t).item != itemCookie || m.dying > 0 {
 		return false
 	}
 	if isSurvival(t.gamemode) {
-		h.consumeHeld(t)
+		h.consumeUsed(t)
 	}
 	h.applyMobEffect(players, m, effPoison, 0, 45)
 	h.hurtMobOf(players, m, math.MaxFloat32, dtPlayerAttack)
@@ -154,7 +154,7 @@ func (h *hub) tryPoisonParrot(players map[int32]*tracked, t *tracked, m *mob) bo
 // click raises player_interacted_with_entity with the item that was in hand
 // before it (PlayerInteractTrigger reads the stack as it was).
 func (h *hub) interactMob(players map[int32]*tracked, t *tracked, m *mob, sneak bool) bool {
-	held := heldStack(t).item
+	held := usedStack(t).item
 	if m.etype == entityCamelHusk {
 		m.persistent = true // CamelHusk.interact: any click keeps it
 	}
@@ -171,4 +171,42 @@ func (h *hub) interactMob(players map[int32]*tracked, t *tracked, m *mob, sneak 
 		return true
 	}
 	return false
+}
+
+// onInteractMob is Player.interactOn for a right-click on an entity, in the
+// hand t.useOffhand names.
+func (h *hub) onInteractMob(players map[int32]*tracked, t *tracked, e evInteractMob) {
+	if st := h.armorStands[e.target]; st != nil {
+		h.interactStand(players, t, st)
+		return
+	}
+	if k := h.knots[e.target]; k != nil {
+		h.interactKnot(players, t, k, e.sneak)
+		return
+	}
+	if f := h.itemFrames[e.target]; f != nil {
+		h.interactFrame(players, t, f)
+		return
+	}
+	if v := h.vehicles[e.target]; v != nil {
+		if !v.isBoat() {
+			h.interactCart(players, t, v)
+			return
+		}
+		if e.sneak && v.chest != nil { // ChestBoat: sneak-click opens the cargo
+			h.openVehicleChest(players, t, v)
+			return
+		}
+		h.mountVehicle(players, t, v)
+		return
+	}
+	m := h.mobs[e.target]
+	if m == nil || m.dying != 0 || !mobInReach(t, m) {
+		return
+	}
+	if m.etype == entityVillager || m.etype == entityWanderingTrader {
+		h.openTrades(t, m)
+		return
+	}
+	h.interactMob(players, t, m, e.sneak)
 }

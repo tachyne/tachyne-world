@@ -360,8 +360,8 @@ func (h *hub) fuelCart(players map[int32]*tracked, t *tracked, v *vehicle) {
 	if t.inv == nil {
 		return
 	}
-	slot := t.p.heldSlot()
-	st := &t.inv.slots[slot]
+	slot := t.useSlot()
+	st := t.handStack(slot)
 	if st.count == 0 || !cartFuelItems[st.item] || v.fuel+cartFuelPerItem > cartFuelMax {
 		return
 	}
@@ -372,7 +372,7 @@ func (h *hub) fuelCart(players map[int32]*tracked, t *tracked, v *vehicle) {
 		if st.count == 0 {
 			*st = invStack{}
 		}
-		h.sendSlot(t, slot)
+		h.sendHandSlot(t, slot)
 	}
 }
 

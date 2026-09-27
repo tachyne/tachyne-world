@@ -51,7 +51,7 @@ func (h *hub) tryMount(players map[int32]*tracked, t *tracked, m *mob) bool {
 	if m.etype == entityNautilus && !m.tamed {
 		return false // isSaddleable: only a tamed nautilus takes a saddle or a rider
 	}
-	held := heldStack(t).item
+	held := usedStack(t).item
 	if isMobFood(m.etype, held) {
 		return false // a meal is never a ride: Pig/AbstractHorse test isFood first
 	}
@@ -81,7 +81,7 @@ func (h *hub) tryMount(players map[int32]*tracked, t *tracked, m *mob) bool {
 		m.saddled = true
 		m.saddleSt = invStack{item: itemSaddle, count: 1}
 		if isSurvival(t.gamemode) {
-			h.consumeHeld(t)
+			h.consumeUsed(t)
 		}
 		if horseFamily(m.etype) {
 			h.horseEquipSync(players, m) // saddle + body armor together

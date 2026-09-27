@@ -42,7 +42,7 @@ func nameMetaVis(eid int32, name string, visible bool) []byte {
 // used on. An unnamed one does nothing, exactly as in vanilla — you have to
 // put it through an anvil first, which is what makes the anvil step meaningful.
 func (h *hub) tryNameTag(players map[int32]*tracked, t *tracked, m *mob) bool {
-	held := heldStack(t)
+	held := usedStack(t)
 	if held.item != int32(itemByName["name_tag"]) || held.name == "" {
 		return false
 	}
@@ -50,12 +50,12 @@ func (h *hub) tryNameTag(players map[int32]*tracked, t *tracked, m *mob) bool {
 	m.persistent = true // NameTagItem: setPersistenceRequired
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(nameMeta(m.eid, m.customName)))
 	if isSurvival(t.gamemode) {
-		slot := t.p.heldSlot()
+		slot := t.useSlot()
 		if held.count--; held.count <= 0 {
 			held = invStack{}
 		}
-		t.inv.slots[slot] = held
-		h.sendSlot(t, slot)
+		*t.handStack(slot) = held
+		h.sendHandSlot(t, slot)
 	}
 	return true
 }

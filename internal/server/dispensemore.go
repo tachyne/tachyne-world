@@ -105,11 +105,11 @@ func (h *hub) brushArmadillo(players map[int32]*tracked, m *mob) bool {
 // tryBrush is BrushItem.interactLivingEntity: a brush on an armadillo takes
 // a scute and wears the brush by sixteen.
 func (h *hub) tryBrush(players map[int32]*tracked, t *tracked, m *mob) bool {
-	if heldStack(t).item != itemBrush || !h.brushArmadillo(players, m) {
+	if usedStack(t).item != itemBrush || !h.brushArmadillo(players, m) {
 		return false
 	}
 	if isSurvival(t.gamemode) {
-		h.applyToolWear(t, t.p.heldSlot(), 16)
+		h.applyToolWear(t, t.useSlot(), 16)
 	}
 	return true
 }

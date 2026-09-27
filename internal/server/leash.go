@@ -184,7 +184,7 @@ func (h *hub) tryLeash(players map[int32]*tracked, t *tracked, m *mob) bool {
 		h.playSoundDim(players, m.dim, "minecraft:entity.lead.untied", sndNeutral, m.x, m.y, m.z, 1, 1)
 		return true
 	}
-	if heldStack(t).item != itemLead || !canBeLeashed(m) {
+	if usedStack(t).item != itemLead || !canBeLeashed(m) {
 		return false
 	}
 	// Vanilla refuses to steal a mob off another PLAYER's lead; one tied to a
@@ -197,7 +197,7 @@ func (h *hub) tryLeash(players map[int32]*tracked, t *tracked, m *mob) bool {
 	}
 	h.setLeash(players, m, t.p.eid)
 	if isSurvival(t.gamemode) {
-		h.consumeHeld(t)
+		h.consumeUsed(t)
 	}
 	h.playSoundDim(players, m.dim, "minecraft:entity.lead.tied", sndNeutral, m.x, m.y, m.z, 1, 1)
 	return true

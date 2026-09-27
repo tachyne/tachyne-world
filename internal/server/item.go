@@ -65,6 +65,7 @@ type itemEntity struct {
 	cube          cubeContent // a sulfur cube bucket's cube
 	ominous       bool        // the ominous banner
 	load          xbowLoad    // a crossbow's charged_projectiles
+	golemPose     int8        // a copper golem statue's pose (block_state)
 	vx, vy, vz    float64     // motion per tick (tickItem); all 0 at rest
 	born          uint64      // world tick spawned
 	age           int         // ItemEntity.age: ticks it has lain (despawns at 6000; saved)
@@ -83,7 +84,7 @@ func (it *itemEntity) stack() invStack {
 		hiveID: it.hiveID, bundleID: it.bundleID, potion: it.potion, repairCost: it.repairCost,
 		instrument: it.instrument, name: it.name, lode: it.lode, color: it.color, stew: it.stew,
 		shieldBase: it.shieldBase, sherds: it.sherds, flight: it.flight, starID: it.starID, cube: it.cube,
-		ominous: it.ominous, load: it.load}
+		ominous: it.ominous, load: it.load, golemPose: it.golemPose}
 }
 
 // setFrom is stack()'s inverse: everything a slot carries, onto the dropped
@@ -100,6 +101,7 @@ func (it *itemEntity) setFrom(st invStack) {
 	it.name, it.lode, it.stew, it.shieldBase = st.name, st.lode, st.stew, st.shieldBase
 	it.sherds, it.flight, it.starID = st.sherds, st.flight, st.starID
 	it.cube, it.ominous, it.load = st.cube, st.ominous, st.load
+	it.golemPose = st.golemPose
 }
 
 // refreshItemMeta re-sends a ground item's stack after a drop site has
@@ -160,6 +162,10 @@ func (h *hub) spawnBlockDrop(players map[int32]*tracked, dim int, item int32, co
 	if it != nil {
 		if n := h.takeHeldBlockName(simPos{dim: dim, blockPos: blockPos{x, y, z}}, item); n != "" {
 			it.name = n // copy_components custom_name
+		}
+		if p := h.takeHeldStatuePose(simPos{dim: dim, blockPos: blockPos{x, y, z}}, item); p != 0 {
+			it.golemPose = p // copy_state copper_golem_pose
+			h.refreshItemMeta(players, it)
 		}
 	}
 	if it != nil && item == itemDecoratedPot && h.lastPotPos == (simPos{dim: dim, blockPos: blockPos{x, y, z}}) {

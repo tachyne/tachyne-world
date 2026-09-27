@@ -78,7 +78,7 @@ func (h *hub) tryHorseScreen(players map[int32]*tracked, t *tracked, m *mob, sne
 		h.openHorseScreen(players, t, m) // HasCustomInventoryScreen: the nautilus shares the mount screen
 		return true
 	}
-	held := heldStack(t).item
+	held := usedStack(t).item
 	// Horse/AbstractChestedHorse/ZombieHorse.mobInteract: anything in hand
 	// that is not its food makes a wild one rear up and refuse — a saddle,
 	// a chest, armour or a sword alike. Only an empty hand climbs on.
@@ -90,7 +90,7 @@ func (h *hub) tryHorseScreen(players map[int32]*tracked, t *tracked, m *mob, sne
 	if tamed && held == int32(itemByName["chest"]) && chestedFamily(m.etype) && !m.chested {
 		h.equipChest(players, m)
 		if isSurvival(t.gamemode) {
-			h.consumeHeld(t)
+			h.consumeUsed(t)
 		}
 		return true
 	}

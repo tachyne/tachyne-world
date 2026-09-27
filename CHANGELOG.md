@@ -70,6 +70,35 @@ the public history since the project was open-sourced on 2026-07-10.
   players watching when they changed; anyone who came into range later saw
   an unnamed mob, a white sheep and a plain creeper.
 
+- **Thrown potions work like vanilla's.** A splash or lingering potion now
+  doses creative players too (only spectators are left out). A splash potion
+  gives the full drink duration at its centre, not three quarters of it. How
+  close you stand is measured to the edge of your body, rounded as vanilla
+  does, and a dose that would wear off within a second is skipped. A splash
+  of water now puts out fire, candles and campfires beside the block it
+  breaks on, and gives a drying axolotl 90 seconds of air back.
+- **Dispensers equip anything that can wear the item.** A dispenser puts
+  armour, heads and elytras on a player standing in front of it, not just on
+  an armour stand. It also dresses mobs that pick up loot, saddles an adult
+  pig or strider, harnesses a happy ghast, and saddles or armours a tame
+  nautilus. This works in every dimension; the stand and shears searches
+  used to look only in the overworld. Anything a dispenser tosses keeps all
+  its data, so a water bottle stays a water bottle and dyed or named armour
+  keeps its colour and name. Unbreaking now protects a dispensed flint and
+  steel, shears and brush. A dispensed flint and steel primes TNT and lights
+  an explosive sulfur cube.
+- **The offhand works on mobs and more.** Items in your offhand now work on
+  mobs, armour stands, item frames and minecarts when your main hand has
+  nothing to do: name tags, leads, dyes, buckets, feed, shears, saddles and
+  the rest. The offhand is used up or worn, not the main hand. A fishing rod
+  in the offhand casts, reels in and wears there, and the line holds while
+  either hand has a rod. An offhand written book opens. Armour and frogspawn
+  used from the offhand are taken from the offhand.
+- **Copper golem statues keep their pose.** A statue you break drops with its
+  pose, and it goes back down in that pose, where it used to reset to
+  standing. The pose is saved with the item. Clients don't show it in the
+  tooltip yet.
+
 ## 2026-09-26
 
 ### Added

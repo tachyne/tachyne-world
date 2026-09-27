@@ -96,17 +96,17 @@ func sheepWool(m *mob) int32 {
 // tryDyeSheep is the right-click branch: a dye on a sheep recolours it and
 // costs one dye in survival.
 func (h *hub) tryDyeSheep(players map[int32]*tracked, t *tracked, m *mob) bool {
-	held := heldStack(t)
+	held := usedStack(t)
 	if !h.dyeSheep(players, m, held.item) {
 		return false
 	}
 	if isSurvival(t.gamemode) {
-		slot := t.p.heldSlot()
+		slot := t.useSlot()
 		if held.count--; held.count <= 0 {
 			held = invStack{}
 		}
-		t.inv.slots[slot] = held
-		h.sendSlot(t, slot)
+		*t.handStack(slot) = held
+		h.sendHandSlot(t, slot)
 	}
 	return true
 }

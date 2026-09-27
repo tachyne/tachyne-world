@@ -31,12 +31,12 @@ var fishItems = func() map[int32]bool {
 
 // tryFeedDolphin is Dolphin.mobInteract: a fish sets it off after treasure.
 func (h *hub) tryFeedDolphin(players map[int32]*tracked, t *tracked, m *mob) bool {
-	if m.etype != entityDolphin || m.dying > 0 || !fishItems[heldStack(t).item] {
+	if m.etype != entityDolphin || m.dying > 0 || !fishItems[usedStack(t).item] {
 		return false
 	}
 	h.playSoundDim(players, m.dim, "minecraft:entity.dolphin.eat", sndNeutral, m.x, m.y, m.z, 1, 1)
 	if isSurvival(t.gamemode) {
-		h.consumeHeld(t)
+		h.consumeUsed(t)
 	}
 	if m.baby {
 		return true // a calf just eats

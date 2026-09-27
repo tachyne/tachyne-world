@@ -200,7 +200,7 @@ func (h *hub) feedHorse(players map[int32]*tracked, t *tracked, m *mob, item int
 		return false
 	}
 	if isSurvival(t.gamemode) {
-		h.consumeHeld(t)
+		h.consumeUsed(t)
 	}
 	if m.etype != entitySkeletonHorse { // a skeleton horse eats in silence (no getEatingSound)
 		h.playSoundDim(players, m.dim, eatSound(m.etype), sndNeutral, m.x, m.y, m.z, 1, 1+(h.rng.Float32()-h.rng.Float32())*0.2)
@@ -240,10 +240,10 @@ func (h *hub) consumeFed(t *tracked, item int32) {
 		return
 	}
 	if nautilusBucketFood[item] {
-		slot := t.p.heldSlot()
-		t.inv.slots[slot] = invStack{item: itemByName["water_bucket"], count: 1}
-		h.sendSlot(t, slot)
+		slot := t.useSlot()
+		*t.handStack(slot) = invStack{item: itemByName["water_bucket"], count: 1}
+		h.sendHandSlot(t, slot)
 		return
 	}
-	h.consumeHeld(t)
+	h.consumeUsed(t)
 }

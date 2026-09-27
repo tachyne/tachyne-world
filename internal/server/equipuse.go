@@ -15,7 +15,10 @@ import (
 // stays put unless the player is in creative, and the very same item
 // changes nothing.
 
-type evEquipHeld struct{ eid int32 }
+type evEquipHeld struct {
+	eid int32
+	off bool // Equippable.swapWithEquipmentSlot from the offhand
+}
 
 func (evEquipHeld) isHubEvent() {}
 
@@ -63,7 +66,11 @@ func (h *hub) onEquipHeld(players map[int32]*tracked, e evEquipHeld) {
 		return
 	}
 	logical := t.p.heldSlot()
-	held := t.inv.slots[logical]
+	if e.off {
+		logical = offhandSlot
+	}
+	hand := t.handStack(logical)
+	held := *hand
 	slot := equipSlotOnUse(held.item)
 	if slot < 0 || held.count <= 0 {
 		return
@@ -81,15 +88,15 @@ func (h *hub) onEquipHeld(players map[int32]*tracked, e evEquipHeld) {
 	if held.count <= 1 {
 		t.armor[slot] = one
 		if t.gamemode == gmCreative {
-			t.inv.slots[logical] = held // creative keeps the hand's copy
+			*hand = held // creative keeps the hand's copy
 		} else {
-			t.inv.slots[logical] = worn
+			*hand = worn
 		}
 	} else {
 		t.armor[slot] = one
 		if t.gamemode != gmCreative {
 			held.count--
-			t.inv.slots[logical] = held
+			*hand = held
 		}
 		if worn.item != 0 {
 			changed, leftover := t.inv.addStack(worn)
@@ -101,7 +108,7 @@ func (h *hub) onEquipHeld(players map[int32]*tracked, e evEquipHeld) {
 			}
 		}
 	}
-	h.sendSlot(t, logical)
+	h.sendHandSlot(t, logical)
 	t.inv.stateId++
 	t.p.trySendEv(attachproto.WindowSlot{ID: 0, StateID: t.inv.stateId, Slot: int32(5 + slot), Item: stackEv(t.armor[slot])})
 	t.refreshArmorAttrs()

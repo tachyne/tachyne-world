@@ -33,7 +33,7 @@ func shearSoundFor(item int32) string {
 // tryShearEquipment is Entity.interact's shears step. Returns true when the
 // click was spent here.
 func (h *hub) tryShearEquipment(players map[int32]*tracked, t *tracked, m *mob, sneak bool) bool {
-	if heldStack(t).item != itemShears || sneak || m.dying > 0 {
+	if usedStack(t).item != itemShears || sneak || m.dying > 0 {
 		return false
 	}
 	if m.etype == entityWolf {
@@ -77,7 +77,7 @@ func (h *hub) tryShearEquipment(players map[int32]*tracked, t *tracked, m *mob, 
 		return false
 	}
 	if isSurvival(t.gamemode) {
-		h.applyToolWear(t, t.p.heldSlot(), 1)
+		h.applyToolWear(t, t.useSlot(), 1)
 	}
 	h.vibAt(m.dim, freqShear, m.x, m.y, m.z, t.p.eid)
 	if it := h.spawnItemIn(players, m.dim, piece.item, piece.count, m.x, m.y+0.5, m.z); it != nil {

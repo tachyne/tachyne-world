@@ -124,7 +124,7 @@ func newInvStore(path string) *invStore {
 // name, repairCost and instrument existed on invStack but never reached the
 // row, so every rollout turned potions into water bottles, stripped anvil
 // names, reset the prior-work cost and made every goat horn play ponder.
-type stackRow [44]int32 // 41 on 2026-09-26 for the ominous banner, 44 for a crossbow's load; 28 → 30 on 2026-09-19 for enchantments 5-8, 32 on 2026-09-20 for a firework's flight and bursts, 36 for a pot's four sherds, 38 on 2026-09-24 for a sulfur cube bucket's block and age, 39 for a bucketed mob's variant, 40 for its health; older rows load with the tail zero
+type stackRow [45]int32 // 45 on 2026-09-27 for a statue's pose; 41 on 2026-09-26 for the ominous banner, 44 for a crossbow's load; 28 → 30 on 2026-09-19 for enchantments 5-8, 32 on 2026-09-20 for a firework's flight and bursts, 36 for a pot's four sherds, 38 on 2026-09-24 for a sulfur cube bucket's block and age, 39 for a bucketed mob's variant, 40 for its health; older rows load with the tail zero
 
 func packStack(st invStack) stackRow {
 	r := stackRow{st.item, int32(st.count), int32(st.dmg), packEnch(st.ench), st.mapID}
@@ -162,7 +162,8 @@ func packStack(st invStack) stackRow {
 	}
 	r[41] = st.load.item // a crossbow's loaded projectile (column 41)…
 	r[42] = int32(st.load.n) | int32(uint8(st.load.potion))<<8 | int32(uint8(st.load.flight))<<16
-	r[43] = st.load.starID // …and a loaded rocket's bursts (column 43)
+	r[43] = st.load.starID      // …and a loaded rocket's bursts (column 43)
+	r[44] = int32(st.golemPose) // a copper golem statue's pose + 1 (column 44)
 	return r
 }
 
@@ -192,6 +193,7 @@ func unpackStack(r stackRow) invStack {
 	if r[41] != 0 {
 		st.load = xbowLoad{item: r[41], n: int8(r[42]), potion: int8(r[42] >> 8), flight: int8(r[42] >> 16), starID: r[43]}
 	}
+	st.golemPose = int8(r[44])
 	return st
 }
 

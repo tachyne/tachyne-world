@@ -37,13 +37,13 @@ func (h *hub) tadpoleGrowUp(players map[int32]*tracked, m *mob) {
 // feedTadpole is Tadpole.feed: a slime ball takes a tenth of the time left
 // off (AgeableMob.getSpeedUpSecondsWhenFeeding), and the item goes.
 func (h *hub) feedTadpole(players map[int32]*tracked, t *tracked, m *mob) bool {
-	if m.etype != entityTadpole || heldStack(t).item != itemSlimeball {
+	if m.etype != entityTadpole || usedStack(t).item != itemSlimeball {
 		return false
 	}
 	left := tadpoleTicksToFrog - m.tadpoleAge
 	secs := int(float64(left/20) * 0.1)
 	if isSurvival(t.gamemode) {
-		h.consumeHeld(t)
+		h.consumeUsed(t)
 	}
 	h.spawnParticles(players, m.dim, particleHappyVillager, m.x, m.y+0.5, m.z, 0.5, 0, 1)
 	m.tadpoleAge += secs * 20

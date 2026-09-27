@@ -22,14 +22,17 @@ var (
 
 const frogspawnReach = 5.0
 
-type evPlaceOnWater struct{ eid int32 }
+type evPlaceOnWater struct {
+	eid int32
+	off bool // PlaceOnWaterBlockItem.use from the offhand
+}
 
 func (evPlaceOnWater) isHubEvent() {}
 
 // placeFrogspawn walks the look ray to the first water source and lays the
 // spawn on top of it.
 func (h *hub) placeFrogspawn(players map[int32]*tracked, t *tracked) {
-	if t.dead || t.inv == nil || heldStack(t).item != itemFrogspawn {
+	if t.dead || t.inv == nil || usedStack(t).item != itemFrogspawn {
 		return
 	}
 	dx, dy, dz := lookVector(t.yaw, t.pitch)
@@ -53,7 +56,7 @@ func (h *hub) placeFrogspawn(players map[int32]*tracked, t *tracked) {
 			h.playSoundDim(players, t.dim, "minecraft:block.frogspawn.place", sndBlock,
 				float64(p.x)+0.5, float64(p.y)+1.5, float64(p.z)+0.5, 1, 1)
 			if isSurvival(t.gamemode) {
-				h.consumeHeld(t)
+				h.consumeUsed(t)
 			}
 			return
 		case worldgen.Collides(st):

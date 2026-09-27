@@ -83,6 +83,9 @@ type invStack struct {
 	// as vanilla keeps it, so a loaded crossbow stays loaded in a chest or
 	// across a restart, and a second crossbow does not fire the first's load.
 	load xbowLoad
+	// A copper golem statue's block_state component (copy_state of
+	// copper_golem_pose): 1 + the pose's index in statuePoses, 0 = none.
+	golemPose int8
 }
 
 // xbowLoad is a crossbow's charged_projectiles: the projectile it holds and

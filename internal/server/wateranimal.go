@@ -21,6 +21,7 @@ import (
 const (
 	dolphinMaxAir    = 4800 // Dolphin.getMaxAirSupply
 	axolotlMaxAir    = 6000 // Axolotl.getMaxAirSupply
+	axolotlRehydrate = 1800 // Axolotl.rehydrate: air a splash of water gives back
 	waterAnimalAir   = 300  // WaterAnimal.handleAirSupply: what a fish holds
 	dolphinMoistness = 2400 // Dolphin.TOTAL_MOISTNESS_LEVEL
 	breatheAirBelow  = 140  // BreathAirGoal.canUse

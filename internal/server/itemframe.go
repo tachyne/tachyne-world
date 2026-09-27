@@ -187,8 +187,8 @@ func (h *hub) interactFrame(players map[int32]*tracked, t *tracked, f *itemFrame
 		if t.inv == nil {
 			return
 		}
-		slot := t.p.heldSlot()
-		st := t.inv.slots[slot]
+		slot := t.useSlot()
+		st := *t.handStack(slot)
 		if st.count == 0 {
 			return
 		}
@@ -199,8 +199,8 @@ func (h *hub) interactFrame(players map[int32]*tracked, t *tracked, f *itemFrame
 			if st.count--; st.count == 0 {
 				st = invStack{}
 			}
-			t.inv.slots[slot] = st
-			h.sendSlot(t, slot)
+			*t.handStack(slot) = st
+			h.sendHandSlot(t, slot)
 		}
 		h.playSoundDim(players, f.dim, frameSound(f, "add_item"), sndPlayer,
 			float64(f.x), float64(f.y), float64(f.z), 1, 1)

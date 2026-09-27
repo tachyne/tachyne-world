@@ -50,7 +50,12 @@ var (
 	entityBobber   = entityID("fishing_bobber")
 )
 
-type evFishUse struct{ eid int32 } // right-clicked holding a fishing rod
+// evFishUse is FishingRodItem.use: a right-click with a rod, in the hand
+// the client used.
+type evFishUse struct {
+	eid int32
+	off bool
+}
 
 func (evFishUse) isHubEvent() {}
 
@@ -108,7 +113,7 @@ func (h *hub) castBobber(players map[int32]*tracked, t *tracked) {
 	tri := func() float64 { return 0.6/d + 0.5 + 0.0103365*(h.rng.Float64()-h.rng.Float64()) }
 	vx, vy, vz = vx*tri(), vy*tri(), vz*tri()
 
-	st := heldStack(t)
+	st := usedStack(t) // the rod in the hand that cast
 	eid := h.allocEID()
 	b := &bobberEntity{eid: eid, owner: t.p.eid, dim: t.dim, x: x, y: y, z: z,
 		vx: vx, vy: vy, vz: vz, sx: x, sy: y, sz: z, openWater: true,
@@ -144,7 +149,8 @@ func waterHeight(st uint32) float64 {
 func (h *hub) updateBobbers(players map[int32]*tracked) {
 	for owner, b := range h.bobbers {
 		t := players[owner]
-		if t == nil || t.dead || t.dim != b.dim || t.p.heldItem() != itemFishingRod ||
+		// FishingHook.shouldStopFishing: a rod in either hand holds the line.
+		if t == nil || t.dead || t.dim != b.dim || (t.p.heldItem() != itemFishingRod && t.offhand.item != itemFishingRod) ||
 			(t.x-b.x)*(t.x-b.x)+(t.y-b.y)*(t.y-b.y)+(t.z-b.z)*(t.z-b.z) > bobberMaxDist2 {
 			h.discardBobber(players, b) // owner gone / switched away / too far: the line snaps
 			continue
@@ -410,7 +416,7 @@ func (h *hub) reelBobber(players map[int32]*tracked, t *tracked, b *bobberEntity
 		wear = 2
 	}
 	if wear > 0 {
-		h.applyToolWear(t, t.p.heldSlot(), wear)
+		h.applyToolWear(t, t.useSlot(), wear) // hurtAndBreak on the hand that reeled
 	}
 	h.playSoundDim(players, b.dim, "minecraft:entity.fishing_bobber.retrieve", sndNeutral,
 		t.x, t.y, t.z, 1, 0.4/(h.rng.Float32()*0.4+0.8))
