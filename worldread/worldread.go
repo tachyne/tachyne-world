@@ -14,6 +14,8 @@
 package worldread
 
 import (
+	"fmt"
+
 	"github.com/tachyne/tachyne-world/internal/anvil"
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
@@ -26,21 +28,17 @@ const MinY = worldgen.MinY
 type Dim int
 
 const (
-	Overworld Dim = iota
-	Nether
-	End
+	Overworld Dim = world.DimOverworld
+	Nether    Dim = world.DimNether
+	End       Dim = world.DimEnd
 )
 
 // String returns the canonical dimension id used in tile paths.
 func (d Dim) String() string {
-	switch d {
-	case Nether:
-		return "nether"
-	case End:
-		return "end"
-	default:
-		return "overworld"
+	if t := world.Dimension(int(d)); t != nil {
+		return t.Name
 	}
+	return world.Dimensions[world.DimOverworld].Name
 }
 
 // Reader is a read-only view of one dimension of a world. Safe for concurrent
@@ -55,18 +53,11 @@ type Reader struct {
 // world.NewFileStore(path) to include edits from a gob file (a missing file is
 // treated as no edits). The store is only ever read — the reader never writes.
 func Open(dim Dim, seed int64, store world.Store) (*Reader, error) {
-	var (
-		w   *world.World
-		err error
-	)
-	switch dim {
-	case Nether:
-		w, err = world.NewNether(seed, store)
-	case End:
-		w, err = world.NewEnd(seed, store)
-	default:
-		w, err = world.NewWithStore(seed, store)
+	t := world.Dimension(int(dim))
+	if t == nil {
+		return nil, fmt.Errorf("worldread: unknown dimension %d", dim)
 	}
+	w, err := t.Open(seed, store)
 	if err != nil {
 		return nil, err
 	}

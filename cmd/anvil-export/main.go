@@ -45,32 +45,26 @@ func main() {
 	dir := filepath.Dir(*worldFile)
 	ts := uint32(time.Now().Unix())
 
-	type dim struct {
-		file, sub string
-		open      func(int64, world.Store) (*world.World, error)
-	}
-	byName := map[string]dim{
-		"overworld": {*worldFile, "", world.NewWithStore},
-		"nether":    {filepath.Join(dir, "nether.gob"), "DIM-1", world.NewNether},
-		"end":       {filepath.Join(dir, "end.gob"), "DIM1", world.NewEnd},
-	}
-
 	start := time.Now()
 	total := 0
 	for _, dn := range strings.Split(*dims, ",") {
 		dn = strings.TrimSpace(dn)
-		d, ok := byName[dn]
-		if !ok {
+		d := world.DimensionByName(dn)
+		if d == nil {
 			log.Fatalf("unknown dimension %q (want overworld, nether, end)", dn)
 		}
-		w, err := d.open(*seed, world.NewFileStore(d.file))
+		file := *worldFile
+		if d.ID != world.DimOverworld {
+			file = filepath.Join(dir, d.File)
+		}
+		w, err := d.Open(*seed, world.NewFileStore(file))
 		if err != nil {
 			log.Fatalf("%s: %v", dn, err)
 		}
 		last := 0
 		n, err := anvil.Export(w, anvil.Options{
 			Dir:     *out,
-			SubDir:  d.sub,
+			SubDir:  d.AnvilDir,
 			CenterX: int32(cx >> 4), CenterZ: int32(cz >> 4),
 			Radius:    int32(*radius),
 			Timestamp: ts,
@@ -85,7 +79,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("%s: export: %v", dn, err)
 		}
-		if dn == "overworld" {
+		if d.ID == world.DimOverworld {
 			y := w.GroundY(cx, cz) + 1
 			if err := anvil.WriteLevelDat(filepath.Join(*out, "level.dat"),
 				*name, int32(cx), int32(y), int32(cz)); err != nil {
