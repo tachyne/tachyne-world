@@ -13,28 +13,6 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ## 2026-09-27
 
-### Fixed
-- **Bubble columns under boats, items on honey, fish at the top of a
-  column.** A boat floating over a bubble column rocks on it (the client's
-  bubble wobble), and after three seconds a whirlpool throws its riders out
-  and pulls it under while an updraft tosses it into the air. An item falling
-  past the side of a honey block slides down it slowly, as a mob does. A fish
-  or squid carried to the top of an updraft is thrown clear of the surface,
-  and a whirlpool's top cell pulls a swimmer down harder.
-- **Mobs climb by their step height.** A mob's own walking and route
-  planning now climb as far as its `step_height` allows (at least one block,
-  as a jump), so raising it with `/attribute` lets a mob walk up taller
-  ledges.
-- **Reach follows the interaction-range attributes.** Placing, using and
-  breaking blocks now check `block_interaction_range` (plus a block of
-  slack), and hitting or dressing an armour stand checks
-  `entity_interaction_range`, so a changed reach changes what a player can
-  touch; a click far out of reach is ignored.
-- **Armour stand flags.** `/summon armor_stand` takes `Small`, `ShowArms`,
-  `NoBasePlate`, `Marker` and `Invisible`, which show on the client and
-  survive a restart. An armed stand holds an item in its hand; a small one
-  has half the hitbox; an invisible stand or a marker ignores punches,
-  arrows, fire and blasts, as in vanilla.
 ### Added
 - **/time speaks 26.3.** The world has clocks now, as 26.3 does: the
   overworld's and the End's, each with its own rate and a pause. `/time set`
@@ -65,6 +43,27 @@ the public history since the project was open-sourced on 2026-07-10.
   world is refused, all in vanilla's words.
 
 ### Fixed
+- **Bubble columns under boats, items on honey, fish at the top of a
+  column.** A boat floating over a bubble column rocks on it (the client's
+  bubble wobble), and after three seconds a whirlpool throws its riders out
+  and pulls it under while an updraft tosses it into the air. An item falling
+  past the side of a honey block slides down it slowly, as a mob does. A fish
+  or squid carried to the top of an updraft is thrown clear of the surface,
+  and a whirlpool's top cell pulls a swimmer down harder.
+- **Mobs climb by their step height.** A mob's own walking and route
+  planning now climb as far as its `step_height` allows (at least one block,
+  as a jump), so raising it with `/attribute` lets a mob walk up taller
+  ledges.
+- **Reach follows the interaction-range attributes.** Placing, using and
+  breaking blocks now check `block_interaction_range` (plus a block of
+  slack), and hitting or dressing an armour stand checks
+  `entity_interaction_range`, so a changed reach changes what a player can
+  touch; a click far out of reach is ignored.
+- **Armour stand flags.** `/summon armor_stand` takes `Small`, `ShowArms`,
+  `NoBasePlate`, `Marker` and `Invisible`, which show on the client and
+  survive a restart. An armed stand holds an item in its hand; a small one
+  has half the hitbox; an invisible stand or a marker ignores punches,
+  arrows, fire and blasts, as in vanilla.
 - **A named mob keeps its name for late arrivals.** A mob's name tag, a
   dyed sheep's fleece and a charged creeper's aura were sent only to the
   players watching when they changed; anyone who came into range later saw
