@@ -45,7 +45,7 @@ func TestRaidBonusSpawnsAndPersistence(t *testing.T) {
 	// A level-2 omen raid is not over after its last regular wave.
 	h.rules.Difficulty = diffNormal
 	center := blockPos{100, 64, 100}
-	h.startRaidLevel(players, center, 2)
+	h.startRaidLevel(players, dimOverworld, center, 2)
 	r := h.raids[center]
 	if r == nil || r.omenLevel != 2 {
 		t.Fatal("raid should start at omen level 2")

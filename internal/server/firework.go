@@ -118,6 +118,7 @@ func (h *hub) useFirework(players map[int32]*tracked, t *tracked) {
 		h.consumeUsed(t)
 	}
 	h.spawnRocket(players, t.dim, t.x, t.y+1.5, t.z, t.p.eid, st)
+	h.usedItem(t, itemFireworkRocket) // FireworkRocketItem.use
 }
 
 // spawnRocket puts one in the air. attached is the eid it boosts, or 0. The

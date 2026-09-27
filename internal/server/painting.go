@@ -160,6 +160,7 @@ func (h *hub) spawnPainting(players map[int32]*tracked, t *tracked, e evPlacePai
 		dir: e.dir, variant: v.Name, w: v.W, h: v.H}
 	h.paintings[pt.eid] = pt
 	h.showPainting(players, pt)
+	h.usedItem(t, itemPainting) // HangingEntityItem.useOn
 	h.signConsume(t, e.slot)
 	h.playSoundDim(players, t.dim, "minecraft:entity.painting.place", sndBlock,
 		float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 1, 1)

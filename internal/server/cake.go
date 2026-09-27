@@ -67,6 +67,7 @@ func (h *hub) eatCake(players map[int32]*tracked, t *tracked, pos blockPos) {
 	if base, isCandle := candleCakeBases[usedStack(t).item]; isCandle && bites == 0 {
 		h.setBlockAt(players, t.dim, pos, base+1) // +1 = unlit, as a placed candle starts
 		h.playSoundDim(players, t.dim, "minecraft:block.cake.add_candle", sndBlock, cx, cy, cz, 1, 1)
+		h.usedItem(t, usedStack(t).item) // CakeBlock.useItemOn
 		if isSurvival(t.gamemode) {
 			h.consumeUsed(t)
 		}

@@ -158,6 +158,7 @@ func (h *hub) onUseAxe(players map[int32]*tracked, e evUseAxe) {
 	case axeWaxOff:
 		h.copperFX(players, t, e.x, e.y, e.z, state, next, "minecraft:item.axe.wax_off", worldEventWaxOff)
 	}
+	h.usedItem(t, held.item) // AxeItem.useOn, through ItemStack.useOn
 	h.applyToolWear(t, int(e.slot), 1)
 }
 
@@ -177,6 +178,7 @@ func (h *hub) onUseHoneycomb(players map[int32]*tracked, e evUseHoneycomb) {
 		return
 	}
 	h.advance(players, t, "item_used_on_block", advMatch{blockState: state, item: held.item})
+	h.usedItem(t, held.item) // HoneycombItem.useOn
 	h.signConsume(t, e.slot) // survival: one honeycomb
 	h.copperFX(players, t, e.x, e.y, e.z, state, next, "minecraft:item.honeycomb.wax_on", worldEventWaxOn)
 }

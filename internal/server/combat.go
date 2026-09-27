@@ -353,9 +353,17 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		dmg = int(math.Max(0, math.Round(dev.Damage)))
 	}
 
+	// A mace smash is its OWN damage type (MaceItem.getItemDamageSource →
+	// damageSources().mace), which is what makes the death message read
+	// "was smashed by" instead of the plain player attack.
+	dt := dtPlayerAttack
+	if smash {
+		dt = dtMaceSmash
+	}
+
 	// A guardian's spikes bite back at whoever is close enough to punch it —
 	// before its own damage lands, exactly as Guardian.hurtServer orders it.
-	h.guardianThorns(players, m, attacker)
+	h.guardianThorns(players, m, attacker, dt)
 
 	if crit {
 		h.spawnParticles(players, m.dim, particleCrit, m.x, m.y+1, m.z, 0.4, 0.2, 8)
@@ -484,13 +492,6 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	// the part the client struck (its id is the dragon's plus one to eight),
 	// the body for a blow naming the dragon itself.
 	m.dragonHitByPlayer = t != nil
-	// A mace smash is its OWN damage type (MaceItem.getItemDamageSource →
-	// damageSources().mace), which is what makes the death message read
-	// "was smashed by" instead of the plain player attack.
-	dt := dtPlayerAttack
-	if smash {
-		dt = dtMaceSmash
-	}
 	m.hurtOf(melee, breachFrac, dt) // through base armor (zombie family has 2), less breach
 	if t != nil && m.health < hpBefore && attackWear(t.p.heldItem()) > 0 {
 		h.incStat(t, attachproto.StatUsed, t.p.heldItem(), 1) // ItemStack.hurtEnemy: a WEAPON counts a landed blow
@@ -503,7 +504,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	}
 	if t != nil {
 		h.advance(players, t, "player_hurt_entity", advMatch{damageDirect: "player", mainhand: heldStack(t).item,
-			damageTags: map[string]bool{"mace_smash": smash}, dealt: float64(dmg)})
+			damageTags: map[string]bool{"mace_smash": dt.has(tagMaceSmash)}, dealt: float64(dmg)})
 	}
 	if t != nil {
 		h.applyFireAspect(players, t, m)              // Fire Aspect: 4 s alight per level

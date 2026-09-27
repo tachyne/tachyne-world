@@ -46,6 +46,7 @@ func (h *hub) throwXPBottle(players map[int32]*tracked, t *tracked) {
 	a.playerShot, a.breaks, a.xpBottle = true, true, true
 	h.playSoundDim(players, t.dim, "minecraft:entity.experience_bottle.throw", sndNeutral,
 		t.x, t.y, t.z, 0.5, 0.4/(h.rng.Float32()*0.4+0.8))
+	h.usedItem(t, itemXPBottle)
 }
 
 // breakXPBottle is what a shattered bottle pays out.

@@ -53,6 +53,7 @@ func (h *hub) drinkOminousBottle(players map[int32]*tracked, t *tracked, slot in
 	}
 	level := ominousBottleLevel(*s)
 	h.advance(players, t, "consume_item", advMatch{item: s.item})
+	h.usedItem(t, s.item) // Consumable.onConsume
 	if t.gamemode != gmCreative {
 		s.count--
 		if s.count == 0 {

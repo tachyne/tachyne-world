@@ -97,6 +97,27 @@ the public history since the project was open-sourced on 2026-07-10.
   pose, and it goes back down in that pose, where it used to reset to
   standing. The pose is saved with the item. Clients don't show it in the
   tooltip yet.
+- **Raids in the End.** A village built in the End can now be raided, as in
+  vanilla, where only the Nether forbids raids. Carrying Bad Omen into a
+  Nether village still turns it into a Raid Omen, but the fuse burns out
+  without a raid. Each raid keeps its dimension across a restart.
+- **The "used" statistic counts every use.** Bows, crossbows, tridents
+  (riptide too), snowballs, eggs, ender pearls, wind charges, eyes of ender,
+  bottles o' enchanting, splash and lingering potions, rockets, spyglasses,
+  goat horns, books, buckets (filled and poured), boats and minecarts, armour
+  stands, paintings, item frames, end crystals, spawn eggs, leads, brushes,
+  shears, axes and honeycomb on blocks, lodestone compasses, maps on banners,
+  shields that block, drunk potions, keys in vaults, candles on cakes, sign
+  dyes and wax, and composting now all count, as in vanilla. A hoe or
+  shovel used in creative counts too, and cauldron statistics follow
+  vanilla: pouring a water bottle in is "Cauldrons used", and washing an
+  item counts only as the washing.
+- **Damage types decide more reactions.** Silverfish call their friends out
+  of the stone only when something hurts them (or magic does), not when they
+  fall or burn; tamed wolves no longer go after a hot sulfur cube that burnt
+  their owner, while a goat's ram still names nobody for them to answer; and
+  the vanilla damage-type tags behind these (and a guardian's thorns and the
+  Over-Overkill advancement) are now read wherever vanilla reads them.
 
 ## 2026-09-26
 

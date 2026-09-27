@@ -567,8 +567,9 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 	}
 	// LivingEntity.hurt's cooldown: for 10 ticks after a landed blow only a
 	// bigger blow lands, and only its excess over the last one — so fire,
-	// cactus, a crowd of zombies do not stack their hits every tick.
-	if now := h.tick.Load(); now < t.hurtAt+10 {
+	// cactus, a crowd of zombies do not stack their hits every tick. A
+	// #bypasses_cooldown type skips it.
+	if now := h.tick.Load(); now < t.hurtAt+10 && !dt.has(tagBypassesCooldown) {
 		if amount <= t.lastHurt {
 			return false
 		}
@@ -612,11 +613,15 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 		// stopped it — vanilla's `!blocked || damage > 0`, and the distinction
 		// is what makes blocking cancel a bite's venom while a lucky roll of
 		// armour and Resistance does not.
+		if blocked <= 0 {
+			t.lastHurtDT, t.lastHurtSet = dt, true // LivingEntity.lastDamageSource
+		}
 		return blocked <= 0
 	}
-	h.wakePlayer(players, t)   // pain wakes (and stands the pose back up)
-	t.exhaust(dt.exhaustion()) // vanilla: DamageType.exhaustion, per type
-	h.infestOnHurt(players, t) // Infested: silverfish burst out on being hit
+	t.lastHurtDT, t.lastHurtSet = dt, true // LivingEntity.lastDamageSource
+	h.wakePlayer(players, t)               // pain wakes (and stands the pose back up)
+	t.exhaust(dt.exhaustion())             // vanilla: DamageType.exhaustion, per type
+	h.infestOnHurt(players, t)             // Infested: silverfish burst out on being hit
 	h.incCustom(t, "damage_taken", tenths(amount))
 	t.health -= amount
 	h.vibAt(t.dim, freqEntityDamage, t.x, t.y, t.z, t.p.eid)

@@ -200,6 +200,7 @@ func (r *remotePlayer) Action(v any) {
 			// The reader/editor UI is client-side; it opens the book in the
 			// hand that was used (WrittenBookItem.use → openItemGui(hand)).
 			r.emitEvNow(attachproto.OpenBook{Hand: e.Hand})
+			h.post(evItemUsed{eid: p.eid, item: item}) // Writable/WrittenBookItem.use
 		default:
 			// BoatItem.use: the crosshair is on water, which the client
 			// reports as a plain use because a fluid is not a clickable block.

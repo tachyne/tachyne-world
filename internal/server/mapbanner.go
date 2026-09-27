@@ -88,6 +88,7 @@ func (h *hub) toggleMapBanner(players map[int32]*tracked, e evMapBanner) {
 	for _, hd := range md.holders {
 		hd.dirtyDecor = true
 	}
+	h.usedItem(t, st.item) // MapItem.useOn: a banner marked or unmarked
 }
 
 // mapBannerDecorations is the banner half of the decoration set, dropping

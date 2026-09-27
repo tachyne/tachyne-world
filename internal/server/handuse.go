@@ -26,6 +26,7 @@ func (h *hub) onInsertEye(players map[int32]*tracked, e evInsertEye) {
 		h.sendHandSlot(t, t.useSlot())
 	}
 	h.insertEye(players, t, pos, st)
+	h.usedItem(t, itemEnderEye) // EnderEyeItem.useOn, through ItemStack.useOn
 }
 
 // cauldronUsesItem reports whether an item has a CauldronInteraction: the

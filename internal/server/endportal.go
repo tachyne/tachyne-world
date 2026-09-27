@@ -120,6 +120,7 @@ func (h *hub) throwEye(players map[int32]*tracked, t *tracked) {
 	h.vibAt(t.dim, freqProjectileShoot, e.x, e.y, e.z, t.p.eid)
 	pitch := 0.33 + h.rng.Float32()*(0.5-0.33)
 	h.playSoundDim(players, t.dim, "minecraft:entity.ender_eye.launch", sndNeutral, t.x, t.y, t.z, 1, pitch)
+	h.usedItem(t, itemEnderEye) // EnderEyeItem.use
 }
 
 type evInsertEye struct {

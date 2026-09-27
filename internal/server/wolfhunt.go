@@ -89,7 +89,13 @@ func (h *hub) wolfHuntStep(players map[int32]*tracked, m *mob) bool {
 func (h *hub) wolfPickTarget(players map[int32]*tracked, m *mob) *mob {
 	if m.tamed {
 		if owner := players[m.owner]; owner != nil && owner.dim == m.dim {
-			for _, eid := range []int32{owner.lastHurtByMob, owner.lastHitMob} { // OwnerHurtBy / OwnerHurt
+			// OwnerHurtByTargetGoal holds back when the owner's last damage
+			// was #no_wolf_retaliation (a hot sulfur cube's burn).
+			hurtBy := owner.lastHurtByMob
+			if owner.lastHurtSet && owner.lastHurtDT.has(tagNoWolfRetaliation) {
+				hurtBy = 0
+			}
+			for _, eid := range []int32{hurtBy, owner.lastHitMob} { // OwnerHurtBy / OwnerHurt
 				if o := h.mobs[eid]; o != nil && o != m && o.dying == 0 && wolfWantsToAttack(m, o) &&
 					dist3(o.x, o.y, o.z, m.x, m.y, m.z) <= wolfHuntRange {
 					return o

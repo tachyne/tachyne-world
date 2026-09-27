@@ -328,7 +328,7 @@ func (h *hub) stabPlayerByMob(players map[int32]*tracked, m *mob, v *tracked, b 
 		landed = h.hurtFrom(players, v, dmg, dtSpear, mobMeleeCause(m),
 			fromMobWeapon(m.x, m.z, m.held))
 		if landed {
-			v.lastHurtByMob = m.eid
+			h.hurtByMob(v, m, dtSpear)
 			if lvl := m.heldStack().enchLvl(enchFireAspect); lvl > 0 {
 				h.setBurning(players, v, 4*lvl)
 			}

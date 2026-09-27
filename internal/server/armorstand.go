@@ -159,6 +159,7 @@ func (h *hub) onPlaceStand(players map[int32]*tracked, e evPlaceStand) {
 		x: float64(e.x) + 0.5, y: float64(e.y), z: float64(e.z) + 0.5, yaw: yaw,
 		name: usedStack(t).name} // createDefaultStackConfig: the item's custom_name
 	h.armorStands[st.eid] = st
+	h.usedItem(t, itemArmorStand) // ArmorStandItem.useOn
 	if isSurvival(t.gamemode) {
 		h.consumeUsed(t)
 	}

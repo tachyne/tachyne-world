@@ -59,6 +59,14 @@ func (h *hub) incStat(t *tracked, typ, key, n int32) {
 	t.stats[statKey{typ, key}] += n
 }
 
+// usedItem counts one use of an item: minecraft:used, vanilla's
+// Stats.ITEM_USED.
+func (h *hub) usedItem(t *tracked, item int32) {
+	if item != 0 {
+		h.incStat(t, attachproto.StatUsed, item, 1)
+	}
+}
+
 // incCustom bumps a custom stat by name ("deaths", "play_time", …).
 func (h *hub) incCustom(t *tracked, name string, n int32) {
 	if id, ok := customStatID[name]; ok {

@@ -40,7 +40,7 @@ func raiderCelebrateSound(etype int) string {
 func (h *hub) updateCelebration(players map[int32]*tracked, m *mob) {
 	on := false
 	if isRaider(m) && !m.hasTarget && m.dying == 0 {
-		if r := h.raids[m.raidCenter]; r != nil && r.lostLeft > 0 {
+		if r := h.raidOf(m); r != nil && r.lostLeft > 0 {
 			on = true
 		}
 	}

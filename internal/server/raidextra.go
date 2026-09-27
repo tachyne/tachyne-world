@@ -57,11 +57,12 @@ func (h *hub) raidBell(players map[int32]*tracked, r *raid) {
 		return
 	}
 	bell := r.center
-	if !isBell(h.world.At(bell.x, bell.y, bell.z)) {
+	w := h.worldFor(r.dim)
+	if w == nil || !isBell(w.At(bell.x, bell.y, bell.z)) {
 		return
 	}
 	rang := false
-	h.grid().nearby(dimOverworld, float64(bell.x)+0.5, float64(bell.z)+0.5, raidBellRange, func(m *mob) {
+	h.grid().nearby(r.dim, float64(bell.x)+0.5, float64(bell.z)+0.5, raidBellRange, func(m *mob) {
 		if rang || m.etype != entityVillager || m.dying > 0 {
 			return
 		}
@@ -69,7 +70,7 @@ func (h *hub) raidBell(players map[int32]*tracked, r *raid) {
 			return
 		}
 		if h.rng.Float64() < raidBellChance {
-			rang = h.ringBell(players, dimOverworld, bell, bellDirFor(h.world.At(bell.x, bell.y, bell.z)))
+			rang = h.ringBell(players, r.dim, bell, bellDirFor(w.At(bell.x, bell.y, bell.z)))
 		}
 	})
 }

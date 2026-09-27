@@ -334,6 +334,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		return
 	}
 	if held == itemBrush { // sweep a suspicious block
+		s.itemUsed(p, held) // BrushItem.useOn starts the brushing on any block: ITEM_USED
 		s.hub.post(evBrush{eid: p.eid, x: x, y: y, z: z, dx: dx, dy: dy, dz: dz, off: off})
 		s.sendBlockChange(p, x, y, z, s.worldFor(p).Block(x, y, z), seq)
 		return

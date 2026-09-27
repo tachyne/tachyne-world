@@ -237,6 +237,7 @@ func (h *hub) useVault(players map[int32]*tracked, t *tracked, pos blockPos) {
 	// The key is spent and the player is recorded — permanently, by UUID, so it
 	// survives a relog and a restart.
 	slot := t.p.heldSlot()
+	key := held.item
 	held.count--
 	if held.count <= 0 {
 		held = invStack{}
@@ -248,7 +249,8 @@ func (h *hub) useVault(players map[int32]*tracked, t *tracked, pos blockPos) {
 	v.state, v.until = vaultUnlocking, h.tick.Load()+vaultUnlockTicks
 	h.playSoundDim(players, t.dim, "minecraft:block.vault.insert_item", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5, 1, 1)
-	h.advance(players, t, "item_used_on_block", advMatch{blockState: cur, item: held.item})
+	h.usedItem(t, key) // VaultBlockEntity.tryInsertKey
+	h.advance(players, t, "item_used_on_block", advMatch{blockState: cur, item: key})
 	if next := vaultBlock(cur, v.ominous, v.state); next != cur {
 		h.setBlockAt(players, 0, pos, next)
 	}

@@ -334,6 +334,7 @@ func (h *hub) placeVehicle(players map[int32]*tracked, t *tracked, e evPlaceVehi
 		return
 	}
 	h.vib(t.dim, freqEntityPlace, e.x, e.y, e.z, t.p.eid) // ENTITY_PLACE
+	h.usedItem(t, e.item)                                 // BoatItem.use, or MinecartItem.useOn through ItemStack.useOn
 	// Either hand: a boat placed from the off hand is paid for too (it came
 	// back free until 2026-09-24).
 	if isSurvival(t.gamemode) && t.inv != nil && ((e.slot >= 0 && e.slot < 9) || e.slot == offhandSlot) {

@@ -258,6 +258,7 @@ func (h *hub) throwPearl(players map[int32]*tracked, t *tracked) {
 	a.playerShot = true
 	h.playSoundDim(players, t.dim, "minecraft:entity.ender_pearl.throw", sndPlayer, t.x, t.y, t.z, 0.5, 0.6+h.rng.Float32()*0.4)
 	h.setCooldown(t, itemEnderPearl, pearlCooldown)
+	h.usedItem(t, itemEnderPearl) // EnderpearlItem.use
 }
 
 // pearlLand teleports the thrower to the shatter point (vanilla: 5 HP toll).

@@ -71,6 +71,7 @@ func (h *hub) tootHorn(players map[int32]*tracked, t *tracked) {
 		i = 0
 	}
 	h.playSoundDim(players, t.dim, instrumentSounds[i], sndRecord, t.x, t.y, t.z, hornRange/16, 1)
+	h.usedItem(t, itemGoatHorn) // InstrumentItem.use
 }
 
 // onCooldown / setCooldown are vanilla's ItemCooldowns, the server's half:

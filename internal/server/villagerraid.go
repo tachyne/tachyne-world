@@ -28,11 +28,8 @@ const (
 
 // raidAt is Level.getRaidAt: the raid centred within 96 blocks.
 func (h *hub) raidAt(m *mob) *raid {
-	if m.dim != dimOverworld {
-		return nil
-	}
 	for c, r := range h.raids {
-		if math.Hypot(float64(c.x)+0.5-m.x, float64(c.z)+0.5-m.z) < raidNearRange &&
+		if r.dim == m.dim && math.Hypot(float64(c.x)+0.5-m.x, float64(c.z)+0.5-m.z) < raidNearRange &&
 			math.Abs(float64(c.y)-m.y) < raidNearRange {
 			return r
 		}

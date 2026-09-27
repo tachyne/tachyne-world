@@ -66,6 +66,7 @@ func (h *hub) useComposter(players map[int32]*tracked, t *tracked, pos blockPos)
 	if !compostable || level >= composterFull {
 		return
 	}
+	h.usedItem(t, held.item) // ComposterBlock.useItemOn: every insert, the roll aside
 	if isSurvival(t.gamemode) {
 		h.consumeUsed(t)
 	}

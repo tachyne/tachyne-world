@@ -89,6 +89,7 @@ func (h *hub) onUseLodestone(players map[int32]*tracked, e evUseLodestone) {
 	h.playSoundDim(players, t.dim, "minecraft:item.lodestone_compass.lock", sndPlayer,
 		float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 1, 1)
 	h.advance(players, t, "item_used_on_block", advMatch{blockState: state, item: held.item})
+	h.usedItem(t, held.item) // CompassItem.useOn
 	target := lodeTracker{has: true, target: true, x: int32(e.x), y: int32(e.y), z: int32(e.z), dim: int8(t.dim)}
 	if t.gamemode != gmCreative && held.count == 1 { // replaceExistingStack
 		hs.lode = target

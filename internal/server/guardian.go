@@ -191,12 +191,16 @@ func guardianSpikesOut(m *mob) bool {
 // arrow's direct entity is the arrow, not the archer, and a guardian never
 // spikes someone who shot it. The other half of the guard — magic, explosions
 // and thorns themselves (#avoids_guardian_thorns) — cannot reach a melee blow
-// at all, which is why there is no damage-type test here.
+// at all; the callers pass the blow's type and the test is made anyway, as
+// Guardian.hurtServer makes it.
 //
 // The reflection runs BEFORE the guardian takes the hit, as it does in
 // vanilla, so even a killing blow costs the killer its two points.
-func (h *hub) guardianThorns(players map[int32]*tracked, m *mob, attacker int32) {
+func (h *hub) guardianThorns(players map[int32]*tracked, m *mob, attacker int32, dt dmgType) {
 	if m.etype != entityGuardian && m.etype != entityElderGuardian {
+		return
+	}
+	if dt.has(tagAvoidsGuardianThorns) || dt == dtThorns {
 		return
 	}
 	if m.dying > 0 || !guardianSpikesOut(m) {
