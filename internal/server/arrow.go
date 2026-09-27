@@ -47,34 +47,35 @@ type arrowEntity struct {
 	born       uint64
 	sx, sy, sz float64 // last broadcast position (relative-move baseline)
 
-	shooter    int32    // eid of who fired it (players skip their own fresh shots)
-	ox, oz     float64  // launch point (target-block distance, advancements)
-	weapon     int32    // the bow/crossbow that loosed it (0 = thrown/mob) — killed_by_arrow
-	victims    []string // entity types this projectile has killed (piercing) — killed_by_arrow
-	dmg        int      // damage on a hit (charge-scaled for player bows)
-	noHitUntil uint64   // tick before which the shooter can't hit themselves
-	playerShot bool     // player-fired: hits mobs, and is retrievable once stuck
-	breaks     bool     // snowball/egg: shatters on impact instead of sticking
-	mobShot    bool     // shot by a mob at mobs (a snow golem's snowball): may hit mobs other than its shooter
-	breezeBorn bool     // a breeze's wind charge (vanilla's breeze_wind_charge), even once batted back
-	turnedBy   int32    // the breeze that last turned this projectile back (lastDeflectedBy)
-	turnedNow  bool     // turned back during this sample: stop the move where it is
-	breath     bool     // dragon fireball: bursts into a breath cloud where it lands
-	dangerous  bool     // wither skull: the blue one — slower, and it chews through what the black one cannot
-	egg        bool     // an egg: 1-in-8 chance to hatch a chick where it lands
-	eggItem    int32    // …which egg: white, brown or blue (the chick's variant)
-	xpBottle   bool     // a bottle o' enchanting: shatters into experience orbs
-	pearl      bool     // an ender pearl: teleports its thrower where it lands
-	poison     int      // seconds of poison on a hit: a witch's splash, a bogged's arrow
-	splash     bool     // a thrown potion: shatters on any impact into an AoE (see splashPotion)
-	tipped     bool     // a tipped arrow: applies its potion's effects to the player it hits
-	glow       int      // a spectral arrow: seconds of Glowing on what it hits
-	potion     int8     // the potion kind a splash/lingering/tipped projectile carries
-	lingering  bool     // a lingering potion: leaves an effect cloud instead of an instant splash
-	fire       bool     // blaze fireball: sets its target burning
-	withers    bool     // wither skull: Wither II on a hit, for as long as the difficulty says (witherSkullSecs)
-	weaken     int      // parched arrow: seconds of weakness effect on a hit
-	slow       int      // stray arrow: seconds of slowness effect on a hit
+	shooter    int32      // eid of who fired it (players skip their own fresh shots)
+	ox, oz     float64    // launch point (target-block distance, advancements)
+	weapon     int32      // the bow/crossbow that loosed it (0 = thrown/mob) — killed_by_arrow
+	victims    []string   // entity types this projectile has killed (piercing) — killed_by_arrow
+	dmg        int        // damage on a hit (charge-scaled for player bows)
+	noHitUntil uint64     // tick before which the shooter can't hit themselves
+	playerShot bool       // player-fired: hits mobs, and is retrievable once stuck
+	breaks     bool       // snowball/egg: shatters on impact instead of sticking
+	mobShot    bool       // shot by a mob at mobs (a snow golem's snowball): may hit mobs other than its shooter
+	breezeBorn bool       // a breeze's wind charge (vanilla's breeze_wind_charge), even once batted back
+	turnedBy   int32      // the breeze that last turned this projectile back (lastDeflectedBy)
+	turnedNow  bool       // turned back during this sample: stop the move where it is
+	breath     bool       // dragon fireball: bursts into a breath cloud where it lands
+	dangerous  bool       // wither skull: the blue one — slower, and it chews through what the black one cannot
+	egg        bool       // an egg: 1-in-8 chance to hatch a chick where it lands
+	eggItem    int32      // …which egg: white, brown or blue (the chick's variant)
+	xpBottle   bool       // a bottle o' enchanting: shatters into experience orbs
+	pearl      bool       // an ender pearl: teleports its thrower where it lands
+	poison     int        // seconds of poison on a hit: a witch's splash, a bogged's arrow
+	splash     bool       // a thrown potion: shatters on any impact into an AoE (see splashPotion)
+	tipped     bool       // a tipped arrow: applies its potion's effects to the player it hits
+	glow       int        // a spectral arrow: seconds of Glowing on what it hits
+	potion     int8       // the potion kind a splash/lingering/tipped projectile carries
+	lingering  bool       // a lingering potion: leaves an effect cloud instead of an instant splash
+	potionHit  *potionHit // a thrown potion that broke on a block: the block and its struck face (douseFire)
+	fire       bool       // blaze fireball: sets its target burning
+	withers    bool       // wither skull: Wither II on a hit, for as long as the difficulty says (witherSkullSecs)
+	weaken     int        // parched arrow: seconds of weakness effect on a hit
+	slow       int        // stray arrow: seconds of slowness effect on a hit
 
 	homing   int32      // shulker bullet: eid of the target it curves toward (0 = straight)
 	bullet   bulletPlan // shulker bullet: its axis-by-axis course (shulkerbullet.go)
@@ -435,6 +436,9 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 					// every projectile: a blaze's fireball primes TNT and lights a
 					// campfire, a snowball rings a bell or scores on a target.
 					bp := blockPos{int(math.Floor(px)), int(math.Floor(py)), int(math.Floor(pz))}
+					if a.splash {
+						a.potionHit = &potionHit{block: bp, face: struckFace(a.x, a.y, a.z, px, py, pz, bp)}
+					}
 					h.projectileHitBlock(players, a, bp, h.worldFor(a.dim).At(bp.x, bp.y, bp.z))
 					if a.etype == entitySmallFireball {
 						h.smallFireballLights(players, a, bp, struckFace(a.x, a.y, a.z, px, py, pz, bp))
@@ -497,7 +501,8 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 				h.spawnBreathCloud(a.dim, a.x, a.y, a.z)
 			}
 			if a.splash { // a thrown potion shatters into its area-of-effect
-				h.splashPotion(players, a.dim, a.x, a.y, a.z, a.potion, a.lingering)
+				h.splashPotionHit(players, a.dim, a.x, a.y, a.z, a.potion, a.lingering,
+					splashMargin(now-a.born), a.potionHit)
 			}
 			if a.explode > 0 { // ghast/wither fireball detonates on impact
 				by := ""

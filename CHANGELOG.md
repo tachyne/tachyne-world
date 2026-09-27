@@ -11,6 +11,18 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-27
+
+### Fixed
+
+- **Thrown potions work like vanilla's.** A splash or lingering potion now
+  doses creative players too (only spectators are left out). A splash potion
+  gives the full drink duration at its centre, not three quarters of it. How
+  close you stand is measured to the edge of your body, rounded as vanilla
+  does, and a dose that would wear off within a second is skipped. A splash
+  of water now puts out fire, candles and campfires beside the block it
+  breaks on, and gives a drying axolotl 90 seconds of air back.
+
 ## 2026-09-26
 
 ### Added
