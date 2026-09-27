@@ -61,6 +61,7 @@ func TestArmorStandBlastAndArrow(t *testing.T) {
 	}
 	h3, players3, st3 := standFixture(t)
 	pl := survPlayer(h3)
+	pl.x, pl.y, pl.z = 1.5, 180, 0.5 // within reach
 	pl.gamemode = gmAdventure
 	h3.hitStand(players3, pl, st3)
 	h3.tick.Add(1)
@@ -126,7 +127,7 @@ func TestArmorStandHealthAndFireSurviveARestart(t *testing.T) {
 	pl := survPlayer(h)
 	drain(pl.p)
 	h.sendStandsTo(pl)
-	want := metaEv(fireMetadata(got.eid, true))
+	want := metaEv(standMeta(got)) // the flames (shared flag 0x01) ride with the stand's flags
 	burning := false
 	for _, f := range frames(pl.p) {
 		if m, ok := f.(attachproto.EntityMeta); ok && m.EID == want.EID && bytes.Equal(m.Meta, want.Meta) {
@@ -152,5 +153,75 @@ func TestStandsReappearAfterAPortalTrip(t *testing.T) {
 	h.onDimSwitch(players, pl, evDim{eid: pl.p.eid, dim: dimOverworld, x: 0, y: 70, z: 0})
 	if fs := frames(pl.p); !sawAdd(fs, st.eid) {
 		t.Fatal("back in the overworld, the armour stand must be spawned again")
+	}
+}
+
+// A summoned stand takes the Small, ShowArms, NoBasePlate, Marker and
+// Invisible tags: they reach the client (DATA_CLIENT_FLAGS and the shared
+// invisible flag), survive a restart, and an invisible stand or a marker
+// shrugs off blows, arrows and blasts (hurtServer) while /kill still works.
+func TestArmorStandSummonFlags(t *testing.T) {
+	h, players, _ := standFixture(t)
+	summon := func(nbt map[string]any) *armorStand {
+		before := map[int32]bool{}
+		for id := range h.armorStands {
+			before[id] = true
+		}
+		h.summonAt(players, evSummon{etype: entityByName["armor_stand"], x: 1.5, y: 180, z: 1.5, nbt: nbt})
+		for id, st := range h.armorStands {
+			if !before[id] {
+				return st
+			}
+		}
+		t.Fatal("no stand summoned")
+		return nil
+	}
+	small := summon(map[string]any{"Small": true, "ShowArms": int64(1), "NoBasePlate": true})
+	if !small.small || !small.arms || !small.noBasePlate || small.marker || small.invisible {
+		t.Fatalf("flags from the NBT: %+v", small)
+	}
+	if f := small.clientFlags(); f != standFlagSmall|standFlagShowArms|standFlagNoBasePlate {
+		t.Fatalf("DATA_CLIENT_FLAGS %#x", f)
+	}
+	if meta := standMeta(small); meta[len(meta)-2] != standFlagSmall|standFlagShowArms|standFlagNoBasePlate {
+		t.Fatalf("the client flags are the last field: % x", meta)
+	}
+	// Small: half the box; an arrow at the full stand's chest height misses.
+	a := &arrowEntity{etype: entityArrow, dim: 0}
+	if h.arrowHitsStand(players, a, 1.5, 181.6, 1.5) {
+		t.Fatal("an arrow over a small stand's head should miss it")
+	}
+	// Armed: a held item goes to the main hand.
+	pl := survPlayer(h)
+	pl.x, pl.y, pl.z = 2.5, 180, 1.5
+	players[pl.p.eid] = pl
+	pl.inv.slots[pl.p.heldSlot()] = invStack{item: int32(itemByName["stick"]), count: 1}
+	h.interactStand(players, pl, small)
+	if small.equip[attachproto.EquipMainHand].item != int32(itemByName["stick"]) {
+		t.Fatal("an armed stand takes a held item in its hand")
+	}
+
+	for _, tag := range []string{"Marker", "Invisible"} {
+		st := summon(map[string]any{tag: true})
+		h.hitStand(players, pl, st)
+		h.tick.Add(1)
+		h.hitStand(players, pl, st)
+		h.arrowHitsStand(players, &arrowEntity{etype: entityArrow, dim: 0}, 1.5, 180.5, 1.5)
+		h.standHurt(players, st, dtExplosion, nil, false)
+		if h.armorStands[st.eid] == nil {
+			t.Fatalf("a %s stand takes no blows, arrows or blasts", tag)
+		}
+		h.standHurt(players, st, dtGenericKill, nil, false)
+		if h.armorStands[st.eid] != nil {
+			t.Fatalf("/kill removes a %s stand", tag)
+		}
+	}
+
+	cs := newContainerStore("")
+	cs.recordStands(map[int32]*armorStand{small.eid: small})
+	for _, l := range cs.loadStands(func() int32 { return 999 }) {
+		if !l.small || !l.arms || !l.noBasePlate {
+			t.Fatalf("the flags did not survive a save: %+v", l)
+		}
 	}
 }

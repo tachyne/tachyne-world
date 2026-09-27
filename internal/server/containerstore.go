@@ -196,6 +196,12 @@ type savedStand struct {
 	// restart used to reset to a whole, unlit stand.
 	Hurt float64 `json:"hurt,omitempty"`
 	Fire int     `json:"fire,omitempty"`
+	// The Small, ShowArms, NoBasePlate, Marker and Invisible tags.
+	Small       bool `json:"small,omitempty"`
+	ShowArms    bool `json:"showArms,omitempty"`
+	NoBasePlate bool `json:"noBasePlate,omitempty"`
+	Marker      bool `json:"marker,omitempty"`
+	Invisible   bool `json:"invisible,omitempty"`
 }
 
 // recordLecterns / loadLecterns persist lectern books + pages.
@@ -264,7 +270,8 @@ func (s *containerStore) recordStands(stands map[int32]*armorStand) {
 	defer s.mu.Unlock()
 	s.m.Stands = s.m.Stands[:0]
 	for _, st := range stands {
-		sv := savedStand{Dim: st.dim, X: st.x, Y: st.y, Z: st.z, Yaw: st.yaw, Name: st.name, Hurt: st.hurt, Fire: st.fire}
+		sv := savedStand{Dim: st.dim, X: st.x, Y: st.y, Z: st.z, Yaw: st.yaw, Name: st.name, Hurt: st.hurt, Fire: st.fire,
+			Small: st.small, ShowArms: st.arms, NoBasePlate: st.noBasePlate, Marker: st.marker, Invisible: st.invisible}
 		for i, e := range st.equip {
 			sv.Equip[i] = packStack(e)
 		}
@@ -279,7 +286,8 @@ func (s *containerStore) loadStands(alloc func() int32) map[int32]*armorStand {
 	out := map[int32]*armorStand{}
 	for _, sv := range s.m.Stands {
 		st := &armorStand{eid: alloc(), dim: sv.Dim, x: sv.X, y: sv.Y, z: sv.Z, yaw: sv.Yaw, name: sv.Name,
-			hurt: sv.Hurt, fire: sv.Fire}
+			hurt: sv.Hurt, fire: sv.Fire,
+			small: sv.Small, arms: sv.ShowArms, noBasePlate: sv.NoBasePlate, marker: sv.Marker, invisible: sv.Invisible}
 		for i, r := range sv.Equip {
 			st.equip[i] = unpackStack(r)
 		}

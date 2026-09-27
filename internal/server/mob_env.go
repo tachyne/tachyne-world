@@ -282,6 +282,16 @@ func (m *mob) gravity() float64 {
 	return m.attrs.Peek(attr.Gravity)
 }
 
+// climb is the tallest step, in whole blocks, a walker takes onto the next
+// column: WalkNodeEvaluator's jumpSize, floor(max(1, STEP_HEIGHT)). Below a
+// block the mob jumps the one block; a taller STEP_HEIGHT walks it up more.
+func (m *mob) climb() int {
+	if m.attrs == nil {
+		return 1
+	}
+	return int(math.Floor(math.Max(1, m.attrs.Peek(attr.StepHeight))))
+}
+
 // effectiveGravity is getEffectiveGravity for a mob whose vertical speed is
 // vy: Slow Falling caps it at 0.01 while it is coming down (vy ≤ 0), and
 // leaves it alone on the way up.

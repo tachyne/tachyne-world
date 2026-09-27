@@ -156,8 +156,7 @@ func (h *hub) tickItem(players map[int32]*tracked, w *world.World, it *itemEntit
 	// The top cell of a column, with nothing over it, is onAboveBubbleColumn:
 	// the harder push that throws an item clear of the surface (or the
 	// stronger pull of a whirlpool).
-	colTop := worldgen.IsBubbleColumn(cell) && !worldgen.Collides(w.At(fx, fy+1, fz)) &&
-		!worldgen.HoldsWater(w.At(fx, fy+1, fz)) && !worldgen.IsLava(w.At(fx, fy+1, fz))
+	colTop := bubbleColumnTop(w, fx, fy, fz)
 	switch {
 	case cell == worldgen.BubbleColumnUp && colTop:
 		it.vy = math.Min(columnTopUpCap, it.vy+columnTopUpStep)
@@ -280,6 +279,12 @@ func (h *hub) tickItem(players map[int32]*tracked, w *world.World, it *itemEntit
 		}
 	}
 
+	// HoneyBlock.entityInside: an item falling past a honey block's side is
+	// held to the slide (doSlideMovement), as a body is.
+	if !noPhysics && !itemGrounded(w, it) {
+		h.itemHoneySlide(w, it)
+	}
+
 	if stuck {
 		it.vx, it.vy, it.vz = 0, 0, 0
 	}
@@ -368,6 +373,30 @@ func (h *hub) fluidFlow(dim int, pos blockPos) (x, y, z float64, ok bool) {
 		return 0, 0, 0, false
 	}
 	return fx / n, fy / n, fz / n, true
+}
+
+// itemHoneySlide is HoneyBlock.isSlidingDown + doSlideMovement for an item:
+// against a honey side, below the block's 0.9375 top, falling faster than
+// the slide, the fall is throttled to it (and a fast one loses its
+// sideways speed in proportion).
+func (h *hub) itemHoneySlide(w *world.World, it *itemEntity) {
+	old := it.vy/0.98 + 0.08 // HoneyBlock.getOldDeltaY
+	if old >= -0.08 {
+		return
+	}
+	on := false
+	boxCells(it.y, 2*itemHalfHeight, func(cy int) bool {
+		on = it.y <= float64(cy)+0.9375-1e-7 && honeyWallAt(w, it.x, it.z, cy, itemHalfHeight)
+		return on
+	})
+	if !on {
+		return
+	}
+	if old < -0.13 {
+		f := -honeySlideSpeed / old
+		it.vx, it.vz = it.vx*f, it.vz*f
+	}
+	it.vy = (-honeySlideSpeed - 0.08) * 0.98 // getNewDeltaY(-0.05)
 }
 
 // itemHalfHeight is half the item's 0.25 box: the bounding box's middle,

@@ -67,12 +67,13 @@ type player struct {
 	// chunks that are already loaded (ChunkMap.skipPlayer).
 	loadedOnly atomic.Bool
 
-	digBonusMirror atomic.Uint64 // MINING_EFFICIENCY, as float64 bits (hub -> session)
-	digMultMirror  atomic.Uint64 // the dig-speed multipliers (Haste, BLOCK_BREAK_SPEED), float64 bits
-	offhandMirror  atomic.Int32  // the offhand's item id (setOffhand), for the use-item dispatch
-	leading        atomic.Int32  // mobs on this player's leads (hub → session): a fence click ties them
-	hmu            sync.Mutex    // guards hotbar (the hub mirrors the survival inventory in)
-	hotbar         [9]int32      // item id per hotbar slot (0 = empty)
+	digBonusMirror atomic.Uint64              // MINING_EFFICIENCY, as float64 bits (hub -> session)
+	digMultMirror  atomic.Uint64              // the dig-speed multipliers (Haste, BLOCK_BREAK_SPEED), float64 bits
+	reachMirror    atomic.Pointer[reachModel] // block reach and eye (hub -> session): setReachModel
+	offhandMirror  atomic.Int32               // the offhand's item id (setOffhand), for the use-item dispatch
+	leading        atomic.Int32               // mobs on this player's leads (hub → session): a fence click ties them
+	hmu            sync.Mutex                 // guards hotbar (the hub mirrors the survival inventory in)
+	hotbar         [9]int32                   // item id per hotbar slot (0 = empty)
 	// hotbarPaint carries the painting/variant component of a creative-menu
 	// painting preset per hotbar slot ("" = plain painting → random fit).
 	hotbarPaint [9]string
@@ -308,6 +309,47 @@ func (p *player) digMult() float64 {
 		return math.Float64frombits(b)
 	}
 	return 1 // not yet mirrored
+}
+
+// blockReachChecked turns the session-side block reach check on. The
+// package's tests click blocks all over the map from a player parked at the
+// origin, so their TestMain turns it off and the reach tests turn it back on.
+var blockReachChecked = true
+
+// reachModel is what the session side needs for
+// isWithinBlockInteractionRange: BLOCK_INTERACTION_RANGE, the eye height,
+// and the hub's own idea of where the player is (a rider moves with its
+// vehicle, which the session's position does not follow).
+type reachModel struct {
+	reach, eye float64
+	x, y, z    float64
+}
+
+// setReachModel mirrors the reach model onto the session side, where digs
+// and block clicks arrive.
+func (p *player) setReachModel(m reachModel) { p.reachMirror.Store(&m) }
+
+// withinBlockReach is Player.isWithinBlockInteractionRange(pos, buffer) on
+// the session goroutine: the eye to the block's box, against
+// block_interaction_range + buffer — from the session's position or the
+// hub's, whichever is nearer.
+func (p *player) withinBlockReach(x, y, z int, buffer float64) bool {
+	if !blockReachChecked {
+		return true
+	}
+	m := p.reachMirror.Load()
+	if m == nil { // not yet mirrored: the defaults
+		m = &reachModel{reach: 4.5, eye: playerEyeHeightStand, x: p.x, y: p.y, z: p.z}
+	}
+	reach := m.reach + buffer
+	near := func(ex, ey, ez float64) bool {
+		bx, by, bz := float64(x), float64(y), float64(z)
+		dx := math.Max(0, math.Max(bx-ex, ex-(bx+1)))
+		dy := math.Max(0, math.Max(by-ey, ey-(by+1)))
+		dz := math.Max(0, math.Max(bz-ez, ez-(bz+1)))
+		return dx*dx+dy*dy+dz*dz < reach*reach
+	}
+	return near(p.x, p.y+m.eye, p.z) || near(m.x, m.y+m.eye, m.z)
 }
 
 // handItem is the item in the hand a packet named (InteractionHand): the

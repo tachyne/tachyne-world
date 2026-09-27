@@ -143,11 +143,6 @@ func hostileMelee(m *mob) float32 {
 	return float32(m.attackDamage())
 }
 
-// maxMeleeReach is a flat sanity cap on how far a player can be from an
-// end portal frame they fill. Blows and entity interactions measure against
-// the player's own reach instead (withinEntityRange).
-const maxMeleeReach = 6.0
-
 // attackMob applies a player's melee hit to a mob, killing it at 0 health.
 // swing is one melee swing's worked-out numbers, shared by every target a
 // player can hit. Extracted when PvP arrived: the arithmetic is long (weapon

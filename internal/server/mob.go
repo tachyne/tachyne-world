@@ -1481,7 +1481,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 }
 
 // mobStepOK reports whether a walker may stand at (nx, nz): never onto water,
-// into a tree, up a step taller than one block, or off a drop deeper than
+// into a tree, up a step taller than its climb (one block, or more on a
+// raised STEP_HEIGHT), or off a drop deeper than
 // Mob.getMaxFallDistance's comfortable three (pathMaxFall — the same drop the
 // route planner already plans for). It used to refuse any drop past one, so
 // a route with a two-block drop in it was planned and then never walked, and
@@ -1519,7 +1520,7 @@ func (h *hub) mobStepOK(m *mob, nx, nz float64) bool {
 	// mob already wedged somewhere may still leave.
 	fy := int(math.Floor(m.y))
 	roomOK := h.bodyFits(m, fnx, fy+step, fnz) || !h.bodyFits(m, cx, fy, cz)
-	return destOK && hazardOK && roomOK && step <= 1 && step >= -pathMaxFall && !w.TallObstacle(fnx, fnz)
+	return destOK && hazardOK && roomOK && step <= m.climb() && step >= -pathMaxFall && !w.TallObstacle(fnx, fnz)
 }
 
 // bodyFits reports whether this mob's height of cells from feet y up is
@@ -2037,7 +2038,7 @@ func (m *mob) flyingFactor() float64 {
 
 // stepHeightFor is the species' STEP_HEIGHT, which vanilla moves off the 0.6
 // default for exactly twelve of them. It is a SYNCED attribute, so it is not
-// decoration even though the server's own walkers use a flat one-block climb:
+// decoration: the server's own walkers climb by it (mob.climb), and
 // a ridden mount is moved by the riding client, and that client reads this to
 // decide what it can walk over. A camel on 0.6 has to jump the fence its 1.5
 // is famous for strolling across.

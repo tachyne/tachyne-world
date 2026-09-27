@@ -97,6 +97,8 @@ type vehicle struct {
 	boatStatus             int
 	lastYd                 float64
 	boatOutOfControl       int
+	bubbleTime             int  // DATA_ID_BUBBLE_TIME: ticks left over a column's top (boatbubble.go)
+	bubbleDown             bool // the column under it drags down (bubbleColumnDirectionIsDown)
 	// movedAt is the tick a rider last moved the boat horizontally, and
 	// moveDX/DZ the step it took (Entity.lastKnownSpeed): what a dolphin
 	// following the boat reads (FollowPlayerRiddenEntityGoal).
@@ -578,6 +580,7 @@ func (h *hub) updateVehicles(players map[int32]*tracked) {
 		} else {
 			h.tickBoatPaddles(players, v)
 			h.tickBoatDrift(players, v)
+			h.tickBoatBubbles(players, v)
 			h.boatPickup(players, v)
 			h.boatCrushesLilyPads(players, v)
 		}
@@ -670,6 +673,9 @@ func (h *hub) sendVehiclesTo(t *tracked) {
 		}
 		if v.paddle != [2]bool{} {
 			t.p.trySendEv(metaEv(boatPaddleMeta(v)))
+		}
+		if v.bubbleTime > 0 {
+			t.p.trySendEv(metaEv(boatBubbleMeta(v)))
 		}
 		if v.aboard() > 0 {
 			t.p.trySendEv(passengersBody(v.eid, v.passengers()...))

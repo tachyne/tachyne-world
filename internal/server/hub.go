@@ -1212,6 +1212,7 @@ func (h *hub) run() {
 				t.updatePlayerAttributes() // the creative reach modifiers
 				t.p.loadedOnly.Store(t.gamemode == gmSpectator && !h.rules.SpectatorsGenChunks)
 				t.p.setDigModel(t.playerAttrs().Value(attr.MiningEfficiency), t.digSpeedMult())
+				t.p.setReachModel(reachModel{reach: t.playerAttrs().Value(attr.BlockInteractionRange), eye: t.eyeHeight(), x: t.x, y: t.y, z: t.z})
 				if t.resyncInvAt != 0 && age >= t.resyncInvAt {
 					t.resyncInvAt = 0
 					h.sendInventory(t) // self-heal a dropped mode-switch inventory push

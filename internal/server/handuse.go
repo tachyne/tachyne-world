@@ -11,7 +11,7 @@ func (h *hub) onInsertEye(players map[int32]*tracked, e evInsertEye) {
 	}
 	pos := blockPos{e.x, e.y, e.z}
 	st := h.world.At(e.x, e.y, e.z)
-	if !isEndFrame(st) || dist3(t.x, t.y, t.z, float64(e.x), float64(e.y), float64(e.z)) >= maxMeleeReach+1 {
+	if !isEndFrame(st) || !withinBlockReach(t, pos, 1) { // handleUseItemOn's reach
 		return
 	}
 	sl := t.handStack(t.useSlot())

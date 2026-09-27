@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
+	"github.com/tachyne/tachyne-common/protocol"
 )
 
 // Armor stands, on the vanilla model: placed from the item (bottom-center of
@@ -12,7 +13,8 @@ import (
 // (swap when occupied), clicked empty-handed to undress (head first), broken
 // by a quick double punch — the stand and its gear pop. Metadata indices and
 // the entity type are identical on every served version, so no gateway
-// surgery. v1: no arms (vanilla survival default), no pose controls.
+// surgery. A summoned stand may be small, armed, plate-less, a marker or
+// invisible; there are no pose controls.
 
 const (
 	entityStatusStandWobble = 32 // vanilla entity event: armor-stand hit wobble
@@ -33,6 +35,83 @@ type armorStand struct {
 	name    string  // custom_name: from a named armour-stand item or a name tag
 	hurt    float64 // health lost (a stand has 20; causeDamage breaks it at 0.5)
 	fire    int     // remainingFireTicks
+	// The stand's own flags (the Small/ShowArms/NoBasePlate/Marker tags,
+	// DATA_CLIENT_FLAGS) and its Invisible tag. A placed stand has none of
+	// them; /summon's NBT sets them.
+	small, arms, noBasePlate, marker, invisible bool
+}
+
+// Armor stand metadata: DATA_CLIENT_FLAGS follows LivingEntity's fields.
+const (
+	standMetaClientFlags = 15
+	standFlagSmall       = 0x01
+	standFlagShowArms    = 0x04
+	standFlagNoBasePlate = 0x08
+	standFlagMarker      = 0x10
+)
+
+// clientFlags is DATA_CLIENT_FLAGS.
+func (st *armorStand) clientFlags() byte {
+	var f byte
+	for _, b := range []struct {
+		on  bool
+		bit byte
+	}{{st.small, standFlagSmall}, {st.arms, standFlagShowArms}, {st.noBasePlate, standFlagNoBasePlate}, {st.marker, standFlagMarker}} {
+		if b.on {
+			f |= b.bit
+		}
+	}
+	return f
+}
+
+// standMeta is the stand's synced flags: the shared entity flags (alight,
+// invisible) and its own client flags.
+func standMeta(st *armorStand) []byte {
+	var shared byte
+	if st.fire > 0 {
+		shared |= 0x01
+	}
+	if st.invisible {
+		shared |= entFlagInvisible
+	}
+	b := protocol.AppendVarInt(nil, st.eid)
+	b = protocol.AppendU8(b, 0)     // index 0: shared entity flags
+	b = protocol.AppendVarInt(b, 0) // type 0: byte
+	b = protocol.AppendU8(b, shared)
+	b = protocol.AppendU8(b, standMetaClientFlags)
+	b = protocol.AppendVarInt(b, 0)
+	b = protocol.AppendU8(b, st.clientFlags())
+	return protocol.AppendU8(b, itemMetaEnd)
+}
+
+// standInReach is handleInteract's and handleAttack's
+// isWithinEntityInteractionRange(box, 3.0) for a stand.
+func standInReach(t *tracked, st *armorStand) bool {
+	w, ht, _ := st.standBox()
+	return t.dim == st.dim && withinEntityRange(t, st.x, st.y, st.z, w, ht, interactSlack)
+}
+
+// flagged reports a stand whose synced flags are off their defaults.
+func (st *armorStand) flagged() bool { return st.fire > 0 || st.invisible || st.clientFlags() != 0 }
+
+// setStandFlagsFrom reads the summon NBT's Small, ShowArms, NoBasePlate,
+// Marker and Invisible tags (ArmorStand.readAdditionalSaveData).
+func (st *armorStand) setStandFlagsFrom(nbt map[string]any) {
+	on := func(k string) bool { n, ok := snbtInt(nbt[k]); return ok && n != 0 }
+	st.small, st.arms, st.noBasePlate, st.marker, st.invisible =
+		on("Small"), on("ShowArms"), on("NoBasePlate"), on("Marker"), on("Invisible")
+}
+
+// standBox is the stand's box: 0.5 by 1.975, halved when small; a marker
+// has none (it is never picked or hit).
+func (st *armorStand) standBox() (w, ht float64, ok bool) {
+	switch {
+	case st.marker:
+		return 0, 0, false
+	case st.small:
+		return 0.25, 0.9875, true
+	}
+	return 0.5, 1.975, true
 }
 
 // standSlotFor classifies an item into the stand's equip index (-1 = not
@@ -116,8 +195,8 @@ func (h *hub) sendStandsTo(t *tracked) {
 		if st.name != "" {
 			t.p.trySendEv(metaEv(nameMeta(st.eid, st.name)))
 		}
-		if st.fire > 0 { // the flames ride with the spawn
-			t.p.trySendEv(metaEv(fireMetadata(st.eid, true)))
+		if st.flagged() { // the flames and the flags ride with the spawn
+			t.p.trySendEv(metaEv(standMeta(st)))
 		}
 	}
 }
@@ -127,6 +206,12 @@ func (h *hub) sendStandsTo(t *tracked) {
 func (h *hub) interactStand(players map[int32]*tracked, t *tracked, st *armorStand) {
 	if t.inv == nil {
 		return
+	}
+	if !standInReach(t, st) {
+		return // handleInteract: beyond entity_interaction_range + 3
+	}
+	if st.marker && t.inv.slots[t.p.heldSlot()].item != int32(itemByName["name_tag"]) {
+		return // a marker is dressed by nobody (ArmorStand.interact)
 	}
 	heldSlot := t.p.heldSlot()
 	held := t.inv.slots[heldSlot]
@@ -149,8 +234,11 @@ func (h *hub) interactStand(players map[int32]*tracked, t *tracked, st *armorSta
 	}
 	if held.item != 0 {
 		slot := standSlotFor(held.item)
+		if slot < 0 && st.arms {
+			slot = attachproto.EquipMainHand // getEquipmentSlotForItem: anything else is held
+		}
 		if slot < 0 {
-			return
+			return // a hand slot needs arms (isDisabled)
 		}
 		prev := st.equip[slot]
 		piece := held
@@ -175,6 +263,9 @@ func (h *hub) interactStand(players map[int32]*tracked, t *tracked, st *armorSta
 	} else {
 		// Undress head-down (no click height in the domain event).
 		order := []int{attachproto.EquipHead, attachproto.EquipChest, attachproto.EquipLegs, attachproto.EquipFeet}
+		if st.arms {
+			order = append(order, attachproto.EquipMainHand, attachproto.EquipOffhand)
+		}
 		took := false
 		for _, slot := range order {
 			if st.equip[slot].item != 0 {
@@ -203,6 +294,9 @@ func (h *hub) interactStand(players map[int32]*tracked, t *tracked, st *armorSta
 // damage): the vanilla double punch — a lone hit wobbles, a second within
 // the window breaks, a creative player's breaks at once.
 func (h *hub) hitStand(players map[int32]*tracked, t *tracked, st *armorStand) {
+	if t != nil && !standInReach(t, st) {
+		return // handleAttack: beyond entity_interaction_range + 3
+	}
 	h.standHurt(players, st, dtPlayerAttack, t, false)
 }
 

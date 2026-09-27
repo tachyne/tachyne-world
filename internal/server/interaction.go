@@ -66,6 +66,12 @@ func (s *Server) handleDig(p *player, data []byte) {
 		return // this pod does not own the target chunk (finite world / cross-shard)
 	}
 	broken := s.worldFor(p).Block(x, y, z)
+	// ServerPlayerGameMode.handleBlockBreakAction: a dig beyond
+	// block_interaction_range + 1 is "too far" and does nothing.
+	if !p.withinBlockReach(x, y, z, 1) {
+		s.sendBlockChange(p, x, y, z, broken, seq)
+		return
+	}
 	if !s.hub.cellWithinBorder(p.dim, x, z) { // ServerLevel.mayInteract: not past the border
 		s.sendBlockChange(p, x, y, z, broken, seq)
 		return
@@ -226,6 +232,15 @@ func (s *Server) handlePlace(p *player, data []byte) {
 
 	if !s.hub.ownedBlock(x, z) {
 		return // clicked block is outside this pod's region (finite world / cross-shard)
+	}
+	// handleUseItemOn: a click beyond block_interaction_range + 1, or one
+	// whose hit point lies outside the clicked block, is dropped.
+	if !p.withinBlockReach(x, y, z, 1) || !hitInBlock(cursorX) || !hitInBlock(cursorY) || !hitInBlock(cursorZ) {
+		dx, dy, dz := blockFaceOffset(dir)
+		w := s.worldFor(p)
+		s.sendBlockChange(p, x, y, z, w.Block(x, y, z), seq)
+		s.sendBlockChange(p, x+dx, y+dy, z+dz, w.Block(x+dx, y+dy, z+dz), seq)
+		return
 	}
 
 	// ServerPlayerGameMode.useItemOn: a spectator's click does nothing to the
@@ -1438,3 +1453,7 @@ func nearestLookingDirection(yaw, pitch float32) string {
 	}
 	return axisZ
 }
+
+// hitInBlock is handleUseItemOn's hit-point check on one axis: the click's
+// offset in the block (location - pos) is within 1.0000001 of the centre.
+func hitInBlock(c float32) bool { return math.Abs(float64(c)-0.5) < 1.0000001 }

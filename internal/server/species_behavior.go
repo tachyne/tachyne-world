@@ -3,6 +3,7 @@ package server
 import (
 	"math"
 
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -16,6 +17,20 @@ import (
 // dart; ours wander within the sea and bob to stay submerged.
 func (h *hub) swimMove(m *mob, nx, nz float64, fnx, fnz int) {
 	w := h.worldFor(m.dim)
+	// Entity.onAboveBubbleColumn: in an updraft's top cell, with nothing
+	// over it, the push is min(1.8, dy + 0.1) — enough to throw the swimmer
+	// clear of the surface, where it arcs through the air (leapFlight) and
+	// falls back in, or flops where it lands.
+	cx, cy, cz := int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z))
+	updraftTop := w.At(cx, cy, cz) == worldgen.BubbleColumnUp && bubbleColumnTop(w, cx, cy, cz)
+	if updraftTop {
+		m.vy = math.Min(columnTopUpCap, math.Max(m.vy, 0)+columnTopUpStep)
+		if !worldgen.HoldsWater(w.At(cx, int(math.Floor(m.y+m.vy)), cz)) {
+			m.leaping, m.leapVX, m.leapVY, m.leapVZ = true, m.vx, m.vy, m.vz
+			m.vy = 0
+			return
+		}
+	}
 	ny := m.y + m.vy
 	// Only advance into cells that are still water — otherwise bounce off the
 	// bank/surface and pick a new heading, so the fish never beaches itself.
@@ -25,18 +40,37 @@ func (h *hub) swimMove(m *mob, nx, nz float64, fnx, fnz int) {
 		m.vx, m.vy, m.vz = -m.vx*0.5, -m.vy, -m.vz*0.5
 	}
 	// Small vertical wander so schools don't sit on one plane.
-	if h.rng.Intn(20) == 0 {
+	if !updraftTop && h.rng.Intn(20) == 0 {
 		m.vy = (h.rng.Float64() - 0.5) * m.moveSpeed()
 	}
 	m.vy *= 0.8
 	// Entity.onInsideBubbleColumn: a whirlpool pulls a swimmer down, an
-	// updraft carries it up — the clamps are vanilla's per-tick figures.
-	switch w.At(int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z))) {
+	// updraft carries it up — the clamps are vanilla's per-tick figures; a
+	// whirlpool's top cell pulls harder (onAboveBubbleColumn).
+	fx, fy, fz := int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z))
+	switch w.At(fx, fy, fz) {
 	case worldgen.BubbleColumnDrag:
-		m.vy = math.Max(-0.3, m.vy-0.03)
+		if bubbleColumnTop(w, fx, fy, fz) {
+			m.vy = math.Max(columnTopDownCap, m.vy-columnDownStep)
+		} else {
+			m.vy = math.Max(columnDownCap, m.vy-columnDownStep)
+		}
 	case worldgen.BubbleColumnUp:
-		m.vy = math.Min(0.7, m.vy+0.06)
+		if !updraftTop {
+			m.vy = math.Min(columnUpCap, m.vy+columnUpStep)
+		}
 	}
+}
+
+// bubbleColumnTop reports a bubble column cell with nothing over it — no
+// collision and no fluid — where BubbleColumnBlock.entityInside calls
+// onAboveBubbleColumn rather than onInsideBubbleColumn.
+func bubbleColumnTop(w *world.World, x, y, z int) bool {
+	if !worldgen.IsBubbleColumn(w.At(x, y, z)) {
+		return false
+	}
+	above := w.At(x, y+1, z)
+	return !worldgen.Collides(above) && !worldgen.HoldsWater(above) && !worldgen.IsLava(above)
 }
 
 // flyMove floats a flying mob toward its hover altitude above the terrain,

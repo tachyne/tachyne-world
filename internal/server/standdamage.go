@@ -26,6 +26,8 @@ func (h *hub) standHurt(players map[int32]*tracked, st *armorStand, dt dmgType, 
 	case dt.has(tagBypassesInvulnerability):
 		h.breakStand(players, st, false, false)
 		return
+	case st.invisible || st.marker:
+		return // an invisible stand or a marker takes no other damage
 	case dt.has(tagIsExplosion):
 		h.breakStand(players, st, false, true) // brokenByAnything
 		return
@@ -75,7 +77,7 @@ func (h *hub) igniteStand(players map[int32]*tracked, st *armorStand, ticks int)
 	was := st.fire > 0
 	st.fire = max(st.fire, ticks)
 	if !was {
-		h.toTracking(players, st.eid, st.dim, st.x, st.z, metaEv(fireMetadata(st.eid, true)))
+		h.toTracking(players, st.eid, st.dim, st.x, st.z, metaEv(standMeta(st)))
 	}
 }
 
@@ -110,7 +112,7 @@ func (h *hub) tickStands(players map[int32]*tracked) {
 		}
 		if st.fire > 0 && wet {
 			st.fire = 0
-			h.toTracking(players, st.eid, st.dim, st.x, st.z, metaEv(fireMetadata(st.eid, false)))
+			h.toTracking(players, st.eid, st.dim, st.x, st.z, metaEv(standMeta(st)))
 			continue
 		}
 		if st.fire > 0 {
@@ -119,7 +121,7 @@ func (h *hub) tickStands(players map[int32]*tracked) {
 			}
 			st.fire--
 			if st.fire == 0 && h.armorStands[st.eid] != nil {
-				h.toTracking(players, st.eid, st.dim, st.x, st.z, metaEv(fireMetadata(st.eid, false)))
+				h.toTracking(players, st.eid, st.dim, st.x, st.z, metaEv(standMeta(st)))
 			}
 		}
 	}
@@ -139,13 +141,15 @@ func (h *hub) explosionHitsStands(players map[int32]*tracked, dim int, cx, cy, c
 	}
 }
 
-// arrowHitsStand is a projectile meeting a stand (0.5 across, 1.975 tall).
+// arrowHitsStand is a projectile meeting a stand (0.5 across, 1.975 tall;
+// half that when small). A marker is never hit.
 func (h *hub) arrowHitsStand(players map[int32]*tracked, a *arrowEntity, px, py, pz float64) bool {
 	if a.pearl || a.xpBottle || a.breath || a.splash {
 		return false
 	}
 	for _, st := range h.armorStands {
-		if st.dim != a.dim || absF(px-st.x) > 0.55 || absF(pz-st.z) > 0.55 || py < st.y-0.3 || py > st.y+2.275 {
+		bw, bh, ok := st.standBox()
+		if !ok || st.dim != a.dim || absF(px-st.x) > bw/2+0.3 || absF(pz-st.z) > bw/2+0.3 || py < st.y-0.3 || py > st.y+bh+0.3 {
 			continue
 		}
 		h.standHurt(players, st, projectileDamageOf(a), players[a.shooter], a.mobShot)

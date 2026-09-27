@@ -109,10 +109,14 @@ func (h *hub) summonAt(players map[int32]*tracked, e evSummon) {
 	case name == "armor_stand":
 		st := &armorStand{eid: h.allocEID(), dim: e.dim, x: e.x, y: e.y, z: e.z, yaw: yaw}
 		st.name = nbtName(e.nbt)
+		st.setStandFlagsFrom(e.nbt)
 		h.armorStands[st.eid] = st
 		h.toNearbyEv(players, st.dim, st.x, st.z, h.standAddEv(st))
 		if st.name != "" {
 			h.toNearbyEv(players, st.dim, st.x, st.z, metaEv(nameMeta(st.eid, st.name)))
+		}
+		if st.flagged() {
+			h.toNearbyEv(players, st.dim, st.x, st.z, metaEv(standMeta(st)))
 		}
 	case name == "firework_rocket":
 		h.spawnRocket(players, e.dim, e.x, e.y, e.z, 0, invStack{item: itemByName["firework_rocket"], count: 1})

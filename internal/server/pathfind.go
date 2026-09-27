@@ -53,7 +53,7 @@ func (h *hub) pathSteer(m *mob, gx, gz float64) (float64, float64) {
 			// vindicator's (setCanOpenDoors(level.isRaided(pos))).
 			pw = doorPather{h.worldFor(m.dim)}
 		}
-		m.path, m.pathReached = findPathLimits(pw, malusFor(m.etype), sxi, szi, gxi, gzi, pathMaxRange, pathMaxNodes)
+		m.path, m.pathReached = findPathLimits(pw, malusFor(m.etype), sxi, szi, gxi, gzi, pathMaxRange, pathMaxNodes, m.climb())
 		m.pathIdx = 0
 		m.pathGoal = [2]int{gxi, gzi}
 		m.pathAt = now
@@ -152,14 +152,15 @@ func (p *pathHeap) Pop() any {
 // path to the explored column closest to the goal, so the mob still makes
 // progress rather than freezing.
 func findPath(w pather, prof malusProfile, sx, sz, gx, gz int) []pathPoint {
-	path, _ := findPathLimits(w, prof, sx, sz, gx, gz, pathMaxRange, pathMaxNodes)
+	path, _ := findPathLimits(w, prof, sx, sz, gx, gz, pathMaxRange, pathMaxNodes, 1)
 	return path
 }
 
 // findPathLimits is findPath with its reach and node budget given, and
 // whether the goal itself was reached (false: the path ends at the closest
-// column the search found). It never steps into an unloaded chunk.
-func findPathLimits(w pather, prof malusProfile, sx, sz, gx, gz, maxRange, maxNodes int) ([]pathPoint, bool) {
+// column the search found). It never steps into an unloaded chunk. climb is
+// the mob's jumpSize (mob.climb): the tallest step up it plans.
+func findPathLimits(w pather, prof malusProfile, sx, sz, gx, gz, maxRange, maxNodes, climb int) ([]pathPoint, bool) {
 	if sx == gx && sz == gz {
 		return nil, true
 	}
@@ -208,7 +209,7 @@ func findPathLimits(w pather, prof malusProfile, sx, sz, gx, gz, maxRange, maxNo
 				if maxi(abs(nx-sx), abs(nz-sz)) > maxRange || !pathLoaded(w, nx, nz) {
 					continue
 				}
-				if !stepOK(pw, cur.x, cur.z, nx, nz, curFeet, dx != 0 && dz != 0) {
+				if !stepOK(pw, cur.x, cur.z, nx, nz, curFeet, climb, dx != 0 && dz != 0) {
 					continue
 				}
 				nk := key(nx, nz)
@@ -379,11 +380,11 @@ func (p *memoPather) Block(x, y, z int) uint32 { return p.w.Block(x, y, z) }
 // must be walkable and not a tall obstacle, the height change within climb/fall
 // limits, and — for a diagonal — both orthogonal cells must be clear so it can't
 // cut a corner through a wall.
-func stepOK(w pather, cx, cz, nx, nz, curFeet int, diag bool) bool {
+func stepOK(w pather, cx, cz, nx, nz, curFeet, climb int, diag bool) bool {
 	if !w.Walkable(nx, nz) || w.TallObstacle(nx, nz) {
 		return false
 	}
-	if step := w.MobFeet(nx, nz) - curFeet; step > 1 || step < -pathMaxFall {
+	if step := w.MobFeet(nx, nz) - curFeet; step > climb || step < -pathMaxFall {
 		return false
 	}
 	if diag {
