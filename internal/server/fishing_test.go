@@ -12,7 +12,7 @@ import (
 // pool of water sources centered at (500, 199-200, 500), open sky above.
 func fishSetup(t *testing.T, ench enchList) (*hub, *tracked, map[int32]*tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	for dx := -2; dx <= 2; dx++ {
 		for dz := -2; dz <= 2; dz++ {
 			h.world.SetBlock(500+dx, 199, 500+dz, worldgen.WaterBase)

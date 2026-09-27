@@ -9,7 +9,7 @@ import (
 // A player arriving at an End city seeds its shulker sentries and the
 // ship's elytra frame once; its chests fill from end_city_treasure.
 func TestEndCitySeedsAndLoots(t *testing.T) {
-	h := newHub(world.New(5))
+	h := newTestHub(world.New(5))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	g := h.worldFor(dimEnd).Gen()

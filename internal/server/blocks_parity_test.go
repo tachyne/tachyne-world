@@ -50,7 +50,7 @@ func TestCobwebHoldsMobsButNotSpiders(t *testing.T) {
 		etype int
 		slow  bool
 	}{{entityZombie, true}, {entitySpider, false}} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		players := map[int32]*tracked{}
 		h.world.ForceLoad(0, 0, 2)
 		for x := -2; x <= 8; x++ {
@@ -89,7 +89,7 @@ func TestPlacedLeavesArePersistent(t *testing.T) {
 // slows any living thing but a fox or a bee to 0.8, and scratches only one
 // that is moving (a standing cow is left alone).
 func TestBerryBushSlowsAndScratchesMovers(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 5, 180, 5
 	h.world.SetBlock(x, y-1, z, worldgen.GrassBlock)

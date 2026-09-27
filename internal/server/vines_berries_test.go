@@ -10,7 +10,7 @@ import (
 // A cave vine growing down leaves a body with the berries its head had —
 // not berries on every segment.
 func TestCaveVineBodyKeepsTheHeadsBerries(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	players := map[int32]*tracked{}
 	cv := growingPlants[3]

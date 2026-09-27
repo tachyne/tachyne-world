@@ -14,7 +14,7 @@ func writeFileForTest(path, content string) error {
 }
 
 func TestEatRestoresFood(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.food = 10
 	pl.inv.slots[0] = invStack{item: itemByName["apple"], count: 2} // 2 apples (4 hunger each)

@@ -9,7 +9,7 @@ import (
 
 func TestBreakDoorRemovesBothHalves(t *testing.T) {
 	s := &Server{world: world.New(1)}
-	s.hub = newHub(s.world)
+	s.hub = newTestHub(s.world)
 	p := newPlayer(1, "tester", [16]byte{})
 
 	oakDoor := worldgen.BlockID("oak_door")

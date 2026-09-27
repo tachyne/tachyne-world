@@ -26,7 +26,7 @@ func starGrid(t *testing.T, items ...string) []invStack {
 // glowstone dust and one diamond. The dyes give the burst its colours — and
 // the value is the dye's FIREWORK colour, not its text colour.
 func TestFireworkStarRecipe(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	res, ok := h.fireworkStarMatch(starGrid(t, "gunpowder", "red_dye", "blue_dye"))
 	if !ok {
 		t.Fatal("gunpowder and two dyes should make a star")
@@ -89,7 +89,7 @@ func mustStar(t *testing.T, h *hub, items ...string) invStack {
 // FireworkStarFadeRecipe: a finished star plus dyes gains the colours it
 // fades to, and keeps everything else it had.
 func TestFireworkStarFadeRecipe(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	star := mustStar(t, h, "gunpowder", "red_dye", "fire_charge", "diamond")
 	grid := make([]invStack, 9)
 	grid[0] = star
@@ -113,7 +113,7 @@ func TestFireworkStarFadeRecipe(t *testing.T) {
 
 // A rocket carries its stars' bursts, and no more than seven.
 func TestRocketCarriesStars(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	star := mustStar(t, h, "gunpowder", "red_dye")
 	grid := make([]invStack, 9)
 	grid[0] = invStack{item: itemPaper, count: 1}
@@ -151,7 +151,7 @@ func TestRocketCarriesStars(t *testing.T) {
 // through the slot copier — colours are fixed-width ints inside it, which is
 // the part a walker gets wrong.
 func TestFireworkComponentsOnTheWire(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	star := mustStar(t, h, "gunpowder", "red_dye", "blue_dye", "fire_charge", "glowstone_dust")
 	for _, st := range []invStack{star, {item: itemFireworkRocket, count: 1, flight: 2, starID: star.starID}} {
 		body := appendStack(nil, st)
@@ -176,7 +176,7 @@ func TestFireworkComponentsOnTheWire(t *testing.T) {
 // Asking for the same star twice reuses its id: the result PREVIEW runs on
 // every grid change, and minting there would fill the save with orphans.
 func TestIdenticalStarsShareAnId(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	a := mustStar(t, h, "gunpowder", "red_dye")
 	b := mustStar(t, h, "gunpowder", "red_dye")
 	if a.starID != b.starID || a.starID == 0 {
@@ -196,7 +196,7 @@ func TestIdenticalStarsShareAnId(t *testing.T) {
 // client draws the burst from when it pops. A rocket full of stars used to go
 // off as nothing, because the entity was told only where it was.
 func TestRocketEntityCarriesItsStack(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	star := mustStar(t, h, "gunpowder", "red_dye", "fire_charge")
 	grid := make([]invStack, 9)
 	grid[0] = invStack{item: itemPaper, count: 1}

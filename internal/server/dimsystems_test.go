@@ -18,9 +18,9 @@ import (
 // air above it over a small square, and returns the pad's corner.
 func netherPad(t *testing.T) (*hub, *world.World, map[int32]*tracked, int, int, int) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nw, _ := world.NewNether(1, nil)
-	h.nether = nw
+	h.dims.set(dimNether, nw)
 	x, y, z := 0, 80, 0
 	nw.ForceLoad(x, z, 2)
 	h.world.ForceLoad(x, z, 2)
@@ -201,7 +201,7 @@ func TestHiveStoreCarriesDimension(t *testing.T) {
 	if err := os.WriteFile(path, []byte(`{"5,70,-3":[{"secs":40,"nectar":true}]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.hivestore = newHiveStore(path)
 	h.hivesLoad()
 	if occ := h.hives[simPos{blockPos: blockPos{5, 70, -3}}]; len(occ) != 1 || occ[0].SecsLeft != 40 {
@@ -211,7 +211,7 @@ func TestHiveStoreCarriesDimension(t *testing.T) {
 	h.hivesMark()
 	h.hivestore.save()
 
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	h2.hivestore = newHiveStore(path)
 	h2.hivesLoad()
 	if occ := h2.hives[simPos{dim: dimNether, blockPos: blockPos{5, 70, -3}}]; len(occ) != 1 || occ[0].SecsLeft != 7 {

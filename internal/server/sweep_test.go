@@ -13,7 +13,7 @@ import (
 // swing, and sets it alight; a plain sword's sweep reads the ratio from the
 // attribute, so a raised SWEEPING_DAMAGE_RATIO raises it.
 func TestSweepingBlow(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z, pl.yaw = 0.5, 70, 0.5, -90 // facing +x
 	pl.onGround = true

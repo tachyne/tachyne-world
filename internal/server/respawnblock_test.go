@@ -13,9 +13,9 @@ import (
 // respawnHub is a hub with a real Nether and a spawn store to claim into.
 func respawnHub(t *testing.T) (*hub, map[int32]*tracked, *tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nw, _ := world.NewNether(1, nil)
-	h.nether = nw
+	h.dims.set(dimNether, nw)
 	h.spawns = newSpawnStore(t.TempDir() + "/spawns.json")
 	players := map[int32]*tracked{}
 	pl := testTracked()
@@ -28,7 +28,7 @@ func respawnHub(t *testing.T) (*hub, map[int32]*tracked, *tracked) {
 // A bed in the Nether is a bomb, not a respawn point.
 func TestBedExplodesOutsideTheOverworld(t *testing.T) {
 	h, players, pl := respawnHub(t)
-	nw := h.nether
+	nw := h.worldFor(dimNether)
 	head := blockPos{4, 70, 3} // the foot faces north, so the head is one north
 	nw.SetBlock(4, 70, 4, tWhiteBed)
 	nw.SetBlock(head.x, head.y, head.z, worldgen.SetProperty(
@@ -69,7 +69,7 @@ func mustInfo(t *testing.T, state uint32) worldgen.BlockInfo {
 func TestRespawnPointIsDimensionScoped(t *testing.T) {
 	h, players, pl := respawnHub(t)
 	// A bed stands in the Nether at these coordinates…
-	h.nether.SetBlock(9, 70, 9, tWhiteBed)
+	h.worldFor(dimNether).SetBlock(9, 70, 9, tWhiteBed)
 	h.spawns.set(pl.p.name, blockPos{9, 70, 9}, dimNether)
 
 	_, _, _, dim := h.respawnPoint(players, pl)
@@ -81,14 +81,14 @@ func TestRespawnPointIsDimensionScoped(t *testing.T) {
 func TestRespawnAnchorChargesAndClaims(t *testing.T) {
 	h, players, pl := respawnHub(t)
 	pos := blockPos{2, 70, 2}
-	h.nether.SetBlock(pos.x, pos.y, pos.z, anchorWithCharge(anchorMin, 0))
+	h.worldFor(dimNether).SetBlock(pos.x, pos.y, pos.z, anchorWithCharge(anchorMin, 0))
 	pl.x, pl.y, pl.z = 2.5, 70, 2.5
 	pl.gamemode = gmSurvival
 	pl.inv.slots[pl.p.heldSlot()] = invStack{item: itemGlowstoneBlock, count: 2}
 
 	// An empty anchor does nothing without fuel.
 	h.handleUseAnchor(players, pl, pos)
-	if got := anchorCharge(h.nether.At(pos.x, pos.y, pos.z)); got != 1 {
+	if got := anchorCharge(h.worldFor(dimNether).At(pos.x, pos.y, pos.z)); got != 1 {
 		t.Fatalf("charge %d after one glowstone, want 1", got)
 	}
 	if got := pl.inv.slots[pl.p.heldSlot()].count; got != 1 {
@@ -117,7 +117,7 @@ func TestRespawnAnchorChargesAndClaims(t *testing.T) {
 	if dim != dimNether {
 		t.Errorf("respawned into dim %d, want the Nether", dim)
 	}
-	if got := anchorCharge(h.nether.At(pos.x, pos.y, pos.z)); got != 0 {
+	if got := anchorCharge(h.worldFor(dimNether).At(pos.x, pos.y, pos.z)); got != 0 {
 		t.Errorf("charge %d after a respawn, want the charge spent", got)
 	}
 }
@@ -163,11 +163,11 @@ func TestSpawnStoreReadsPreDimensionFiles(t *testing.T) {
 func TestAnchorRespawnPlaysDeplete(t *testing.T) {
 	h, _, pl := respawnHub(t)
 	pos := blockPos{2, 70, 2}
-	h.nether.SetBlock(pos.x, pos.y, pos.z, anchorWithCharge(anchorMin, 2))
+	h.worldFor(dimNether).SetBlock(pos.x, pos.y, pos.z, anchorWithCharge(anchorMin, 2))
 	for _, c := range [][3]int{{3, 70, 2}, {3, 69, 2}, {3, 71, 2}} {
-		h.nether.SetBlock(c[0], c[1], c[2], worldgen.Air)
+		h.worldFor(dimNether).SetBlock(c[0], c[1], c[2], worldgen.Air)
 	}
-	h.nether.SetBlock(3, 69, 2, worldgen.Stone)
+	h.worldFor(dimNether).SetBlock(3, 69, 2, worldgen.Stone)
 	h.spawns.set(pl.p.name, pos, dimNether)
 	pl.gamemode = gmSurvival
 	pl.dead = true

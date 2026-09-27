@@ -3,7 +3,6 @@ package server
 import (
 	"log"
 
-	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -28,10 +27,7 @@ import (
 // them from the vanilla DEFAULT state (all faces off), not from BlockBase.
 func (h *hub) repairMultiface() {
 	fixed, removed := 0, 0
-	for _, w := range []*world.World{h.world, h.nether, h.end} {
-		if w == nil {
-			continue
-		}
+	for _, w := range h.allDims() {
 		for _, c := range w.EditedChunks() {
 			for _, e := range w.EditedBlocks(c[0], c[1]) {
 				if !isMultiface(e.State) {

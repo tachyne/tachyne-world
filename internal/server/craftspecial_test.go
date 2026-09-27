@@ -17,7 +17,7 @@ func craftPlayer(h *hub) (*tracked, map[int32]*tracked) {
 // RepairItemRecipe: two damaged pickaxes make one with both remainders
 // plus five percent, curses kept and every other enchantment dropped.
 func TestCraftRepairsTwoTools(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pick := int32(itemByName["iron_pickaxe"])
 	maxDmg := itemMaxDurability[pick]
 	grid := make([]invStack, 9)
@@ -43,7 +43,7 @@ func TestCraftRepairsTwoTools(t *testing.T) {
 // TippedArrowRecipe: a lingering potion ringed by eight arrows makes eight
 // tipped arrows carrying it.
 func TestCraftTippedArrows(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	grid := make([]invStack, 9)
 	for i := range grid {
 		grid[i] = invStack{item: itemArrow, count: 1}
@@ -62,7 +62,7 @@ func TestCraftTippedArrows(t *testing.T) {
 // crafting_transmute: a shulker box and a dye recolour it with its contents;
 // so does a bundle.
 func TestCraftTransmutesBoxesAndBundles(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	grid := make([]invStack, 4)
 	grid[0] = invStack{item: int32(itemByName["shulker_box"]), count: 1, boxID: 42}
 	grid[1] = invStack{item: int32(itemByName["red_dye"]), count: 1}
@@ -84,7 +84,7 @@ func TestCraftTransmutesBoxesAndBundles(t *testing.T) {
 // BannerDuplicateRecipe: a patterned banner and a blank one of its colour
 // make a copy, and the patterned one is left in the grid.
 func TestCraftDuplicatesBanner(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl, players := craftPlayer(h)
 	banner := int32(itemByName["white_banner"])
 	pl.craft[0] = invStack{item: banner, count: 1, pats: [6]bannerLayer{{patPlus1: 3, color: 14}}}
@@ -104,7 +104,7 @@ func TestCraftDuplicatesBanner(t *testing.T) {
 
 // FireworkRocketRecipe: paper and one to three gunpowder make three rockets.
 func TestCraftFireworkRockets(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	grid := make([]invStack, 9)
 	grid[0] = invStack{item: itemPaper, count: 1}
 	grid[1] = invStack{item: itemGunpowder, count: 1}
@@ -121,7 +121,7 @@ func TestCraftFireworkRockets(t *testing.T) {
 // BookCloningRecipe: a written book and quills make copies a generation up
 // (born at take time), the original stays, and a copy of a copy is final.
 func TestCraftClonesBooks(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.books = newBookStore("")
 	pl, players := craftPlayer(h)
 	id := h.books.create(savedBook{Title: "T", Author: "A", Pages: []string{"p"}})

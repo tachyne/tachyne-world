@@ -26,7 +26,7 @@ func TestTitleCommandBuildsTheFrame(t *testing.T) {
 		{[]string{"@a", "reset"}, attachproto.Title{Clear: true, Reset: true}, ""},
 		{[]string{"@a", "actionbar", `"watch`, `out"`}, attachproto.Title{}, "watch out"},
 	} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		by := newPlayer(1, "op", [16]byte{})
 		tr := &tracked{p: by}
 		players := map[int32]*tracked{1: tr}
@@ -99,7 +99,7 @@ func TestKickSendsADisconnectScreen(t *testing.T) {
 		{"building in spawn", "building in spawn"},
 		{"   ", "Kicked by an operator"}, // no reason given still says something
 	} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		victim := &tracked{p: newPlayer(2, "Legion", [16]byte{})}
 		by := newPlayer(1, "op", [16]byte{})
 		players := map[int32]*tracked{2: victim}

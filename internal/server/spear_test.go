@@ -12,7 +12,7 @@ import (
 // (y=180) facing +z (yaw 0, pitch 0), at a hub tick past zero.
 func spearFixture(t *testing.T, spear string) (*hub, *tracked, map[int32]*tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.tick.Store(1000)
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 180, 0.5
@@ -243,7 +243,7 @@ func TestSpearChargeHitsPlayer(t *testing.T) {
 
 // Zombies arm themselves as 26.3's do: one armed zombie in six has a spear.
 func TestZombieSpawnsWithSpear(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.Difficulty = diffHard
 	counts := map[int32]int{}
 	for i := 0; i < 6000; i++ {
@@ -262,7 +262,7 @@ func TestZombieSpawnsWithSpear(t *testing.T) {
 
 // ZombifiedPiglin.populateDefaultEquipmentSlots: a golden sword, one in twenty a golden spear.
 func TestZombifiedPiglinWeapon(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	spears := 0
 	for i := 0; i < 2000; i++ {
 		m := &mob{eid: int32(100 + i), etype: entityZombifiedPiglin}
@@ -289,7 +289,7 @@ func TestZombifiedPiglinWeapon(t *testing.T) {
 // A zombie with a spear closes, lowers it within ten blocks, and its charge
 // hurts the player it runs into.
 func TestZombieSpearCharge(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.tick.Store(1000)
 	h.rules.Difficulty = diffNormal
 	pl := survPlayer(h)

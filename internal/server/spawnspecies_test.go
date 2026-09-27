@@ -34,7 +34,7 @@ func TestSixSpeciesHavePools(t *testing.T) {
 		{"minecraft:swamp", entityFrog, false},
 		{"minecraft:mangrove_swamp", entityFrog, true},
 	}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	for _, c := range cases {
 		pool := h.creaturePoolFor(c.biome)
 		if !poolHas(pool, c.want) {
@@ -110,7 +110,7 @@ func TestSpeciesFloorRules(t *testing.T) {
 // Axolotls are their own category with vanilla's cap and despawn distance,
 // spawn only in water over clay, and only where the cave biome is lush.
 func TestAxolotlCategory(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	m := &mob{etype: entityAxolotl}
 	if mobSpawnCategory(m) != catAxolotls {
 		t.Fatal("axolotl must count against the AXOLOTLS category")
@@ -159,7 +159,7 @@ func TestBiomeAt3DSeesCaveBiomes(t *testing.T) {
 // Herd seeding places each species on its own ground: a turtle pack on a
 // sand column that a cow pack would refuse, and the other way round.
 func TestHerdSeedingUsesSpeciesFloor(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	// Find a sand-floored, sky-exposed land column the world thinks is spawnable.
 	var sx, sz int
 	found := false

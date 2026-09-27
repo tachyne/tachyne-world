@@ -11,7 +11,7 @@ import (
 
 func bundleHub(t *testing.T) (*hub, map[int32]*tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	return h, players

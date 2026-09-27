@@ -11,7 +11,7 @@ import (
 // wooden door beats it down in two hundred and forty ticks, and the door
 // is gone without dropping; on normal it leaves it alone.
 func TestZombieBreaksDoor(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

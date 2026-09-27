@@ -10,7 +10,7 @@ import (
 // four skeleton horses each with a helmeted, persistent skeleton on its
 // back, the original tamed and disarmed.
 func TestSkeletonTrapSprings(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	x, z := 10.5, 10.5
@@ -62,7 +62,7 @@ func TestSkeletonTrapSprings(t *testing.T) {
 // Striders sometimes spawn with a rider; hard-mode spiders sometimes with
 // an effect.
 func TestStriderRidersAndSpiderEffects(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	riders, calves := 0, 0

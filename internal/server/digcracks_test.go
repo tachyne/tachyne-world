@@ -11,7 +11,7 @@ import (
 
 // Break times from getDestroyProgress, in ticks, standing on the ground.
 func TestDestroyProgressMatchesVanilla(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z, pl.onGround = 0.5, 200, 0.5, true
@@ -44,7 +44,7 @@ func TestDestroyProgressMatchesVanilla(t *testing.T) {
 
 // Another player sees the cracks advance, and they clear on abort.
 func TestOthersSeeTheCracks(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	digger := survPlayer(h)
 	watcher := &tracked{p: newPlayer(2, "watcher", [16]byte{}), gamemode: gmSurvival} // its own eid
@@ -86,7 +86,7 @@ func TestOthersSeeTheCracks(t *testing.T) {
 
 // A player's swing is shown to the others, not echoed to the swinger.
 func TestArmSwingReachesOthersOnly(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	swinger := survPlayer(h)
 	watcher := &tracked{p: newPlayer(2, "watcher", [16]byte{}), gamemode: gmSurvival}
 	initSurvival(watcher)

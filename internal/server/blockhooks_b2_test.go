@@ -10,7 +10,7 @@ import (
 // BeehiveBlock.onExplosionHit: a blast that reaches a hive sets the bees
 // near it on a player near it.
 func TestBlastAtAHiveAngersTheBees(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	const x, y, z = 80, 180, 80
 	w.SetBlock(x, y-1, z, worldgen.Stone)
@@ -27,7 +27,7 @@ func TestBlastAtAHiveAngersTheBees(t *testing.T) {
 // BlockBehaviour.onExplosionHit: ore blown up by a player's TNT drops its
 // experience; by a creeper, none.
 func TestPlayerBlastDropsOreExperience(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	const x, y, z = 90, 180, 90
 	by := &tracked{p: newPlayer(12, "miner", [16]byte{}), gamemode: gmSurvival, x: 100, y: 180, z: 100}
@@ -52,7 +52,7 @@ func TestPlayerBlastDropsOreExperience(t *testing.T) {
 // TurtleEggBlock.fallOn: a mob landing on a clutch may break an egg; a
 // zombie never does.
 func TestMobLandingOnTurtleEggs(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	players := map[int32]*tracked{}
 	const x, y, z = 104, 180, 104

@@ -12,7 +12,7 @@ import (
 // one kind seven blocks apart on it.
 func courtRig(t *testing.T, etype int) (*hub, map[int32]*tracked, *mob, *mob) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.world.ForceLoad(0, 0, 2)
 	for x := -2; x <= 10; x++ {

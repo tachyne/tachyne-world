@@ -8,7 +8,7 @@ import (
 
 func wardenSetup(t *testing.T) (*hub, map[int32]*tracked, *mob, *tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.p.name, pl.p.eid = "Prey", 500 // well clear of the mob eids
 	pl.x, pl.y, pl.z = 10, 70, 0

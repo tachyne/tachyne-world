@@ -11,7 +11,7 @@ import (
 // with trades, and is unemployed again when the lectern goes; a second
 // villager cannot claim a lectern the first holds.
 func TestVillagerTakesAndLosesAJob(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -72,7 +72,7 @@ func TestVillagerTakesAndLosesAJob(t *testing.T) {
 // YieldJobSite: an unemployed villager walking to a composter gives it up
 // to a farmer nearby who lost its own, and the farmer walks there instead.
 func TestVillagerYieldsJobSite(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -116,7 +116,7 @@ func TestVillagerYieldsJobSite(t *testing.T) {
 // A nitwit never takes a workstation, has no trades, wears the nitwit
 // robe, and survives a reload as a nitwit.
 func TestNitwitNeverWorks(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

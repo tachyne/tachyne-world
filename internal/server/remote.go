@@ -101,6 +101,9 @@ func (s *Server) ResumeRemote(id attach.Identity, token string, emit func(typ by
 	if !ok {
 		return nil, fmt.Errorf("resume: no pending handover for token %q", token)
 	}
+	if s.worldIn(int(ps.Dim)) == nil {
+		return nil, fmt.Errorf("resume: dimension %d is not run here", ps.Dim)
+	}
 	p := newPlayer(ps.EID, name, uuid)
 	s.adoptIdentity(p, id)
 	p.x, p.y, p.z = ps.X, ps.Y, ps.Z

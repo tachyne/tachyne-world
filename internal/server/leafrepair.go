@@ -39,10 +39,7 @@ func (s *Server) repairPlacedLeaves() {
 	}
 	undo := ran(leafRepairMarker) // the first version ran here: take back its canopy
 	total := 0
-	for _, w := range []*world.World{s.world, s.nether, s.end} {
-		if w == nil {
-			continue
-		}
+	for _, w := range s.allDims() {
 		if undo {
 			total += unpersistCanopy(w)
 		} else {

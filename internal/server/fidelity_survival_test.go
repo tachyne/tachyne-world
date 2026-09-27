@@ -12,7 +12,7 @@ import (
 // two applications — the effect's real cadence.
 func effectInterval(t *testing.T, id int32, amp, secs, ticks int) int {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.health = 15 // below max so regen heals; above the poison floor so it bites
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -65,7 +65,7 @@ func TestEffectCadenceMatchesVanilla(t *testing.T) {
 
 // TestPoisonNeverKills — vanilla poison stops at half a heart.
 func TestPoisonNeverKills(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.health = 2
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -80,7 +80,7 @@ func TestPoisonNeverKills(t *testing.T) {
 
 // TestWitherCanKill — unlike poison, wither is lethal.
 func TestWitherCanKill(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.health = 2
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -99,7 +99,7 @@ func TestWitherCanKill(t *testing.T) {
 // not. The expectations here are written out rather than read from the
 // generated table, so a regenerated table that quietly changed them fails.
 func TestDamageExhaustionPerType(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	for _, c := range []struct {
 		dt   dmgType
 		want float32
@@ -124,7 +124,7 @@ func TestDamageExhaustionPerType(t *testing.T) {
 // TestSlowRegenGatedByGamerule — with naturalRegeneration off the slow (fed)
 // regen branch must not heal.
 func TestSlowRegenGatedByGamerule(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.NaturalRegen = false
 	pl := testTracked()
 	pl.health, pl.food, pl.saturation, pl.exhaustion = 10, 18, 0, 0

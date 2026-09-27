@@ -8,7 +8,7 @@ import (
 )
 
 func TestMobCombatKillDropsBeef(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnMob(players, entityCow, 5, 70, 5)
 	if m.health != cowHealth {
@@ -43,7 +43,7 @@ func TestMobCombatKillDropsBeef(t *testing.T) {
 }
 
 func TestHitCowPanicsAndFlees(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	lx, lz := h.findLand(0, 0)
 	atk := &tracked{p: newPlayer(1, "a", [16]byte{}), x: float64(lx) + 3, y: 70, z: float64(lz)}
 	players := map[int32]*tracked{1: atk}
@@ -66,7 +66,7 @@ func TestHitCowPanicsAndFlees(t *testing.T) {
 }
 
 func TestAttackNonMobIsNoop(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.attackMob(players, 1, 12345) // unknown target — must not panic
 }
@@ -76,7 +76,7 @@ func TestAttackNonMobIsNoop(t *testing.T) {
 // magma cube leaves nothing at all, and a big one's cream comes off roughly
 // one kill in four because set_count starts at uniform -2..1.
 func TestSlimeAndMagmaCubeDrops(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 
 	count := func(etype int, size, n int) map[int32]int {
 		got := map[int32]int{}
@@ -118,7 +118,7 @@ func TestSlimeAndMagmaCubeDrops(t *testing.T) {
 // multiply it (that pool has no enchanted_count_increase) — nor the elder's
 // sponge or tide template.
 func TestGuardianRareFish(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	fishes := map[int32]bool{
 		itemByName["cod"]: true, itemByName["salmon"]: true,
 		itemByName["pufferfish"]: true, itemByName["tropical_fish"]: true,

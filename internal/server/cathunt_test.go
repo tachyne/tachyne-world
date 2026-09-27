@@ -9,7 +9,7 @@ import (
 // TestCatsHunt: a wild cat goes for a rabbit, a tamed one does not; an
 // ocelot goes for a chicken.
 func TestCatsHunt(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

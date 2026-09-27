@@ -10,7 +10,7 @@ import (
 // and must not take the hub down. The offhand is slot 40, and stopEating read
 // it straight out of the 36-slot main array.
 func TestOffhandEatReleaseFeedsAndDoesNotPanic(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	tr := testTracked()
 	initSurvival(tr)

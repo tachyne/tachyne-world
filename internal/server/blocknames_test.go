@@ -22,7 +22,7 @@ func windowTitle(p *player) string {
 // A chest placed from a renamed item carries the name: it is the menu's
 // title, and breaking the chest — by hand or in a blast — drops it named.
 func TestNamedChestKeepsItsName(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}

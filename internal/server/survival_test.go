@@ -16,7 +16,7 @@ func testTracked() *tracked {
 }
 
 func TestDamageAndDeath(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	h.damageOf(nil, pl, 5, dtGeneric)
 	if pl.health != 15 || pl.dead {
@@ -33,7 +33,7 @@ func TestDamageAndDeath(t *testing.T) {
 }
 
 func TestFallDamage(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	h.onFallAndExhaust(nil, pl, evMove{y: 80, onGround: false}) // leave ground at 80
 	h.onFallAndExhaust(nil, pl, evMove{y: 90, onGround: false}) // rise to peak 90
@@ -44,7 +44,7 @@ func TestFallDamage(t *testing.T) {
 }
 
 func TestRegenAndStarve(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -74,7 +74,7 @@ func TestRegenAndStarve(t *testing.T) {
 }
 
 func TestRespawnResets(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	h.damageOf(nil, pl, 25, dtGeneric)
 	if !pl.dead {
@@ -88,7 +88,7 @@ func TestRespawnResets(t *testing.T) {
 
 func TestDrowning(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -122,7 +122,7 @@ func TestDrowning(t *testing.T) {
 
 func TestLavaDamage(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -138,7 +138,7 @@ func TestLavaDamage(t *testing.T) {
 
 func TestCactusDamage(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -153,7 +153,7 @@ func TestCactusDamage(t *testing.T) {
 }
 
 func TestDeathDropsInventory(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -189,7 +189,7 @@ func TestInventoryAdd(t *testing.T) {
 // TestEatHoldTiming: use_item starts the 32-tick chew; the food applies only
 // after the hold completes — one right-click no longer instant-eats.
 func TestEatHoldTiming(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -220,7 +220,7 @@ func TestEatHoldTiming(t *testing.T) {
 // TestEatReleaseCancels: releasing early cancels; releasing at the last moment
 // applies (absorbs the client/server timer race).
 func TestEatReleaseCancels(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -252,7 +252,7 @@ func TestEatReleaseCancels(t *testing.T) {
 // loot, and a genuine loss.
 func TestDeathDropsStayInTheDimensionYouDiedIn(t *testing.T) {
 	for _, dim := range []int{1, 2} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		players := map[int32]*tracked{}
 		tr := survPlayer(h)
 		players[tr.p.eid] = tr
@@ -288,7 +288,7 @@ func TestDeathDropsStayInTheDimensionYouDiedIn(t *testing.T) {
 // Peaceful heals and feeds on its own clock; exhaustion never banks past
 // forty; the always-edible foods go down at full hunger.
 func TestPeacefulRegenExhaustionCapAlwaysEdible(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -332,7 +332,7 @@ func TestPeacefulRegenExhaustionCapAlwaysEdible(t *testing.T) {
 // contact hazard).
 func TestLavaHitsTwiceASecond(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5

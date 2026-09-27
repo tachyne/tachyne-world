@@ -17,7 +17,7 @@ func riderAt(eid int32, x, y, z float64) *tracked {
 }
 
 func TestHarnessEquipAndBoard(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pilot := riderAt(1, 100.5, 70, 100.5)
 	players := map[int32]*tracked{1: pilot}
 	m := h.spawnSpecies(players, entityHappyGhast, 0, 101.5, 70, 100.5)
@@ -47,7 +47,7 @@ func TestHarnessEquipAndBoard(t *testing.T) {
 }
 
 func TestGhastlingCannotBeHarnessed(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := riderAt(1, 100.5, 70, 100.5)
 	players := map[int32]*tracked{1: pl}
 	m := h.spawnSpecies(players, entityHappyGhast, 0, 101.5, 70, 100.5)
@@ -59,7 +59,7 @@ func TestGhastlingCannotBeHarnessed(t *testing.T) {
 }
 
 func TestGhastPilotFlightDragsRiders(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pilot := riderAt(1, 100.5, 70, 100.5)
 	passenger := riderAt(2, 100.5, 70, 100.5)
 	players := map[int32]*tracked{1: pilot, 2: passenger}

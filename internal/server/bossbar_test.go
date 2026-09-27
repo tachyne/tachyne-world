@@ -56,7 +56,7 @@ func recordEvents(t *testing.T, p *player) *evRecorder {
 func eventServer(t *testing.T, rulesPath string) (*Server, *hub, map[string]*player, map[string]*chatLog, map[string]*evRecorder) {
 	t.Helper()
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	h.rules.DoMobSpawning = false
 	h.rulesPath = rulesPath
 	s := &Server{world: w, hub: h, modes: newModeStore("", gmCreative), Ops: map[string]bool{"alice": true, "bob": true}}

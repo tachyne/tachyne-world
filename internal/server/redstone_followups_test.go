@@ -11,7 +11,7 @@ import (
 // player opening it powers the block beneath (strongly) and its neighbours
 // (weakly); closing it drops the signal back to zero.
 func TestTrappedChestSignalIsItsViewerCount(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := riderAt(1, 11.5, 70, 10.5)
 	players := map[int32]*tracked{1: pl}
 	h.playersRef = players
@@ -84,7 +84,7 @@ func TestDustSurvivesOnSturdyTopsOnly(t *testing.T) {
 // even once its support is unpowered, and only relights after the 160-tick
 // restart delay has let the toggle log expire.
 func TestRedstoneTorchBurnsOutWhenToggledTooOften(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	// A floor torch on stone; power the stone from beside it with a lever on

@@ -11,7 +11,7 @@ import (
 // piglinWalk is a floating stone walk, fifty blocks long, with air above.
 func piglinWalk(t *testing.T) (*hub, *world.World, map[int32]*tracked, int, int, int) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.world.ForceLoad(0, 0, 3)
@@ -30,7 +30,7 @@ func piglinWalk(t *testing.T) (*hub, *world.World, map[int32]*tracked, int, int,
 func TestPiglinBruteKeepsHome(t *testing.T) {
 	// Level ground in seed 1's terrain (x 80..128, z -328..-312): the walk
 	// is planned over the real surface.
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.world.ForceLoad(104, -320, 3)

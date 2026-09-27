@@ -38,7 +38,7 @@ func TestFamilyMeleeBonusCoversImpaling(t *testing.T) {
 // Bane of Arthropods' post_attack half: a struck arthropod is slowed to a
 // crawl, Slowness IV for 1.5 s plus half a second a level above the first.
 func TestBaneOfArthropodsSlows(t *testing.T) {
-	h := newHub(world.New(47))
+	h := newTestHub(world.New(47))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

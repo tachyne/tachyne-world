@@ -11,7 +11,7 @@ import (
 // vanilla's ServerItemCooldowns sends — keyed by the item's id, for the
 // ticks it lasts — so the client draws the sweep over the disabled shield.
 func TestCooldownFrame(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := blocking(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

@@ -9,9 +9,9 @@ import (
 
 func netherHub(t *testing.T) (*hub, *tracked, map[int32]*tracked) {
 	t.Helper()
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	nw, _ := world.NewNether(7, nil)
-	h.nether = nw
+	h.dims.set(dimNether, nw)
 	pl := testTracked()
 	pl.dim = 1
 	// Park the player on a real nether floor.
@@ -161,7 +161,7 @@ func TestNetherSpawnsNeverFloat(t *testing.T) {
 		if m.etype == entityStrider {
 			continue // striders spawn IN lava (SpawnPlacementTypes.IN_LAVA)
 		}
-		below := h.nether.At(floorInt(m.x), floorInt(m.y)-1, floorInt(m.z))
+		below := h.worldFor(dimNether).At(floorInt(m.x), floorInt(m.y)-1, floorInt(m.z))
 		if below == worldgen.Air || worldgen.IsLava(below) {
 			t.Fatalf("mob %d floating/in-lava at (%.1f,%.1f,%.1f) over %d", m.etype, m.x, m.y, m.z, below)
 		}
@@ -209,9 +209,9 @@ func TestDroppedItemsSurviveRestart(t *testing.T) {
 		t.Fatalf("want 2 snapshotted items, got %d", len(snap))
 	}
 	// A fresh hub restores them with dims intact.
-	h2 := newHub(h.world)
+	h2 := newTestHub(h.world)
 	nw, _ := world.NewNether(7, nil)
-	h2.nether = nw
+	h2.dims.set(dimNether, nw)
 	h2.restoreItems(snap)
 	if len(h2.items) != 2 {
 		t.Fatalf("want 2 restored, got %d", len(h2.items))

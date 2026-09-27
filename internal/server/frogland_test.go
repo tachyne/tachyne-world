@@ -10,7 +10,7 @@ import (
 // A frog put in a pond makes for the bank (TryFindLand) and is out of the
 // water within a few seconds.
 func TestFrogFindsLand(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	for x := -12; x <= 12; x++ {
 		for z := -12; z <= 12; z++ {
@@ -60,7 +60,7 @@ func TestFrogLandNearest(t *testing.T) {
 // Out in open water, with no bank in reach, a frog swims about at 0.75 of
 // its pace (RandomStroll.swim(0.75F)), not its full walking stroll.
 func TestFrogSwimStrollSpeed(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 3)
 	for x := -24; x <= 24; x++ {
 		for z := -24; z <= 24; z++ {

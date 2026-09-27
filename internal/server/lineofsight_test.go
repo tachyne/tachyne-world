@@ -10,7 +10,7 @@ import (
 // A wall between them: the skeleton holds its fire, the ghast never charges,
 // the guardian lets go of its beam. Remove it and all three attack.
 func TestRangedMobsNeedLineOfSight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -85,7 +85,7 @@ func TestRangedMobsNeedLineOfSight(t *testing.T) {
 
 // The traversal crosses a diagonal cleanly and stops at a lone block on it.
 func TestSightClearDiagonal(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	if !h.sightClear(0, 0.5, 200.5, 0.5, 7.5, 203.5, 6.5) {
 		t.Fatal("empty sky blocked")
 	}

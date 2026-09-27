@@ -9,7 +9,7 @@ import (
 // Species wiring: each night-mob type gets the right behavior/health/day rules.
 
 func TestSpawnHostileSpecies(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 
 	z := h.spawnHostile(players, entityZombie, 0, 0)
@@ -37,7 +37,7 @@ func TestSpawnHostileSpecies(t *testing.T) {
 }
 
 func TestSpiderNeutralByDayButRetaliates(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
 	players := map[int32]*tracked{1: pl}
@@ -68,7 +68,7 @@ func TestSpiderNeutralByDayButRetaliates(t *testing.T) {
 }
 
 func TestFarHostilesDespawnPassiveStay(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.z = 0.5, 0.5
 	players := map[int32]*tracked{1: pl}
@@ -92,7 +92,7 @@ func TestFarHostilesDespawnPassiveStay(t *testing.T) {
 // TestHappyGhastSpawnsPassiveFlyer: the 1.21.6 happy ghast spawns as a
 // non-hostile free-flying mob with 20 HP, /summon-able and roster-passive.
 func TestHappyGhastSpawnsPassiveFlyer(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	m := h.spawnSpecies(players, entityHappyGhast, 0, 100, 90, 100)
 	if m.hostile {
@@ -113,7 +113,7 @@ func TestHappyGhastSpawnsPassiveFlyer(t *testing.T) {
 }
 
 func TestMonsterPoolCoversCoreSpecies(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	seen := map[int]bool{}
 	for i := 0; i < 2000; i++ {
 		if sd, ok := h.rollSpawner(monsterPoolDefault); ok {
@@ -155,7 +155,7 @@ func TestSpeciesItemNamesResolve(t *testing.T) {
 // applySpecies produced a coherent mob: table health, a behavior, and the
 // stance flags its archetype implies.
 func TestEverySpeciesSummonsAndConfigures(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	for etype, d := range speciesTable {
 		m := h.spawnSpecies(players, etype, 0, 100, 70, 100)
@@ -209,7 +209,7 @@ func TestRosterSpeciesAreSummonable(t *testing.T) {
 // TestWitherSkeletonWithers checks melee status-effect wiring: a wither
 // skeleton bite lays the wither effect on its victim.
 func TestWitherSkeletonWithers(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	h.rules.Difficulty = diffNormal
 	players := map[int32]*tracked{}
 	pl := testTracked()
@@ -227,7 +227,7 @@ func TestWitherSkeletonWithers(t *testing.T) {
 // TestParchedArrowWeakens checks the parched's signature: the arrows it fires
 // carry the Weakness effect (vanilla Parched.getArrow).
 func TestParchedArrowWeakens(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 100.5, 70, 100.5
@@ -260,7 +260,7 @@ func TestCaveSpiderPoisons(t *testing.T) {
 		diff    int
 		poisons bool
 	}{{diffEasy, false}, {diffNormal, true}, {diffHard, true}} {
-		h := newHub(world.New(7))
+		h := newTestHub(world.New(7))
 		h.rules.Difficulty = tc.diff
 		players := map[int32]*tracked{}
 		pl := testTracked()
@@ -277,7 +277,7 @@ func TestCaveSpiderPoisons(t *testing.T) {
 
 // TestRetaliateWakesThePack: hitting one wolf turns nearby wolves hostile too.
 func TestRetaliateWakesThePack(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 100.5, 70, 100.5

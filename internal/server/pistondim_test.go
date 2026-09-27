@@ -15,12 +15,12 @@ import (
 // was.
 func TestPistonRunsInTheNether(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	nw, err := world.NewNether(1, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	h.nether = nw
+	h.dims.set(dimNether, nw)
 	pl := testTracked()
 	pl.dim = dimNether
 	players := map[int32]*tracked{1: pl}

@@ -8,7 +8,7 @@ import (
 )
 
 func brewSetup(t *testing.T) (*hub, map[int32]*tracked, blockPos, *bin) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	pos := blockPos{10, 70, 10}
@@ -71,7 +71,7 @@ func TestBrewNeedsFuelAndValidIngredient(t *testing.T) {
 }
 
 func TestDrinkPotionAppliesEffectAndReturnsBottle(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.gamemode = gmSurvival
 	pl.inv.slots[0] = potionStack(potFireRes)
@@ -88,7 +88,7 @@ func TestDrinkPotionAppliesEffectAndReturnsBottle(t *testing.T) {
 // (NetherWartBlock.randomTick), not on a self-rearming schedule. The old
 // scheduled path ignored the randomTickSpeed gamerule and ran ~3x too fast.
 func TestWartGrowsOnRandomTick(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pos := blockPos{5, 70, 5}
 	h.world.SetBlock(pos.x, pos.y-1, pos.z, worldgen.SoulSand)
@@ -104,7 +104,7 @@ func TestWartGrowsOnRandomTick(t *testing.T) {
 
 // The 1-in-10 gate must actually gate: a single tick rarely advances.
 func TestWartAdvancesAtVanillaRate(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 
 	const trials = 4000
@@ -125,7 +125,7 @@ func TestWartAdvancesAtVanillaRate(t *testing.T) {
 // Growth must honour the randomTickSpeed gamerule, which the scheduled path
 // bypassed entirely — including 0, which has to stop growth dead.
 func TestWartRespectsRandomTickSpeedZero(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.RandomTicks = 0
 	players := map[int32]*tracked{}
 	p := testTracked()

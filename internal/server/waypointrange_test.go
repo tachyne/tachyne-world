@@ -11,7 +11,7 @@ import (
 // bar (the crouch modifier zeroes WAYPOINT_TRANSMIT_RANGE), and a receiver
 // sees a transmitter only nearer than the lesser of the two ranges.
 func TestWaypointRanges(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.LocatorBar = true
 	a, b := survPlayer(h), survPlayer(h)
 	b.p.eid = a.p.eid + 1

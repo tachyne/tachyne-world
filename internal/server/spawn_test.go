@@ -52,7 +52,7 @@ func TestTallMobsNeedTheirOwnHeadroom(t *testing.T) {
 		t.Errorf("iron golem needs %d cells, want 3", got)
 	}
 
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	x, y, z := 300, 70, 300
 	// A pocket exactly two blocks high: stone floor, two clear, stone ceiling.

@@ -11,7 +11,7 @@ import (
 // flips its flag and the next tick re-rolls it as a duration (flag on) or a
 // delay (flag off), each in the vanilla uniform range.
 func TestWeatherCycleFlips(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{1: testTracked()}
 	if h.raining || h.rainFlag {
 		t.Fatal("worlds start clear")
@@ -49,7 +49,7 @@ func TestWeatherCycleFlips(t *testing.T) {
 // TestClearWindowSuppressesSpells: an active /weather clear window forces both
 // flags off and parks the timers (vanilla advanceWeatherCycle's first branch).
 func TestClearWindowSuppressesSpells(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.clearTime, h.rainFlag, h.thunderFlag = 5, true, true
 	h.updateWeather(players)
@@ -66,7 +66,7 @@ func TestClearWindowSuppressesSpells(t *testing.T) {
 // sets BOTH flags with one shared duration; a missing duration samples the
 // vanilla distribution; clear rolls a fresh delay window.
 func TestWeatherCommandSemantics(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.applyWeatherCommand(evSetWeather{kind: "thunder", duration: -1})
 	if !h.rainFlag || !h.thunderFlag || h.clearTime != 0 {
 		t.Fatal("/weather thunder must raise both flags")
@@ -118,7 +118,7 @@ func TestPrecipitationTable(t *testing.T) {
 // TestLightningPrefersRods: a lightning rod crowning its column redirects a
 // strike within the vanilla 128-block search (the strike lands on its tip).
 func TestLightningPrefersRods(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	surf := h.world.SurfaceFeet(10, 10)
 	rod := worldgen.BlockID("waxed_lightning_rod") // the whole family attracts
@@ -141,7 +141,7 @@ func TestLightningPrefersRods(t *testing.T) {
 
 // TestRainShieldsTheUndead — unchanged behavior: h.raining keeps its meaning.
 func TestRainShieldsTheUndead(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	h.dayTime.Store(6000) // noon — burn time
@@ -170,7 +170,7 @@ func TestRainShieldsTheUndead(t *testing.T) {
 }
 
 func TestLightningStrikeDamages(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 64, 0.5
 	players := map[int32]*tracked{1: pl}
@@ -202,7 +202,7 @@ func TestLightningStrikeDamages(t *testing.T) {
 }
 
 func TestSleepClearsWeather(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	h.dayTime.Store(14000)
@@ -230,13 +230,13 @@ func TestSleepClearsWeather(t *testing.T) {
 // restart via settings.json, and a restored storm resumes at full level.
 func TestWeatherPersistence(t *testing.T) {
 	path := t.TempDir() + "/settings.json"
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rulesPath = path
 	h.clearTime, h.rainTime, h.thunderTime = 0, 777, 555
 	h.rainFlag, h.thunderFlag = true, true
 	h.saveRules()
 
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	h2.rulesPath = path
 	h2.loadRules()
 	if h2.rainTime != 777 || h2.thunderTime != 555 || !h2.rainFlag || !h2.thunderFlag {
@@ -263,7 +263,7 @@ func TestRainGameEventIDs(t *testing.T) {
 // within 256 blocks — a villager spared by a bolt 100 blocks away still
 // earns the rod advancement.
 func TestLightningStrikeTriggerReach(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	h.rules.Difficulty = diffPeaceful // no fire
 	pl := riderAt(1, 100.5, 180, 0.5)

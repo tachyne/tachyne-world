@@ -11,7 +11,7 @@ import (
 // blocks around; carried out of it, it swims back
 // (MoveTowardsRestrictionGoal).
 func TestElderGuardianSwimsHome(t *testing.T) {
-	h := newHub(world.New(5))
+	h := newTestHub(world.New(5))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.world.ForceLoad(16, 0, 2)

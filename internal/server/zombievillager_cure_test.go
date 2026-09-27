@@ -12,7 +12,7 @@ import (
 // cures it back, the villager returns with everything and owes its curer a
 // discount.
 func TestZombieVillagerInfectionAndCure(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.rules.Difficulty = diffHard
@@ -87,7 +87,7 @@ func TestZombieVillagerInfectionAndCure(t *testing.T) {
 
 // On Easy the bite just kills; villagers run from a nearby zombie.
 func TestZombieBiteOnEasyAndVillagerFlee(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.rules.Difficulty = diffEasy

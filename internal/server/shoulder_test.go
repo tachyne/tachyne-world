@@ -13,7 +13,7 @@ import (
 
 func shoulderFixture(t *testing.T) (*hub, map[int32]*tracked, *tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	for x := -6; x <= 6; x++ {
 		for z := -6; z <= 6; z++ {

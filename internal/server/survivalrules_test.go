@@ -10,7 +10,7 @@ import (
 // A handful of blocks had no survival rule at all, so they simply hung in the
 // air when whatever held them went. These are vanilla's own rules.
 func TestGrowingPlantsNeedTheirAnchor(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	players := map[int32]*tracked{}
 	const x, y, z = 30, 180, 30
@@ -108,7 +108,7 @@ func slabInfo(t *testing.T) worldgen.BlockInfo {
 // A clutch on a still pond survives the pond starting to flow away under it
 // no longer: the sweep that follows the change takes it.
 func TestFrogspawnGoesWhenItsWaterRuns(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	players := map[int32]*tracked{}
 	const x, y, z = 36, 180, 36
@@ -129,7 +129,7 @@ func TestFrogspawnGoesWhenItsWaterRuns(t *testing.T) {
 // DirtPathBlock.canSurvive is about what is ABOVE it, and a path that loses
 // the argument turns back into dirt rather than falling.
 func TestDirtPathTurnsBackToDirtUnderABlock(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	players := map[int32]*tracked{}
 	const x, y, z = 38, 180, 38

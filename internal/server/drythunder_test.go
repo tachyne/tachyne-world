@@ -16,7 +16,7 @@ import (
 // the snowy mountain from the reports: a zombie on a snow layer over a snow
 // block and packed ice, at mid-morning.
 func TestDryThunderIsNoStorm(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 181, 4.5 // close by, so nothing despawns
 	players := map[int32]*tracked{1: pl}

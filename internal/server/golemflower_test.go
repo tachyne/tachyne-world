@@ -9,7 +9,7 @@ import (
 // TestGolemOffersPoppy: a golem beside a villager eventually holds out a
 // poppy for four hundred ticks, standing still; alone, it never does.
 func TestGolemOffersPoppy(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

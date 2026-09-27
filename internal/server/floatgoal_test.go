@@ -11,7 +11,7 @@ import (
 // A cow in deep water comes up and bobs with its eyes clear, swims on, and
 // never drowns; a zombie sinks and walks the bottom; shallow water is waded.
 func TestFloatersBobInDeepWater(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

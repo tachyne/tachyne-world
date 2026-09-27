@@ -13,7 +13,7 @@ import (
 // (MinecartChest.interact, ContainerEntity.chestVehicleDestroyed).
 func TestPiglinsGuardBlocksAndChestVehicles(t *testing.T) {
 	setup := func() (*hub, map[int32]*tracked, *tracked, *mob) {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		h.world.ForceLoad(0, 0, 2)
 		for x := -6; x <= 6; x++ {
 			for z := -6; z <= 6; z++ {

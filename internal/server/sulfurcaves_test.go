@@ -41,7 +41,7 @@ func TestSulfurCavesSpawnPool(t *testing.T) {
 	if got := w.BiomeAt3D(x, w.SurfaceFeet(x, z), z); got == "minecraft:sulfur_caves" {
 		t.Errorf("the surface over (%d,%d) reports sulfur_caves", x, z)
 	}
-	h := newHub(w)
+	h := newTestHub(w)
 	cube, ok := entityByName["sulfur_cube"]
 	if !ok {
 		t.Fatal("sulfur_cube has no entity id")

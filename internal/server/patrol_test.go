@@ -8,7 +8,7 @@ import (
 )
 
 func TestSpawnPatrolHasCaptain(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	h.rules.Difficulty = diffNormal
 	lx, lz := h.findLand(40, 40)
@@ -46,7 +46,7 @@ func TestSpawnPatrolHasCaptain(t *testing.T) {
 }
 
 func TestPatrolGatedBeforeDay5(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{1: testTracked()}
 	h.patrolNextAt = 1 // due immediately
 	h.tick.Store(100)
@@ -63,7 +63,7 @@ func TestPatrolGatedBeforeDay5(t *testing.T) {
 // eventually visited.
 func TestPatrolVillageAndSpectatorGates(t *testing.T) {
 	try := func(setup func(h *hub, pl *tracked)) bool {
-		h := newHub(world.New(7))
+		h := newTestHub(world.New(7))
 		h.rules.Difficulty = diffNormal
 		h.rules.SpawnPatrols, h.rules.DoMobSpawning = true, true
 		pl := testTracked()

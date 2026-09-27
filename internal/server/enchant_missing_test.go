@@ -42,7 +42,7 @@ func TestFamilyMeleeBonusPicksItsFamily(t *testing.T) {
 
 // Fire Aspect sets the target alight for four seconds a level.
 func TestFireAspectIgnites(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -70,7 +70,7 @@ func TestFireAspectIgnites(t *testing.T) {
 
 // Thorns rolls per piece, so a full set retaliates far more often than one.
 func TestThornsRetaliates(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
@@ -105,7 +105,7 @@ func TestThornsRetaliates(t *testing.T) {
 
 // Fire Protection shortens how long you burn; the attribute is what carries it.
 func TestFireProtectionShortensBurning(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -129,7 +129,7 @@ func TestFireProtectionShortensBurning(t *testing.T) {
 
 // Respiration is an OXYGEN_BONUS modifier and slows the drowning clock.
 func TestRespirationSlowsDrowning(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	if h.keepsAirThisTick(pl) {
 		t.Fatal("a bare player kept a breath")
@@ -172,7 +172,7 @@ func TestBlastProtectionResistsTheShove(t *testing.T) {
 
 // Curse of Vanishing destroys the item instead of dropping it.
 func TestVanishingCurseDestroysOnDeath(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
@@ -199,7 +199,7 @@ func TestVanishingCurseDestroysOnDeath(t *testing.T) {
 
 // Frost Walker freezes the surface it walks over — sources only, air above.
 func TestFrostWalkerFreezesTheSurface(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -237,7 +237,7 @@ func TestFrostWalkerFreezesTheSurface(t *testing.T) {
 
 // …and the ice it leaves ages back to water, so a lake does not stay paved.
 func TestFrostedIceAgesBackToWater(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	const wy = 180
@@ -257,7 +257,7 @@ func TestFrostedIceAgesBackToWater(t *testing.T) {
 
 // Soul Speed only helps while you are actually standing on soul sand.
 func TestSoulSpeedAppliesOnSoulBlocksOnly(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	w := h.worldFor(0)
 	const fy = 180

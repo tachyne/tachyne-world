@@ -10,7 +10,7 @@ import (
 // A sponge dropped in water drinks it and turns wet; a dry one on land does
 // nothing at all.
 func TestSpongeAbsorbsWater(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	pos := blockPos{0, 180, 0}
@@ -57,7 +57,7 @@ func TestSpongeAbsorbsWater(t *testing.T) {
 
 // A sponge cannot reach through a wall it has no water path around.
 func TestSpongeCannotReachThroughStone(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	pos := blockPos{0, 180, 0}
@@ -80,7 +80,7 @@ func TestSpongeCannotReachThroughStone(t *testing.T) {
 // Blast resistance now attenuates the blast instead of switching it off:
 // obsidian survives and shields what is behind it, dirt does not.
 func TestExplosionAttenuatesAndShields(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	obsidian := worldgen.BlockBase("obsidian")
@@ -111,9 +111,9 @@ func TestExplosionAttenuatesAndShields(t *testing.T) {
 
 // An explosion in the nether must not blow a hole in the overworld.
 func TestExplosionStaysInItsDimension(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nw, _ := world.NewNether(1, nil)
-	h.nether = nw
+	h.dims.set(dimNether, nw)
 	players := map[int32]*tracked{}
 	dirt := worldgen.BlockBase("dirt")
 	for dx := -3; dx <= 3; dx++ {

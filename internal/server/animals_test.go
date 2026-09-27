@@ -21,7 +21,7 @@ func TestRosterSpeciesBreed(t *testing.T) {
 		{entityHorse, itemByName["golden_carrot"]},
 	}
 	for _, c := range cases {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		pl := testTracked()
 		pl.p.setHotbarSlot(0, c.food)
 		pl.inv.slots[0] = invStack{item: c.food, count: 2}
@@ -57,7 +57,7 @@ func courtBreeding(h *hub, players map[int32]*tracked) {
 }
 
 func TestFeedingPairMakesABaby(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.p.setHotbarSlot(0, itemWheat)
 	pl.inv.slots[0] = invStack{item: itemWheat, count: 2}
@@ -105,7 +105,7 @@ func TestFeedingPairMakesABaby(t *testing.T) {
 }
 
 func TestFeedGatesAndCooldown(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.p.setHotbarSlot(0, itemWheat)
 	pl.inv.slots[0] = invStack{item: itemWheat, count: 5}
@@ -123,7 +123,7 @@ func TestFeedGatesAndCooldown(t *testing.T) {
 }
 
 func TestShearingAndRegrowth(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.p.setHotbarSlot(0, itemShears)
 	pl.inv.slots[0] = invStack{item: itemShears, count: 1}
@@ -158,7 +158,7 @@ func TestShearingAndRegrowth(t *testing.T) {
 }
 
 func TestShearedSheepDropsNoWool(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnAnimal(players, entitySheep, 3, 3)
 	m.sheared, m.hitByPlayer = true, true
@@ -171,7 +171,7 @@ func TestShearedSheepDropsNoWool(t *testing.T) {
 }
 
 func TestChickensLayEggs(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnAnimal(players, entityChicken, 3, 3)
 	m.eggIn = survivalTickN
@@ -194,7 +194,7 @@ func TestChickensLayEggs(t *testing.T) {
 // used to make a baby without ever meeting. They must now close to three
 // blocks and stand together for sixty ticks.
 func TestBreedingPairMustMeetFirst(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.p.setHotbarSlot(0, itemWheat)
 	pl.inv.slots[0] = invStack{item: itemWheat, count: 2}
@@ -228,7 +228,7 @@ func TestBreedingPairMustMeetFirst(t *testing.T) {
 // PandaBreedGoal.canUse: a panda with no bamboo within eight blocks (and two
 // above) sulks instead of breeding, whatever it has been fed.
 func TestPandasNeedBambooToBreed(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	a := h.spawnMob(players, entityPanda, 0.5, 180, 0.5)
 	b := h.spawnMob(players, entityPanda, 1.5, 180, 0.5)

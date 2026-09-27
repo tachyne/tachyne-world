@@ -11,7 +11,7 @@ import (
 // longer one runs first, and when it ends the weaker one is back with the
 // time it had left.
 func TestHiddenEffectComesBack(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -40,7 +40,7 @@ func TestHiddenEffectComesBack(t *testing.T) {
 
 // AbsorptionMobEffect: once the golden hearts are spent the effect ends.
 func TestAbsorptionEndsWithItsHearts(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -58,7 +58,7 @@ func TestAbsorptionEndsWithItsHearts(t *testing.T) {
 // Fire Resistance turns the burn's damage away but leaves the burn itself
 // to run its course.
 func TestFireResistanceBlocksBurnDamageOnly(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -76,7 +76,7 @@ func TestFireResistanceBlocksBurnDamageOnly(t *testing.T) {
 // MobEffectUtil.hasWaterBreathing: a cow under water with Water Breathing
 // does not drown.
 func TestMobWaterBreathing(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	players := map[int32]*tracked{}
 	for y := 199; y <= 203; y++ {

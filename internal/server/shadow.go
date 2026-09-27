@@ -170,6 +170,9 @@ func (h *hub) shadowGoneAll(eid int32) {
 // applyShadow registers or updates an inbound shadow and reflects it to nearby
 // players (a spawn on first sight, else a move).
 func (h *hub) applyShadow(players map[int32]*tracked, s handover.Shadow) {
+	if h.worldFor(int(s.Dim)) == nil {
+		return // a dimension this pod does not run: nobody here could see it
+	}
 	se := h.shadowIn[s.EID]
 	if se == nil {
 		se = &shadowEnt{}

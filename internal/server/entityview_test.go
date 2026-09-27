@@ -25,7 +25,7 @@ func addedFor(tr *tracked, eid int32) bool {
 // and spawned again when it comes back — vanilla's tracked-entity model.
 // Before this a creature that wandered off simply froze where it stood.
 func TestTrackingFollowsTheViewer(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 0, 70, 0
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -71,7 +71,7 @@ func TestTrackingFollowsTheViewer(t *testing.T) {
 // A viewer only ever hears about what is in range of them: a second player
 // far away is told nothing about the first one's neighbours.
 func TestTrackingIsPerViewer(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	near := survPlayer(h)
 	far := survPlayer(h)
 	far.p.eid = 2
@@ -95,7 +95,7 @@ func TestTrackingIsPerViewer(t *testing.T) {
 // A dimension change replaces the whole view: everything the client held
 // is removed, and the new dimension's entities arrive with the next pass.
 func TestDimensionChangeDropsTheView(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -116,7 +116,7 @@ func TestDimensionChangeDropsTheView(t *testing.T) {
 // holding it hears about it, one who does not hear nothing. Kinds the
 // tracker does not own yet still ride the positional broadcast.
 func TestUpdatesFollowTheTrackedSet(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	near := survPlayer(h)
 	far := survPlayer(h)
 	far.p.eid = 2
@@ -170,7 +170,7 @@ func TestTrackRangesAreVanillas(t *testing.T) {
 			t.Errorf("%s track range %v, want %v", entityNameByID[et], got, want)
 		}
 	}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 0, 70, 0
 	// The viewer's own render distance clamps it: six chunks here, so a cow

@@ -12,7 +12,7 @@ import (
 // beds across it, so every section of the pad counts as a village.
 func siegeVillage(t *testing.T) (*hub, map[int32]*tracked, *tracked, int) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	const cx, cz, fy = 5000, 5000, 200
 	h.world.ForceLoad(cx, cz, 5)
 	for x := cx - 60; x <= cx+60; x++ {
@@ -45,7 +45,7 @@ func zombiesIn(h *hub) (out []*mob) {
 
 // Light clears the night's state, as isBrightOutside does.
 func TestVillageSiegeClearsInTheLight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.siegeState, h.siegeSetUp, h.siegeLeft = siegeTonight, true, 5
 	h.dayTime.Store(6000) // noon
 	h.updateVillageSiege(nil)
@@ -56,7 +56,7 @@ func TestVillageSiegeClearsInTheLight(t *testing.T) {
 
 // The night is rolled at the siege marker, midnight, and nowhere else.
 func TestVillageSiegeRollsAtMidnight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	for _, d := range []uint64{13000, 14000, 17999, 18001, 22000} {
 		h.dayTime.Store(d)
 		for i := 0; i < 200; i++ {

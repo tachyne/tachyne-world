@@ -11,7 +11,7 @@ import (
 // A phantom circles its target high up and swoops every eight to twelve
 // seconds, rather than flying straight at it.
 func TestPhantomCirclesThenSwoops(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.playersRef = map[int32]*tracked{}
 	m := &mob{etype: entityPhantom, hasTarget: true, x: 0, y: 90, z: 0, tx: 10, tz: 0, ty: 70, flies: true}
 	m.setMoveSpeed(0.2)
@@ -62,7 +62,7 @@ func TestPhantomCirclesThenSwoops(t *testing.T) {
 // up and down) it takes the highest it can see, not the nearest, and only
 // rescans every sixty ticks.
 func TestPhantomPicksTheHighestPlayer(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	low, high := survPlayer(h), survPlayer(h)
 	low.p.eid, high.p.eid = 500, 501

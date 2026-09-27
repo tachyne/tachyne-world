@@ -10,7 +10,7 @@ import (
 // cooldown, the flag drops once the cooldown is under fifty, and a second
 // dash waits for the cooldown.
 func TestCamelDash(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	c := h.spawnAnimal(players, entityCamel, 3, 3)

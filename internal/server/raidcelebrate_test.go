@@ -13,7 +13,7 @@ import (
 // village, raise the IS_CELEBRATING flag, and jump now and then; when the
 // raid is gone the flag comes down again.
 func TestLostRaidRaidersCelebrate(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	center := blockPos{64, 200, 64}

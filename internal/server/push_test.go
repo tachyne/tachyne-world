@@ -13,7 +13,7 @@ import (
 
 func pushWorld(t *testing.T) (*hub, map[int32]*tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	// Real ground, so the tests that drive the full updateMobs step see a

@@ -11,7 +11,7 @@ import (
 // less than one at its centre, and a scale that rounds to nothing does
 // nothing.
 func TestSplashHarmingScalesWithDistance(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

@@ -116,7 +116,7 @@ func TestDaylightDetectorIdleWithoutSkyLight(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h.nether = nw
+	h.dims.set(dimNether, nw)
 	nw.SetBlock(0, 60, 0, daylightWith(true, 0))
 	h.inDim(dimNether, func() { h.updateDaylight(players, blockPos{0, 60, 0}, nw.At(0, 60, 0)) })
 	if p := daylightPower(nw.At(0, 60, 0)); p != 0 {

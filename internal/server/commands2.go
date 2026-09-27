@@ -250,8 +250,6 @@ type evSetSpawnpoint struct {
 
 func (evSetSpawnpoint) isHubEvent() {}
 
-var dimensionNames = [...]string{"minecraft:overworld", "minecraft:the_nether", "minecraft:the_end"}
-
 func (h *hub) onSetSpawnpoint(players map[int32]*tracked, e evSetSpawnpoint) {
 	caller := players[e.eid]
 	if caller == nil {
@@ -269,10 +267,7 @@ func (h *hub) onSetSpawnpoint(players map[int32]*tracked, e evSetSpawnpoint) {
 	if len(targets) > 1 {
 		who = fmt.Sprintf("%d players", len(targets))
 	}
-	dim := dimensionNames[0]
-	if caller.dim >= 0 && caller.dim < len(dimensionNames) {
-		dim = dimensionNames[caller.dim]
-	}
+	dim := dimRegistryName(caller.dim)
 	h.cmdSuccess(players, caller.p, fmt.Sprintf("Set spawn point to %d, %d, %d [%.1f, %.1f] in %s for %s",
 		e.pos.x, e.pos.y, e.pos.z, e.yaw, e.pitch, dim, who), true)
 }

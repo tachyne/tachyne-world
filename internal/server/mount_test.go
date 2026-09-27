@@ -9,7 +9,7 @@ import (
 // ridingSetup spawns a player and a fresh mob of etype next to it.
 func ridingSetup(t *testing.T, etype int) (*hub, *tracked, map[int32]*tracked, *mob) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.gamemode = gmSurvival
 	pl.x, pl.y, pl.z = 100.5, 70, 100.5

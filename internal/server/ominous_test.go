@@ -11,7 +11,7 @@ import (
 // splits slimes, one that dies weaving leaves cobwebs, and an infested one
 // bursts silverfish when it is hurt.
 func TestOminousEffectsReachMobs(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.rules.MobGriefing = true
 	for x := -2; x <= 2; x++ {

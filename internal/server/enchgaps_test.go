@@ -31,7 +31,7 @@ func TestEfficiencyIsAllowedByTheFastBreakCheck(t *testing.T) {
 
 // Mending: experience mends held and worn gear before it reaches the bar.
 func TestMendingRepairsBeforeBanking(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 
 	pick := itemByName["diamond_pickaxe"]
@@ -66,7 +66,7 @@ func TestMendingRepairsBeforeBanking(t *testing.T) {
 
 // Without Mending, nothing is repaired and all the experience is banked.
 func TestNoMendingNoRepair(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.inv.slots[0] = invStack{item: itemByName["diamond_pickaxe"], count: 1, dmg: 100}
 	if got := h.mendingRepair(pl, 10); got != 10 {
@@ -80,7 +80,7 @@ func TestNoMendingNoRepair(t *testing.T) {
 // getRandomItemWith(REPAIR_WITH_XP): only EQUIPPED items are mended — both
 // hands and the armour — not a tool lying idle on the hotbar.
 func TestMendingOnlyEquipped(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pick := invStack{item: itemByName["diamond_pickaxe"], count: 1, dmg: 100, ench: enchList{{id: enchMending, lvl: 1}}}
 	pl.inv.slots[5] = pick // not the held slot
@@ -97,7 +97,7 @@ func TestMendingOnlyEquipped(t *testing.T) {
 // isValidBookShelf (26.3): the cell between the table and a shelf may hold
 // anything in #replaceable — grass counts, a torch still blocks.
 func TestBookshelfTransmitter(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	for x := -2; x <= 2; x++ {
 		for z := -2; z <= 2; z++ {

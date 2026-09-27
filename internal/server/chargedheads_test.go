@@ -9,7 +9,7 @@ import (
 // A charged creeper's blast leaves whatever it killed's head behind — the
 // only way to a mob head in survival.
 func TestChargedCreeperDropsHeads(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.rules.DoMobLoot = true
 	victim := h.spawnMob(players, entitySkeleton, 1.5, 70, 0.5)
@@ -51,7 +51,7 @@ func TestChargedCreeperDropsHeads(t *testing.T) {
 
 // A turtle that grows up leaves a scute — the only source in the game.
 func TestGrownTurtleDropsScute(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnMob(players, entityTurtle, 0.5, 70, 0.5)
 	m.baby, m.growLeft = true, survivalTickN
@@ -74,7 +74,7 @@ func TestGrownTurtleDropsScute(t *testing.T) {
 // its blast kills, and a baby zombie's head counts like any other (the
 // charged_creeper tables ask only the type).
 func TestChargedCreeperGivesOneHeadBabiesIncluded(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	players := map[int32]*tracked{}
 	h.rules.DoMobLoot = true

@@ -11,9 +11,9 @@ import (
 // and its spawn eggs all landed at the same coordinates in the overworld
 // until 2026-09-24.
 func TestNetherDispenserActsInTheNether(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nw, _ := world.NewNether(1, nil)
-	h.nether = nw
+	h.dims.set(dimNether, nw)
 	players := map[int32]*tracked{}
 	pos := blockPos{5, 100, 5}
 	nw.ForceLoad(pos.x, pos.z, 1)
@@ -46,9 +46,9 @@ func TestNetherDispenserActsInTheNether(t *testing.T) {
 
 // Redstone-lit TNT and TNT lit by hand go off where they stand.
 func TestTNTPrimesInItsOwnDimension(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nw, _ := world.NewNether(1, nil)
-	h.nether = nw
+	h.dims.set(dimNether, nw)
 	players := map[int32]*tracked{}
 	nw.ForceLoad(0, 0, 1)
 	h.inDim(1, func() { h.primeTNT(players, 0, 100, 0, tntFuseTicks) })

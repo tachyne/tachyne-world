@@ -98,7 +98,7 @@ func TestDispensedArrowIsNoPlayerKill(t *testing.T) {
 
 // A player killed by another player's Thorns is the wearer's kill.
 func TestPvPThornsKillIsCredited(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.PvP = true
 	a, b, players := pvpPair(h)
 	for i := range b.armor {

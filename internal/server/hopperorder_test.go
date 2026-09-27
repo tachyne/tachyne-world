@@ -12,7 +12,7 @@ import (
 // not at random: with room for one, the older drop goes in every time.
 func TestHopperTakesItemsInEntityOrder(t *testing.T) {
 	for trial := 0; trial < 30; trial++ {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		players := map[int32]*tracked{}
 		h.world.ForceLoad(0, 0, 1)
 		h.world.SetBlock(0, 180, 0, worldgen.BlockBase("hopper"))

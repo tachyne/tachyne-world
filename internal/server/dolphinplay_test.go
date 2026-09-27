@@ -11,7 +11,7 @@ import (
 // A dolphin goes to a floating item, takes it, and tosses it back into the
 // water ahead of itself with a pickup hold; an item on land is not a toy.
 func TestDolphinPlaysWithItems(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	w := h.world

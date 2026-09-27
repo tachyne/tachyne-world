@@ -41,7 +41,7 @@ func TestGamemodeMapping(t *testing.T) {
 }
 
 func TestCommandTime(t *testing.T) {
-	s := &Server{hub: newHub(world.New(1)), Ops: map[string]bool{"tester": true}} // /time is for ops
+	s := &Server{hub: newTestHub(world.New(1)), Ops: map[string]bool{"tester": true}} // /time is for ops
 	s.hub.rules.DoMobSpawning = false
 	s.hub.rules.DoDaylight = false // hold the clock still so the poll target is exact
 	startHub(t, s.hub)             // /time routes through the hub (plugin TimeSetEvent)
@@ -73,7 +73,7 @@ func TestTimeCommandForms(t *testing.T) {
 			t.Errorf("parseTimeTicks(%v) = %d, %v", tc.in, got, ok)
 		}
 	}
-	s := &Server{hub: newHub(world.New(1)), Ops: map[string]bool{}}
+	s := &Server{hub: newTestHub(world.New(1)), Ops: map[string]bool{}}
 	p := newPlayer(1, "tester", [16]byte{})
 	s.handleCommand(p, "time set 500")
 	select {

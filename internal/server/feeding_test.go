@@ -8,7 +8,7 @@ import (
 
 func feedRig(t *testing.T, etype int, item string, count int) (*hub, *tracked, map[int32]*tracked, *mob) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	id := itemByName[item]
 	if id == 0 {

@@ -50,7 +50,7 @@ func TestTwoPlayersShareABoat(t *testing.T) {
 // An unsteered boat is not still: in a current it drifts downstream, and
 // dropped in the air it falls to the ground; in still water it stays put.
 func TestUnmannedBoatDrifts(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 3)
 	players := map[int32]*tracked{}
 	h.playersRef = players
@@ -106,7 +106,7 @@ func TestUnmannedBoatDrifts(t *testing.T) {
 // Camel.getMaxPassengers is 2: a second player climbs on behind the first,
 // only the front one steers, and the back one moves up when it gets off.
 func TestCamelSeatsTwoPlayers(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	players := map[int32]*tracked{}
 	h.playersRef = players

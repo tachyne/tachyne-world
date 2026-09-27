@@ -14,7 +14,7 @@ import (
 // does, and not through the back. Draining the stair takes that water away.
 func TestWaterloggedStairPoursOutItsOpenSides(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	x, y, z := 3000, 180, 3000
 	w.ForceLoad(x, z, 2)

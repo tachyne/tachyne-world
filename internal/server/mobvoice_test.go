@@ -10,7 +10,7 @@ import (
 // whose ids differ from their names borrow the right voice, and the ones
 // whose vanilla sound depends on state pick it from the mob.
 func TestMobVoicesMatchVanilla(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	voice := func(etype int) (string, string, string) {
 		m := h.spawnMob(players, etype, 0.5, 200, 0.5)
@@ -53,7 +53,7 @@ func TestMobVoicesMatchVanilla(t *testing.T) {
 // (CopperGolemOxidationLevels): exposed keeps the plain voice, weathered and
 // oxidized have their own.
 func TestCopperGolemVoiceByOxidation(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	g := h.spawnMob(players, entityCopperGolem, 0.5, 200, 0.5)
 	for ox, want := range []string{"copper_golem", "copper_golem", "copper_golem_weathered", "copper_golem_oxidized"} {

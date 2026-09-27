@@ -182,7 +182,7 @@ func entityNameOf(id int) string {
 // reports that as a plain use — a fluid is not a clickable block — which is
 // why it needs the look ray rather than a clicked cell.
 func TestBoatPlacedByLookingAtWater(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pl.x, pl.y, pl.z = 0.5, 180, 0.5
@@ -206,7 +206,7 @@ func TestBoatPlacedByLookingAtWater(t *testing.T) {
 
 // Aiming at nothing places nothing, and keeps the item.
 func TestBoatNeedsSomethingToLandOn(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pl.x, pl.y, pl.z = 0.5, 180, 0.5

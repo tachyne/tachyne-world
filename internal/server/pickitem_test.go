@@ -26,7 +26,7 @@ func pickVia(h *hub, players map[int32]*tracked, pl *tracked, e attachproto.Pick
 // nothing, a creative one a fresh stack. Custom-named block items and wall
 // variants pick their item.
 func TestPickItemFromBlock(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -79,7 +79,7 @@ func TestPickItemFromBlock(t *testing.T) {
 
 // Middle click on a mob picks its spawn egg (Mob.getPickResult).
 func TestPickItemFromEntity(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}

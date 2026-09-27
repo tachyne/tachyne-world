@@ -11,7 +11,7 @@ import (
 // air → small → medium → large → cluster.
 
 func TestAmethystGrowsThroughEveryStage(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 30, 60, 30
 
@@ -40,7 +40,7 @@ func TestAmethystGrowsThroughEveryStage(t *testing.T) {
 // A bud only advances on the face it already points at — growing "up" must not
 // promote a bud that faces north.
 func TestAmethystBudOnlyAdvancesOnItsOwnFacing(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 50, 60, 50
 
@@ -67,7 +67,7 @@ func TestAmethystBudOnlyAdvancesOnItsOwnFacing(t *testing.T) {
 // Buds grow waterlogged when they replace water, so a submerged geode still
 // grows and does not create an air pocket.
 func TestAmethystGrowsWaterlogged(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 70, 60, 70
 
@@ -95,7 +95,7 @@ func TestAmethystGrowsWaterlogged(t *testing.T) {
 
 // Solid neighbours block growth entirely.
 func TestAmethystDoesNotGrowIntoStone(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 90, 60, 90
 

@@ -10,7 +10,7 @@ import (
 // (Sharpness), sets you alight (Fire Aspect), and a skeleton's Power/Flame
 // bow shoots harder, burning arrows.
 func TestMobWeaponEnchantments(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	pl := survPlayer(h)
@@ -51,7 +51,7 @@ func TestMobWeaponEnchantments(t *testing.T) {
 	// The weapon survives a save and reload with its enchantments, and drops
 	// enchanted when the mob dies.
 	sm := toSavedMob(z)
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	h2.reloading = true
 	m2 := h2.reloadMob(players, &sm)
 	if m2.held != itemIronSword || m2.heldStack().enchLvl(enchSharpness) != 5 {

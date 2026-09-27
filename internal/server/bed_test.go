@@ -11,7 +11,7 @@ import (
 var tWhiteBed = worldgen.BlockBase("white_bed") + 3 // foot, facing north
 
 func bedSetup(t *testing.T) (*hub, map[int32]*tracked, *tracked) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.spawns = newSpawnStore(t.TempDir() + "/spawns.json")
 	players := map[int32]*tracked{}
 	pl := testTracked()
@@ -204,7 +204,7 @@ func TestWalkingAwayWakes(t *testing.T) {
 // moves. That is why a thunderstorm lets you sleep at noon and ordinary rain
 // does not — rain darkens the sky, but not far enough.
 func TestSleepWindowFollowsTheSky(t *testing.T) {
-	h := newHub(world.New(79))
+	h := newTestHub(world.New(79))
 
 	// With a clear sky the window is exactly the pair of constants vanilla's
 	// formula produces, which is what the engine used to hard-code.

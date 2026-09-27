@@ -7,7 +7,7 @@ import (
 )
 
 func TestGuardianBeamAndElderAura(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.Difficulty = diffNormal
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 5, 63, 5
@@ -45,7 +45,7 @@ func TestGuardianBeamAndElderAura(t *testing.T) {
 // Guardian.hurtServer: a guardian whose spikes are out spits two points back
 // at whoever melees it, and it does so before it takes the blow itself.
 func TestGuardianSpikesBiteBackAtMelee(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.Difficulty = diffNormal
 	pl := testTracked()
 	pl.gamemode = gmSurvival
@@ -73,7 +73,7 @@ func TestGuardianSpikesBiteBackAtMelee(t *testing.T) {
 // …but one still swimming at you has them folded back, and punching it costs
 // nothing.
 func TestASwimmingGuardianHasNoSpikes(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.Difficulty = diffNormal
 	pl := testTracked()
 	pl.gamemode = gmSurvival
@@ -100,7 +100,7 @@ func TestASwimmingGuardianHasNoSpikes(t *testing.T) {
 // them off: vanilla reflects onto the DIRECT entity of the blow, which for a
 // shot is the arrow and not the archer, so only the melee seam fires them.
 func TestElderGuardianSpikesAndTheArcherItSpares(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.Difficulty = diffNormal
 	pl := testTracked()
 	pl.gamemode = gmSurvival

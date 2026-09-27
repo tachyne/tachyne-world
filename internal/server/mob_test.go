@@ -9,7 +9,7 @@ import (
 )
 
 func TestMobStaysOnLand(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	lx, lz := h.findLand(0, 0)
 	h.herds = append(h.herds, &herd{x: float64(lx), z: float64(lz)})
@@ -38,7 +38,7 @@ func TestMobStaysOnLand(t *testing.T) {
 // TestMobPennedByFence builds a fence ring around a mob and checks it can never
 // escape — a land mob must not climb or jump over a fence (1.5-block collision).
 func TestMobPennedByFence(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	cx, cz := h.findLand(0, 0)
 	g := h.world.GroundY(cx, cz)
@@ -68,7 +68,7 @@ func TestMobPennedByFence(t *testing.T) {
 // the per-tick re-seat never lifts it onto the fence (where it would be stranded).
 func TestFenceAboveMobDoesNotTeleport(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	cx, cz := h.findLand(0, 0)
 	feet := w.MobFeet(cx, cz)
@@ -86,7 +86,7 @@ func TestFenceAboveMobDoesNotTeleport(t *testing.T) {
 // must not spawn on or inside a fence), while a plain land column is fine.
 func TestNoSpawnOnFence(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	cx, cz := h.findLand(0, 0)
 	if !w.Spawnable(cx, cz) {
 		t.Fatalf("plain land column (%d,%d) should be spawnable", cx, cz)
@@ -99,7 +99,7 @@ func TestNoSpawnOnFence(t *testing.T) {
 }
 
 func TestHerdCohesion(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.herds = append(h.herds, &herd{x: 0, z: 0}) // herd goal at origin
 	m := &mob{eid: 1, etype: entityCow, behavior: herdBehavior{}, x: 12, z: 0}
 	h.mobs[1] = m
@@ -113,7 +113,7 @@ func TestHerdCohesion(t *testing.T) {
 // open grass is.
 func TestNoAnimalSpawnInsideBuildings(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	// Find an open GRASS column (findLand may return beach sand, which is
 	// correctly not animal ground).
 	cx, cz := -1000, -1000
@@ -147,7 +147,7 @@ func TestNoAnimalSpawnInsideBuildings(t *testing.T) {
 // off the ground, so an on_ground=true move freezes the wings mid-flight — the
 // symptom that surfaced this: bees hovering with perfectly still wings.
 func TestFlyingMobsReportAirborne(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	for _, tc := range []struct {
 		etype    int

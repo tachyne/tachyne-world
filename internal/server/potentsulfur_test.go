@@ -49,7 +49,7 @@ func psKindAt(h *hub, pos blockPos) int {
 // PotentSulfurBlock.validBlockState: water source above or it is DRY; lava
 // source below CONTINUOUS, magma DORMANT (a running eruption kept), else WET.
 func TestPotentSulfurValidState(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.worldFor(0)
 	pos := geyserPool(h, 2400, 180, 2400, 2, worldgen.Stone)
 	anyState := psState(psDry)
@@ -82,7 +82,7 @@ func TestPotentSulfurValidState(t *testing.T) {
 // eruption that starts that way sends the block event, the start sound and
 // BLOCK_ACTIVATE; turning a continuous geyser periodic resets its countdown.
 func TestPotentSulfurFollowsNeighbours(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.worldFor(0)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -196,7 +196,7 @@ func TestXoroshiroVectors(t *testing.T) {
 // water waits 10 + 15..30 seconds, erupts for 1 + 1..2 seconds (BLOCK_ACTIVATE
 // on the way in, BLOCK_DEACTIVATE on the way out), and waits again.
 func TestPotentSulfurEruptionCycle(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pos := geyserPool(h, 2400, 180, 2400, 2, magmaBlockState)
@@ -234,7 +234,7 @@ func TestPotentSulfurEruptionCycle(t *testing.T) {
 // surface — eyes in the open cell over source water, in sight of the vent —
 // gets Nausea 80 ticks; someone on the dry rim does not.
 func TestPotentSulfurNausea(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	swimmer := survPlayer(h)
 	rim := survPlayer(h)
 	rim.p.eid = 2
@@ -280,7 +280,7 @@ func TestPotentSulfurNausea(t *testing.T) {
 // out of the water and up its column; a player in the column is left to the
 // client but is never read as floating.
 func TestPotentSulfurLaunch(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pos := geyserPool(h, 2400, 180, 2400, 2, worldgen.LavaBase)
@@ -353,7 +353,7 @@ func TestPotentSulfurLaunch(t *testing.T) {
 // The floating check leaves a plume rider alone: hovering over a geyser for
 // longer than the float limit is not snapped down.
 func TestPotentSulfurRiderNotFloating(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pos := geyserPool(h, 2400, 180, 2400, 4, worldgen.LavaBase)
@@ -377,7 +377,7 @@ func TestPotentSulfurRiderNotFloating(t *testing.T) {
 // Vents in a chunk are found when it first loads: placed ones from the edits,
 // generated ones from the generated base.
 func TestPotentSulfurDiscovery(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.worldFor(0)
 	x, y, z := 2400, 180, 2400
 	w.ForceLoad(x, z, 1)

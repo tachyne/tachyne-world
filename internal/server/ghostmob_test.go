@@ -31,7 +31,7 @@ func goneFor(tr *tracked, eid int32) bool {
 // 128 blocks and the old broadcast was culled to six chunks, so the
 // goodbye reached nobody at all.
 func TestDespawnFarAwayStillTellsViewers(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 0, 70, 0
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -63,7 +63,7 @@ func TestDespawnFarAwayStillTellsViewers(t *testing.T) {
 // player's view, which is the other way a creature leaves the world while
 // everyone is too far to hear an interest-culled broadcast.
 func TestChunkUnloadStillTellsViewers(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 0, 70, 0
 	players := map[int32]*tracked{pl.p.eid: pl}

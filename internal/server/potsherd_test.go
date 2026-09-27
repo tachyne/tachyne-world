@@ -105,7 +105,7 @@ func TestPotFacesOnTheWire(t *testing.T) {
 // A pot placed from a decorated stack keeps its faces, and a broken one hands
 // them back on the drop.
 func TestPotKeepsItsFacesThroughPlaceAndBreak(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pos := simPos{blockPos: blockPos{5, 70, 5}}
 	faces := potSherds{int32(itemByName["angler_pottery_sherd"]), 0, 0, int32(itemByName["brick"])}
 

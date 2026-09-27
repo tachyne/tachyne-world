@@ -138,7 +138,7 @@ func TestJoinClaimsNameKeyedData(t *testing.T) {
 	useIDs(t, loadPlayerIDs(dir))
 	modes := filepath.Join(dir, "players.json")
 	writeJSONFile(t, modes, map[string]int{"LegionZA": gmCreative, "EdgeZA1951": gmCreative})
-	s := &Server{modes: newModeStore(modes, gmSurvival), hub: newHub(world.New(1))}
+	s := &Server{modes: newModeStore(modes, gmSurvival), hub: newTestHub(world.New(1))}
 	invPath := filepath.Join(dir, "inventories.json")
 	writeJSONFile(t, invPath, map[string]*savedInv{"EdgeZA1951": {XPLevel: 12}})
 	s.hub.invs = newInvStore(invPath)
@@ -199,7 +199,7 @@ func bedrockRig(t *testing.T) (*Server, string) {
 	useIDs(t, loadPlayerIDs(dir))
 	modes := filepath.Join(dir, "players.json")
 	writeJSONFile(t, modes, map[string]int{"EdgeZA1951": gmCreative})
-	s := &Server{modes: newModeStore(modes, gmSurvival), hub: newHub(world.New(1))}
+	s := &Server{modes: newModeStore(modes, gmSurvival), hub: newTestHub(world.New(1))}
 	inv := filepath.Join(dir, "inventories.json")
 	writeJSONFile(t, inv, map[string]*savedInv{"EdgeZA1951": {XPLevel: 7}})
 	s.hub.invs = newInvStore(inv)
@@ -263,7 +263,7 @@ func TestBedrockRenameLeavesJavaNamesAlone(t *testing.T) {
 	useIDs(t, loadPlayerIDs(dir))
 	modes := filepath.Join(dir, "players.json")
 	writeJSONFile(t, modes, map[string]int{"Steve": gmCreative})
-	s := &Server{modes: newModeStore(modes, gmSurvival), hub: newHub(world.New(1))}
+	s := &Server{modes: newModeStore(modes, gmSurvival), hub: newTestHub(world.New(1))}
 	javaU, _ := parseUUIDString(offlineUUIDString("Steve"))
 	java := newPlayer(1, "Steve", javaU)
 	ids.learn(java.name, java.uuid, "java")

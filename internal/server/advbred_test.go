@@ -13,7 +13,7 @@ import (
 func TestBredAllAnimalsEggLayersNeedTheirParents(t *testing.T) {
 	const adv = "minecraft:husbandry/bred_all_animals"
 	breed := func(etype int) *tracked {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		pl := survPlayer(h)
 		pl.adv = advState{}
 		players := map[int32]*tracked{pl.p.eid: pl}

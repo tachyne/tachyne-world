@@ -43,7 +43,7 @@ func TestPetSitToggle(t *testing.T) {
 }
 
 func TestPetFollowsOwner(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.gamemode = gmSurvival
 	pl.x, pl.y, pl.z = 100.5, 70, 100.5
@@ -68,7 +68,7 @@ func TestPetFollowsOwner(t *testing.T) {
 }
 
 func TestPetTeleportsWhenFar(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 100.5, 70, 100.5
 	players := map[int32]*tracked{1: pl}
@@ -104,7 +104,7 @@ func TestPetStopDistancePerSpecies(t *testing.T) {
 			t.Errorf("stop distance for %d = %v, want %v", c.etype, got, c.want)
 		}
 	}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 100.5, 70, 100.5
 	players := map[int32]*tracked{1: pl}
@@ -148,7 +148,7 @@ func TestParrotFollowsSooner(t *testing.T) {
 // and not food — an empty hand was never the requirement. A player carrying a
 // sword could not sit their own cat (LegionZA #17).
 func TestSittingAPetDoesNotNeedAnEmptyHand(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[pl.p.eid] = pl
@@ -189,7 +189,7 @@ func TestSittingAPetDoesNotNeedAnEmptyHand(t *testing.T) {
 // gate a cat that fell behind teleported every update and was never seen to
 // run (LegionZA #17).
 func TestPetWalksBetweenTeleports(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	m := h.spawnSpecies(players, entityCat, 0, 100.5, 70, 100.5)

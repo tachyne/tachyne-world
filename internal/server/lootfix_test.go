@@ -12,7 +12,7 @@ import (
 // the upper; snow layers give a snowball a layer, or the layers themselves
 // to shears or Silk Touch; a chorus flower drops nothing.
 func TestSpecialBlockDrops(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	if ds, ok := h.specialBlockDrops(tallGrassHi, int32(itemShears), false); !ok || len(ds) != 1 || ds[0].item != itemShortGrass || ds[0].count != 2 {
 		t.Fatalf("shears on tall grass: %+v ok=%v", ds, ok)
 	}
@@ -60,7 +60,7 @@ func TestSpecialBlockDrops(t *testing.T) {
 // nothing, and the elder adds a sponge for a player's kill and a tide
 // template one time in five.
 func TestGuardianLoot(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	g := h.spawnMob(players, entityGuardian, 0.5, 40, 0.5)
 	e := h.spawnMob(players, entityElderGuardian, 0.5, 40, 0.5)
@@ -97,7 +97,7 @@ func TestGuardianLoot(t *testing.T) {
 // A creeper a skeleton shot drops a music disc, a burning sheep's mutton
 // comes cooked, and a turtle struck by lightning leaves a bowl.
 func TestSkeletonKillDiscBurningSheepAndLightningTurtle(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	creeper := h.spawnMob(players, entityCreeper, 0.5, 40, 0.5)
 	skel := h.spawnMob(players, entitySkeleton, 5.5, 40, 0.5)

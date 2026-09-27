@@ -15,7 +15,7 @@ var (
 )
 
 func furnaceSetup() (*hub, map[int32]*tracked, *tracked, *furnace) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -147,7 +147,7 @@ func TestOrphanedLitFurnaceExtinguishedAtBoot(t *testing.T) {
 	w := world.New(1)
 	// A lit furnace persisted from a crashed/restarted burn (even offset = lit).
 	w.SetBlock(8, 70, 8, furnaceStateMin)
-	h := newHub(w)
+	h := newTestHub(w)
 	h.reconcileFurnaceBlocks()
 	if got := w.Block(8, 70, 8); got != furnaceStateMin+1 {
 		t.Fatalf("boot sweep should unlight the furnace: state %d, want %d", got, furnaceStateMin+1)
@@ -165,7 +165,7 @@ func TestBootSweepRelightsRestoredBurningFurnace(t *testing.T) {
 	// The furnace block was persisted UNLIT (e.g. an older sweep), but restored
 	// state says it's mid-burn: the sweep must relight it, not extinguish.
 	w.SetBlock(8, 70, 8, furnaceStateMin+1)
-	h := newHub(w)
+	h := newTestHub(w)
 	h.furnaces[simPos{blockPos: blockPos{8, 70, 8}}] = &furnace{burnLeft: 500, burnMax: 1600, cookMax: 200}
 	h.reconcileFurnaceBlocks()
 	if got := w.Block(8, 70, 8); got != furnaceStateMin {
@@ -209,7 +209,7 @@ func TestContainerStoreFurnaceRoundTrip(t *testing.T) {
 }
 
 func TestFurnaceLitFollowsWorldBlock(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.world.SetBlock(10, 70, 10, furnaceStateMin+1) // placed unlit
 	pl := testTracked()

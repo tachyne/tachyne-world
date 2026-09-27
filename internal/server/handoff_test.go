@@ -36,9 +36,9 @@ func TestPlayerHandoverAcrossSeam(t *testing.T) {
 	}}
 	shardOf := func(cx, cz int32) int32 { return topo.ShardOf(0, cx, cz) }
 
-	hubA := newHub(world.New(1))
+	hubA := newTestHub(world.New(1))
 	hubA.sid, hubA.shardOf = 0, shardOf
-	hubB := newHub(world.New(1))
+	hubB := newTestHub(world.New(1))
 	hubB.sid, hubB.shardOf = 1, shardOf
 
 	playersA := map[int32]*tracked{}
@@ -122,9 +122,9 @@ func TestMobHandoverAcrossSeam(t *testing.T) {
 		{SID: 1, MinCX: 0, MinCZ: -8, W: 16, H: 16},
 	}}
 	shardOf := func(cx, cz int32) int32 { return topo.ShardOf(0, cx, cz) }
-	hubA := newHub(world.New(1))
+	hubA := newTestHub(world.New(1))
 	hubA.sid, hubA.shardOf = 0, shardOf
-	hubB := newHub(world.New(1))
+	hubB := newTestHub(world.New(1))
 	hubB.sid, hubB.shardOf = 1, shardOf
 
 	playersA := map[int32]*tracked{}
@@ -175,7 +175,7 @@ func TestNoHandoverIntoVoid(t *testing.T) {
 		{SID: 0, MinCX: -16, MinCZ: -8, W: 16, H: 16},
 		{SID: 1, MinCX: 0, MinCZ: -8, W: 16, H: 16},
 	}}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.sid, h.shardOf = 0, func(cx, cz int32) int32 { return topo.ShardOf(0, cx, cz) }
 	h.peers = &fakeMesh{self: 0, deliver: map[int32]func(int32, byte, []byte){}} // no neighbours reachable
 

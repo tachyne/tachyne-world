@@ -98,7 +98,7 @@ func TestABeeStingsRatherThanBites(t *testing.T) {
 // or a restart mid-fight hands it back full health.
 func TestTheDragonResumesAtTheHealthItHad(t *testing.T) {
 	h, players := pushWorld(t)
-	h.end = h.world // any non-nil end world is enough to stage the fight
+	h.dims.set(dimEnd, h.world) // any non-nil end world is enough to stage the fight
 	tr := leashPlayer(t, h, players, 0, 70, 0)
 	h.rules.DragonHealth = 37 // what a previous session left it on
 
@@ -115,7 +115,7 @@ func TestTheDragonResumesAtTheHealthItHad(t *testing.T) {
 // A fresh fight starts at full health, not at whatever a finished one left.
 func TestAFreshDragonIsAtFullHealth(t *testing.T) {
 	h, players := pushWorld(t)
-	h.end = h.world
+	h.dims.set(dimEnd, h.world)
 	tr := leashPlayer(t, h, players, 0, 70, 0)
 	h.rules.DragonHealth = 0 // no fight in progress
 

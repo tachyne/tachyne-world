@@ -3,6 +3,7 @@ package server
 import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/protocol"
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -58,15 +59,13 @@ func (s *Server) tryCompassUse(p *player, off bool, x, y, z int, seq int32) bool
 	return true
 }
 
-// dimRegistryName is a dimension's registry key, as GlobalPos carries it.
+// dimRegistryName is a dimension's registry key, as GlobalPos carries it
+// (the overworld's for an id outside the table).
 func dimRegistryName(dim int) string {
-	switch dim {
-	case dimNether:
-		return "minecraft:the_nether"
-	case dimEnd:
-		return "minecraft:the_end"
+	if d := dimType(dim); d != nil {
+		return d.Key
 	}
-	return "minecraft:overworld"
+	return world.Dimensions[dimOverworld].Key
 }
 
 // onUseLodestone is CompassItem.useOn on the hub.

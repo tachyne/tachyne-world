@@ -10,7 +10,7 @@ import (
 // TestDragonEggLandsOnSomething: DragonEggBlock.teleport picks an air cell
 // with a non-air block below it, so the egg never blinks into mid-air.
 func TestDragonEggLandsOnSomething(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	from := blockPos{0, 200, 0}
 	// Open sky all around except scattered stone pillars: a free cell with air

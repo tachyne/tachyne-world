@@ -11,7 +11,7 @@ import (
 // it can see and bites it; a cub leaves foxes alone.
 func TestPolarBearHuntsFoxes(t *testing.T) {
 	for _, cub := range []bool{false, true} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		players := map[int32]*tracked{}
 		h.world.ForceLoad(0, 0, 2)
 		for x := -4; x <= 8; x++ {

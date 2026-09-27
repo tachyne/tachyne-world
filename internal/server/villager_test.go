@@ -22,7 +22,7 @@ func findTestVillage(w *world.World) (worldgen.Village, bool) {
 
 func TestVillagePopulatesOnApproach(t *testing.T) {
 	w := world.New(7)
-	h := newHub(w)
+	h := newTestHub(w)
 	v, ok := findTestVillage(w)
 	if !ok {
 		t.Skip("no village near origin")
@@ -83,7 +83,7 @@ func TestVillagePopulatesOnApproach(t *testing.T) {
 
 func TestTradeAuthority(t *testing.T) {
 	w := world.New(7)
-	h := newHub(w)
+	h := newTestHub(w)
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	m := h.spawnMob(players, entityVillager, pl.x+1, pl.y, pl.z)
@@ -138,7 +138,7 @@ func TestTradeAuthority(t *testing.T) {
 
 func TestGolemPunchesHostiles(t *testing.T) {
 	w := world.New(7)
-	h := newHub(w)
+	h := newTestHub(w)
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	g := h.spawnMob(players, entityIronGolem, 0.5, 70, 0.5)
@@ -156,7 +156,7 @@ func TestGolemPunchesHostiles(t *testing.T) {
 }
 
 func TestVillagerLevelsUp(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	m := h.spawnMob(players, entityVillager, 0, 70, 0)
 	h.initVillagerTrades(m, 0) // farmer
@@ -213,7 +213,7 @@ func TestAllProfessionsHaveTrades(t *testing.T) {
 // consumes; and the offer survives the store round trip.
 func TestLibrarianSellsEnchantedBooks(t *testing.T) {
 	w := world.New(7)
-	h := newHub(w)
+	h := newTestHub(w)
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	m := h.spawnMob(players, entityVillager, pl.x+1, pl.y, pl.z)
@@ -274,7 +274,7 @@ func TestLibrarianSellsEnchantedBooks(t *testing.T) {
 // A villager with its trade screen open stands still and faces the customer
 // (LookAndFollowTradingPlayerSink).
 func TestTradingVillagerStandsAndFaces(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	pl := testTracked()
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pl.x, pl.y, pl.z = 10, 70, 0
@@ -303,7 +303,7 @@ func TestTradingVillagerStandsAndFaces(t *testing.T) {
 // AcquirePoi(HOME): a villager with no bed claims a free one nearby, gives
 // it up when it is broken, and never takes one another villager sleeps in.
 func TestVillagerClaimsAPlacedBed(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	for x := -4; x <= 8; x++ { // a floor in open air, so the path search has ground
 		for z := -4; z <= 4; z++ {
@@ -381,7 +381,7 @@ func TestMasonSellsStone(t *testing.T) {
 // capped at 64 emeralds).
 func TestVillagerSellsEnchantedGear(t *testing.T) {
 	w := world.New(11)
-	h := newHub(w)
+	h := newTestHub(w)
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 
@@ -548,7 +548,7 @@ func TestCartographerSellsExplorerMaps(t *testing.T) {
 	if !found {
 		t.Skip("no ocean monument in the scanned range for this seed")
 	}
-	h := newHub(w)
+	h := newTestHub(w)
 	h.maps = newMapStore("")
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
@@ -607,7 +607,7 @@ func TestCartographerSellsExplorerMaps(t *testing.T) {
 // listings, whose second item cost rides the plain path.
 func TestRemainingVillagerListingTypes(t *testing.T) {
 	w := world.New(13)
-	h := newHub(w)
+	h := newTestHub(w)
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	prof := func(name string) int {
@@ -878,7 +878,7 @@ func TestLibrarianBookIsOneOfTheTierListings(t *testing.T) {
 	}
 
 	w := world.New(29)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	sawBook := false
 	for i := 0; i < 40; i++ {
@@ -906,7 +906,7 @@ func TestLibrarianBookIsOneOfTheTierListings(t *testing.T) {
 // head instead of opening an empty window.
 func TestTradeScreenRefusals(t *testing.T) {
 	w := world.New(31)
-	h := newHub(w)
+	h := newTestHub(w)
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	h.playersRef = players
@@ -939,7 +939,7 @@ func TestTradeScreenRefusals(t *testing.T) {
 // hand every villager a fresh budget.
 func TestRestockDayRollsOverWithoutABed(t *testing.T) {
 	w := world.New(37)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	m := h.spawnMob(players, entityVillager, 0, 70, 0)
 	h.initVillagerTrades(m, 0) // farmer
@@ -1017,7 +1017,7 @@ func TestRestockDayRollsOverWithoutABed(t *testing.T) {
 // within one villager's ten-block box, each of whom lay down within the last
 // day, and none of whom has seen a golem in the last thirty seconds.
 func TestIronGolemQuorum(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	now := h.tick.Load()
 	// A stone pad high in open air, loaded as a player's view would load it,
@@ -1121,7 +1121,7 @@ func TestIronGolemQuorum(t *testing.T) {
 // VillageBoundRandomStroll: a villager two sections out from the nearest
 // claimed POI steps toward it; inside the village it strolls at random.
 func TestVillageStrollHeadsBackToTheVillage(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	anchor := h.spawnMob(players, entityVillager, 8.5, 180, 8.5)
 	anchor.bed = blockPos{8, 180, 8} // a claimed bed makes section (0,11,0) a village centre
@@ -1151,7 +1151,7 @@ func TestVillageStrollHeadsBackToTheVillage(t *testing.T) {
 // only what it never had (the pen animals) is placed.
 func TestPreviouslyPopulatedVillageGetsOnlyWhatItLacks(t *testing.T) {
 	w := world.New(7)
-	h := newHub(w)
+	h := newTestHub(w)
 	v, ok := findTestVillage(w)
 	if !ok {
 		t.Skip("no village near origin")
@@ -1205,7 +1205,7 @@ func TestPreviouslyPopulatedVillageGetsOnlyWhatItLacks(t *testing.T) {
 // MerchantMenu.tryMoveItems: choosing an offer fills the payment slot from
 // the inventory, and puts back what was there before.
 func TestTradeSelectMovesPayment(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -1232,7 +1232,7 @@ func TestTradeSelectMovesPayment(t *testing.T) {
 // A shift-click on the merchant result keeps trading while the inputs can
 // pay (doClick's QUICK_MOVE loop): 64 wheat at 20 a time buys 3 emeralds.
 func TestTradeShiftClickRepeats(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	m := h.spawnMob(players, entityVillager, pl.x+1, pl.y, pl.z)

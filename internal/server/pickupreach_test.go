@@ -11,7 +11,7 @@ import (
 // tick's item physics and pickup until the pickup delay has passed.
 func pickupScene(t *testing.T, px, ix, iy float64, setup func(h *hub, pl *tracked)) (picked bool) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	flatFloor(h.world, 0, 180, 0, 3)
 	pl := survPlayer(h)
@@ -48,7 +48,7 @@ func TestPickupReachesTheNextBlockFromTheEdge(t *testing.T) {
 
 // The area reaches half a block below the feet and half above the head.
 func TestPickupAreaHeight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 0.5, 180, 0.5
 	lo, hi := h.pickupArea(pl)
@@ -63,7 +63,7 @@ func TestPickupAreaHeight(t *testing.T) {
 
 // A rider's area stretches over its boat, then widens sideways only.
 func TestPickupAreaCoversTheVehicle(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 0.5, 180.3, 0.5
 	v := &vehicle{eid: 900, etype: entityID("oak_boat"), x: 0.5, y: 180, z: 0.5}

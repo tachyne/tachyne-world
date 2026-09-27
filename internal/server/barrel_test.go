@@ -9,7 +9,7 @@ import (
 // A barrel opens as a 27-slot container, shows its lid open while viewed,
 // and shuts it again when the viewer leaves.
 func TestBarrelOpensAndCloses(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	h.playersRef = map[int32]*tracked{pl.p.eid: pl}
 	closed := setBoolProp(barrelMin, "open", false)

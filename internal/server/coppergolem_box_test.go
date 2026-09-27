@@ -9,7 +9,7 @@ import (
 // TransportItemsBetweenContainers looks 32 blocks sideways and 8 up or
 // down from the golem's block, not 65 and 17.
 func TestCopperGolemSearchBox(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	m := &mob{x: 0.5, y: 64, z: 0.5}
 	for _, tc := range []struct {
 		p  blockPos

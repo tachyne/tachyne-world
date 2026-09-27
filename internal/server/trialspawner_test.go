@@ -57,7 +57,7 @@ func TestTrialSpawnerWaveMath(t *testing.T) {
 // The fight only starts when someone is close, and the whole run is: detect →
 // spawn waves → last mob dies → shutter → pay out → cooldown.
 func TestTrialSpawnerRunsAFight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	pos := blockPos{0, 180, 0}

@@ -16,8 +16,8 @@ import (
 
 // netherHub returns a hub with a real Nether world attached.
 func dimHub() *hub {
-	h := newHub(world.New(1))
-	h.nether = world.New(2)
+	h := newTestHub(world.New(1))
+	h.dims.set(dimNether, world.New(2))
 	return h
 }
 
@@ -53,17 +53,17 @@ func TestNetherPlayerTicksTheNether(t *testing.T) {
 	// Sugar cane is the probe: it advances on a random tick with NO light gate,
 	// which matters because the Nether has no skylight at all — a sapling would
 	// never grow there and would prove nothing.
-	h.nether.ForceLoad(x, z, 2) // random ticks run in ticking chunks only
-	h.nether.SetBlock(x, y-1, z, worldgen.Dirt)
-	h.nether.SetBlock(x, y, z, caneMin)
-	h.nether.SetBlock(x, y+1, z, worldgen.Air)
+	h.worldFor(dimNether).ForceLoad(x, z, 2) // random ticks run in ticking chunks only
+	h.worldFor(dimNether).SetBlock(x, y-1, z, worldgen.Dirt)
+	h.worldFor(dimNether).SetBlock(x, y, z, caneMin)
+	h.worldFor(dimNether).SetBlock(x, y+1, z, worldgen.Air)
 
 	p := testTracked()
 	p.x, p.y, p.z, p.dim = float64(x), 70, float64(z), 1
 	players := map[int32]*tracked{1: p}
 
 	for i := 0; i < 4000; i++ {
-		if h.nether.At(x, y, z) != caneMin {
+		if h.worldFor(dimNether).At(x, y, z) != caneMin {
 			return // it advanced: the Nether is being simulated
 		}
 		h.runRandomTicks(players)
@@ -76,10 +76,10 @@ func TestScheduledTickRespectsDimension(t *testing.T) {
 	h := dimHub()
 
 	x, y, z := 400, 70, 400
-	h.nether.ForceLoad(x, z, 1)
+	h.worldFor(dimNether).ForceLoad(x, z, 1)
 	// Sand floating in the Nether should fall when its scheduled tick runs.
-	h.nether.SetBlock(x, y, z, worldgen.Sand)
-	h.nether.SetBlock(x, y-1, z, worldgen.Air)
+	h.worldFor(dimNether).SetBlock(x, y, z, worldgen.Sand)
+	h.worldFor(dimNether).SetBlock(x, y-1, z, worldgen.Air)
 
 	players := map[int32]*tracked{}
 	h.scheduleIn(1, blockPos{x, y, z}, 1)
@@ -88,7 +88,7 @@ func TestScheduledTickRespectsDimension(t *testing.T) {
 		h.runUpdates(players, i)
 	}
 
-	if h.nether.At(x, y, z) == worldgen.Sand {
+	if h.worldFor(dimNether).At(x, y, z) == worldgen.Sand {
 		t.Error("sand in the Nether never fell: scheduled ticks skip the dimension")
 	}
 	if h.world.At(x, y, z) != worldgen.Air {

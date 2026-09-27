@@ -11,7 +11,7 @@ import (
 // breath, long-jumps toward a spot behind them, lands, and in the window
 // after the landing inhales and fires a wind charge.
 func TestBreezeJumpsThenShoots(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

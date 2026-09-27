@@ -22,7 +22,7 @@ func snifferField(h *hub) {
 // when the dig runs its course the cooldown starts and it gets up (RISING,
 // forty ticks), then remembers the spot and is happy for 40-100 ticks.
 func TestSnifferDigsForSeeds(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.rules.DoMobLoot = true
@@ -72,7 +72,7 @@ func TestSnifferDigsForSeeds(t *testing.T) {
 // course sets it searching toward diggable ground. On its cooldown, or as a
 // baby, it only scents.
 func TestSnifferIdleScentingAndSniffing(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	snifferField(h)
 	players := map[int32]*tracked{}
 	s := h.spawnSpecies(players, entitySniffer, 0, 0.5, 180, 0.5)
@@ -113,7 +113,7 @@ func TestSnifferIdleScentingAndSniffing(t *testing.T) {
 // resetSniffing through the real update path: a panic mid-dig stands the
 // sniffer up and ends the dig, with no cooldown and nothing remembered.
 func TestSnifferPanicResetsDig(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	snifferField(h)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -139,7 +139,7 @@ func TestSnifferPanicResetsDig(t *testing.T) {
 // Sniffers breed into an egg, not a snifflet, and never while one of the
 // pair is busy with a dig (Sniffer.canMate).
 func TestSnifferBreedsAnEgg(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	snifferField(h)
 	players := map[int32]*tracked{}
 	a := h.spawnSpecies(players, entitySniffer, 0, 0.5, 180, 0.5)

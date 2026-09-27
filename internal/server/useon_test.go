@@ -11,7 +11,7 @@ import (
 // the bottle back, a spawn egg retargets a spawner, a shovel dowses a
 // campfire, and a rocket lit on a block launches.
 func TestUseOnItems(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -70,24 +70,24 @@ func TestUseOnItems(t *testing.T) {
 // TestEndCrystalRespawnsDragon: crystals on obsidian in the End, and four
 // round the beaten dragon's portal bring it back.
 func TestEndCrystalRespawnsDragon(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	ew, _ := world.NewEnd(7, nil)
-	h.end = ew
+	h.dims.set(dimEnd, ew)
 	pl := survPlayer(h)
 	pl.dim = 2
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
 	h.rules.DragonDefeated = true
 	cy := worldgen.EndSurfaceY
-	for h.end.At(0, cy, 0) != worldgen.Air && cy < worldgen.EndSurfaceY+8 {
+	for h.worldFor(dimEnd).At(0, cy, 0) != worldgen.Air && cy < worldgen.EndSurfaceY+8 {
 		cy++
 	}
 	pl.x, pl.y, pl.z = 8.5, float64(cy), 8.5
 	pl.p.setHotbarSlot(0, itemEndCrystal)
 	for _, d := range [4][2]int{{2, 0}, {-2, 0}, {0, 2}, {0, -2}} {
-		h.end.SetBlock(d[0], cy-1, d[1], worldgen.Bedrock)
-		h.end.SetBlock(d[0], cy, d[1], worldgen.Air)
-		h.end.SetBlock(d[0], cy+1, d[1], worldgen.Air)
+		h.worldFor(dimEnd).SetBlock(d[0], cy-1, d[1], worldgen.Bedrock)
+		h.worldFor(dimEnd).SetBlock(d[0], cy, d[1], worldgen.Air)
+		h.worldFor(dimEnd).SetBlock(d[0], cy+1, d[1], worldgen.Air)
 		pl.inv.slots[0] = invStack{item: itemEndCrystal, count: 1}
 		h.placeCrystal(players, evPlaceCrystal{eid: pl.p.eid, x: d[0], y: cy - 1, z: d[1]})
 	}
@@ -106,7 +106,7 @@ func TestEndCrystalRespawnsDragon(t *testing.T) {
 // the End; an entity in the box above blocks it, and a struck overworld
 // crystal blows up where it stands.
 func TestEndCrystalPlacesOutsideTheEnd(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

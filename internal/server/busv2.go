@@ -181,6 +181,10 @@ func busCmdSpawn(h *hub, args json.RawMessage) (any, string) {
 	var eid int32
 	errStr := ""
 	done := h.runOnHub(func() {
+		if h.worldFor(a.Dim) == nil {
+			errStr = fmt.Sprintf("unknown dimension %d", a.Dim)
+			return
+		}
 		y := a.Y
 		if y == 0 {
 			y = float64(h.worldFor(a.Dim).SurfaceFeet(int(a.X), int(a.Z)))

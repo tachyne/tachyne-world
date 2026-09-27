@@ -10,7 +10,7 @@ import (
 // Water flowing onto a crop washes it out — the cell floods and the crop's
 // loot drops (FlowingFluid.spreadTo → WaterFluid.beforeDestroyingBlock).
 func TestWaterWashesCropAndDropsIt(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 900, 180, 900
 	h.world.ForceLoad(x, z, 1)

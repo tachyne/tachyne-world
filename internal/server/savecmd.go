@@ -47,13 +47,11 @@ func (s *Server) saveEverything() error {
 			return errSaveTimeout
 		}
 	}
-	if s.nether != nil {
-		if err := s.nether.Save(); err != nil {
-			return err
+	for id, w := range s.allDims() {
+		if id == dimOverworld {
+			continue // saved last, below
 		}
-	}
-	if s.end != nil {
-		if err := s.end.Save(); err != nil {
+		if err := w.Save(); err != nil {
 			return err
 		}
 	}

@@ -10,7 +10,7 @@ import (
 // A stranded dolphin heads for the water; a strider off the lava heads back
 // to it; neither moves when it is already in its element.
 func TestStrandedAnimalsHeadHome(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	for x := -12; x <= 12; x++ {
 		for z := -12; z <= 12; z++ {

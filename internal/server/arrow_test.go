@@ -10,7 +10,7 @@ import (
 // A tipped arrow gives an eighth of the bottle's duration, as its
 // POTION_DURATION_SCALE says — not the whole thing.
 func TestTippedArrowGivesAnEighth(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
@@ -37,7 +37,7 @@ func TestTippedArrowGivesAnEighth(t *testing.T) {
 
 // A netherite set carries knockback resistance: a hit barely moves you.
 func TestNetheriteResistsKnockback(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
 	if got := pl.playerAttrs().Value(attr.KnockbackResistance); got != 0 {
@@ -64,7 +64,7 @@ func TestNetheriteResistsKnockback(t *testing.T) {
 // thing that makes a bogged different from a skeleton at range. Parched and
 // stray already tipped theirs; the bogged fired plain ones.
 func TestBoggedShootsPoisonArrows(t *testing.T) {
-	h := newHub(world.New(83))
+	h := newTestHub(world.New(83))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -119,7 +119,7 @@ func TestBoggedShootsPoisonArrows(t *testing.T) {
 // A wind charge that strikes a player deals its one point of wind_charge
 // damage as well as the shove (AbstractWindCharge.onHitEntity).
 func TestWindChargeHurtsAPlayer(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5

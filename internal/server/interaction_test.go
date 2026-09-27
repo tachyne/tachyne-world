@@ -36,7 +36,7 @@ func TestHeldItem(t *testing.T) {
 
 func TestCreativeSlotTracking(t *testing.T) {
 	p := newPlayer(1, "x", [16]byte{})
-	srv := &Server{hub: newHub(world.New(1)), modes: newModeStore("", gmCreative)}
+	srv := &Server{hub: newTestHub(world.New(1)), modes: newModeStore("", gmCreative)}
 
 	// Put item id 5 in window slot 36 (= hotbar slot 0).
 	srv.applyCreativeSlot(p, 36, 5, 1, "")

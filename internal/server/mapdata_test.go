@@ -169,7 +169,7 @@ func TestMapCloneAndZoomRecipes(t *testing.T) {
 // map in that hand; with more left and a full inventory the new map drops;
 // creative keeps the empty map.
 func TestEmptyMapUseHandsAndOverflow(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.maps = newMapStore("")
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}

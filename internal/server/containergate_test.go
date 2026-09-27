@@ -10,7 +10,7 @@ import (
 // A chest with a solid block on top will not open — no menu, no lid, no sound
 // — and a barrel in the same spot opens fine.
 func TestChestBlockedFromAbove(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	x, z := 4, 4
 	y := h.world.SurfaceFeet(x, z)
@@ -42,7 +42,7 @@ func TestChestBlockedFromAbove(t *testing.T) {
 // A shulker box needs the half block its lid slides into: a solid block on
 // the side it faces holds it shut.
 func TestShulkerBoxBlockedByItsLidSide(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	x, z := 14, 14
 	y := h.world.SurfaceFeet(x, z)
@@ -68,7 +68,7 @@ func TestShulkerBoxBlockedByItsLidSide(t *testing.T) {
 // A sitting cat on the lid holds a chest shut; a cat that is only standing
 // there does not.
 func TestChestBlockedBySittingCat(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	x, z := 9, 9
 	y := h.world.SurfaceFeet(x, z)

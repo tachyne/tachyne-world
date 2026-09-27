@@ -11,7 +11,7 @@ import (
 // clients (game events 11/12, entity event 22/23) and the next login's
 // flags; an operator's client learns its permission level (event 28).
 func TestGameruleFlagsReachClients(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

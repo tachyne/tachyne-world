@@ -14,7 +14,7 @@ import (
 // rather than assuming one.
 func patrolSetup(t *testing.T) (*hub, map[int32]*tracked, *mob, *mob) {
 	t.Helper()
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	lx, lz := h.findLand(0, 0)

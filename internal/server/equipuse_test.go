@@ -11,7 +11,7 @@ import (
 // in hand and sends the old piece to the inventory; a bound piece stays;
 // a plain item does nothing.
 func TestEquipArmourOnUse(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -66,7 +66,7 @@ func TestEquipArmourOnUse(t *testing.T) {
 
 // The F key swaps the held item with the off-hand, stacks whole.
 func TestSwapHands(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	sword := invStack{item: tDiamondSword, count: 1, ench: enchList{{id: enchSharpness, lvl: 3}}}

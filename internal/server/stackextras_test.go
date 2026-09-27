@@ -175,7 +175,7 @@ func TestCrossbowLoadPersists(t *testing.T) {
 // A scooped tropical fish's bucket carries its pattern and colours, which is
 // what the bucket's tooltip shows, and bucket_entity_data with its Health.
 func TestTropicalFishBucketCarriesItsVariant(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := riderAt(1, 30, 70, 30)
 	players := map[int32]*tracked{1: pl}
 	h.playersRef = players

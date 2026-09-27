@@ -21,7 +21,7 @@ func findDungeon(w *world.World) (worldgen.Dungeon, bool) {
 
 func TestSpawnerSpawnsWhenPlayerNear(t *testing.T) {
 	w := world.New(7)
-	h := newHub(w)
+	h := newTestHub(w)
 	d, ok := findDungeon(w)
 	if !ok {
 		t.Skip("no dungeon near origin for this seed")
@@ -73,7 +73,7 @@ func TestSpawnerSpawnsWhenPlayerNear(t *testing.T) {
 // Nether at a dungeon's overworld coordinates does not wake it.
 func TestDungeonSpawnerIgnoresOtherDimensions(t *testing.T) {
 	w := world.New(7)
-	h := newHub(w)
+	h := newTestHub(w)
 	d, ok := findDungeon(w)
 	if !ok {
 		t.Skip("no dungeon near origin for this seed")
@@ -91,7 +91,7 @@ func TestDungeonSpawnerIgnoresOtherDimensions(t *testing.T) {
 
 func TestDungeonChestLoot(t *testing.T) {
 	w := world.New(7)
-	h := newHub(w)
+	h := newTestHub(w)
 	d, ok := findDungeon(w)
 	if !ok {
 		t.Skip("no dungeon near origin for this seed")

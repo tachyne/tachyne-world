@@ -11,7 +11,7 @@ import (
 // surface and floats; one in an upward bubble column shoots clear of the
 // water and falls back; one on dry ground never moves.
 func TestItemsFloatAndRideColumns(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

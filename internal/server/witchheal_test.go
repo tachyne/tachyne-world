@@ -12,7 +12,7 @@ import (
 // regeneration (or healing) potion and holds off the players for ten
 // seconds; a witch outside a raid heals nobody.
 func TestRaidWitchHealsRaiders(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

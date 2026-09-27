@@ -11,7 +11,7 @@ import (
 // raise takes the hand the client used, and what the shield stops wears
 // the offhand stack, not whatever the main hand happens to hold.
 func TestShieldRaisesAndWearsInTheOffhand(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.tick.Store(50)
 	pl := testTracked()
 	h.playersRef = map[int32]*tracked{pl.p.eid: pl}
@@ -50,7 +50,7 @@ func TestShieldRaisesAndWearsInTheOffhand(t *testing.T) {
 // The use-item dispatch reads the hand: an offhand right-click uses the
 // offhand's item, not whatever the main hand holds.
 func TestUseItemDispatchesByHand(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	h.playersRef = map[int32]*tracked{pl.p.eid: pl}
 	pl.offhand = invStack{item: itemShield, count: 1}
@@ -86,7 +86,7 @@ func TestUseItemDispatchesByHand(t *testing.T) {
 // A beacon's effect is ambient — the flag the client draws with fainter
 // particles — while an ordinary effect is vanilla's default instance.
 func TestBeaconEffectsAreAmbient(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{pl.p.eid: pl}
 	drainEvents(pl)

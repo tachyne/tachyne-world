@@ -10,7 +10,7 @@ import (
 // TestSilverfishFriendsAndStone: a hurt silverfish breaks nearby infested
 // stone open, freeing more; an idle one burrows into the stone beside it.
 func TestSilverfishFriendsAndStone(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

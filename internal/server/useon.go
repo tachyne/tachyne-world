@@ -299,7 +299,7 @@ func (h *hub) tryRespawnDragon(players map[int32]*tracked) {
 		return
 	}
 	cy := worldgen.EndSurfaceY
-	for h.end.At(0, cy, 0) != worldgen.Bedrock && h.end.At(0, cy, 0) != worldgen.Air && cy < worldgen.EndSurfaceY+8 {
+	for h.worldFor(dimEnd).At(0, cy, 0) != worldgen.Bedrock && h.worldFor(dimEnd).At(0, cy, 0) != worldgen.Air && cy < worldgen.EndSurfaceY+8 {
 		cy++
 	}
 	var found []*crystal

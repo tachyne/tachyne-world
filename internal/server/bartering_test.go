@@ -10,7 +10,7 @@ import (
 // gameplay/piglin_bartering (26.3) pays out a dried ghast at weight 10 of
 // 469: the table had no such line, so a dried ghast could not be bartered.
 func TestBarteringPaysOutDriedGhasts(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	total := 0
 	for _, e := range barterTable {
 		total += e.weight

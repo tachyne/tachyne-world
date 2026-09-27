@@ -10,7 +10,7 @@ import (
 // TestLevitatingMobRises: a mob under Levitation floats up (LivingEntity.
 // travel: dy eases toward 0.05 × level), and comes down when it ends.
 func TestLevitatingMobRises(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

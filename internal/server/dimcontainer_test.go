@@ -14,9 +14,9 @@ import (
 
 func dimStoreHub(t *testing.T) (*hub, map[int32]*tracked, *tracked, *tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nw, _ := world.NewNether(1, nil)
-	h.nether = nw
+	h.dims.set(dimNether, nw)
 	over, nether := testTracked(), testTracked()
 	nether.p.eid = 2
 	nether.dim = dimNether
@@ -29,7 +29,7 @@ func TestNetherChestIsNotTheOverworldChest(t *testing.T) {
 	h, _, over, nether := dimStoreHub(t)
 	pos := blockPos{10, 70, 10}
 	h.world.SetBlock(pos.x, pos.y, pos.z, chestStateMin)
-	h.nether.SetBlock(pos.x, pos.y, pos.z, chestStateMin)
+	h.worldFor(dimNether).SetBlock(pos.x, pos.y, pos.z, chestStateMin)
 
 	h.openChest(over, pos.x, pos.y, pos.z)
 	if over.viewChest == nil {
@@ -53,7 +53,7 @@ func TestNetherFurnaceIsNotTheOverworldFurnace(t *testing.T) {
 	h, _, over, nether := dimStoreHub(t)
 	pos := blockPos{-3, 40, 8}
 	h.world.SetBlock(pos.x, pos.y, pos.z, furnaceStateMin)
-	h.nether.SetBlock(pos.x, pos.y, pos.z, furnaceStateMin)
+	h.worldFor(dimNether).SetBlock(pos.x, pos.y, pos.z, furnaceStateMin)
 
 	h.openFurnace(over, pos.x, pos.y, pos.z)
 	h.furnaces[simPos{blockPos: pos}].slots[furnaceInput] = invStack{item: 1, count: 3}
@@ -70,7 +70,7 @@ func TestNetherFurnaceIsNotTheOverworldFurnace(t *testing.T) {
 // dim != 0 early return in onBlock, so it never opened or ticked.
 func TestBeaconRegistersOutsideTheOverworld(t *testing.T) {
 	h, players, _, _ := dimStoreHub(t)
-	h.nether.SetBlock(4, 40, 4, beaconState)
+	h.worldFor(dimNether).SetBlock(4, 40, 4, beaconState)
 	h.onBlock(players, evBlock{dim: dimNether, x: 4, y: 40, z: 4, state: beaconState})
 	if h.beacons[simPos{dim: dimNether, blockPos: blockPos{4, 40, 4}}] == nil {
 		t.Error("a Nether beacon was never registered")

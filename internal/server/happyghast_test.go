@@ -20,7 +20,7 @@ func driedGhastCycle(h *hub, players map[int32]*tracked, pos blockPos) {
 // water every 5000 ticks and, once full, is consumed and hatches a baby
 // happy ghast.
 func TestDriedGhastHatchesGhastling(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	x, y, z := 100, 80, 100
 	info, _ := worldgen.InfoForState(driedGhastBase)
@@ -54,7 +54,7 @@ func TestDriedGhastHatchesGhastling(t *testing.T) {
 // TestDriedGhastDriesWithoutWater: not waterlogged — water beside it does
 // not count — a partly-hydrated dried ghast loses a step instead of hatching.
 func TestDriedGhastDriesWithoutWater(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	x, y, z := 40, 80, 40
 	info, _ := worldgen.InfoForState(driedGhastBase)

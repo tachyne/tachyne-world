@@ -24,7 +24,7 @@ func placeClosedDoor(w *world.World, x, z int) int {
 // it (both halves), and once it walks away the hub shuts it after the grace.
 func TestVillagerOpensAndClosesDoor(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 
 	const dx, dz = 6, 5
@@ -110,7 +110,7 @@ func TestVillagerSegment(t *testing.T) {
 // hours and its bed at night (pathSteer records the goal it planned toward).
 func TestVillagerScheduleGoals(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	m := &mob{etype: entityVillager, usesDoors: true, x: 20, z: 20,
 		home: blockPos{20, 70, 20},
 		bed:  blockPos{10, 70, 10}, work: blockPos{30, 70, 30}, meet: blockPos{50, 70, 50}}
@@ -141,7 +141,7 @@ func TestVillagerScheduleGoals(t *testing.T) {
 // still) and wakes at first light.
 func TestVillagerSleepsAtNight(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	bed := blockPos{15, 70, 15}
 	m := h.spawnMob(players, entityVillager, float64(bed.x)+0.5, float64(bed.y), float64(bed.z)+0.5)
@@ -165,7 +165,7 @@ func TestVillagerSleepsAtNight(t *testing.T) {
 // walking home — it must actually reach the bed first.
 func TestVillagerFarFromBedStaysAwake(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	m := h.spawnMob(players, entityVillager, 100, 70, 100)
 	m.usesDoors, m.bed = true, blockPos{15, 70, 15}
@@ -181,7 +181,7 @@ func TestVillagerFarFromBedStaysAwake(t *testing.T) {
 // walk out — no player digging required.
 func TestVillagerEscapesDooredRoom(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 
 	fy := w.MobFeet(3, 3)

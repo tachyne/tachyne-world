@@ -17,7 +17,7 @@ func runTicks(h *hub, players map[int32]*tracked, from, to uint64) {
 
 func TestFallingBlock(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 
 	x, z := h.findLand(100, 100) // dry ground: sand sinks through water now, as vanilla's does
@@ -40,7 +40,7 @@ func TestFallingBlock(t *testing.T) {
 
 func TestWaterSpreadAndRecede(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	w.ForceLoad(0, 0, 2) // the floor straddles chunks 0 and -1; their neighbours load too, so both tick
 
@@ -82,7 +82,7 @@ func TestLavaWaterInteraction(t *testing.T) {
 
 	t.Run("source->obsidian", func(t *testing.T) {
 		w := world.New(1)
-		h := newHub(w)
+		h := newTestHub(w)
 		players := map[int32]*tracked{}
 		w.SetBlock(50, 70, 50, src)
 		w.SetBlock(51, 70, 50, water) // water beside
@@ -93,7 +93,7 @@ func TestLavaWaterInteraction(t *testing.T) {
 	})
 	t.Run("flowing->cobblestone", func(t *testing.T) {
 		w := world.New(1)
-		h := newHub(w)
+		h := newTestHub(w)
 		players := map[int32]*tracked{}
 		w.SetBlock(50, 70, 50, flow)
 		w.SetBlock(50, 70, 51, water)
@@ -104,7 +104,7 @@ func TestLavaWaterInteraction(t *testing.T) {
 	})
 	t.Run("above-water->stone", func(t *testing.T) {
 		w := world.New(1)
-		h := newHub(w)
+		h := newTestHub(w)
 		players := map[int32]*tracked{}
 		w.SetBlock(50, 71, 50, src)   // lava above
 		w.SetBlock(50, 70, 50, water) // water below
@@ -119,7 +119,7 @@ func TestLavaWaterInteraction(t *testing.T) {
 // hole two blocks east, the fluid flows only toward the hole, not all ways.
 func TestFluidSlopeFinding(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	// A large stone platform high above the terrain (so the surroundings are
 	// generated air, out of slope range) with air on top and one gap two east.
 	const fy = 100

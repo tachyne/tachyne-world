@@ -11,7 +11,7 @@ import (
 // spawn-issued gear drops at 8.5% a piece; a converted mob keeps its gear;
 // the pickup roll follows the special multiplier.
 func TestSpawnGearByDifficulty(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.rules.Difficulty = diffHard
@@ -100,7 +100,7 @@ func TestSpawnGearByDifficulty(t *testing.T) {
 
 // Lightning swaps a mooshroom's colour and kills a turtle outright.
 func TestLightningMooshroomAndTurtle(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	x, z := 10.5, 10.5
@@ -121,7 +121,7 @@ func TestLightningMooshroomAndTurtle(t *testing.T) {
 // Pillager.enchantSpawnedWeapon: one pillager in 300 spawns with Piercing I
 // on its crossbow (pillager_spawn_crossbow), over Mob's usual roll.
 func TestPillagerSpawnCrossbowPiercing(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pierced := 0
 	for i := 0; i < 3000; i++ {

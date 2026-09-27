@@ -8,7 +8,7 @@ import (
 
 // tridentSetup arms a survival player with a plain trident, high in the air.
 func tridentSetup() (*hub, *tracked, map[int32]*tracked) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 80, 0.5
 	pl.yaw, pl.pitch = 0, 0
@@ -142,7 +142,7 @@ func TestTridentImpalingHitsTheAquatic(t *testing.T) {
 // own right — the first living thing it passes through takes eight, and the
 // spin ends there rather than drilling through a crowd.
 func TestRiptideSpinAttackHits(t *testing.T) {
-	h := newHub(world.New(53))
+	h := newTestHub(world.New(53))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

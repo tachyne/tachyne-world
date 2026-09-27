@@ -67,7 +67,7 @@ func TestAnvilMergesBookOntoBook(t *testing.T) {
 
 // Taking a material repair consumes only the materials it actually used.
 func TestAnvilMaterialRepairConsumesWhatItUses(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	max := itemMaxDurability[tDiamondSword]
@@ -150,7 +150,7 @@ func maxInt(a, b int) int {
 
 // A bookshelf only powers the table when the cell halfway to it is open.
 func TestBookshelfNeedsAnAirGap(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	lx, lz := h.findLand(10, 10)
 	y := h.world.SurfaceFeet(lx, lz)
 	pos := simPos{blockPos: blockPos{lx, y, lz}}

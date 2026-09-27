@@ -10,7 +10,7 @@ import (
 // Flint lights an unlit candle (never a wet or burning one), an empty hand
 // snuffs it, and eating a candle cake gives the candle back.
 func TestCandlesLightSnuffAndCakeReturnsTheCandle(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pos := blockPos{0, 180, 0}

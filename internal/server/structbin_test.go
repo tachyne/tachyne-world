@@ -11,7 +11,7 @@ import (
 // first time anything touches it, so the tripwire trap fires; any other
 // dispenser starts empty.
 func TestJungleTempleDispenserLoot(t *testing.T) {
-	h := newHub(world.New(5))
+	h := newTestHub(world.New(5))
 	g := h.world.Gen()
 	var tp worldgen.JungleTemple
 	found := false

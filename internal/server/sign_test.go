@@ -69,7 +69,7 @@ func TestSignStateMath(t *testing.T) {
 // TestSignEditFlow drives placement registration, the edit lock, text
 // submission, applicators and waxing through the hub handlers.
 func TestSignEditFlow(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 70, 3.5 // south of the sign → front side, within reach
@@ -159,7 +159,7 @@ func TestSignChunkNBT(t *testing.T) {
 // In adventure mode a sign is read, not written: no editor opens and a dye
 // is not spent on it (SignBlock: player.mayBuild()).
 func TestSignAdventureCannotEdit(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.z = 0.5, 3.5
 	pl.gamemode = gmAdventure

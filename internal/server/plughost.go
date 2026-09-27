@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 	"github.com/tachyne/tachyne-world/plugin"
 )
 
@@ -327,20 +328,37 @@ type worldFacade struct {
 	dim int
 }
 
+// A dimension the server does not run reads as air and ignores writes.
+
 func (f worldFacade) Block(x, y, z int) uint32 {
-	return f.ph.h.worldFor(f.dim).At(x, y, z)
+	w := f.ph.h.worldFor(f.dim)
+	if w == nil {
+		return worldgen.Air
+	}
+	return w.At(x, y, z)
 }
 
 func (f worldFacade) SetBlock(x, y, z int, state uint32) {
+	if f.ph.h.worldFor(f.dim) == nil {
+		return
+	}
 	f.ph.h.setBlockLive(f.ph.h.playersRef, f.dim, x, y, z, state)
 }
 
 func (f worldFacade) SurfaceY(x, z int) float64 {
-	return f.ph.h.worldFor(f.dim).SurfaceY(x, z)
+	w := f.ph.h.worldFor(f.dim)
+	if w == nil {
+		return 0
+	}
+	return w.SurfaceY(x, z)
 }
 
 func (f worldFacade) BiomeAt(x, z int) string {
-	return f.ph.h.worldFor(f.dim).BiomeAt(x, z)
+	w := f.ph.h.worldFor(f.dim)
+	if w == nil {
+		return ""
+	}
+	return w.BiomeAt(x, z)
 }
 
 // ---- Player handle ----

@@ -11,7 +11,7 @@ import (
 // Mob.setBaby, for the zombie family, piglins and zoglins; a piglin brute
 // cannot be a baby, so its egg does nothing to it.
 func TestSpawnEggOffspringGaps(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}

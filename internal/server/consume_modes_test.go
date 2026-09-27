@@ -12,7 +12,7 @@ import (
 // effect lands and the bottle comes back.
 func TestDrinkPotionThroughTheHold(t *testing.T) {
 	for _, mode := range []int{gmSurvival, gmAdventure, gmCreative} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		pl := survPlayer(h)
 		pl.gamemode = mode
 		players := map[int32]*tracked{pl.p.eid: pl}
@@ -41,7 +41,7 @@ func TestDrinkPotionThroughTheHold(t *testing.T) {
 // full bar and keeps the food.
 func TestEatingInAdventureAndCreative(t *testing.T) {
 	for _, mode := range []int{gmAdventure, gmCreative} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		pl := survPlayer(h)
 		pl.gamemode = mode
 		players := map[int32]*tracked{pl.p.eid: pl}
@@ -71,7 +71,7 @@ func TestEatingInAdventureAndCreative(t *testing.T) {
 // tosses its contents out one at a time, the first at once, then one
 // every other tick after the tenth.
 func TestBundleEmptiesWhileHeld(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -104,7 +104,7 @@ func TestBundleEmptiesWhileHeld(t *testing.T) {
 // ThrownEgg.onHit: chicks hatch where the egg broke, in its dimension, and
 // take the egg's variant; a brown or blue egg can be thrown at all.
 func TestEggsHatchTheirOwnVariant(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -134,7 +134,7 @@ func TestEggsHatchTheirOwnVariant(t *testing.T) {
 // saveToBucketTag / loadFromBucketTag: a blue axolotl comes out of its
 // bucket blue, and the bucket survives a save.
 func TestAxolotlBucketKeepsItsColour(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -163,7 +163,7 @@ func TestAxolotlBucketKeepsItsColour(t *testing.T) {
 // SimpleWaterloggedBlock.pickupBlock: an empty bucket drains a waterlogged
 // slab and comes back full.
 func TestBucketDrainsWaterloggedBlock(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -182,7 +182,7 @@ func TestBucketDrainsWaterloggedBlock(t *testing.T) {
 // DolphinJumpGoal: a dolphin swimming along the surface of open water leaps
 // out and comes back down into it.
 func TestDolphinLeaps(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	players := map[int32]*tracked{}
 	for x := -2; x <= 12; x++ {
@@ -218,7 +218,7 @@ func TestDolphinLeaps(t *testing.T) {
 // FrogAi's Croak: an idle frog on land croaks for sixty ticks, holding
 // still, then stands.
 func TestFrogCroaks(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	players := map[int32]*tracked{}
 	f := h.spawnMob(players, entityFrog, 0.5, 200, 0.5)
@@ -240,7 +240,7 @@ func TestFrogCroaks(t *testing.T) {
 // FollowPlayerRiddenEntityGoal: a dolphin near a boat a player is rowing
 // swims after it, and stops when the boat stops.
 func TestDolphinFollowsARowedBoat(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -263,7 +263,7 @@ func TestDolphinFollowsARowedBoat(t *testing.T) {
 // adventure (isSurvival covers it) and creative count; a spectator, or a
 // player more than 64 blocks off, is no delivery point.
 func TestAllayLikedPlayerRules(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	a := &mob{etype: entityAllay, owner: pl.p.eid, x: 0.5, y: 100, z: 0.5}
@@ -288,7 +288,7 @@ func TestAllayLikedPlayerRules(t *testing.T) {
 // Weather is the overworld's alone: overworld rain neither waters a Nether
 // farm nor douses a Nether fire.
 func TestNoOverworldWeatherInTheNether(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.raining = true
 	if h.rainingAbove(dimNether, 0, 200, 0) {
 		t.Error("overworld rain falls on a Nether farm")
@@ -310,7 +310,7 @@ func TestHappyGhastBrain(t *testing.T) {
 	if panicSpeed(entityHappyGhast) != 2.0 {
 		t.Error("happy ghast panic speed")
 	}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -330,7 +330,7 @@ func TestHappyGhastBrain(t *testing.T) {
 // the water stops the scoop, and a crouched player's lower eye reaches water
 // a standing player's ray passes over.
 func TestBucketFillRayOutlineAndEye(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -366,7 +366,7 @@ func TestBucketFillRayOutlineAndEye(t *testing.T) {
 // Dolphin's second FollowPlayerRiddenEntityGoal is for AbstractNautilus: a
 // player steering a nautilus through the water draws the dolphin along.
 func TestDolphinFollowsARiddenNautilus(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nautilusSea(h)
 	pl := survPlayer(h)
 	pl.p.eid = 500

@@ -26,7 +26,7 @@ func closeFrames(pl *tracked) []attachproto.WindowCloseServer {
 // stands; walking out of reach closes it from the server, and so does the
 // block going.
 func TestMenuClosesWhenInvalid(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -67,7 +67,7 @@ func TestMenuClosesWhenInvalid(t *testing.T) {
 // A trade screen closes when the villager dies or the player walks past
 // entity reach plus four of it.
 func TestTradeClosesWhenInvalid(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

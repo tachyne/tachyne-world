@@ -18,7 +18,7 @@ func TestDungeonSpawnCount(t *testing.T) {
 // darken is a subtraction amount, not a cap. Thunder's fixed −10 (not a cap)
 // must not double-count the night skyDarken.
 func TestRawBrightnessSubtraction(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	// Force full night so skyDarken() is large (11).
 	h.dayTime.Store(18000)
 
@@ -43,7 +43,7 @@ func TestRawBrightnessSubtraction(t *testing.T) {
 // (vanilla getRawBrightness(pos, 0) > 8), so the catCreature light gate must
 // not apply the night skyDarken.
 func TestAnimalLightUsesRawSky(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.dayTime.Store(18000) // deep night
 
 	// Grass floor under a sky-lit (15) column: vanilla lets animals spawn.
@@ -61,7 +61,7 @@ func TestAnimalLightUsesRawSky(t *testing.T) {
 // TestDrownedPlacementAndRarity — drowned use IN_WATER placement and the
 // river-1/15 vs deep-ocean-1/40 rarity gates, unlike land monsters.
 func TestDrownedPlacementAndRarity(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 
 	// Placement: a water anchor with a clear block above is valid for drowned,
 	// invalid for a land monster; a solid anchor is the reverse.

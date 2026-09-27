@@ -11,7 +11,7 @@ import (
 // bear's cod (3) against salmon (1), the witch's stick (2) against each of
 // its five other weight-1 drops. Even draws would give 1:1 for both.
 func TestEntityLootHonoursEntryWeights(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	r := rand.New(rand.NewSource(7))
 	ratio := func(etype int32, a, b string) float64 {
 		na, nb := 0, 0

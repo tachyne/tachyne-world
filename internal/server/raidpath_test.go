@@ -12,7 +12,7 @@ import (
 // advances when all of its raiders are dead — so one wanderer could stall the
 // raid until the no-player timeout ended it.
 func TestStrayRaiderWalksBackAndRecruits(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	lx, lz := h.findLand(120, 120)
@@ -65,7 +65,7 @@ func TestStrayRaiderWalksBackAndRecruits(t *testing.T) {
 // A raider with prey to chase keeps hunting: PathfindToRaidGoal only runs
 // when getTarget() is null.
 func TestRaiderWithATargetIgnoresTheRaidWalk(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	center := blockPos{0, 70, 0}

@@ -421,10 +421,9 @@ type tracked struct {
 }
 
 type hub struct {
-	supportSweep bool // a dropUnsupported sweep is running (its writes must not start another)
-	world        *world.World
-	nether       *world.World // second dimension (nil in bare tests → worldFor falls back)
-	end          *world.World // third dimension
+	supportSweep bool         // a dropUnsupported sweep is running (its writes must not start another)
+	world        *world.World // the overworld
+	dims         dimensions   // every other dimension's world, by id (dimtable.go)
 	events       chan hubEvent
 	stop         chan struct{}    // closed to end run(); production never closes it, tests do (t.Cleanup)
 	eidCounter   int64            // per-pod eid mint counter, fed through shard.MintEID when sharded
@@ -836,16 +835,9 @@ func (h *hub) restoreItems(saved []savedItem) {
 	}
 }
 
-// worldFor picks the world a dimension index lives in.
-func (h *hub) worldFor(dim int) *world.World {
-	switch {
-	case dim == 1 && h.nether != nil:
-		return h.nether
-	case dim == 2 && h.end != nil:
-		return h.end
-	}
-	return h.world
-}
+// worldFor picks the world a dimension index lives in: nil for a dimension
+// this hub does not run, so an unknown id never lands on the overworld.
+func (h *hub) worldFor(dim int) *world.World { return h.dims.worldIn(h.world, dim) }
 
 func newHub(w *world.World) *hub {
 	sb, sbst := newScoreboard("") // in-memory board; server.Run swaps in the persisted one
@@ -1047,6 +1039,7 @@ func (h *hub) run() {
 		h.paintings = h.containers.loadPaintings(h.allocEID)
 		h.itemFrames = h.containers.loadFrames(h.allocEID)
 		h.armorStands = h.containers.loadStands(h.allocEID)
+		h.dropUnrunFurniture()
 		h.jukeboxes = h.containers.loadJukeboxes()
 		h.pots = h.containers.loadPots()
 		h.brewProg, h.brewFuel, h.brewIng = h.containers.loadBrews()
@@ -1118,12 +1111,8 @@ func (h *hub) run() {
 			tickStart := time.Now()
 			h.phases.start(tickStart)
 			age := h.tick.Add(1) // world age; drives day/night
-			h.world.Tick()       // LRU epoch: cached chunks promote at most once per tick
-			if h.nether != nil {
-				h.nether.Tick()
-			}
-			if h.end != nil {
-				h.end.Tick()
+			for _, w := range h.allDims() {
+				w.Tick() // LRU epoch: cached chunks promote at most once per tick
 			}
 			dueNow := len(h.pending[age])
 			dt := h.dayTime.Load()

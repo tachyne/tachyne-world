@@ -57,7 +57,7 @@ func TestMemoryDedup(t *testing.T) {
 }
 
 func TestNPCBehaviorSteersTowardTarget(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	n := h.spawnNPC(players, "Bram", "a farmer", 0, 0)
 	n.targetX, n.targetZ, n.hasTarget = 10, 0, true

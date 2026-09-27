@@ -9,7 +9,7 @@ import (
 // Sheep were always white: the fleece byte's colour bits were hard-zero, so
 // every sheep in the world looked the same and dye did nothing.
 func TestSheepColoursVary(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	seen := map[int8]int{}
 	for i := 0; i < 3000; i++ {
 		seen[h.rollSheepColor()]++
@@ -48,7 +48,7 @@ func TestFleeceByteLayout(t *testing.T) {
 
 // A dye recolours a live sheep, and the wool follows the fleece.
 func TestDyeSheepAndWool(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnMobIn(players, entitySheep, 0, 0, 70, 0)
 	if m == nil {
@@ -82,7 +82,7 @@ func TestDyeSheepAndWool(t *testing.T) {
 // A name tag renames a mob and makes it persistent — the second part is what
 // keeps a pet where you left it.
 func TestNameTagRenamesAndPersists(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -114,7 +114,7 @@ func TestNameTagRenamesAndPersists(t *testing.T) {
 
 // Colour and name survive a save/reload round trip.
 func TestSheepColourAndNamePersist(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnMobIn(players, entitySheep, 0, 0, 70, 0)
 	if m == nil {
@@ -123,7 +123,7 @@ func TestSheepColourAndNamePersist(t *testing.T) {
 	m.color, m.customName = 11, "Cloud"
 
 	sm := toSavedMob(m)
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	back := h2.reloadMob(players, &sm)
 	if back == nil {
 		t.Fatal("reload returned nil")

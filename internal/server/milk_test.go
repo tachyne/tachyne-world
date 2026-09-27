@@ -9,7 +9,7 @@ import (
 // A bucket and an adult cow is the most basic thing a survival player expects
 // to work; a calf and a pig are not cows enough.
 func TestMilkingFillsTheBucket(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
@@ -47,7 +47,7 @@ func TestMilkingFillsTheBucket(t *testing.T) {
 
 // The mooshroom's other half: a bowl comes back as stew.
 func TestMooshroomFillsABowl(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
@@ -75,7 +75,7 @@ func TestMooshroomFillsABowl(t *testing.T) {
 // Milk's one job is stripping every effect, and it must work on a full
 // stomach — curing a poison is the whole reason to carry it.
 func TestDrinkingMilkClearsEffectsEvenWhenFull(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -108,7 +108,7 @@ func TestDrinkingMilkClearsEffectsEvenWhenFull(t *testing.T) {
 // The llama's one attack is the spit, and it comes from well beyond arm's
 // reach — a llama that has to touch you to hurt you is not a llama.
 func TestLlamaSpits(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 12, 70, 0 // far outside melee range

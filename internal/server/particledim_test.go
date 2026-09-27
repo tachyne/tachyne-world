@@ -14,7 +14,7 @@ import (
 // nowhere. A wind burst even carried an `if dim == 0` guard to suppress the
 // wrong-dimension particle rather than send the right one.
 func TestParticlesGoToTheirOwnDimension(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 
 	over := testTracked()

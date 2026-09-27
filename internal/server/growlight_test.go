@@ -37,7 +37,7 @@ func carveChamber(h *hub, cells ...[3]int) {
 // A torch-lit indoor farm grows in vanilla. Under the old sky-column check it
 // could not, because the roof blocked the column outright.
 func TestCropGrowsUnderArtificialLight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 40, 40, 40
 
@@ -62,7 +62,7 @@ func TestCropGrowsUnderArtificialLight(t *testing.T) {
 
 // The flip side: genuinely dark ground must not grow. Sealed, unlit.
 func TestCropDoesNotGrowInTheDark(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 60, 40, 60
 
@@ -87,7 +87,7 @@ func TestCropDoesNotGrowInTheDark(t *testing.T) {
 // Over many trials the observed rate must sit near 1/7, not 1.
 func TestSaplingAdvancesAtVanillaRate(t *testing.T) {
 	skipHeavy(t)
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 
 	base, _ := worldgen.BlockRange("oak_sapling")
@@ -110,7 +110,7 @@ func TestSaplingAdvancesAtVanillaRate(t *testing.T) {
 // TorchflowerCropBlock: AGE tops out at 1 but getMaxAge() is 2, so the last
 // step swaps the crop for the torchflower block.
 func TestTorchflowerGrowsIntoTheFlower(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 20, 200, 20
 
@@ -162,7 +162,7 @@ func TestPitcherStateLayout(t *testing.T) {
 // Growing past age 2 writes the upper half above the plant, and only the lower
 // half ticks.
 func TestPitcherGrowsAnUpperHalf(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 30, 200, 30
 
@@ -189,7 +189,7 @@ func TestPitcherGrowsAnUpperHalf(t *testing.T) {
 
 // A blocked cell above stops the plant going double (canGrowInto).
 func TestPitcherWillNotGrowIntoASolidBlock(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 35, 200, 35
 

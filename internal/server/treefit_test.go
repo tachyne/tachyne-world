@@ -22,7 +22,7 @@ func stoneCeiling(w *world.World, x, y, z, half int) {
 }
 
 func TestSaplingRefusesToGrowUnderARoof(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 300, 200, 300
 	lo, hi := worldgen.BlockRange("oak_sapling")
@@ -59,7 +59,7 @@ func TestSaplingRefusesToGrowUnderARoof(t *testing.T) {
 // The same sapling in the open grows fine — the gate refuses cramped spots,
 // not everything.
 func TestSaplingGrowsInTheOpen(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 340, 200, 340
 	lo, hi := worldgen.BlockRange("oak_sapling")
@@ -77,7 +77,7 @@ func TestSaplingGrowsInTheOpen(t *testing.T) {
 // NEEDS (minimum_size), not a full canopy box. An oak needs its column plus
 // radius 1 near the top; a wall two blocks away does not block it.
 func TestSaplingGrowsBesideAWall(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 380, 200, 380
 	lo, hi := worldgen.BlockRange("oak_sapling")
@@ -102,7 +102,7 @@ func TestSaplingGrowsBesideAWall(t *testing.T) {
 // the trunk stands on the same species log and leaves carry the vanilla
 // distance-7 state, which the old hand-rolled stamper did not set.
 func TestPlantedLeavesCarryTheVanillaState(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 420, 200, 420
 	lo, hi := worldgen.BlockRange("birch_sapling")

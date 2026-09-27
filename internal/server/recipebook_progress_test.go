@@ -27,7 +27,7 @@ func drainRB(pl *tracked) (out []attachproto.RecipeBook) {
 func TestRecipeUnlocks(t *testing.T) {
 	pl := testTracked()
 	pl.rbKnown, pl.rbHighlight = map[int32]bool{}, map[int32]bool{}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 
 	oak := itemByName["oak_planks"]
 	if len(rbIngredientIndex[oak]) == 0 {
@@ -103,7 +103,7 @@ func TestRecipeBookStoreRoundTrip(t *testing.T) {
 func TestCookingRecipesEnterTheBook(t *testing.T) {
 	pl := testTracked()
 	pl.rbKnown, pl.rbHighlight = map[int32]bool{}, map[int32]bool{}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 
 	rawIron := itemByName["raw_iron"]
 	h.recipeUnlocks(pl, []int32{rawIron})

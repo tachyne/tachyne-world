@@ -41,7 +41,7 @@ func TestPandaGenes(t *testing.T) {
 		t.Errorf("only %d of 400 cubs took both genes from their parents (mutation is 1/32 each)", fromParents)
 	}
 
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	weak := h.spawnMobIn(players, entityPanda, 0, 0, 70, 0)
 	weak.variant, weak.variantSet = packPandaGenes(pandaWeak, pandaWeak), true

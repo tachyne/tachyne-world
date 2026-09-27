@@ -13,7 +13,7 @@ import (
 // hundred ticks, and the clutch cracks and hatches on random ticks in the
 // hour before dawn.
 func TestTurtleEggLifeCycle(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -98,7 +98,7 @@ func TestTurtleEggLifeCycle(t *testing.T) {
 // A turtle out of the water heads back to it — a hatchling twice as fast —
 // and a grown one far from its beach swims home.
 func TestTurtleGoesToWaterAndHome(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	for x := -10; x <= 10; x++ {
 		for z := -10; z <= 10; z++ {

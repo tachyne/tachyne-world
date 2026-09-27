@@ -41,12 +41,12 @@ func buildPortalAxis(h *hub, dim, x, y, z int, axisZ bool) blockPos {
 // its islands), so what the portal forcer builds there is predictable.
 func voidPortalHub(t *testing.T) *hub {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nw, err := world.NewEnd(1, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	h.nether = nw
+	h.dims.set(dimNether, nw)
 	return h
 }
 
@@ -89,7 +89,7 @@ func TestNetherTripBuildsThenReusesPortal(t *testing.T) {
 	if !near(m.x, 399.5) || !near(m.y, 118) || !near(m.z, 400.5) {
 		t.Fatalf("it should come out in the new portal's matching spot, got %.3f,%.3f,%.3f", m.x, m.y, m.z)
 	}
-	nw := h.nether
+	nw := h.worldFor(dimNether)
 	if nw.At(399, 118, 400) != portalX || nw.At(400, 120, 400) != portalX {
 		t.Fatal("the far portal should be lit along the entry's axis")
 	}
@@ -194,7 +194,7 @@ func TestNetherTripFindsNearbyPortal(t *testing.T) {
 func TestCreatePortalPicksClosestSpot(t *testing.T) {
 	h := voidPortalHub(t)
 	players := map[int32]*tracked{}
-	nw := h.nether
+	nw := h.worldFor(dimNether)
 	for x := 510; x <= 519; x++ {
 		for z := 500; z <= 509; z++ {
 			nw.SetBlock(x, 59, z, worldgen.Stone)
@@ -230,7 +230,7 @@ func TestCreatePortalFallbackPlatform(t *testing.T) {
 	if r.min != (blockPos{600, 70, 599}) {
 		t.Fatalf("wrong fallback spot: %+v", r.min)
 	}
-	nw := h.nether
+	nw := h.worldFor(dimNether)
 	for box := -1; box <= 1; box++ { // clockwise of SOUTH is WEST: the platform spans x±1
 		for wd := 0; wd < 2; wd++ {
 			if nw.At(600-box, 69, 599+wd) != worldgen.Obsidian {

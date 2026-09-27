@@ -12,7 +12,7 @@ import (
 // take path, where the trigger fires.
 func TestPotFromSherdsNeedsFourSherds(t *testing.T) {
 	const adv, crit = "minecraft:adventure/craft_decorated_pot_using_only_sherds", "pot_crafted_using_only_sherds"
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl, players := craftPlayer(h)
 	pl.adv = advState{}
 	brick := int32(itemByName["brick"])

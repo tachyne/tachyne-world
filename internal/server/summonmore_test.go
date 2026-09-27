@@ -10,7 +10,7 @@ import (
 // they were asked for (off any water or rail), a TNT charge on the default
 // eighty-tick fuse with no hop, an arrow at rest, an end crystal.
 func TestSummonNonLiving(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	players := map[int32]*tracked{}
 	h.playersRef = players

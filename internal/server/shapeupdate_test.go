@@ -11,7 +11,7 @@ import (
 func shapeSetup(t *testing.T) (*hub, *world.World, map[int32]*tracked, int, int, int) {
 	t.Helper()
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	x, y, z := 8, 180, 8
 	w.ForceLoad(x, z, 1)
 	for dx := -3; dx <= 3; dx++ {

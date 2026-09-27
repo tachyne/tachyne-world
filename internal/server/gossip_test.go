@@ -52,7 +52,7 @@ func TestGossipBook(t *testing.T) {
 // it against the player, it spreads to a villager standing beside them,
 // it survives a save, and the village golem turns on a player at −100.
 func TestGossipEventsSpreadAndGolem(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	pl := testTracked()
@@ -104,7 +104,7 @@ func TestGossipEventsSpreadAndGolem(t *testing.T) {
 // HurtByTargetGoal: hit an iron golem and it comes after you, whatever your
 // reputation in the village is.
 func TestGolemRetaliatesAgainstItsAttacker(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	pl := testTracked()
 	pl.p.name, pl.p.eid = "Hitter", 400
 	pl.x, pl.y, pl.z = 1.5, 70, 0.5

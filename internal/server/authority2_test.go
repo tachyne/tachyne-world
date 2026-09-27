@@ -8,7 +8,7 @@ import (
 )
 
 func TestNoclipIntoSolidRejected(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl, players := walkSetup(h)
 	h.tick.Store(101)
 	// Claim a position with the head inside the hillside below the surface.
@@ -30,7 +30,7 @@ func TestNoclipIntoSolidRejected(t *testing.T) {
 }
 
 func TestBuriedHeadSuffocates(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
 	pl.food = 10

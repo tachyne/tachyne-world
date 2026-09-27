@@ -12,7 +12,7 @@ import (
 // TestStatsCountersAndSnapshot: counters accumulate at gameplay sites and the
 // snapshot renders them deterministically in canonical ids.
 func TestStatsCountersAndSnapshot(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	pl.adv = advState{}

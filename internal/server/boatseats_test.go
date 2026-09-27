@@ -8,7 +8,7 @@ import (
 
 func boatFixture(t *testing.T) (*hub, map[int32]*tracked, *vehicle) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	players := map[int32]*tracked{}
 	h.playersRef = players

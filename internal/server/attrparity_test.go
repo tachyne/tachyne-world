@@ -86,7 +86,7 @@ func TestFlyingSpeedAttributeMovesFliers(t *testing.T) {
 // the time, as getMaximumFlyingTicks does.
 func TestLowGravityPlayerIsNotGrounded(t *testing.T) {
 	hover := func(gravity float64, ticks int) (grounded bool) {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		pl, players := walkSetup(h)
 		pl.p.eid = 1
 		surface := pl.y
@@ -250,7 +250,7 @@ func TestScaleAttributeGrowsTheMob(t *testing.T) {
 // the server must not take their head for being inside the ceiling.
 func TestSmallPlayerWalksUnderALowCeiling(t *testing.T) {
 	moved := func(scale float64) bool {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		pl, players := walkSetup(h)
 		h.world.ForceLoad(0, 0, 1)
 		y := pl.y

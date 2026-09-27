@@ -21,7 +21,7 @@ import (
 
 func roamHub(t *testing.T) (*hub, float64, float64) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.playersRef = map[int32]*tracked{}
 	// Root the herd on land the way the boot seeding does — the drift reverses
 	// off water, so a herd started in the ocean never moves at all.

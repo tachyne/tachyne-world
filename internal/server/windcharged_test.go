@@ -11,7 +11,7 @@ import (
 // swings the oak door beside it open (TRIGGER block interaction), which the
 // hand-rolled shove it used to be never did.
 func TestWindChargedDeathTriggersBlocks(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.world.ForceLoad(0, 0, 2)
 	for x := -3; x <= 3; x++ {

@@ -18,7 +18,7 @@ import (
 // runs the fire step onto a TNT block. It must return.
 func TestFireIgnitingTNTNeverBlocksOnTheEventQueue(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	h.playersRef = players
 
@@ -55,7 +55,7 @@ func TestFireIgnitingTNTNeverBlocksOnTheEventQueue(t *testing.T) {
 // postFromHub is the sanctioned escape hatch for hub-side deferral. It never
 // blocks: with room it queues, without room it panics rather than deadlocks.
 func TestPostFromHubNeverBlocks(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.postFromHub(evChat{text: "x"})
 	if len(h.events) != 1 {
 		t.Fatalf("queued %d events, want 1", len(h.events))

@@ -13,7 +13,7 @@ import (
 // its floor (bug #27); one on stone stays, and a loose edit that is not a
 // cave growth (a snow layer) is not this pass's to judge.
 func TestChunkActivationSettlesFloatingGrowths(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.mobstore = newMobStore(filepath.Join(t.TempDir(), "mobs.json"))
 	players := map[int32]*tracked{}
 	h.tick.Store(1000)

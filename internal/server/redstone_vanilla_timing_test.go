@@ -23,7 +23,7 @@ import (
 func timingSetup(t *testing.T) (*hub, *world.World, map[int32]*tracked, int, int, int) {
 	t.Helper()
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	lx, lz := h.findLand(60, 60)
 	y := h.world.SurfaceFeet(lx, lz)

@@ -10,7 +10,7 @@ import (
 
 func TestDesertTempleChestLoots(t *testing.T) {
 	w := world.New(7)
-	h := newHub(w)
+	h := newTestHub(w)
 	g := w.Gen()
 	// Find a temple in this seed.
 	var found bool
@@ -45,7 +45,7 @@ func TestDesertTempleChestLoots(t *testing.T) {
 
 func TestVillageHouseChestLoot(t *testing.T) {
 	w := world.New(7)
-	h := newHub(w)
+	h := newTestHub(w)
 	g := w.Gen()
 	// Find a village with a chest near origin (chests come from the real jigsaw
 	// templates now — VillageChests).
@@ -95,7 +95,7 @@ func TestVillageHouseChestLoot(t *testing.T) {
 // tables the first time anything touches them, and a pot that has been
 // emptied is never restocked.
 func TestTrialChamberDispensersAndPotsFill(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	g := h.world.Gen()
 
 	var dispenser, pot blockPos

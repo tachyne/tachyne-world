@@ -30,7 +30,7 @@ func TestSuspiciousStew(t *testing.T) {
 	if _, ok := stewCraftMatch(grid); ok {
 		t.Error("two flowers do not make a stew")
 	}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	if r, _ := h.craftResult(grid[:9], 3); r.item != 0 {
 		t.Error("the general crafting path should reject two flowers")
 	}

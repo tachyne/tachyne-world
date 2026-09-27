@@ -11,7 +11,7 @@ import (
 // turning its head without turning its body, and lets go when the look runs
 // out or the player leaves.
 func TestIdleLookWatchesAPlayer(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 3, 70, 0
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -56,7 +56,7 @@ func TestLookRanges(t *testing.T) {
 			t.Errorf("%s look range %v, want %v", entityNameByID[et], got, want)
 		}
 	}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	sq := &mob{eid: 3, etype: entitySquid, yaw: 45}
@@ -72,7 +72,7 @@ func TestLookRanges(t *testing.T) {
 // HurtByTargetGoal.setAlertOthers — while a species without the goal, or a
 // neighbour already fighting, is left alone.
 func TestAlertKinRousesNeighbours(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 0, 70, 0
 	players := map[int32]*tracked{pl.p.eid: pl}

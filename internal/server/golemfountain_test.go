@@ -18,7 +18,7 @@ import (
 // tests the feet cell with an empty fluid, so the source on the pillar is a
 // place a village's golem may appear.
 func TestGolemMaySpawnOnTheFountainPillar(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	stampBugCapture(t, h.world, "bug47-fountain.json")
 	w := h.world
 	x, z := -249, -586
@@ -34,7 +34,7 @@ func TestGolemMaySpawnOnTheFountainPillar(t *testing.T) {
 // into the basin is two blocks, inside Mob.getMaxFallDistance's three. The
 // walker refused any drop past one, so it paced the pillar top for good.
 func TestGolemWalksOffTheFountainPillar(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	stampBugCapture(t, h.world, "bug47-fountain.json")
 	players := map[int32]*tracked{}
 	h.playersRef = players
@@ -56,7 +56,7 @@ func TestGolemWalksOffTheFountainPillar(t *testing.T) {
 // A walker steps off a drop of up to three, not four (the comfortable fall
 // distance with no target).
 func TestWalkerDropsUpToThree(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	for x := -4; x <= 8; x++ {
 		for z := -4; z <= 4; z++ {

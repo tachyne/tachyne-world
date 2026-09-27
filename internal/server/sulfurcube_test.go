@@ -15,7 +15,7 @@ import (
 // survival player beside it, and a grown sulfur cube standing on the floor.
 func cubeFixture(t *testing.T) (*hub, map[int32]*tracked, *tracked, *mob) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	for x := -12; x <= 12; x++ {
 		for z := -12; z <= 12; z++ {

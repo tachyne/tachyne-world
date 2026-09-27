@@ -11,7 +11,7 @@ import (
 // to the foot of the bed, watches (relax pose), then lies down; the owner
 // waking gets it up. A second cat finds the spot taken.
 func TestCatRelaxesOnSleepingOwner(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

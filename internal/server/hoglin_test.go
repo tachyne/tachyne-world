@@ -14,7 +14,7 @@ import (
 // nauseous zoglin after three hundred ticks; one near warped fungus is
 // pacified and walks away from it; the bite rolls half-plus damage.
 func TestHoglinZombifiesAndFleesFungus(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -92,7 +92,7 @@ func TestAttackKnockbackIsSet(t *testing.T) {
 
 // A hoglin's throw now actually leaves the ground.
 func TestHoglinThrowMoves(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	m := &mob{etype: entityHoglin, x: 0, y: 70, z: 0}
 	pl.x, pl.y, pl.z = 2, 70, 0

@@ -27,7 +27,7 @@ func drainFX(pl *tracked) []attachproto.WorldFX {
 // client draws the green burst and plays the sound — instead of a hand-made
 // particle burst.
 func TestBoneMealLevelEvent(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

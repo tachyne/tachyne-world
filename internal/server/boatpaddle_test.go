@@ -14,7 +14,7 @@ import (
 // of sixteen ticks, as vanilla's float test lets two ticks through. A
 // passenger's input does nothing; letting go stops the sound.
 func TestBoatPaddlesSoundAndSync(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	for x := -3; x <= 3; x++ {
 		for z := -3; z <= 3; z++ {

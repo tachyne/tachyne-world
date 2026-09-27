@@ -11,7 +11,7 @@ import (
 // At sea a turtle is always going somewhere (TurtleTravelGoal): leg after
 // leg, never idling, where a land animal in the water would stand about.
 func TestTurtleTravelsAtSea(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.world.ForceLoad(0, 0, 5)
 	for x := -40; x <= 40; x++ {
@@ -49,7 +49,7 @@ func TestTurtleTravelsAtSea(t *testing.T) {
 // Ashore, a turtle's strolls come round on an interval of 100 rather than
 // the usual 120 (TurtleRandomStrollGoal(1.0, 100)): its rests are shorter.
 func TestTurtleStrollsOftenerAshore(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.world.ForceLoad(0, 0, 3)
 	for x := -30; x <= 30; x++ {

@@ -9,7 +9,7 @@ import (
 // A zoglin goes for the closest living thing, a pet included, and does
 // not drop a mob it is already on for a player that walks up.
 func TestZoglinTakesTheClosest(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}

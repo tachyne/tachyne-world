@@ -85,7 +85,7 @@ func TestNamedPotionSurvivesRestart(t *testing.T) {
 // Dropped items carry the same fields — into the save file and back, and
 // through the drop itself (they were not on the item entity at all).
 func TestDroppedItemKeepsItsIdentityAcrossRestart(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	none := map[int32]*tracked{}
 	it := h.spawnItemIn(none, 0, itemByName["potion"], 1, 10, 70, 10)
 	if it == nil {
@@ -96,7 +96,7 @@ func TestDroppedItemKeepsItsIdentityAcrossRestart(t *testing.T) {
 	if len(saved) != 1 {
 		t.Fatalf("%d saved items", len(saved))
 	}
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	globalNames.Store(h.names) // the name table survives the restart, as boot loads it before the drops
 	h2.restoreItems(saved)
 	var back *itemEntity
@@ -115,7 +115,7 @@ func TestDroppedItemKeepsItsIdentityAcrossRestart(t *testing.T) {
 // ones still do. (Stackable item on purpose — a potion stacks to one, so two
 // potions never merge regardless.)
 func TestDropsWithDifferentNamesDoNotMerge(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	none := map[int32]*tracked{}
 	a := h.spawnItemIn(none, 0, itemByName["stone"], 1, 10, 70, 10)
 	b := h.spawnItemIn(none, 0, itemByName["stone"], 1, 10.1, 70, 10)
@@ -149,7 +149,7 @@ func TestGroundItemMetadataCarriesTheFullStack(t *testing.T) {
 // carries, not the subset the flat columns once listed (dyed colour, a
 // rocket's flight and bursts, and a pot's faces were lost on every restart).
 func TestDroppedItemSurvivesTheSaveFileWhole(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	none := map[int32]*tracked{}
 	want := invStack{item: itemByName["leather_chestplate"], count: 1, dmg: 7, name: "Red Coat",
 		color: 0xB02E26, potion: potPoison, repairCost: 3, instrument: 2, flight: 3, starID: 5,
@@ -171,7 +171,7 @@ func TestDroppedItemSurvivesTheSaveFileWhole(t *testing.T) {
 	cs.recordNames(h.names)
 	cs.flush()
 
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	back := newContainerStore(path)
 	globalNames.Store(back.loadNames())
 	h2.restoreItems(back.loadItems())
@@ -187,7 +187,7 @@ func TestDroppedItemSurvivesTheSaveFileWhole(t *testing.T) {
 
 // A drop saved before stacks were packed whole (flat columns) still restores.
 func TestDroppedItemLegacyFlatRowRestores(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.restoreItems([]savedItem{{X: 10, Y: 70, Z: 10, Item: itemByName["potion"], Count: 1, Potion: potPoison, Repair: 2}})
 	for _, e := range h.items {
 		if e.item != itemByName["potion"] || e.potion != potPoison || e.repairCost != 2 {
@@ -202,7 +202,7 @@ func TestDroppedItemLegacyFlatRowRestores(t *testing.T) {
 // stacks: a name first interned by a frame's stack at that moment used to be
 // minted after the table was recorded and was gone after the restart.
 func TestShutdownSaveKeepsANameInternedLate(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	path := filepath.Join(t.TempDir(), "containers.json")
 	h.containers = newContainerStore(path)
 	startHub(t, h)

@@ -10,7 +10,7 @@ import (
 // A zombie finds a clutch of turtle eggs nearby, walks to it, stamps on it
 // for sixty ticks and the clutch is gone; mob griefing off leaves it be.
 func TestZombieBreaksTurtleEggs(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

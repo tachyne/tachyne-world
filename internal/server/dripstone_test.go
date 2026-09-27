@@ -40,7 +40,7 @@ func TestDripstoneStateRoundTrips(t *testing.T) {
 // A stalactite hanging off dripstone stone lengthens, or raises a stalagmite
 // from the floor under it.
 func TestStalactiteGrows(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	x, y, z := 0, 190, 0
@@ -83,7 +83,7 @@ func TestStalactiteGrows(t *testing.T) {
 
 // Water above a stalactite drips down and fills a cauldron under the tip.
 func TestDripstoneFillsACauldron(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	x, y, z := 0, 190, 0
@@ -227,7 +227,7 @@ func TestSideBySideStalactitesLetGoWithoutStallingTheSweep(t *testing.T) {
 // a second piece under it becomes the tip and the first re-shapes to a
 // frustum (SpeleothemBlock.getStateForPlacement / updateShape).
 func TestPlacedDripstoneShapesItsColumn(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	players := map[int32]*tracked{}
 	w := h.world

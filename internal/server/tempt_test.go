@@ -11,7 +11,7 @@ import (
 // short beside them, ignores an empty hand, and calms down after the food
 // goes away.
 func TestTemptFollowsHeldFood(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	cow := h.spawnAnimal(players, entityCow, 0, 0)
@@ -60,7 +60,7 @@ func TestTemptFollowsHeldFood(t *testing.T) {
 // TestTemptRodsAndFamily: a carrot on a stick tempts a pig, a warped fungus
 // on a stick a strider, and the horse family follows its golden foods.
 func TestTemptRodsAndFamily(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pl.x, pl.y, pl.z = 6.5, 70, 0.5
@@ -89,7 +89,7 @@ func TestTemptRodsAndFamily(t *testing.T) {
 // TestScareableTempt: an ocelot creeps up on a still player holding cod at
 // 0.6×, and a step or a turn within six blocks breaks the spell.
 func TestScareableTempt(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	oc := h.spawnAnimal(players, entityOcelot, 0, 0)
@@ -122,7 +122,7 @@ func TestScareableTempt(t *testing.T) {
 // ZombieHorse.addBehaviourGoals: its TemptGoal takes #zombie_horse_food, a
 // red mushroom, and not the horse family's golden foods it used to follow.
 func TestZombieHorseFollowsARedMushroom(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pl.x, pl.y, pl.z = 6.5, 70, 0.5

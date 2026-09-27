@@ -29,7 +29,7 @@ func swirlsSeen(pl *tracked, eid int32) []byte {
 // hideParticles shows nothing; Oozing swirls its own particle; the last
 // effect going clears the list.
 func TestEffectSwirls(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl, near := survPlayer(h), survPlayer(h)
 	near.p.eid = pl.p.eid + 50
 	players := map[int32]*tracked{pl.p.eid: pl, near.p.eid: near}

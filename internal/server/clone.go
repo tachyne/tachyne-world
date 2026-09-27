@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -42,16 +43,10 @@ type cloneReq struct {
 
 const cloneUsage = "Usage: /clone [from <dimension>] <begin> <end> [to <dimension>] <destination> [strict] [replace|masked|filtered <block>] [force|move|normal]"
 
-// parseDimension is DimensionArgument over the three dimensions the engine
-// runs.
+// parseDimension is DimensionArgument over the dimensions the engine runs.
 func parseDimension(arg string) (int, bool) {
-	switch strings.TrimPrefix(arg, "minecraft:") {
-	case "overworld":
-		return 0, true
-	case "the_nether":
-		return 1, true
-	case "the_end":
-		return 2, true
+	if d := world.DimensionByKey(arg); d != nil {
+		return d.ID, true
 	}
 	return 0, false
 }
@@ -262,8 +257,7 @@ type cloneCell struct {
 // runClone performs a parsed /clone on the hub. A non-empty string is the
 // failure line.
 func (h *hub) runClone(players map[int32]*tracked, caller *player, r cloneReq) string {
-	if (r.srcDim == 1 && h.nether == nil) || (r.srcDim == 2 && h.end == nil) ||
-		(r.dstDim == 1 && h.nether == nil) || (r.dstDim == 2 && h.end == nil) {
+	if !h.hasDim(r.srcDim) || !h.hasDim(r.dstDim) {
 		return "That position is not loaded"
 	}
 	from0 := blockPos{min(r.begin.x, r.end.x), min(r.begin.y, r.end.y), min(r.begin.z, r.end.z)}

@@ -11,7 +11,7 @@ import (
 // a click on a dark redstone ore lights it; a comparator beside a chiseled
 // bookshelf reads the slot last touched.
 func TestCarveOreAndShelfSlot(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	w := h.worldFor(0)
@@ -70,7 +70,7 @@ func TestCarveOreAndShelfSlot(t *testing.T) {
 
 // A wet sponge placed in the Nether dries out at once.
 func TestWetSpongeDriesInTheNether(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	nw := h.worldFor(dimNether)
@@ -94,7 +94,7 @@ func TestWetSpongeDriesInTheNether(t *testing.T) {
 // BucketPickup — the sponge drains it (it stays, dry) and reaches the
 // water beyond it.
 func TestSpongeDrainsWaterloggedBlocks(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	w := h.worldFor(0)

@@ -104,7 +104,7 @@ func TestBellFallsBackToTheFloor(t *testing.T) {
 // BellBlock.onProjectileHit: only a proper hit rings, and a player's shot
 // counts toward bell_ring.
 func TestBellProjectileNeedsAProperHit(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	const x, y, z = 64, 180, 64
 	shooter := &tracked{p: newPlayer(7, "archer", [16]byte{}), gamemode: gmSurvival, x: 64.5, y: 180, z: 60}

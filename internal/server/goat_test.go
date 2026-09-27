@@ -11,7 +11,7 @@ import (
 // head, charges, and the hit lands with damage and a shove; a charge into
 // stone snaps a horn off instead.
 func TestGoatRams(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -80,7 +80,7 @@ func TestGoatRams(t *testing.T) {
 // does not pick a player it cannot see through a wall, and does pick one
 // in view further than the old seven blocks.
 func TestGoatRamNeedsSight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.p.eid = 500
 	players := map[int32]*tracked{pl.p.eid: pl}

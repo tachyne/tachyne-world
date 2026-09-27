@@ -18,7 +18,7 @@ import (
 func findWell(t *testing.T) (*hub, worldgen.DesertWell) {
 	t.Helper()
 	for seed := int64(1); seed < 40; seed++ {
-		h := newHub(world.New(seed))
+		h := newTestHub(world.New(seed))
 		g := h.world.Gen()
 		for cx := -3; cx <= 3; cx++ {
 			for cz := -3; cz <= 3; cz++ {
@@ -140,7 +140,7 @@ func TestBrushingDecaysWhenLeftAlone(t *testing.T) {
 // A suspicious block nothing buried holds nothing — brushing one a player
 // placed themselves is just a slow way to make sand.
 func TestUnseededSuspiciousBlockDropsNothing(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	pos := blockPos{2000, 100, 2000}
 	h.world.SetBlock(pos.x, pos.y, pos.z, suspiciousSandBase)
 	pl := testTracked()
@@ -176,7 +176,7 @@ func TestDustedStagesMatchVanilla(t *testing.T) {
 // sand, and the brusher's own client plays it (Level.playSound(player, …)),
 // so only the others are sent it.
 func TestBrushingGravelSoundsLikeGravel(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	pos := blockPos{2, 180, 2}
 	h.world.SetBlock(pos.x, pos.y, pos.z, suspiciousGravelBase)

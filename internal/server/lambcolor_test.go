@@ -10,7 +10,7 @@ import (
 // orange, blue and red purple, white and black gray; a pair with no mix
 // takes one parent's colour.
 func TestLambColorMixes(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	col := func(name string) int8 {
 		for i, c := range dyeColors {
 			if c == name {
@@ -52,7 +52,7 @@ func TestLambColorMixes(t *testing.T) {
 
 // Breeding two sheep applies the mix to the lamb and announces its fleece.
 func TestLambColorOnBreed(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	a := h.spawnMobIn(players, entitySheep, 0, 0, 70, 0)
 	b := h.spawnMobIn(players, entitySheep, 0, 0, 70, 1)

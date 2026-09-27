@@ -20,7 +20,7 @@ func leafAt(w *world.World, x, y, z, d int) {
 // A chain of six leaves from a log survives entirely: the far end is distance
 // 6 in vanilla but sat OUTSIDE the old radius-4 box, so it used to rot.
 func TestLeafChainWithinSixSurvives(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 500, 200, 500
 	h.world.SetBlock(x, y, z, worldgen.OakLog)
@@ -39,7 +39,7 @@ func TestLeafChainWithinSixSurvives(t *testing.T) {
 // The seventh leaf out is past vanilla's reach and rots — even though the old
 // box would have needed only a log within 4 of IT, not a connected path.
 func TestSeventhLeafDecays(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 540, 200, 540
 	h.world.SetBlock(x, y, z, worldgen.OakLog)
@@ -56,7 +56,7 @@ func TestSeventhLeafDecays(t *testing.T) {
 // The other direction the box got wrong: a leaf NEAR a log but with no leaf
 // path to it decays in vanilla — proximity through air is not attachment.
 func TestLeafNearButNotConnectedDecays(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 580, 200, 580
 	h.world.SetBlock(x, y, z, worldgen.OakLog)
@@ -71,7 +71,7 @@ func TestLeafNearButNotConnectedDecays(t *testing.T) {
 // Stripped logs and wood hold a canopy up — the LOGS tag, not just plain logs.
 // A player who strips their tree's trunk must not watch the canopy rot.
 func TestStrippedLogHoldsLeaves(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 620, 200, 620
 	lo, _ := worldgen.BlockRange("stripped_oak_log")
@@ -89,7 +89,7 @@ func TestStrippedLogHoldsLeaves(t *testing.T) {
 // behaviour — the canopy dies because its distances RISE, not because a box
 // stopped finding a log.
 func TestFellingSendsTheDecayWave(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 660, 200, 660
 	h.world.SetBlock(x, y, z, worldgen.OakLog)
@@ -121,7 +121,7 @@ func TestFellingSendsTheDecayWave(t *testing.T) {
 // this port is in that state, so this is what keeps the live world's forests
 // standing through the deploy.
 func TestStaleSevenLeafHealsInsteadOfRotting(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 700, 200, 700
 	h.world.SetBlock(x, y, z, worldgen.OakLog)

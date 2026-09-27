@@ -42,7 +42,7 @@ func TestHealthzReportsAStalledHub(t *testing.T) {
 
 // A running hub stamps the heartbeat every tick, so a live hub reads healthy.
 func TestRunningHubStampsHeartbeat(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	if h.lastTick.Load() != 0 {
 		t.Fatal("heartbeat set before the hub ran")
 	}

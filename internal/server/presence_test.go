@@ -8,7 +8,7 @@ import (
 )
 
 func TestBedDropsItem(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	drops := h.rollDrops(redBedHead) // red_bed
 	if len(drops) != 1 || drops[0].item != itemByName["red_bed"] {
 		t.Fatalf("breaking a bed should drop the bed item (1038), got %+v", drops)

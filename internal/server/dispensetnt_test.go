@@ -10,7 +10,7 @@ import (
 // A dispenser's TNT is a lit charge in the cell ahead; whatever block stood
 // there stays. It used to be cleared to air (the block-priming path).
 func TestDispensedTNTLeavesTheBlockAhead(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pos := blockPos{5, 100, 5}
 	h.world.ForceLoad(pos.x, pos.z, 1)

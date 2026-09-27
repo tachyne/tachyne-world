@@ -9,7 +9,7 @@ import (
 // (hostilePick: 1-in-20 zombies). Vanilla burns them in daylight like their
 // base zombie — verify the whole path: spawn, flag, ignition, death.
 func TestZombieVillagerBurnsInDaylight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	pl.x, pl.z = 0.5, 0.5

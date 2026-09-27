@@ -12,7 +12,7 @@ import (
 // whirlpool; flowing water never; and mining the source drops it all back
 // to water.
 func TestBubbleColumnFormsAndCollapses(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	w.SetBlock(0, 180, 0, worldgen.SoulSand)
@@ -71,7 +71,7 @@ func TestBubbleColumnFormsAndCollapses(t *testing.T) {
 
 // TestBubbleColumnBreathable: eyes in a column do not drown.
 func TestBubbleColumnBreathable(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -95,7 +95,7 @@ func TestBubbleColumnBreathable(t *testing.T) {
 // TestBubbleColumnMovesSwimmers: a fish in an updraft rises, in a whirlpool
 // it sinks (Entity.onInsideBubbleColumn).
 func TestBubbleColumnMovesSwimmers(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	for y := 170; y <= 190; y++ {

@@ -46,7 +46,7 @@ func TestVaultOminousDetection(t *testing.T) {
 // A vault pays each player exactly once, ever — that is the whole design, and
 // it is keyed on the player's UUID so it survives a relog.
 func TestVaultPaysEachPlayerOnce(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	pos := blockPos{0, 180, 0}
@@ -96,7 +96,7 @@ func TestVaultPaysEachPlayerOnce(t *testing.T) {
 
 // The wrong key (or no key) does not open it.
 func TestVaultRefusesTheWrongKey(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	pos := blockPos{0, 180, 0}

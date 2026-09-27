@@ -312,7 +312,7 @@ func TestCatalystBloomClearsAndCalibratedIsShort(t *testing.T) {
 	if calibActiveTicks != 10 || sensorActiveTicks != 30 {
 		t.Fatalf("active ticks: calibrated %d plain %d", calibActiveTicks, sensorActiveTicks)
 	}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pos := simPos{blockPos: blockPos{4, 180, 4}}
 	h.world.SetBlock(pos.x, pos.y, pos.z, catalystWith(true))
@@ -400,9 +400,9 @@ func TestCatalystSpareBuiltBlocks(t *testing.T) {
 // A sensor built in the Nether hears a mob walking there, as one in the
 // overworld does.
 func TestNetherSensorHearsFootsteps(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nw, _ := world.NewNether(1, nil)
-	h.nether = nw
+	h.dims.set(dimNether, nw)
 	nw.ForceLoad(0, 0, 2)
 	players := map[int32]*tracked{}
 	const x, y, z = 4, 100, 4
@@ -436,7 +436,7 @@ func TestNetherSensorHearsFootsteps(t *testing.T) {
 // blocks sideways, on a full-topped block with an open cell over it; with no
 // ground in range, nowhere.
 func TestWardenSpawnSpot(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	w := h.world
 	const y = 200
@@ -471,7 +471,7 @@ func TestWardenSpawnSpot(t *testing.T) {
 // #shrieker_can_listen: a shrieker ignores an ordinary vibration beside it
 // and answers only a sculk sensor's clicking.
 func TestShriekerHearsOnlyTendrils(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	pos := simPos{blockPos: blockPos{4, 180, 4}}
 	shrieker := shriekerWith(worldgen.BlockBase("sculk_shrieker"), false)

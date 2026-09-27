@@ -11,7 +11,7 @@ import (
 // its raid never, a block-carrying enderman never, a leashed or riding
 // mob never; a plain zombie beyond 128 blocks at once.
 func TestDespawnRules(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 64, 0.5
 	players := map[int32]*tracked{1: pl}

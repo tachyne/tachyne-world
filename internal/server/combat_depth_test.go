@@ -8,7 +8,7 @@ import (
 
 // combatSetup: an attacker at melee range of a fresh zombie, clock live.
 func combatSetup() (*hub, *tracked, map[int32]*tracked, *mob) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
 	players := map[int32]*tracked{1: pl}

@@ -42,7 +42,7 @@ func poiFloor(h *hub, cx, cz, r int) {
 // AcquirePoi(MEETING): a bell 40 blocks off (beyond the old ±16 scan) is
 // found and claimed; breaking it lets the claim go.
 func TestVillagerClaimsABellWithinFortyEight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	poiFloor(h, 20, 0, 26)
 	m := h.spawnMob(players, entityVillager, 0.5, 180, 0.5)
@@ -64,7 +64,7 @@ func TestVillagerClaimsABellWithinFortyEight(t *testing.T) {
 // A bed the villager cannot path to is not claimed, and is marked to retry
 // later rather than every run.
 func TestUnreachableBedIsNotClaimed(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	poiFloor(h, 0, 0, 12)
 	bed := blockPos{8, 180, 0}
@@ -93,7 +93,7 @@ func TestUnreachableBedIsNotClaimed(t *testing.T) {
 // SetWalkTargetFromBlockMemory: a claim the villager keeps failing to path to
 // is let go after 1200 ticks for a bed, 200 for a bell, and kept before.
 func TestUnreachableClaimIsLetGo(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	m := h.spawnMob(map[int32]*tracked{}, entityVillager, 0.5, 180, 0.5)
 	m.bed, m.home, m.meet = blockPos{10, 180, 0}, blockPos{10, 180, 0}, blockPos{12, 180, 0}
 	m.pathReached = false
@@ -131,7 +131,7 @@ func TestUnreachableClaimIsLetGo(t *testing.T) {
 // stairs (search3D) and reaches it. The column search saw only one height
 // per column and could not tell the floors apart.
 func TestVillagerPlansUpstairsToItsBed(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	x, y, z := 5000, 180, 5000
 	h.world.ForceLoad(x, z, 2)
 	for dx := -2; dx <= 10; dx++ { // ground floor, cleared above

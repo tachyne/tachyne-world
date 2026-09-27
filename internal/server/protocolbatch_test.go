@@ -19,7 +19,7 @@ func runHubCmds(h *hub, players map[int32]*tracked) {
 // The gateway's keep-alive latency reaches the tab list: in the join entry
 // and in the 600-tick UPDATE_LATENCY for everyone.
 func TestLatencyReachesTabList(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	r := &remotePlayer{s: &Server{hub: h}, p: pl.p, gm: -1}
@@ -43,7 +43,7 @@ func TestLatencyReachesTabList(t *testing.T) {
 // The 26.x gamerule editor asks for values; an operator gets them all by
 // their canonical names, anyone else nothing.
 func TestGameRuleEditorValues(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.rules.KeepInventory = true
@@ -73,7 +73,7 @@ func TestGameRuleEditorValues(t *testing.T) {
 
 // ServerPlayer.onEffectAdded sends the blend bit; onEffectUpdated does not.
 func TestNewEffectBlendsIn(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	drainOut(pl.p)

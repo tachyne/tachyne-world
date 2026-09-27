@@ -9,7 +9,7 @@ import (
 // TestIllusionerSpells: on hard, an illusioner with a target first casts
 // its mirror (invisible after the warm-up), then blinds the target once.
 func TestIllusionerSpells(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

@@ -14,7 +14,7 @@ func TestSnifferEggHatches(t *testing.T) {
 	if !snifferEggOK {
 		t.Skip("no sniffer egg block")
 	}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pos := blockPos{4, 70, 4}
 	h.world.SetBlock(pos.x, pos.y, pos.z, snifferEggLo)
@@ -65,7 +65,7 @@ func TestMossSpeedsTheSnifferEgg(t *testing.T) {
 	if !snifferEggOK {
 		t.Skip("no sniffer egg block")
 	}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	plain, mossy := blockPos{4, 70, 4}, blockPos{8, 70, 8}
 	h.world.SetBlock(mossy.x, mossy.y-1, mossy.z, mossBlockState)
 
@@ -87,7 +87,7 @@ func TestMossSpeedsTheSnifferEgg(t *testing.T) {
 
 // Cut the base of a chorus tree and the whole thing comes down.
 func TestChorusPlantFallsWithoutSupport(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	plant := worldgen.BlockBase("chorus_plant")
 
@@ -120,7 +120,7 @@ func TestBoostedSnifferEggSparkles(t *testing.T) {
 	if !snifferEggOK {
 		t.Skip("no sniffer egg block")
 	}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 8.5, 70, 8.5
 	players := map[int32]*tracked{pl.p.eid: pl}

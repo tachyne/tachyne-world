@@ -11,7 +11,7 @@ import (
 // the surface, to just under sea level; by day it stays down.
 func TestDrownedSwimsUpAtNight(t *testing.T) {
 	for _, night := range []bool{true, false} {
-		h := newHub(world.New(5))
+		h := newTestHub(world.New(5))
 		players := map[int32]*tracked{}
 		h.playersRef = players
 		h.world.ForceLoad(1, 1, 1)

@@ -10,7 +10,7 @@ import (
 // LevelChunk.isTicking: a lit furnace past the world border does not cook
 // (block entities stop ticking there), while one inside does.
 func TestBlockEntitiesStopPastTheBorder(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.border.Size = 64 // centred on 0,0: the wall is 32 out
 	h.publishBorder()

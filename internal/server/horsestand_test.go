@@ -11,7 +11,7 @@ import (
 // STANDING flag goes out and comes back down; a llama never rears; an
 // angered horse rears at once (makeMad).
 func TestHorseRears(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	players := map[int32]*tracked{}
 	horse := h.spawnMob(players, entityHorse, 0.5, 180, 0.5)
@@ -48,7 +48,7 @@ func TestHorseRears(t *testing.T) {
 // untamed one keeps it shut (AbstractHorse.openCustomInventoryScreen).
 func TestOpenInventoryWhileRiding(t *testing.T) {
 	for _, tamed := range []bool{true, false} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		pl := survPlayer(h)
 		players := map[int32]*tracked{pl.p.eid: pl}
 		h.playersRef = players

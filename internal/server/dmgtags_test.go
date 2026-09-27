@@ -11,7 +11,7 @@ import (
 // Frost Walker against #burn_from_stepping, and the dragon, which only
 // #always_hurts_ender_dragons (or a player) can harm.
 func TestDamageTagRules(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

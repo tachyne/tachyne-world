@@ -12,7 +12,7 @@ import (
 // SPAWN_REINFORCEMENTS_CHANCE summons a same-species backup targeting the
 // attacker, and both lose 0.05 charge.
 func TestZombieReinforcements(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.Difficulty = diffHard
 	pl := testTracked()
 	pl.gamemode = gmSurvival

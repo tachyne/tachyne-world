@@ -10,7 +10,7 @@ import (
 // Using or hitting the dragon egg moves it to an empty cell within vanilla's
 // reach; a cell that is not an egg does nothing.
 func TestDragonEggBlinks(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[pl.p.eid] = pl

@@ -13,7 +13,7 @@ import (
 // stalled whole ticks (and most of the test suite's time).
 func TestHubLeavesUnloadedChunksAlone(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 5000.5, 120, 5000.5 // nothing about here is loaded
 	players := map[int32]*tracked{1: pl}
@@ -59,7 +59,7 @@ func TestHubLeavesUnloadedChunksAlone(t *testing.T) {
 // boot take a second and a half.
 func TestHivesTickOnlyInLoadedChunks(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	far := blockPos{8000, 90, 8000}
 	h.hives = map[simPos][]hiveOccupant{{blockPos: far}: {{SecsLeft: 50}}}

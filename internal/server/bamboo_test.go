@@ -37,7 +37,7 @@ func TestBambooStateLayout(t *testing.T) {
 
 // A lit stalk grows upward, and stops at the 16-segment cap.
 func TestBambooGrowsAndStopsAtMaxHeight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 200, 100, 200
 
@@ -69,7 +69,7 @@ func TestBambooGrowsAndStopsAtMaxHeight(t *testing.T) {
 
 // Bamboo needs light 9 above it, like the other lit growers.
 func TestBambooNeedsLight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 60, 40, 60 // underground
 
@@ -96,7 +96,7 @@ func TestBambooNeedsLight(t *testing.T) {
 
 // A capped segment (stage 1) is the top of the stalk and must not grow.
 func TestCappedBambooDoesNotGrow(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 220, 100, 220
 
@@ -115,7 +115,7 @@ func TestCappedBambooDoesNotGrow(t *testing.T) {
 
 // Mushrooms spread to nearby dark ground, and stop once crowded.
 func TestMushroomSpreadsInTheDark(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 40, 40, 40
 
@@ -149,7 +149,7 @@ func TestMushroomSpreadsInTheDark(t *testing.T) {
 
 // The population cap stops a mushroom carpet: five already nearby means no more.
 func TestMushroomStopsWhenCrowded(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 80, 40, 80
 	shroom := worldgen.BlockBase("brown_mushroom")

@@ -70,7 +70,7 @@ func TestPanicCauses(t *testing.T) {
 
 // A hurt animal runs; a burning one runs towards water.
 func TestEnvironmentalDamageStartsPanic(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	for x := -6; x <= 6; x++ {
 		for z := -6; z <= 6; z++ {
@@ -123,7 +123,7 @@ func TestEffectsPersistAndTickOutsideSurvival(t *testing.T) {
 	}
 
 	// A creative player's effects still count down.
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	back.gamemode = gmCreative
 	players := map[int32]*tracked{back.p.eid: back}
 	before := back.effects[effSpeed].left
@@ -136,7 +136,7 @@ func TestEffectsPersistAndTickOutsideSurvival(t *testing.T) {
 // A panicking cow runs to random spots within five blocks (PanicGoal), not
 // in a straight line away from whoever hit it, and prefers grass.
 func TestPanicRunsToRandomSpots(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	for x := -8; x <= 8; x++ {
 		for z := -8; z <= 8; z++ {
@@ -170,7 +170,7 @@ func TestPanicRunsToRandomSpots(t *testing.T) {
 // ArmadilloPanic: the environment unrolls a scared armadillo and sets it
 // running; a blow only rolls it up.
 func TestArmadilloPanicsAtTheEnvironment(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.world.ForceLoad(0, 0, 2)
 	m := h.spawnMob(players, entityArmadillo, 0.5, 180, 0.5)
@@ -186,7 +186,7 @@ func TestArmadilloPanicsAtTheEnvironment(t *testing.T) {
 // in open water flees through the water. Since the random-spot rewrite the
 // burning cow ran anywhere and a panicking fish froze where it was.
 func TestPanicSeeksWaterAndSwims(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	for x := -8; x <= 8; x++ {
 		for z := -8; z <= 8; z++ {
@@ -228,7 +228,7 @@ func TestPanicSeeksWaterAndSwims(t *testing.T) {
 // panicking animal on bare stone runs for the open, lit ground rather than
 // under a roof (the spot value used to be a flat zero off grass).
 func TestPanicPrefersTheLight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.dayTime.Store(6000)
 	h.world.ForceLoad(0, 0, 2)
 	for x := -8; x <= 8; x++ {

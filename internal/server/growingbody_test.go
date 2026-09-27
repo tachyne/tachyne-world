@@ -12,7 +12,7 @@ import (
 // part way down does the same, downward. A body with more of its plant
 // ahead stays body.
 func TestCutGrowingPlantGrowsANewHead(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	players := map[int32]*tracked{}
 	const x, y, z = 40, 180, 40

@@ -10,7 +10,7 @@ import (
 // A spawner block draws an empty cage until the client is told what is
 // inside it. The frame names the mob and carries BaseSpawner's ranges.
 func TestShowSpawnerNamesItsMob(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	t1 := watcher(1, 0, 10, 70, 10)
 	t2 := watcher(2, 0, 400, 70, 400) // far away
 	t3 := watcher(3, 1, 10, 70, 10)   // right there, wrong dimension
@@ -66,7 +66,7 @@ func takeEvents(t *tracked) []any {
 // empty SpawnData would tell the client to draw nothing, which is a
 // different thing from "I do not know".
 func TestShowSpawnerSkipsUnknownMobs(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	tr := watcher(1, 0, 10, 70, 10)
 	h.showSpawner(map[int32]*tracked{1: tr}, 0, blockPos{10, 70, 12}, 99999)
 	if n := len(takeEvents(tr)); n != 0 {
@@ -87,7 +87,7 @@ func TestSpawnerEntityNameIsQualified(t *testing.T) {
 // little mob's spin — the difference between a working spawner and a stalled
 // one, as far as anyone watching can tell.
 func TestSpawnerResetSendsTheBlockEvent(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	near := watcher(1, 0, 10, 70, 10)
 	far := watcher(2, 0, 400, 70, 400)
 	players := map[int32]*tracked{1: near, 2: far}

@@ -12,7 +12,7 @@ import (
 // did, a failed roll fell through to the hand-written fallback and was rolled
 // again: short grass broken by hand dropped seeds 23% of the time, not 12.5%.
 func TestEmptyRollIsNotAMissingTable(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	glass := worldgen.BlockID("glass") // drops only with Silk Touch
 	ds := h.evalBlockLoot(lootCtx{state: glass, rng: h.rng.Intn, randf: h.rng.Float64})
 	if ds == nil || len(ds) != 0 {
@@ -26,7 +26,7 @@ func TestEmptyRollIsNotAMissingTable(t *testing.T) {
 // The player-break path — real table, falling back only when there is none —
 // gives vanilla's 12.5% seed rate for short grass.
 func TestShortGrassSeedRateIsVanillas(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	const n = 200000
 	seeds := 0
 	for i := 0; i < n; i++ {
@@ -48,7 +48,7 @@ func TestShortGrassSeedRateIsVanillas(t *testing.T) {
 // A decaying leaf drops its own sapling, and only oak and dark oak drop apples.
 // The generic table this replaced gave every leaf an oak sapling.
 func TestDecayingLeavesDropTheirOwnSapling(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	count := func(leaf string) map[int32]int {
 		got := map[int32]int{}
 		for i := 0; i < 20000; i++ {
@@ -79,7 +79,7 @@ func TestDecayingLeavesDropTheirOwnSapling(t *testing.T) {
 // A wall torch, sign, banner or head drops from the standing block's table,
 // which it names itself; those used to have no table here at all.
 func TestWallVariantsUseTheStandingTable(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	for wall, want := range map[string]string{
 		"wall_torch":            "torch",
 		"oak_wall_sign":         "oak_sign",

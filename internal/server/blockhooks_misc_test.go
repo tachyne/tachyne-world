@@ -20,7 +20,7 @@ func countItems(h *hub, item int32) int {
 
 // A comparator reads a candle cake as a whole cake, lit or unlit.
 func TestCandleCakeComparatorReadsWholeCake(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pos := blockPos{0, 180, 0}
 	base := worldgen.BlockBase("red_candle_cake")
 	for _, st := range []uint32{base, base + 1} { // lit, unlit
@@ -34,7 +34,7 @@ func TestCandleCakeComparatorReadsWholeCake(t *testing.T) {
 // A ravager tramples a grown pitcher crop, both halves, and it pays out the
 // plant; without mob griefing it walks through.
 func TestRavagerTramplesPitcherCrop(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	w.ForceLoad(0, 0, 2)
@@ -94,7 +94,7 @@ func TestPlayerBreakTakesOneTurtleEgg(t *testing.T) {
 // hiveFixture puts an occupied beehive at (0,180,0) on a stone floor.
 func hiveFixture(t *testing.T) (*hub, map[int32]*tracked, blockPos) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	players := map[int32]*tracked{}
 	h.playersRef = players
@@ -164,7 +164,7 @@ func TestFireBesideHiveEmptiesIt(t *testing.T) {
 // An impact projectile breaks a chorus flower and it drops itself; a mob's
 // shot needs mob griefing, and a bottle o' enchanting is no impact projectile.
 func TestProjectileBreaksChorusFlower(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)

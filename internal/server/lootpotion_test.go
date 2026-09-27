@@ -21,7 +21,7 @@ func TestSkeletonKinDropTippedArrowsWithTheirPotion(t *testing.T) {
 		{"parched", entityParched, potWeakness},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			h := newHub(world.New(1))
+			h := newTestHub(world.New(1))
 			h.world.ForceLoad(0, 0, 1)
 			h.rules.DoMobLoot = true
 			pl := survPlayer(h)

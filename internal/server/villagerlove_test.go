@@ -17,7 +17,7 @@ func bedHeadAt(w *world.World, x, y, z int) blockPos {
 
 func villagerPair(t *testing.T) (*hub, *mob, *mob, map[int32]*tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

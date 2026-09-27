@@ -213,7 +213,7 @@ func TestChorusSurvival(t *testing.T) {
 // downward, every new vine keeping a real face; hemmed in by five vines it
 // stops.
 func TestVineSpreads(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	w := h.world

@@ -13,7 +13,7 @@ import (
 // is gone, dropped back as an item four times in five. In the Nether there
 // is no stronghold to signal, and the eye stays in the hand.
 func TestEyeOfEnderSignals(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 0.5, 100, 0.5

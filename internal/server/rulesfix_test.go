@@ -9,7 +9,7 @@ import (
 // LivingEntity.hurt's cooldown: for ten ticks after a landed blow only a
 // bigger blow lands, and only its excess; after that a blow lands in full.
 func TestDamageCooldownWindow(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.tick.Store(100)
@@ -45,7 +45,7 @@ func TestDamageCooldownWindow(t *testing.T) {
 // Unbreaking on armour spares a piece 2·lvl/(5·lvl+5) of the time — about
 // a fifth at level one — not the tool rule's half.
 func TestArmourUnbreakingRate(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	spared := 0
 	for i := 0; i < 20000; i++ {
 		if h.armourUnbreakingSpares(1) {
@@ -64,7 +64,7 @@ func TestArmourUnbreakingRate(t *testing.T) {
 // its own (tools lvl/(lvl+1)), so over many two-point events the kept total
 // averages 2/(lvl+1) a hit and single points are kept too — not all or none.
 func TestUnbreakingRollsPerPoint(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rng.Seed(7)
 	ones := 0
 	total := 0

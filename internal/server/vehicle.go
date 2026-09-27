@@ -713,7 +713,7 @@ func (h *hub) snapshotVehicles() []savedVehicle {
 func (h *hub) restoreVehicles(saved []savedVehicle) {
 	for _, sv := range saved {
 		et, ok := entityByName[sv.Etype]
-		if !ok {
+		if !ok || h.worldFor(sv.Dim) == nil {
 			continue
 		}
 		v := &vehicle{eid: h.allocEID(), dim: sv.Dim, etype: et, x: sv.X, y: sv.Y, z: sv.Z, yaw: sv.Yaw,

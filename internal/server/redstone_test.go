@@ -20,7 +20,7 @@ func stepTicks(h *hub, players map[int32]*tracked, n int) {
 
 func redSetup(t *testing.T) (*hub, *world.World, map[int32]*tracked, int, int, int) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	lx, lz := h.findLand(60, 60)
 	y := h.world.SurfaceFeet(lx, lz)

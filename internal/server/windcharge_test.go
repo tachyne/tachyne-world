@@ -10,7 +10,7 @@ import (
 // A wind charge's burst swings wooden doors (both halves), leaves iron and
 // redstone-held doors alone, flips levers and snuffs candles.
 func TestWindBurstTriggersBlocks(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	w := h.worldFor(0)

@@ -106,7 +106,7 @@ func TestPlatesFeelItemsAndIronDoorsRefuseTheHand(t *testing.T) {
 
 // A hopper under a chest still takes an item that lands in its own cell.
 func TestHopperUnderChestTakesItemInItsCell(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 1520, 180, 1520
 	clearAirBox(h.world, x, y, z, 2)

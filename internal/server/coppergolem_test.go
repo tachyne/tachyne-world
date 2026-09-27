@@ -21,7 +21,7 @@ func copperGolemCount(h *hub) int {
 // TestCopperGolemConstruction: a carved pumpkin on a copper block builds a copper
 // golem — pumpkin consumed, golem spawned where it was, copper block -> chest.
 func TestCopperGolemConstruction(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 50, 70, 50
 	h.world.SetBlock(x, y-1, z, worldgen.BlockID("weathered_copper")) // any copper block works
@@ -44,7 +44,7 @@ func TestCopperGolemConstruction(t *testing.T) {
 
 // TestCopperGolemNeedsCopperBase: a pumpkin on a non-copper block builds nothing.
 func TestCopperGolemNeedsCopperBase(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 20, 70, 20
 	h.world.SetBlock(x, y-1, z, worldgen.BlockID("iron_block"))
@@ -69,7 +69,7 @@ func spawnGolem(h *hub, players map[int32]*tracked, x, y, z float64) *mob {
 // TestCopperGolemOxidationAdvances: a due oxidation step advances one stage and
 // reschedules; the last step (→ oxidized) leaves it ready to statue.
 func TestCopperGolemOxidationAdvances(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := spawnGolem(h, players, 100.5, 70, 100.5)
 	m.oxidation, m.oxidizeAt = 0, 1 // due immediately (now >= 1 after a tick)
@@ -92,7 +92,7 @@ func TestCopperGolemOxidationAdvances(t *testing.T) {
 // TestCopperGolemBecomesStatue: an oxidized golem freezes into a statue block and
 // despawns.
 func TestCopperGolemBecomesStatue(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := spawnGolem(h, players, 30.5, 70, 30.5)
 	bx, by, bz := 30, 70, 30
@@ -110,7 +110,7 @@ func TestCopperGolemBecomesStatue(t *testing.T) {
 // TestCopperGolemWaxAndScrape: honeycomb waxes; an axe un-waxes then scrapes a
 // stage off.
 func TestCopperGolemWaxAndScrape(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := riderAt(1, 30, 70, 30)
 	players := map[int32]*tracked{1: pl}
 	m := spawnGolem(h, players, 30.9, 70, 30.9)
@@ -132,7 +132,7 @@ func TestCopperGolemWaxAndScrape(t *testing.T) {
 // TestCopperGolemSortsItems: a golem beside a copper chest (with items) and a
 // wooden chest moves the items from copper → wooden.
 func TestCopperGolemSortsItems(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	src := blockPos{10, 70, 10}
 	dst := blockPos{12, 70, 10}
@@ -170,7 +170,7 @@ func TestCopperGolemSortsItems(t *testing.T) {
 // back up, facing the way the statue faced, and costs the axe a point. A
 // statue that has oxidised keeps the axe's ordinary copper behaviour.
 func TestAxeWakesAFreshStatue(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := riderAt(1, 30.5, 70, 31.5)
 	players := map[int32]*tracked{1: pl}
 	bx, by, bz := 30, 70, 30
@@ -205,7 +205,7 @@ func TestAxeWakesAFreshStatue(t *testing.T) {
 
 // A weathered statue is not woken by an axe — it keeps copper's own rules.
 func TestAxeLeavesAWeatheredStatueToTheCopperRules(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := riderAt(1, 30.5, 70, 31.5)
 	players := map[int32]*tracked{1: pl}
 	bx, by, bz := 30, 70, 30

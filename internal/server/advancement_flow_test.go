@@ -33,7 +33,7 @@ func drainAdvFrames(pl *tracked) (frames []attachproto.AdvProgress, trees []atta
 }
 
 func TestAdvanceEatAndInventory(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	pl.adv = advState{}
@@ -84,7 +84,7 @@ func TestAdvanceEatAndInventory(t *testing.T) {
 }
 
 func TestAdvanceKillAndDimension(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	pl.adv = advState{}

@@ -54,7 +54,7 @@ func TestEveryHubEventDispatched(t *testing.T) {
 // A wind charge thrown by a player: one consumed, the gust in flight from
 // the eyes along the look, and half a second before the next.
 func TestThrowWindCharge(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 80, 0.5
 	pl.p.setHotbarSlot(0, itemWindCharge)
@@ -90,7 +90,7 @@ func TestThrowWindCharge(t *testing.T) {
 
 // The pearl is gated by its second of cooldown the same way.
 func TestPearlCooldown(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 80, 0.5
 	pl.inv.slots[0] = invStack{item: itemEnderPearl, count: 3}
@@ -110,7 +110,7 @@ func TestPearlCooldown(t *testing.T) {
 // A gust at your feet launches you: the explosion's shove, straight up from
 // the eyes at nearly the full 1.22, and nothing for someone out of reach.
 func TestWindBurstLaunchesPlayer(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 80, 0.5
 	far := testTracked()

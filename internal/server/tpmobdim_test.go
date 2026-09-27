@@ -10,7 +10,7 @@ import (
 // sent to a Nether player lands in the Nether beside them, its seat left
 // behind; and a player sent to a mob in another dimension goes there.
 func TestTeleportMobAcrossDimensions(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	me, you := survPlayer(h), survPlayer(h)
 	you.p.eid = me.p.eid + 1
 	you.p.name = "you"

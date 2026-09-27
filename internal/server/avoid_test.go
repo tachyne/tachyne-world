@@ -12,7 +12,7 @@ import (
 // other way at sprint pace and forgets its target; a creeper ignores the
 // wolf but not a cat.
 func TestSkeletonAvoidsWolf(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -57,7 +57,7 @@ func TestSkeletonAvoidsWolf(t *testing.T) {
 // the other way at vanilla's 2.2; a creative one does not; a tamed cat is
 // not shy but a wild one is.
 func TestRabbitAvoidsPlayer(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

@@ -26,7 +26,7 @@ func shaft(w *world.World, x, z, y0, y1 int, floor, fill uint32) {
 }
 
 func mobBlocksHub() (*hub, map[int32]*tracked) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	return h, players
@@ -133,7 +133,7 @@ func TestBurningMobMeltsPowderSnow(t *testing.T) {
 // inside powder snow with snow or open air above climbs out onto the top,
 // where it walks.
 func TestSnowWalkerClimbsOutOfPowderSnow(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	for x := -3; x <= 3; x++ {
 		for z := -3; z <= 3; z++ {

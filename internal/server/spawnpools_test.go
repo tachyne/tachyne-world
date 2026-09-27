@@ -52,7 +52,7 @@ func TestBiomeSpawnPools(t *testing.T) {
 // blocks creature spawns in that player's chunks and nobody else's; a chunk
 // no player is close to spawns nothing.
 func TestLocalMobCap(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	a, b := testTracked(), testTracked()
 	a.x, a.y, a.z = 0.5, 64, 0.5
 	b.x, b.y, b.z = 1000.5, 64, 0.5
@@ -112,7 +112,7 @@ func TestSpawnCosts(t *testing.T) {
 	if _, ok := spawnCostFor("minecraft:nether_wastes", entityGhast); ok {
 		t.Fatal("the nether wastes price nothing")
 	}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.spawnCharges = []pointCharge{{0, 64, 0, 0.7}}
 	if p := h.spawnPotential(2, 64, 0); p*0.7 <= 0.15 {
 		t.Fatalf("two blocks from a ghast the potential %.3f × 0.7 must exceed the 0.15 budget", p)

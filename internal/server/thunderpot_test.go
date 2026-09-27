@@ -10,7 +10,7 @@ import (
 // TestLightningIgnites: a bolt sets the player and the mob it hits alight
 // for eight seconds (Entity.thunderHit) on top of its damage.
 func TestLightningIgnites(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -29,7 +29,7 @@ func TestLightningIgnites(t *testing.T) {
 // TestComparatorPotAndHeart: a decorated pot reads its one slot's fullness;
 // a creaking heart reads its creaking's distance.
 func TestComparatorPotAndHeart(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	pot := simPos{blockPos: blockPos{0, 180, 0}}

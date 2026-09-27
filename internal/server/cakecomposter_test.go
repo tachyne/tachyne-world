@@ -10,7 +10,7 @@ import (
 // Seven bites eat a cake, a full player can't take one, and the comparator
 // counts down as it goes.
 func TestCakeIsEatenSliceBySlice(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pos := blockPos{0, 180, 0}
@@ -48,7 +48,7 @@ func TestCakeIsEatenSliceBySlice(t *testing.T) {
 
 // A candle in an untouched cake makes a candle cake; a bitten one refuses.
 func TestCandleGoesIntoAnUntouchedCake(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pos := blockPos{0, 180, 0}
@@ -77,7 +77,7 @@ func TestCandleGoesIntoAnUntouchedCake(t *testing.T) {
 
 // A composter fills, composts on its own a second later, and pays out bone meal.
 func TestComposterFillsAndPaysOut(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pos := blockPos{0, 180, 0}
@@ -138,7 +138,7 @@ func TestComposterFillsAndPaysOut(t *testing.T) {
 
 // The comparator readings vanilla gives blocks that are not containers.
 func TestComparatorReadsNonContainers(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.worldFor(0)
 	cases := []struct {
 		name  string
@@ -167,7 +167,7 @@ func TestComparatorReadsNonContainers(t *testing.T) {
 
 // A jukebox reads out which song is playing, not merely that one is.
 func TestJukeboxComparatorReadsTheSong(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pos := blockPos{0, 180, 0}
 	h.worldFor(0).SetBlock(pos.x, pos.y, pos.z, jukeboxBase)
 	if got := h.analogSignal(simPos{blockPos: pos}); got != 0 {

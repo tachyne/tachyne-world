@@ -12,7 +12,7 @@ import (
 // colour, again unpins it, the marker goes with the banner, and markers
 // survive the store.
 func TestMapBannerMarkers(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	path := filepath.Join(t.TempDir(), "maps.json")
 	h.maps = newMapStore(path)
 	pl := survPlayer(h)
@@ -72,7 +72,7 @@ func TestMapBannerMarkers(t *testing.T) {
 // it, and renaming the banner drops the marker (checkBanners compares the
 // whole MapBanner, name included).
 func TestMapBannerMarkerCarriesTheName(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.maps = newMapStore(filepath.Join(t.TempDir(), "maps.json"))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}

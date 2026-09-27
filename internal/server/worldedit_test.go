@@ -25,7 +25,7 @@ func TestParseBlockState(t *testing.T) {
 
 // FillCommand: replace, hollow, outline, keep and a replace filter.
 func TestFillModes(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	players := map[int32]*tracked{}
 	box := func(mode string, st uint32) evSetBlocks {
@@ -68,7 +68,7 @@ func TestFillModes(t *testing.T) {
 // EnchantCommand: the held item takes a supported, compatible enchantment;
 // an unsupported or conflicting one leaves it alone.
 func TestEnchantCommand(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

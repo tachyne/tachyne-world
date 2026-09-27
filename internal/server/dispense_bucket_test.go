@@ -19,7 +19,7 @@ func eastState(t *testing.T, base uint32) uint32 {
 // TestDispenserBucketEmpty guards the #56 regression: a water/lava bucket must
 // still pour its fluid (buckets are no longer placeable via BlockForItem).
 func TestDispenserBucketEmpty(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	state := eastState(t, dispenserMin)
 	pos, front := blockPos{5, 70, 5}, blockPos{6, 70, 5}
 	for _, tc := range []struct {
@@ -42,7 +42,7 @@ func TestDispenserBucketEmpty(t *testing.T) {
 }
 
 func TestDispenserBucketPickup(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	state := eastState(t, dispenserMin)
 	pos, front := blockPos{5, 70, 5}, blockPos{6, 70, 5}
 	h.world.SetBlock(pos.x, pos.y, pos.z, state)
@@ -60,7 +60,7 @@ func TestDispenserBucketPickup(t *testing.T) {
 }
 
 func TestDropperPushesToContainer(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	state := eastState(t, dropperMin)
 	pos, front := blockPos{5, 70, 5}, blockPos{6, 70, 5}
 	h.world.SetBlock(pos.x, pos.y, pos.z, state)
@@ -84,7 +84,7 @@ func TestDropperPushesToContainer(t *testing.T) {
 }
 
 func TestDropperTossesWithoutContainer(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	state := eastState(t, dropperMin)
 	pos, front := blockPos{5, 70, 5}, blockPos{6, 70, 5}
 	h.world.SetBlock(pos.x, pos.y, pos.z, state)
@@ -100,7 +100,7 @@ func TestDropperTossesWithoutContainer(t *testing.T) {
 }
 
 func TestDispenserRandomSlot(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	state := eastState(t, dispenserMin)
 	pos, front := blockPos{5, 70, 5}, blockPos{6, 70, 5}
 	// Two different items in two slots; over many fires both should be picked.

@@ -10,7 +10,7 @@ import (
 
 func golemStrollRig(t *testing.T) (*hub, map[int32]*tracked, *mob) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 3)
 	for x := -30; x <= 30; x++ {
 		for z := -30; z <= 30; z++ {

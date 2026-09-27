@@ -10,7 +10,7 @@ import (
 // trusted player is not fled, and what hurts a trusted player becomes the
 // fox's quarry.
 func TestFoxTrust(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -56,7 +56,7 @@ func TestFoxTrust(t *testing.T) {
 // (AvoidEntityGoal's and FoxPanicGoal's !isDefending), and a defending cub
 // does not trail after its parent (FoxFollowParentGoal).
 func TestFoxDefendingHoldsItsGround(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	friend := survPlayer(h)
 	u, _ := parseUUIDString(offlineUUIDString("stranger"))
 	stranger := &tracked{p: newPlayer(2, "stranger", u), gamemode: gmSurvival}

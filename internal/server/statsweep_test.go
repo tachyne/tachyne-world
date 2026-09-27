@@ -18,7 +18,7 @@ func stat(t *tracked, name string) int32 {
 // Walking, sneaking, sprinting, jumping and falling each land in their own
 // vanilla counter, in centimetres.
 func TestMovementStatisticsFamily(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := riderAt(1, 100.5, 70, 100.5)
 	players := map[int32]*tracked{1: pl}
 	h.playersRef = players
@@ -61,7 +61,7 @@ func TestMovementStatisticsFamily(t *testing.T) {
 // Damage taken is recorded in tenths after mitigation, the mitigated part as
 // resisted, and a shield's share as blocked.
 func TestDamageStatistics(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.stats = map[statKey]int32{}
 	h.hurtBy(nil, pl, 4, dtGeneric, deathCause{})
@@ -81,7 +81,7 @@ func TestDamageStatistics(t *testing.T) {
 
 // Jump Boost raises the safe fall distance by one block per level.
 func TestJumpBoostRaisesSafeFallDistance(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	h.rules.FallDamage = true
 	drop := func(blocks float64) float32 {
@@ -108,7 +108,7 @@ func TestJumpBoostRaisesSafeFallDistance(t *testing.T) {
 // The dropped and broken counters move: Q on a stack counts it, and a tool
 // that wears out counts once and snaps.
 func TestDroppedAndBrokenStats(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

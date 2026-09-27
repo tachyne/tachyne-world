@@ -9,7 +9,7 @@ import (
 
 // preyFixture is a hub with a stone floor at y=179 and no players.
 func preyFixture(t *testing.T) (*hub, map[int32]*tracked) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.world.ForceLoad(0, 0, 2)

@@ -58,7 +58,7 @@ func TestSnowAndIce(t *testing.T) {
 // past a single layer; raised, snowfall stacks layers up to it.
 func TestSnowAccumulatesToRule(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	h.playersRef = map[int32]*tracked{}
 	fx, fz, found := 0, 0, false
 	for r := 0; r < 400 && !found; r += 8 {

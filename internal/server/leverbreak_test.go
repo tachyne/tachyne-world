@@ -232,7 +232,7 @@ func TestBootSweepClearsStalePower(t *testing.T) {
 // pad cell with a lever opens a hole the sea flows into, and the lever is
 // simply washed away mid-test.
 func TestLongDustLineDecaysToNothing(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	players := map[int32]*tracked{}
 	const (

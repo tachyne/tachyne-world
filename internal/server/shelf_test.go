@@ -20,7 +20,7 @@ func shelfState(name, facing string, powered bool, part string) uint32 {
 // a powered row of three swaps its nine slots with the hotbar; the
 // comparator reads a bit per filled slot; a broken shelf drops its stacks.
 func TestWoodShelf(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	w := h.worldFor(0)
@@ -86,7 +86,7 @@ func TestWoodShelf(t *testing.T) {
 
 // Powering a shelf beside a powered one links them; unpowering unlinks.
 func TestWoodShelfChainsOnPower(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	w := h.worldFor(0)

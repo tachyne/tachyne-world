@@ -11,7 +11,7 @@ import (
 // weak long one shows the strong one, keeps the weak one beneath it, and
 // falls back to it when the strong one runs out.
 func TestMobHiddenEffectStack(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnMob(players, entityZombie, 0.5, 180, 0.5)
 	h.addMobEffect(players, m, effSpeed, activeEffect{amp: 0, left: 600})
@@ -39,7 +39,7 @@ func TestMobHiddenEffectStack(t *testing.T) {
 
 // A player's hidden stack survives a relog.
 func TestPlayerHiddenEffectSaved(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.applyEffectTicks(players, pl, effSpeed, 0, 6000)

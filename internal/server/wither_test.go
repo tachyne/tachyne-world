@@ -40,7 +40,7 @@ func TestWitherPatternBaseAndCorners(t *testing.T) {
 
 func TestWitherBuildSpawns(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	cx, cy, cz := 5, 70, 5
 	buildWitherFrame(w, cx, cy, cz)
@@ -83,7 +83,7 @@ func TestWitherInvulnerableWhileCharging(t *testing.T) {
 
 func TestWitherChargeReleases(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	m := h.spawnSpecies(players, entityWither, 0, 5.5, 70, 5.5)
 	m.health = witherHealth
@@ -98,7 +98,7 @@ func TestWitherChargeReleases(t *testing.T) {
 
 func TestNonSkullDoesNotSpawnWither(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	buildWitherFrame(w, 5, 70, 5)
 	// A non-skull placement (e.g. soul sand) must not trigger the build.
@@ -114,7 +114,7 @@ func TestNonSkullDoesNotSpawnWither(t *testing.T) {
 // that is not undead — and a head with nobody to shoot at eventually fires
 // into the scenery.
 func TestWitherSideHeadsPickVictims(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.rules.Difficulty = diffNormal
 	m := h.spawnMob(players, entityWither, 0.5, 100, 0.5)
@@ -158,7 +158,7 @@ func TestWitherSideHeadsPickVictims(t *testing.T) {
 // A blow arms the wither's block-smashing: twenty ticks later everything
 // breakable around it comes down, bedrock excepted.
 func TestWitherSmashesAfterBeingHurt(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.rules.MobGriefing = true
 	m := h.spawnMob(players, entityWither, 0.5, 100, 0.5)
@@ -189,7 +189,7 @@ func TestWitherSmashesAfterBeingHurt(t *testing.T) {
 // exercise — and it heals a health point a second from the moment its charge
 // ends, which is what makes the damage race matter.
 func TestWitherPhaseTwoAndRegen(t *testing.T) {
-	h := newHub(world.New(89))
+	h := newTestHub(world.New(89))
 	players := map[int32]*tracked{}
 	m := h.spawnMob(players, entityWither, 0, 180, 0)
 	m.health = witherHealth
@@ -241,7 +241,7 @@ func TestWitherPhaseTwoAndRegen(t *testing.T) {
 // holds every block it is allowed to break to 0.8 resistance, which is how it
 // eats through obsidian an ordinary one cannot touch.
 func TestWitherFiresBlueSkulls(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnHostileY(players, entityWither, 100.5, 70, 100.5)
 	if m == nil {
@@ -281,7 +281,7 @@ func TestWitherFiresBlueSkulls(t *testing.T) {
 // The resistance cap is what the blue skull is FOR: obsidian resists 1200 and
 // shrugs off an ordinary blast, and goes down to a blue skull.
 func TestBlueSkullBlastEatsObsidian(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.world
 	cx, cy, cz := 200, 70, 200

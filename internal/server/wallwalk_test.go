@@ -12,7 +12,7 @@ import (
 // eight deep made the step rule read a wall as a flat step, so a sheep
 // wandered into a player's tall wall and was drawn black inside it.
 func TestSheepDoesNotWalkIntoATallWall(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

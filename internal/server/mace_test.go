@@ -9,7 +9,7 @@ import (
 // maceSetup arms a survival player with a mace, high in the air and falling, and
 // returns a full-health test mob just in reach.
 func maceSetup(t *testing.T, ench enchList) (*hub, *tracked, *mob, map[int32]*tracked) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 82, 4.5
 	pl.peakY, pl.airborne, pl.sprinting = 92, true, true // fell 10 blocks; sprinting → no jump-crit

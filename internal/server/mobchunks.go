@@ -172,11 +172,7 @@ func (h *hub) reconcileEntityChunks(players map[int32]*tracked) {
 			}
 		}
 	}
-	for dim := 0; dim <= 2; dim++ {
-		w := h.worldFor(dim)
-		if w == nil || (dim != 0 && w == h.world) { // a test hub serves one world for all three
-			continue
-		}
+	for dim, w := range h.allDims() {
 		for _, c := range w.ForcedChunks() {
 			set[[3]int32{int32(dim), c[0], c[1]}] = true
 		}
@@ -186,8 +182,8 @@ func (h *hub) reconcileEntityChunks(players map[int32]*tracked) {
 
 // anyForced reports whether any dimension has a forced chunk.
 func (h *hub) anyForced() bool {
-	for dim := 0; dim <= 2; dim++ {
-		if w := h.worldFor(dim); w != nil && (dim == 0 || w != h.world) && w.ForcedCount() > 0 {
+	for _, w := range h.allDims() {
+		if w.ForcedCount() > 0 {
 			return true
 		}
 	}

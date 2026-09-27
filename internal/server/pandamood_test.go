@@ -19,7 +19,7 @@ func pandaWith(h *hub, players map[int32]*tracked, trait int32) *mob {
 // on its back and gets up again, a playful one rolls off a ledge along its
 // facing, and the flags byte carries every state.
 func TestPandaPersonalities(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	w := h.worldFor(0)

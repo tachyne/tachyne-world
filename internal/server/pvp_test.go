@@ -17,7 +17,7 @@ func pvpPair(h *hub) (*tracked, *tracked, map[int32]*tracked) {
 
 // The whole point: one player can now hurt another.
 func TestPlayersCanHurtEachOther(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	a, b, players := pvpPair(h)
 
 	if !h.attackPlayer(players, a.p.eid, b.p.eid) {
@@ -34,7 +34,7 @@ func TestPlayersCanHurtEachOther(t *testing.T) {
 
 // The guards: reach, self-harm, dimension, gamemode and the pvp rule.
 func TestPvPGuards(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	a, b, players := pvpPair(h)
 
 	check := func(name string, setup func(), wantHurt bool) {
@@ -78,7 +78,7 @@ func TestPvPGuards(t *testing.T) {
 // and yaw -90 points away from it. The previous version of this test used -90
 // and then accepted damage either way, so it could not fail.
 func TestPvPRespectsArmourAndShields(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	a, b, players := pvpPair(h)
 
 	h.attackPlayer(players, a.p.eid, b.p.eid)
@@ -110,7 +110,7 @@ func TestPvPRespectsArmourAndShields(t *testing.T) {
 // A player's arrow is PvP too: it hits, and it stops hitting when the rule is
 // off — the melee path and the bow must not disagree.
 func TestPlayerArrowsObeyThePvPRule(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	a, b, players := pvpPair(h)
 	b.y = 180
 
@@ -138,7 +138,7 @@ func TestPlayerArrowsObeyThePvPRule(t *testing.T) {
 // the victim's equipment without caring whether a mob or a player landed the
 // blow — so it has to fire in PvP exactly as it does against a mob's bite.
 func TestThornsBitesAPlayerAttacker(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	a, b, players := pvpPair(h)
 
 	swing := func() {
@@ -181,7 +181,7 @@ func TestThornsBitesAPlayerAttacker(t *testing.T) {
 // A blocked blow deals no damage, so vanilla runs no post-attack effects —
 // raising a shield must not hand the attacker a free Thorns hit.
 func TestShieldBlockSuppressesThorns(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	a, b, players := pvpPair(h)
 	for i := range b.armor {
 		b.armor[i] = invStack{item: itemByName["iron_helmet"], count: 1,
@@ -211,7 +211,7 @@ func TestShieldBlockSuppressesThorns(t *testing.T) {
 // resolves the attacker to the SHOOTER — so Thorns reaches back down the
 // arrow's flight path to the archer who loosed it.
 func TestThornsReachesTheArcher(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	a, b, players := pvpPair(h)
 	for i := range b.armor {
 		b.armor[i] = invStack{item: itemByName["iron_helmet"], count: 1,
@@ -240,7 +240,7 @@ func TestThornsReachesTheArcher(t *testing.T) {
 
 // The sweep reaches other players, not only mobs (and only with PvP on).
 func TestSweepHitsPlayers(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.PvP = true
 	att := survPlayer(h)
 	att.p.name = "Attacker"
@@ -276,7 +276,7 @@ func TestSweepHitsPlayers(t *testing.T) {
 // A falling mace blow on a player is a mace_smash (its own death message),
 // and Breach lets it through more of the victim's armour than a plain blow.
 func TestPvPMaceSmashAndBreach(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	a, b, players := pvpPair(h)
 	mace := invStack{item: itemMace, count: 1}
 	a.inv.slots[a.p.heldSlot()] = mace

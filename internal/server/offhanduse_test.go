@@ -12,7 +12,7 @@ import (
 // with the use_item path from the client's frame to the hub handler.
 func offhandUseRig(t *testing.T) (*hub, map[int32]*tracked, *tracked, *remotePlayer) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 0.5, 180, 0.5

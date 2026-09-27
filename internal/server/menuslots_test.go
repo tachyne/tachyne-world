@@ -10,7 +10,7 @@ import (
 // result slots nothing, armour slots their piece, a loom its banner, dye
 // and pattern; and a placement may not exceed the item's stack cap.
 func TestSlotRules(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	tr := testTracked()
 	one := func(name string) invStack { return invStack{item: itemByName[name], count: 1} }
 

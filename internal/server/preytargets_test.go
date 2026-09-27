@@ -9,7 +9,7 @@ import (
 
 // The target classes vanilla hangs on each species, with their selectors.
 func TestPreyClasses(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	mk := func(et int, mods ...func(*mob)) *mob {
 		// High and dry: the baby-turtle selector asks whether it is in water.
 		m := &mob{eid: int32(et) + 1000, etype: et, x: 0.5, y: 200, z: 0.5}
@@ -56,7 +56,7 @@ func TestPreyClasses(t *testing.T) {
 // With no player about, a hunter latches onto its prey and bites it — and
 // an iron golem, which nothing used to attack, is now fair game.
 func TestZombieHuntsAndBitesAnIronGolem(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	z := h.spawnMob(players, entityZombie, 100, 70, 100)
 	z.hostile = true
@@ -84,7 +84,7 @@ func TestZombieHuntsAndBitesAnIronGolem(t *testing.T) {
 // A zombie still infects a villager it kills — the special case vanilla
 // makes of that bite survives the generalisation.
 func TestZombieStillInfectsVillagers(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.Difficulty = diffHard
 	players := map[int32]*tracked{}
 	z := h.spawnMob(players, entityZombie, 200, 70, 200)
@@ -112,7 +112,7 @@ func TestZombieStillInfectsVillagers(t *testing.T) {
 // mustSee) still finds a villager behind one. A zoglin reads only the
 // living entities it can see.
 func TestPreyNeedsLineOfSight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.world.ForceLoad(0, 0, 2)
 	for x := -4; x <= 10; x++ {

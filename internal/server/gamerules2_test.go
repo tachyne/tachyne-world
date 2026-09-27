@@ -10,7 +10,7 @@ import (
 // The rules added on 2026-09-18 resolve, default as vanilla's do, and each
 // reaches its field.
 func TestNewGamerulesResolveAndApply(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	r := h.rules
 	if !r.FreezeDamage || !r.SpreadVines || !r.SpawnMonsters || !r.SpawnerBlocks || !r.ForgiveDead ||
@@ -63,7 +63,7 @@ func TestExplosionDropDecay(t *testing.T) {
 		}
 		return n - before
 	}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	tnt := count(h, blastTNT, 4)
 	broken := 0
 	for x := -3; x <= 3; x++ {
@@ -76,7 +76,7 @@ func TestExplosionDropDecay(t *testing.T) {
 	if broken < 20 || tnt != broken {
 		t.Fatalf("TNT should drop every block it breaks: %d drops for %d broken", tnt, broken)
 	}
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	if mob := count(h2, blastMob, 4); mob >= tnt/2 {
 		t.Fatalf("a mob's blast should thin the drops to a quarter: %d of %d", mob, tnt)
 	}
@@ -85,7 +85,7 @@ func TestExplosionDropDecay(t *testing.T) {
 // Death forgives: a wolf angry at a player calms when the player dies, and
 // the player's pearl in flight vanishes.
 func TestDeathForgivesAndVanishesPearls(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -116,7 +116,7 @@ func TestDeathForgivesAndVanishesPearls(t *testing.T) {
 // Five more of vanilla's rules, each wired to a mechanic the engine already
 // has rather than merely accepted and ignored.
 func TestPortalProjectileAndSoundRules(t *testing.T) {
-	h := newHub(world.New(41))
+	h := newTestHub(world.New(41))
 	if !h.rules.AllowNether || !h.rules.ProjectilesBreak || !h.rules.GlobalSounds {
 		t.Error("the three booleans default on, as vanilla's do")
 	}
@@ -155,7 +155,7 @@ func TestPortalProjectileAndSoundRules(t *testing.T) {
 // listener out of earshot hears it from a point thirty-two blocks off in its
 // direction rather than from where it really happened.
 func TestGlobalSoundReachesEveryone(t *testing.T) {
-	h := newHub(world.New(43))
+	h := newTestHub(world.New(43))
 	near, far := testTracked(), testTracked()
 	far.p.eid = 99
 	near.dim, near.x, near.y, near.z = 0, 5, 70, 0
@@ -179,7 +179,7 @@ func TestGlobalSoundReachesEveryone(t *testing.T) {
 
 // /gamerule <rule>: every rule the command lists can be read back.
 func TestEveryGameruleQueries(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	for _, r := range append(append([]string{}, booleanRules...), numericRules...) {
 		if _, ok := h.ruleValueText(r); !ok {
 			t.Errorf("%s has no readable value", r)

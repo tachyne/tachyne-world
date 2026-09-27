@@ -9,7 +9,7 @@ import (
 
 // The eyeblossom follows the sun: open through the night, shut by day.
 func TestEyeblossomFollowsTheSun(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	pos := blockPos{0, 180, 0}
@@ -37,9 +37,9 @@ func TestEyeblossomFollowsTheSun(t *testing.T) {
 // dimension type that sets nether_portal_spawns_piglin: never inside the
 // Nether, and never on peaceful.
 func TestNetherPortalBreedsPiglins(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nw, _ := world.NewNether(1, nil)
-	h.nether = nw
+	h.dims.set(dimNether, nw)
 	near, nearN := testTracked(), testTracked()
 	near.x, near.y, near.z = 20.5, 180, 20.5
 	nearN.p = newPlayer(2, "nether", near.p.uuid)
@@ -89,7 +89,7 @@ func TestNetherPortalBreedsPiglins(t *testing.T) {
 // The flower switches on vanilla's day timeline, not on a window of our own:
 // the eyeblossom's open state is keyframed TRUE at 12600 and FALSE at 23401.
 func TestEyeblossomSwitchesOnTheDayTimeline(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	pos := blockPos{0, 180, 0}
@@ -121,9 +121,9 @@ func TestEyeblossomSwitchesOnTheDayTimeline(t *testing.T) {
 // The day timeline is an overworld thing, so a flower carried into the Nether
 // has no hour to follow and keeps the face it went in with.
 func TestEyeblossomStaysPutOutsideTheOverworld(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nw, _ := world.NewNether(1, nil)
-	h.nether = nw
+	h.dims.set(dimNether, nw)
 	players := map[int32]*tracked{}
 	pos := blockPos{0, 80, 0}
 
@@ -141,7 +141,7 @@ func TestEyeblossomStaysPutOutsideTheOverworld(t *testing.T) {
 // eyeblossom still wearing the old face within three blocks across and two up
 // or down, at a delay drawn from how far away it is. A garden turns in a wave.
 func TestEyeblossomWakesItsNeighbours(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.dayTime.Store(paleNightStart + 10) // night: closed flowers want to open
 
@@ -189,7 +189,7 @@ func TestEyeblossomWakesItsNeighbours(t *testing.T) {
 // A potted eyeblossom keeps the same hours, on its own: it switches with the
 // long sound and neither starts a wave nor joins one.
 func TestPottedEyeblossomKeepsTheHours(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.dayTime.Store(paleNightStart + 10) // night
 

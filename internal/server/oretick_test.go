@@ -11,7 +11,7 @@ import (
 // opaque block reverts to netherrack.
 
 func TestLitRedstoneOreGoesDark(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 
 	for _, c := range []struct{ lit, dark uint32 }{
@@ -32,7 +32,7 @@ func TestLitRedstoneOreGoesDark(t *testing.T) {
 // Dark ore is claimed (so it doesn't fall through to another handler) but must
 // not change.
 func TestDarkRedstoneOreStaysDark(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 30, 40, 30
 
@@ -46,7 +46,7 @@ func TestDarkRedstoneOreStaysDark(t *testing.T) {
 }
 
 func TestCoveredNyliumRevertsToNetherrack(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 
 	for i, name := range []string{"crimson_nylium", "warped_nylium"} {
@@ -63,7 +63,7 @@ func TestCoveredNyliumRevertsToNetherrack(t *testing.T) {
 }
 
 func TestUncoveredNyliumSurvives(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 
 	st := worldgen.BlockID("crimson_nylium")

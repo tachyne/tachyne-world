@@ -11,7 +11,7 @@ import (
 // after you for three seconds out of sight (fifteen once you hit it) and
 // then gives up.
 func TestHostilesHuntBySight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

@@ -46,7 +46,7 @@ func TestIronTrapdoorClickPlacesAgainstIt(t *testing.T) {
 // ChestBlock.useWithoutItem for a pair: the open_chest statistic, as a single
 // chest gives.
 func TestDoubleChestOpenAwardsStat(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	pl := testTracked()
@@ -65,7 +65,7 @@ func TestDoubleChestOpenAwardsStat(t *testing.T) {
 // ChiseledBookShelfBlock: whatever is in hand, a click on an occupied slot
 // takes the book (TRY_WITH_EMPTY_HAND → useWithoutItem).
 func TestShelfGivesBookWhateverIsHeld(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	pl := testTracked()
@@ -114,7 +114,7 @@ func TestShelfSideClickPlaces(t *testing.T) {
 // ComparatorBlock.getInputSignal: through a conductor, an item frame hung on
 // its far face is read (rotation % 8 + 1).
 func TestComparatorReadsItemFrameThroughBlock(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	comp := withProps(t, comparatorMin, map[string]string{"facing": "north", "mode": "compare"})
@@ -180,7 +180,7 @@ func TestHeartOutputTellsComparator(t *testing.T) {
 // trample, a breached door) shows its break to those near and sends sculk a
 // BLOCK_DESTROY.
 func TestBreakBlockDropShowsTheBreak(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	pl := testTracked()
@@ -205,7 +205,7 @@ func TestBreakBlockDropShowsTheBreak(t *testing.T) {
 // FireBlock.tick: #infiniburn_overworld is netherrack AND magma blocks —
 // a fire on magma with nothing to burn never goes out.
 func TestFireOnMagmaBurnsForever(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 3.5, 180, 3.5
 	players := map[int32]*tracked{1: pl}
@@ -223,7 +223,7 @@ func TestFireOnMagmaBurnsForever(t *testing.T) {
 // FireBlock.tick eats the blocks around it whatever mob_griefing says (the
 // rule is about mobs); only fire_spread_radius_around_player governs fire.
 func TestFireBurnsBlocksWithoutMobGriefing(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 100.5, 180, 100.5
 	players := map[int32]*tracked{1: pl}
@@ -248,7 +248,7 @@ func TestFireBurnsBlocksWithoutMobGriefing(t *testing.T) {
 // BaseFireBlock.onPlace: any fire that appears inside an empty obsidian
 // frame in the overworld lights the portal — not only flint and steel.
 func TestFireInFrameLightsPortal(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	w := h.world
@@ -277,7 +277,7 @@ func TestFireInFrameLightsPortal(t *testing.T) {
 // nothing).
 func sculkHears(t *testing.T, act func(h *hub, players map[int32]*tracked, pl *tracked)) int {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 7.5, 180, 7.5
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -317,7 +317,7 @@ func TestSculkHearsACandleSnuffed(t *testing.T) {
 // 26.3 #maintains_farmland holds the fence gates too: dry farmland under a
 // gate stays tilled.
 func TestFenceGateKeepsFarmland(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.world
 	for dx := -5; dx <= 5; dx++ {
@@ -359,7 +359,7 @@ func TestPathRevertIsHeardAndLifts(t *testing.T) {
 // EnderChestBlock.useWithoutItem awards open_enderchest only when the chest
 // opens: a conductor on its lid refuses the open and the statistic.
 func TestEnderChestStatOnlyWhenItOpens(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	pl := survPlayer(h)
@@ -454,7 +454,7 @@ func TestLecternBookPlacedIsHeard(t *testing.T) {
 // SculkSensorBlock.tick: a sensor going from cooldown to inactive plays the
 // clicking-stop sound (not when waterlogged).
 func TestSensorClickingStops(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 7.5, 180, 7.5
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -476,7 +476,7 @@ func TestSensorClickingStops(t *testing.T) {
 // TntBlock.neighborChanged → prime: with tnt_explodes off prime fails and
 // the powered TNT block stays where it is.
 func TestPoweredTNTStaysWhenTNTCannotExplode(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.rules.TNTExplodes = false
 	h.world.SetBlock(0, 180, 0, worldgen.BlockBase("tnt"))
@@ -513,7 +513,7 @@ func TestSculkHearsAHookAttach(t *testing.T) {
 // WeatheringCopperDoorBlock.randomTick ages the LOWER half only, and the
 // upper half follows it, so the two never end on different stages.
 func TestCopperDoorAgesAsOne(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	w := h.world
@@ -542,7 +542,7 @@ func TestCopperDoorAgesAsOne(t *testing.T) {
 // WeatheringCopperChestBlock.randomTick: a copper chest someone has open
 // does not age.
 func TestOpenCopperChestDoesNotAge(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	h.playersRef = players
@@ -574,12 +574,12 @@ func TestSculkHearsAnEmptyDispenser(t *testing.T) {
 // A live world write (a bucket, a lectern, a jukebox…) in the Nether is a
 // shape update a Nether observer sees, as any block change is.
 func TestNetherObserverSeesLiveWrites(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nw, err := world.NewNether(1, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	h.nether = nw
+	h.dims.set(dimNether, nw)
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	nw.ForceLoad(0, 0, 1)
@@ -598,7 +598,7 @@ func TestNetherObserverSeesLiveWrites(t *testing.T) {
 // FrostedIceBlock.neighborChanged: ice that melts leaves a frosted
 // neighbour with fewer than two frosted neighbours to melt at once.
 func TestFrostedIceMeltTakesLoneNeighbour(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	a, b := blockPos{0, 180, 0}, blockPos{1, 180, 0}
@@ -614,7 +614,7 @@ func TestFrostedIceMeltTakesLoneNeighbour(t *testing.T) {
 // not a successful pull — the rest stays lying there and the hopper does
 // not start its cooldown on it.
 func TestHopperPartialTakeIsNoPull(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 1520, 180, 1520
 	clearAirBox(h.world, x, y, z, 2)
@@ -687,7 +687,7 @@ func TestShelfPowersAtOnceAndIsHeard(t *testing.T) {
 // TripWireBlock: a dropped item presses a string too, and the string stays
 // pressed until its 10-tick re-check finds it clear.
 func TestItemTripsWireForTenTicks(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	w := h.world
@@ -726,7 +726,7 @@ func TestItemTripsWireForTenTicks(t *testing.T) {
 // TripWireBlock.onPlace → updateSource: laying the missing string in a line
 // attaches the hooks at both ends, however far off they are.
 func TestLayingStringAttachesDistantHooks(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	w := h.world
@@ -796,7 +796,7 @@ func TestPlateReleasesOnItsOwnCadence(t *testing.T) {
 // closed: a box already open opens for a second player whatever is in
 // front of it.
 func TestOpenShulkerOpensForASecondPlayer(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	box := withProps(t, worldgen.BlockBase("shulker_box"), map[string]string{"facing": "up"})
@@ -816,7 +816,7 @@ func TestOpenShulkerOpensForASecondPlayer(t *testing.T) {
 // block reach plus four (eye to the sign's box, 8.5 blocks), so a second
 // player cannot take over a sign being edited from seven blocks off.
 func TestSignLockHoldsWithinEightAndAHalf(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	a := cmdSecondPlayer(players, 1, "alice")
@@ -840,7 +840,7 @@ func TestSignLockHoldsWithinEightAndAHalf(t *testing.T) {
 // SpongeBlock.neighborChanged: water that arrives beside a dry sponge by
 // itself — not by a player's hand — is drunk on the neighbour's update.
 func TestSpongeDrinksFlowingWater(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.world
 	w.SetBlock(0, 180, 0, spongeState)
@@ -854,7 +854,7 @@ func TestSpongeDrinksFlowingWater(t *testing.T) {
 // LavaFluid.randomTick: the upward search for a spot to light stops at
 // anything in #blocks_motion — a slab or glass pane, not only a full block.
 func TestLavaIgniteStoppedBySlab(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 180, 0.5
 	players := map[int32]*tracked{1: pl}
@@ -886,7 +886,7 @@ func TestLavaIgniteStoppedBySlab(t *testing.T) {
 // stay; the fire's own tick (spread, ageing, burning out) runs on its
 // schedule, so a busy neighbourhood does not make it burn faster.
 func TestFireNeighbourUpdatesDoNotTickIt(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 180, 0.5
 	players := map[int32]*tracked{1: pl}
@@ -903,7 +903,7 @@ func TestFireNeighbourUpdatesDoNotTickIt(t *testing.T) {
 
 // SoulFireBlock has no tick: on its soul block it burns for good.
 func TestSoulFireBurnsForever(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 180, 0.5
 	players := map[int32]*tracked{1: pl}
@@ -922,7 +922,7 @@ func TestSoulFireBurnsForever(t *testing.T) {
 // BaseFireBlock.entityInside: stepping into fire thaws a freezing player
 // (CLEAR_FREEZE), even with fire damage off.
 func TestFireThawsAFreezingPlayer(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	h.rules.FireDamage = false
@@ -938,12 +938,12 @@ func TestFireThawsAFreezingPlayer(t *testing.T) {
 
 // BigDripleafBlock: a signal holds a dripleaf level in any dimension.
 func TestNetherDripleafReadsNetherPower(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nw, err := world.NewNether(1, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	h.nether = nw
+	h.dims.set(dimNether, nw)
 	nw.ForceLoad(0, 0, 1)
 	nw.SetBlock(1, 100, 0, worldgen.BlockBase("redstone_block"))
 	if !h.dripleafPowered(dimNether, blockPos{0, 100, 0}) {

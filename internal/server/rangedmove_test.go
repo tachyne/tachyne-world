@@ -10,7 +10,7 @@ import (
 // its target holds its ground (BlazeAttackGoal) — neither backs away like a
 // skeleton.
 func TestWitchAndBlazeStandTheirGround(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	players := map[int32]*tracked{}
 	for _, tc := range []struct {
@@ -44,7 +44,7 @@ func TestWitchAndBlazeStandTheirGround(t *testing.T) {
 // SlimeRandomDirectionGoal: a slime with nothing to chase keeps one heading
 // for 40 to 100 ticks, hop after hop.
 func TestSlimeKeepsItsHeading(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	players := map[int32]*tracked{}
 	m := h.spawnMob(players, entitySlime, 0.5, 180, 0.5)

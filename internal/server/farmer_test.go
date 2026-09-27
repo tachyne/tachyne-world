@@ -9,7 +9,7 @@ import (
 
 func farmerSetup(t *testing.T) (*hub, *mob, map[int32]*tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

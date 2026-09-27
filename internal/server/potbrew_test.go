@@ -37,7 +37,7 @@ func TestPotsAndBrewsSurviveRestart(t *testing.T) {
 // a brew costs a charge to start and counts down, and swapping the
 // ingredient under it throws the brew away.
 func TestBrewingStandTick(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pos := simPos{dim: 0, blockPos: blockPos{6, 70, 6}}
 	h.world.ForceLoad(pos.x, pos.z, 1) // a stand brews only in a loaded chunk
@@ -88,7 +88,7 @@ func TestBrewingStandTick(t *testing.T) {
 
 // A patterned banner comes back patterned when it is broken.
 func TestBannerDropsWithItsLayers(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pos := simPos{dim: 0, blockPos: blockPos{8, 70, 8}}
 	h.lastBannerPos = pos

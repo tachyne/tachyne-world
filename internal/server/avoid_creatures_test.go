@@ -11,7 +11,7 @@ import (
 // getPosAway, with the avoider at the origin.
 func avoidPad(t *testing.T) (*hub, map[int32]*tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	for x := -18; x <= 18; x++ {
 		for z := -2; z <= 2; z++ {

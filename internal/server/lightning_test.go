@@ -11,7 +11,7 @@ import (
 // villager into a witch; a Channeling trident calls a bolt down on its
 // target under open sky in a storm, and not otherwise.
 func TestLightningTransformsAndChanneling(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	x, z := 10.5, 10.5
@@ -68,9 +68,9 @@ func TestLightningTransformsAndChanneling(t *testing.T) {
 // the level it is summoned in (only weather keeps to the overworld). In the
 // Nether it charges a creeper there, not one at the same spot overworld.
 func TestSummonedLightningInTheNether(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nw, _ := world.NewNether(1, nil)
-	h.nether = nw
+	h.dims.set(dimNether, nw)
 	nw.ForceLoad(0, 0, 1)
 	h.world.ForceLoad(0, 0, 1)
 	players := map[int32]*tracked{}

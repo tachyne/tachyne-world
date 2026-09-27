@@ -9,7 +9,7 @@ import (
 
 func tickCmdHub(t *testing.T) (*hub, *Server, map[int32]*tracked, *tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.p.eid = 500 // clear of the mob ids the hub hands out
 	players := map[int32]*tracked{pl.p.eid: pl}

@@ -11,7 +11,7 @@ import (
 // eats the block to dirt and grows its wool back; a strider off lava
 // shivers and slows, and warms up again on lava.
 func TestSheepGrazeAndStriderShiver(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -60,7 +60,7 @@ func TestSheepGrazeAndStriderShiver(t *testing.T) {
 // fern stays but the wool still grows back.
 func TestSheepEatsFernAndDryGrass(t *testing.T) {
 	for _, grief := range []bool{true, false} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		h.rules.MobGriefing = grief
 		pl := survPlayer(h)
 		players := map[int32]*tracked{pl.p.eid: pl}

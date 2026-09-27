@@ -31,7 +31,8 @@ type Server interface {
 	Mob(eid int32) (Mob, bool)
 	Mobs() []Mob
 
-	// World returns the dimension view: 0 overworld, 1 nether, 2 end.
+	// World returns the dimension view: 0 overworld, 1 nether, 2 end. A
+	// dimension the server does not run reads as air and ignores writes.
 	World(dim int) World
 
 	// SpawnMob spawns a mob of the given entity type. Returns false if

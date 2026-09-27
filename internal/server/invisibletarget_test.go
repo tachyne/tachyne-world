@@ -12,7 +12,7 @@ import (
 // head at twenty blocks (half the range) — and the invisible player in full
 // armour is back in reach (0.7 × 1).
 func TestInvisibilityHidesFromMobs(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -56,7 +56,7 @@ func TestInvisibilityHidesFromMobs(t *testing.T) {
 // at the origin and the test player standing at x on it.
 func invisPad(t *testing.T, x float64) (*hub, map[int32]*tracked, *tracked, *mob) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

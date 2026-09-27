@@ -83,7 +83,7 @@ func TestFarmland(t *testing.T) {
 // to dirt where it stands (their shared turnToDirt), instead of surviving
 // forever under somebody's chest.
 func TestTilledSoilRevertsUnderASolidBlock(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.world
 	const x, y, z = 66, 180, 66

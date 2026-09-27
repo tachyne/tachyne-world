@@ -12,7 +12,7 @@ import (
 // and sickens, honey lifts poison, and a chorus fruit moves the eater to
 // solid ground within eight blocks.
 func TestConsumeEffects(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[pl.p.eid] = pl

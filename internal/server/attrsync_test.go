@@ -14,7 +14,7 @@ import (
 // player's max health carries its effect modifier, unsyncable attributes
 // stay out, and the fingerprint only changes when something does.
 func TestAttributeFrames(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	horse := h.spawnAnimal(players, entityHorse, 3, 3)
 	h.rollHorseAttributes(horse) // the natural-spawn roll (spawnAnimal is the bare species)
@@ -38,7 +38,7 @@ func TestAttributeFrames(t *testing.T) {
 	}
 	// The roll survives a save and reload.
 	sm := toSavedMob(horse)
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	h2.reloading = true
 	back := h2.reloadMob(players, &sm)
 	if back.moveSpeed() != horse.moveSpeed() || back.jumpStrength() != horse.jumpStrength() {
@@ -79,7 +79,7 @@ func TestAttributeFrames(t *testing.T) {
 // CAMERA_DISTANCE is syncable: a ridden happy ghast pulls the camera back
 // to 8 and a giant's is 16; a mob that never set it sends nothing.
 func TestCameraDistanceSyncs(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	cam := func(m *mob) (float64, bool) {
 		for _, a := range mobAttrFrame(m).Attrs {
@@ -104,7 +104,7 @@ func TestCameraDistanceSyncs(t *testing.T) {
 // air_drag_modifier, below_name_distance, name_tag_distance) reach the
 // client once an entity carries them.
 func TestNewSyncableAttributesSync(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnSpecies(players, entityCow, 0, 0.5, 180, 0.5)
 	if m.attrs == nil {
@@ -129,7 +129,7 @@ func TestNewSyncableAttributesSync(t *testing.T) {
 // MOVEMENT_SPEED — a ridden nautilus steers by 1.0, a happy ghast by 0.05,
 // a villager reads 0.5 — while they move at the tuned step.
 func TestTunedSpeciesSyncVanillaSpeed(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	speedOf := func(m *mob) float64 {
 		for _, a := range mobAttrFrame(m).Attrs {

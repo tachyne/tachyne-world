@@ -11,7 +11,7 @@ import (
 // blocks sideways but only four up or down, and keeps one it has while it
 // stays within sixteen.
 func TestShulkerTargetSlab(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.world.ForceLoad(0, 0, 2)
@@ -38,7 +38,7 @@ func TestShulkerTargetSlab(t *testing.T) {
 // the far side of a wall, and lets one go that has been out of sight past
 // the sixty-tick memory.
 func TestShulkerNeedsToSeeItsTarget(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.world.ForceLoad(0, 0, 2)

@@ -11,7 +11,7 @@ import (
 // camelHuskFixture is an open stone pad at y=180 with a player on it.
 func camelHuskFixture(t *testing.T) (*hub, map[int32]*tracked, *tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	for x := -8; x <= 8; x++ {
 		for z := -8; z <= 8; z++ {

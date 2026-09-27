@@ -47,9 +47,9 @@ func TestLavaIgnition(t *testing.T) {
 // overworld's (LavaFluid in an ultra-warm dimension: delay 10, drop-off 1).
 func TestNetherLavaRunsFarther(t *testing.T) {
 	reach := func(dim int) (int, uint64) {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		nw, _ := world.NewNether(1, nil)
-		h.nether = nw
+		h.dims.set(dimNether, nw)
 		w := h.worldFor(dim)
 		w.ForceLoad(0, 0, 2)
 		const y = 100
@@ -102,7 +102,7 @@ func TestNetherLavaRunsFarther(t *testing.T) {
 func TestRisingLavaWaitsLonger(t *testing.T) {
 	slow, n := 0, 80
 	for i := 0; i < n; i++ {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		h.world.ForceLoad(0, 0, 1)
 		h.rng.Seed(int64(i))
 		players := map[int32]*tracked{}
@@ -144,7 +144,7 @@ func TestRisingLavaWaitsLonger(t *testing.T) {
 // ringed with banners (lit by lava, with no fire odds at all) does.
 func TestLavaIgnitesByTheBlockProperty(t *testing.T) {
 	lights := func(ring uint32) bool {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		h.world.ForceLoad(0, 0, 1)
 		pl := testTracked()
 		pl.x, pl.y, pl.z = 0.5, 180, 0.5

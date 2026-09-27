@@ -14,7 +14,7 @@ import (
 // The stats that were already on the attribute pipeline get their effects for
 // free — that is the whole payoff of the migration, so pin it.
 func TestMobEffectsRideTheAttributePipeline(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnHostile(players, entityZombie, 0, 0)
 	if m == nil {
@@ -47,7 +47,7 @@ func TestMobEffectsRideTheAttributePipeline(t *testing.T) {
 
 // Poison hurts a mob but never kills it; the undead ignore it entirely.
 func TestMobPoisonStopsAtOneAndSparesTheUndead(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 
 	cow := h.spawnMobIn(players, entityCow, 0, 0, 70, 0)
@@ -85,7 +85,7 @@ func TestMobPoisonStopsAtOneAndSparesTheUndead(t *testing.T) {
 
 // Instant Health is backwards on the undead — it harms them, and Harming heals.
 func TestInstantEffectsInvertOnTheUndead(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 
 	z := h.spawnHostile(players, entityZombie, 0, 0)
@@ -118,7 +118,7 @@ func TestInstantEffectsInvertOnTheUndead(t *testing.T) {
 
 // Resistance and Fire Resistance work on a mob the way they do on a player.
 func TestMobResistanceAndFireResistance(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnMobIn(players, entityCow, 0, 0, 70, 0)
 	if m == nil {
@@ -154,7 +154,7 @@ func TestMobResistanceAndFireResistance(t *testing.T) {
 
 // A splash potion doses the mobs in its radius, not just the players.
 func TestSplashPotionReachesMobs(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnMobIn(players, entityCow, 0, 0, 70, 0)
 	if m == nil {
@@ -171,7 +171,7 @@ func TestSplashPotionReachesMobs(t *testing.T) {
 
 // Enchanted armour a mob picked up now counts for something.
 func TestMobGearEnchantmentsCount(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	z := h.spawnHostile(players, entityZombie, 0, 0)
 	if z == nil {
@@ -205,7 +205,7 @@ func TestMobGearEnchantmentsCount(t *testing.T) {
 
 // ATTACK_SPEED had no reader, so Haste and Mining Fatigue changed nothing.
 func TestAttackSpeedChangesSwingRecovery(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -252,7 +252,7 @@ func TestWitchResistsMagicAndWitherIgnoresItsOwn(t *testing.T) {
 // DATA_HEALTH_ID reaches viewers when a mob's health changes (iron golem
 // cracks, mount hearts); a mob at full health sends nothing.
 func TestMobHealthSyncs(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -288,7 +288,7 @@ func TestMobHealthSyncs(t *testing.T) {
 // Fire Resistance on a mob (LivingEntity.hurtServer): standing in lava it
 // still catches fire, but takes none of the fire's damage.
 func TestFireResistantMobBurnsUnhurt(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	players := map[int32]*tracked{}
 	h.world.SetBlock(0, 179, 0, worldgen.Stone)
@@ -309,7 +309,7 @@ func TestFireResistantMobBurnsUnhurt(t *testing.T) {
 
 // Absorption on a mob: four extra hearts a level, spent before health.
 func TestMobAbsorptionSoaksDamage(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnMob(players, entityPig, 0.5, 180, 0.5)
 	h.applyMobEffect(players, m, effAbsorption, 1, 60) // II: 8 points

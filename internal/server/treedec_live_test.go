@@ -13,7 +13,7 @@ import (
 // what the podzol #dirt check and the propagule air rule are about.
 
 func TestPlantedMegaSprucePodzolsTheGround(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 760, 200, 760
 	grass := worldgen.BlockBase("grass_block") + 1 // snowy=false
@@ -47,7 +47,7 @@ func TestPlantedMegaSprucePodzolsTheGround(t *testing.T) {
 }
 
 func TestPlantedMangrovesHangPropagules(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	plo, phi := worldgen.BlockRange("mangrove_propagule")
 	pods := 0
@@ -94,7 +94,7 @@ func TestPlantedMangrovesHangPropagules(t *testing.T) {
 // Bone meal on an azalea bush grows the azalea tree in place at 45% — the
 // bush is lifted out for the attempt and restored when the tree refuses.
 func TestBonemealGrowsAzaleaTrees(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	azalea := worldgen.BlockBase("azalea")
 	rooted := worldgen.BlockBase("rooted_dirt")
@@ -135,7 +135,7 @@ func TestBonemealGrowsAzaleaTrees(t *testing.T) {
 // strict space rule: even a ceiling over the column refuses, and the small
 // mushroom survives every refused attempt.
 func TestBonemealGrowsHugeMushrooms(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	red := worldgen.BlockBase("red_mushroom")
 	stemLo, stemHi := worldgen.BlockRange("mushroom_stem")
@@ -190,7 +190,7 @@ func TestBonemealGrowsHugeMushrooms(t *testing.T) {
 // A freshly seeded chunk hatches the occupants of its generated bee nests —
 // two or three bees beside each nest, exactly once (the seeded gate).
 func TestSeededChunksHatchNestBees(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	nest := worldgen.BlockBase("bee_nest") + 6
 	// A nest in chunk (100,100), in the scanned surface band.
@@ -217,7 +217,7 @@ func TestSeededChunksHatchNestBees(t *testing.T) {
 // carries a nest. Away from flowers it never does.
 func TestSaplingNearFlowersGrowsANest(t *testing.T) {
 	skipHeavy(t)
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	lo, hi := worldgen.BlockRange("birch_sapling")
 	nestLo, nestHi := worldgen.BlockRange("bee_nest")

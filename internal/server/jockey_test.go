@@ -11,7 +11,7 @@ import (
 // and is not a persistent creature; a spider can spawn with a skeleton on
 // its back that stays glued to it.
 func TestJockeys(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	x, z := 10.5, 10.5
@@ -83,7 +83,7 @@ func TestJockeys(t *testing.T) {
 // A saved jockey pair comes back mounted, and a reloaded baby zombie does
 // not roll a fresh chicken.
 func TestMountsSurviveReload(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	x, z := 10.5, 10.5
@@ -96,7 +96,7 @@ func TestMountsSurviveReload(t *testing.T) {
 	if sz.Mount != chicken.eid || !sz.MountDrives || sz.EID != zombie.eid || !sc.Jockey {
 		t.Fatalf("saved rider %+v", sz)
 	}
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	h2.reloading = true
 	byOld := map[int32]*mob{}
 	var riders []*mob
@@ -115,7 +115,7 @@ func TestMountsSurviveReload(t *testing.T) {
 		t.Errorf("relink: zombie.mount=%d chicken.rider=%d drives=%v jockey=%v", z2.mount, c2.mobRider, z2.mountDrives, c2.jockey)
 	}
 	// Reloading many baby zombies must not spawn chickens.
-	h3 := newHub(world.New(1))
+	h3 := newTestHub(world.New(1))
 	h3.reloading = true
 	for i := 0; i < 200; i++ {
 		sm := toSavedMob(zombie)
@@ -134,7 +134,7 @@ func TestMountsSurviveReload(t *testing.T) {
 // zombie nautilus half the time, and drives it; unarmed and baby drowned
 // never do.
 func TestDrownedSpawnsOnZombieNautilus(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.world.ForceLoad(0, 0, 2)
 	x, z := 0, 0

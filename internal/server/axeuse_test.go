@@ -10,7 +10,7 @@ import (
 // axeHub is a hub with one survival player standing beside (10,70,10).
 func axeHub(t *testing.T) (*hub, *tracked, map[int32]*tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := riderAt(1, 11.5, 70, 10.5)
 	pl.adv = advState{}
 	players := map[int32]*tracked{1: pl}

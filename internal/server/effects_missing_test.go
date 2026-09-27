@@ -12,7 +12,7 @@ import (
 // table IS the implementation, so these check the table drives the value.
 
 func TestEffectModifiersFollowVanillaAmounts(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -43,7 +43,7 @@ func TestEffectModifiersFollowVanillaAmounts(t *testing.T) {
 // An effect's modifiers must go when it does, or a 30-second potion is
 // permanent.
 func TestEffectModifiersLiftOnExpiry(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -65,7 +65,7 @@ func TestEffectModifiersLiftOnExpiry(t *testing.T) {
 
 // Luck and Unluck are the same attribute pulling opposite ways.
 func TestLuckAndUnluckCancel(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -84,7 +84,7 @@ func TestLuckAndUnluckCancel(t *testing.T) {
 // Invisibility and Glowing share one metadata byte with the burning flag,
 // which is why it has to be composed rather than written a bit at a time.
 func TestPlayerEntityFlagsCompose(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -107,7 +107,7 @@ func TestPlayerEntityFlagsCompose(t *testing.T) {
 
 // Conduit Power holds your breath the way Water Breathing does.
 func TestConduitPowerStopsDrowning(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -122,7 +122,7 @@ func TestConduitPowerStopsDrowning(t *testing.T) {
 
 // Saturation fills food and saturation together, and stops at the cap.
 func TestSaturationFeeds(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -143,7 +143,7 @@ func TestSaturationFeeds(t *testing.T) {
 // Bad Omen no longer drops a raid on your head the moment you reach a village,
 // and with no village in range it does nothing at all.
 func TestBadOmenNeedsAVillage(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -163,7 +163,7 @@ func TestBadOmenNeedsAVillage(t *testing.T) {
 
 // The Raid Omen is a fuse: the raid lands where it was lit, when it burns out.
 func TestRaidOmenFuseStartsTheRaid(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -185,7 +185,7 @@ func TestRaidOmenFuseStartsTheRaid(t *testing.T) {
 
 // The ominous effects fire on death, not while they run.
 func TestOozingSpillsSlimesOnDeath(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
@@ -216,7 +216,7 @@ func TestOozingSpillsSlimesOnDeath(t *testing.T) {
 
 // Weaving leaves cobwebs where you fell — on ground, never in mid-air.
 func TestWeavingStringsCobwebsOnSolidGround(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -256,7 +256,7 @@ func TestWeavingStringsCobwebsOnSolidGround(t *testing.T) {
 
 // Infested bursts silverfish out of you when you are HURT, not when you die.
 func TestInfestedSpawnsSilverfishOnHurt(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
@@ -284,7 +284,7 @@ func TestInfestedSpawnsSilverfishOnHurt(t *testing.T) {
 // needs it), and oozing's slime cap follows max_entity_cramming (a rule
 // under 1 caps nothing).
 func TestWeavingAndOozingRules(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	h.rules.MobGriefing = false
 	players := map[int32]*tracked{}

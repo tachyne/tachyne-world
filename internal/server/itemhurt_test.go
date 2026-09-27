@@ -13,7 +13,7 @@ import (
 // the items it reaches — not a nether star, and not the drops the blast
 // itself makes.
 func TestDroppedItemsCanBeDestroyed(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	h.rules.DoTileDrops = true
 	players := map[int32]*tracked{}

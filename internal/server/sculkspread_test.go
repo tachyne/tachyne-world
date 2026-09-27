@@ -13,7 +13,7 @@ import (
 func sculkPad(t *testing.T, floor func(dx, dz int) uint32) (*hub, *world.World, map[int32]*tracked, int, int, int) {
 	t.Helper()
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	x, y, z := 8, 180, 8
@@ -244,7 +244,7 @@ func TestSculkSpreaderCursorLimits(t *testing.T) {
 // until a player's view brings it back.
 func TestCatalystChargeWaitsForLoadedChunk(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	x, y, z := 4000, 180, 4000 // never loaded
 	w.SetBlock(x, y, z, catalystWith(false))

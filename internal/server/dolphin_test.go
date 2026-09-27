@@ -9,7 +9,7 @@ import (
 // A fed dolphin heads for the nearest shipwreck and forgets the errand on
 // arrival; a dolphin with no wreck in reach just eats.
 func TestDolphinLeadsToTreasure(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	g := h.worldFor(0).Gen()

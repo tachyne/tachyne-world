@@ -63,7 +63,7 @@ func (h *hub) dragonRoar(players map[int32]*tracked) {
 func (h *hub) startDragonRespawn(players map[int32]*tracked, found []*crystal, daisY int) {
 	for dx := -2; dx <= 2; dx++ {
 		for dz := -2; dz <= 2; dz++ {
-			if h.end.At(dx, daisY, dz) == worldgen.EndPortalBlock {
+			if h.worldFor(dimEnd).At(dx, daisY, dz) == worldgen.EndPortalBlock {
 				h.setBlockIn(players, 2, blockPos{dx, daisY, dz}, worldgen.Bedrock)
 			}
 		}

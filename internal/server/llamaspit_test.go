@@ -12,7 +12,7 @@ import (
 // floor at y=179, in open air.
 func spitRig(t *testing.T) (*hub, map[int32]*tracked, *tracked, *mob) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	h.arrows = map[int32]*arrowEntity{}
 	for x := -3; x <= 3; x++ {

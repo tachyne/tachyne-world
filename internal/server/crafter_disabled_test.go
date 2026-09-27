@@ -69,7 +69,7 @@ func TestCrafterComparator(t *testing.T) {
 // TestCrafterSlotToggle — onSlotState disables an EMPTY grid slot but refuses a
 // filled one (vanilla only toggles empty slots).
 func TestCrafterSlotToggle(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pos := blockPos{2, 70, 2}
 	c := &bin{slots: make([]invStack, 9)}
 	c.slots[5] = invStack{item: int32(itemByName["stone"]), count: 1}
@@ -100,7 +100,7 @@ func TestCrafterSlotToggle(t *testing.T) {
 
 // TestCrafterResultPreview — the preview slot reflects the grid's recipe.
 func TestCrafterResultPreview(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	c := &bin{slots: make([]invStack, 9)}
 	if h.crafterResult(c).item != 0 {
 		t.Fatal("empty grid must have no result")

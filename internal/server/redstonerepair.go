@@ -18,11 +18,7 @@ import "log"
 // pass over its edits and a handful of updates that change nothing.
 func (h *hub) rescheduleRedstone() {
 	wires, pistons, components := 0, 0, 0
-	for _, dim := range []int{dimOverworld, dimNether, dimEnd} { // redstone runs in every dimension
-		w := h.worldFor(dim)
-		if w == nil || (dim != dimOverworld && w == h.world) {
-			continue // no such dimension here (worldFor falls back to the overworld)
-		}
+	for dim, w := range h.allDims() { // redstone runs in every dimension
 		for _, c := range w.EditedChunks() {
 			for _, e := range w.EditedBlocks(c[0], c[1]) {
 				switch {

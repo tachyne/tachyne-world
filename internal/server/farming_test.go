@@ -166,7 +166,7 @@ func TestIsFarmlandCoversAllMoisture(t *testing.T) {
 // a waterlogged block hydrates it; isRainingAt(pos.above()) is the
 // MOTION_BLOCKING heightmap, so a glass roof keeps the rain off.
 func TestFarmlandWaterAndRainRules(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.world
 	x, y, z := 20, 180, 20

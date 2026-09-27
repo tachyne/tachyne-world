@@ -12,7 +12,7 @@ import (
 // raid it does neither.
 func TestRaidingVindicatorGetsThroughDoors(t *testing.T) {
 	run := func(inRaid bool) bool {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		h.world.ForceLoad(0, 0, 3)
 		w := h.world
 		for x := -4; x <= 40; x++ {
@@ -69,7 +69,7 @@ func TestRaidingVindicatorGetsThroughDoors(t *testing.T) {
 // raider heads for a house — a bed within forty-eight blocks — and, once
 // there, marks it visited.
 func TestRaiderRoamsTheVillageHomes(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 3)
 	poiFloor(h, 0, 0, 24)
 	pl := survPlayer(h)

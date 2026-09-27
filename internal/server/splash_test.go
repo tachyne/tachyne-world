@@ -17,7 +17,7 @@ func survivalAt(x, y, z float64) *tracked {
 // TestSplashPotionAoE — a splash potion doses every survival player in range,
 // and skips those beyond the ~4-block reach.
 func TestSplashPotionAoE(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	near := survivalAt(0.5, 70, 0.5)
 	far := survivalAt(20, 70, 20)
 	near.p.eid, far.p.eid = 1, 2
@@ -35,7 +35,7 @@ func TestSplashPotionAoE(t *testing.T) {
 // TestSplashHealingScalesWithProximity — the instant-heal amount falls off with
 // distance from the impact.
 func TestSplashHealingScalesWithProximity(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	center := survivalAt(0.5, 70, 0.5)
 	edge := survivalAt(3.4, 70, 0.5) // ~3 blocks out → small proximity
 	center.health, edge.health = 1, 1
@@ -54,7 +54,7 @@ func TestSplashHealingScalesWithProximity(t *testing.T) {
 // TestLingeringCloudDosesOverTime — a lingering potion leaves a cloud that
 // applies its effect to occupants and eventually expires.
 func TestLingeringCloudDosesOverTime(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survivalAt(0.5, 70, 0.5)
 	pl.p.eid = 1
 	players := map[int32]*tracked{1: pl}
@@ -80,7 +80,7 @@ func TestLingeringCloudDosesOverTime(t *testing.T) {
 // TestThrowSplashPotion — using a splash potion launches a shattering projectile
 // and consumes one from the slot.
 func TestThrowSplashPotion(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survivalAt(0.5, 70, 0.5)
 	pl.p.eid = 1
 	pl.inv.slots[0] = invStack{item: itemSplashPotion, count: 2, potion: potPoison}
@@ -103,7 +103,7 @@ func TestThrowSplashPotion(t *testing.T) {
 
 // TestDrinkPotionStillWorks — the potionEffects refactor keeps drinking intact.
 func TestDrinkPotionStillWorks(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survivalAt(0.5, 70, 0.5)
 	pl.p.eid = 1
 	pl.inv.slots[0] = invStack{item: itemPotion, count: 1, potion: potSwiftness}
@@ -121,7 +121,7 @@ func TestDrinkPotionStillWorks(t *testing.T) {
 // A glass bottle used beside the dragon's breath comes back full of it — the
 // only way to get the stuff, and so the only way into lingering potions.
 func TestBottleFillsFromDragonBreath(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pl.inv.slots[0] = invStack{item: int32(itemGlassBottle), count: 1}
@@ -153,7 +153,7 @@ func TestBottleFillsFromDragonBreath(t *testing.T) {
 // Away from any breath, the bottle wants a water SOURCE in the look ray —
 // flowing water will not fill it.
 func TestBottleNeedsAWaterSourceInSight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pl.x, pl.y, pl.z = 0.5, 180, 0.5

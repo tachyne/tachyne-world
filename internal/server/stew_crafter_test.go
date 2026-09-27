@@ -56,7 +56,7 @@ func TestCrafterKeepsSuspiciousStew(t *testing.T) {
 // (CrafterBlock.dispenseFrom assembles every crafting recipe; a crafter
 // used to refuse map cloning and extending and book cloning).
 func TestCrafterMakesSpecialRecipes(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	c := &bin{slots: make([]invStack, 9)}
 	// Eight arrows around a lingering potion: vanilla's tipped-arrow recipe.
 	for i := 0; i < 9; i++ {
@@ -73,7 +73,7 @@ func TestCrafterMakesSpecialRecipes(t *testing.T) {
 // grid, on loaded chunks.
 func crafterRig(t *testing.T) (*hub, simPos, uint32, *bin) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	h.maps, h.books = newMapStore(""), newBookStore("")
 	h.playersRef = map[int32]*tracked{}

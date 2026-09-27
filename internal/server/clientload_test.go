@@ -10,7 +10,7 @@ import (
 // ServerPlayer.isInvulnerableTo: a respawned player takes nothing until the
 // client reports its world loaded — or sixty ticks pass.
 func TestNothingHurtsUntilTheClientHasLoaded(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -49,7 +49,7 @@ func TestNothingHurtsUntilTheClientHasLoaded(t *testing.T) {
 // A creative player flying down with shift held does not crouch
 // (Player.updatePlayerPose).
 func TestFlyingPlayerDoesNotCrouch(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.gamemode = gmCreative
 	pl.flying = true

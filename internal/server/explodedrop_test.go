@@ -12,7 +12,7 @@ import (
 // explosion), and with TNT's drop decay off (vanilla's default) everything
 // the blast breaks drops.
 func TestExplosionDropsThroughLootTables(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 1400, 180, 1400
 	for dx := -6; dx <= 6; dx++ {
@@ -44,7 +44,7 @@ func TestExplosionDropsThroughLootTables(t *testing.T) {
 
 // A burning arrow primes TNT and lights a campfire where it strikes.
 func TestFlamingArrowPrimesTNTAndLightsCampfire(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 1420, 180, 1420
 	flatFloor(h.world, x, y, z, 3)

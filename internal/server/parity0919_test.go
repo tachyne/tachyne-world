@@ -11,7 +11,7 @@ import (
 // player in particular (it hunts whoever is nearest), and a death does not
 // buy forgiveness.
 func TestUniversalAnger(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -69,7 +69,7 @@ func TestSplashVibrationOnEnteringWater(t *testing.T) {
 
 // The mount inventory closes when the mount dies or is left behind.
 func TestMountMenuClosesWhenInvalid(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

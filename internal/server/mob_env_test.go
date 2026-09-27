@@ -8,7 +8,7 @@ import (
 )
 
 func TestMobLavaDamageAndIgnite(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnMob(players, entityCow, 200, 70, 200)
 	m.health = 50
@@ -24,7 +24,7 @@ func TestMobLavaDamageAndIgnite(t *testing.T) {
 }
 
 func TestMobFallDamageOnGroundRemoval(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnMob(players, entityCow, 210, 90, 210)
 	m.health = 50
@@ -44,7 +44,7 @@ func TestMobFallDamageOnGroundRemoval(t *testing.T) {
 }
 
 func TestLandMobDrowns(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnMob(players, entityCow, 220, 70, 220)
 	m.health = 50
@@ -72,7 +72,7 @@ func TestLandMobDrowns(t *testing.T) {
 }
 
 func TestFireImmuneMobsIgnoreLava(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnMob(players, entityStrider, 230, 70, 230)
 	m.health = 20
@@ -89,7 +89,7 @@ func TestFireImmuneMobsIgnoreLava(t *testing.T) {
 // mob fell like a zombie. Vanilla moves two families off the defaults: a fox
 // lands from five blocks unhurt, and an equine from six and then takes half.
 func TestFallToleranceByFamily(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 
 	fall := func(etype int, from float64) int {

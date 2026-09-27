@@ -11,7 +11,7 @@ import (
 // throws a snowball at a hostile within ten blocks (which hurts only a
 // blaze), and melts in the Nether.
 func TestSnowGolemTrailShootMelt(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	w := h.worldFor(0)
@@ -55,7 +55,7 @@ func TestSnowGolemTrailShootMelt(t *testing.T) {
 	// The Nether melts it.
 	g.health = 4
 	g.dim = 1
-	if h.nether == nil {
+	if !h.dims.has(dimNether) {
 		g.dim = 0
 		if !h.snowGolemMelts(g) {
 			t.Skip("no Nether here and the origin biome does not melt")
@@ -69,7 +69,7 @@ func TestSnowGolemTrailShootMelt(t *testing.T) {
 // SnowGolem's target goal reaches its FOLLOW_RANGE of 16, and RangedAttackGoal
 // walks it in at 1.25 toward a monster beyond its ten-block throw.
 func TestSnowGolemClosesIn(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	w := h.worldFor(0)

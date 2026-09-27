@@ -12,7 +12,7 @@ import (
 // stays, the lighter is untouched, and the player is told.
 func TestFlintAndSteelWearsLightingTNT(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	s := &Server{world: w, hub: h}
 	pl := testTracked()
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -57,7 +57,7 @@ func TestFlintAndSteelWearsLightingTNT(t *testing.T) {
 func TestSoulFireOverSoulBlocks(t *testing.T) {
 	w := world.New(1)
 	w.ForceLoad(0, 0, 1)
-	h := newHub(w)
+	h := newTestHub(w)
 	s := &Server{world: w, hub: h, modes: newModeStore("", gmCreative)}
 	players := map[int32]*tracked{}
 	w.SetBlock(0, 180, 0, worldgen.BlockBase("soul_soil"))
@@ -84,7 +84,7 @@ func TestSoulFireOverSoulBlocks(t *testing.T) {
 func TestBlastFireOverSoulSoil(t *testing.T) {
 	w := world.New(1)
 	w.ForceLoad(0, 0, 1)
-	h := newHub(w)
+	h := newTestHub(w)
 	var cleared []blockPos
 	for x := 0; x < 30; x++ {
 		w.SetBlock(x, 180, 0, worldgen.BlockBase("soul_soil"))
@@ -116,7 +116,7 @@ func TestBlastFireNeedsSolidRender(t *testing.T) {
 	}{{"tinted_glass", false}, {"stone", true}} {
 		w := world.New(1)
 		w.ForceLoad(0, 0, 1)
-		h := newHub(w)
+		h := newTestHub(w)
 		var cleared []blockPos
 		for x := 0; x < 30; x++ {
 			w.SetBlock(x, 180, 0, worldgen.BlockBase(tc.floor))

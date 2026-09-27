@@ -62,7 +62,7 @@ func TestEmptyEntryParticipates(t *testing.T) {
 }
 
 func TestSetDamageFraction(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	bow := itemBow
 	maxd := itemMaxDurability[bow]
 	if maxd == 0 {
@@ -81,7 +81,7 @@ func TestSetDamageFraction(t *testing.T) {
 }
 
 func TestEnchRandomOnBook(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	ctx := seededCtx(3)
 	fn := lootFn{F: "ench_random"}
 	st := ctx.applyChestFn(h, &fn, invStack{item: itemBook, count: 1})
@@ -106,7 +106,7 @@ func TestEnchRandomOnBook(t *testing.T) {
 // mutually compatible enchantments on a sword (vanilla's selection loop),
 // and across seeds more than one regularly.
 func TestEnchLevelsFillsUpToFour(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	sword := int32(itemByName["diamond_sword"])
 	if _, ok := meleeDamage[sword]; !ok {
 		t.Skip("diamond_sword not a melee weapon in this build")
@@ -144,7 +144,7 @@ func TestEnchLevelsFillsUpToFour(t *testing.T) {
 	}
 }
 func TestChestFillDeterministicAndScattered(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pos := blockPos{100, 40, -200}
 	a, b := &chest{}, &chest{}
 	h.fillChest(a, "chests/village/village_plains_house", pos)
@@ -190,7 +190,7 @@ func TestLootEnchantCapsRespectVanilla(t *testing.T) {
 		}
 	}
 	// A bow drawn from treasure must never exceed those caps over many rolls.
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	for seed := int64(0); seed < 200; seed++ {
 		ctx := seededCtx(seed)
 		fn := lootFn{F: "ench_levels", NP: &lootNP{T: "const", V: 30}}

@@ -11,7 +11,7 @@ import (
 // and a survival player standing beside the origin.
 func spawnerPad(t *testing.T) (*hub, map[int32]*tracked, *tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -186,7 +186,7 @@ func TestSetblockAndCloneSpawner(t *testing.T) {
 // dungeon pass leaves it to updatePlacedSpawners, so it never runs twice.
 func TestEggedDungeonSpawnerTicksOnce(t *testing.T) {
 	w := world.New(7)
-	h := newHub(w)
+	h := newTestHub(w)
 	d, ok := findDungeon(w)
 	if !ok {
 		t.Skip("no dungeon near origin for this seed")

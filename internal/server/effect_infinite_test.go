@@ -11,7 +11,7 @@ import (
 
 func effectCmdFixture(t *testing.T) (*hub, map[int32]*tracked, *tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	for x := -4; x <= 4; x++ {
 		for z := -4; z <= 4; z++ {

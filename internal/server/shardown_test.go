@@ -11,7 +11,7 @@ import (
 
 func TestHubOwnership(t *testing.T) {
 	// Unsharded hub (owned == nil) owns everything — the single-pod default.
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	if !h.ownedChunk(1000, -1000) || !h.ownedBlock(5, 5) || !h.ownedAt(1e6, -1e6) {
 		t.Fatal("unsharded hub must own everything")
 	}
@@ -59,7 +59,7 @@ func TestHubOwnership(t *testing.T) {
 
 func TestEIDLanes(t *testing.T) {
 	// Unsharded: plain sequential counters (legacy behavior for existing tests).
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	if e := h.allocEID(); e != 1 {
 		t.Errorf("unsharded allocEID=%d want 1", e)
 	}
@@ -69,7 +69,7 @@ func TestEIDLanes(t *testing.T) {
 
 	// Sharded as SID 3: mob/entity eids in lane 3, player eids in the player lane,
 	// and the shared counter guarantees they never collide.
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	h2.sid = 3
 	h2.shardOf = func(cx, cz int32) int32 { return 3 } // sharded (non-nil) as sid 3
 	mob := h2.allocEID()

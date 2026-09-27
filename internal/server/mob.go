@@ -666,6 +666,9 @@ func (h *hub) withSpawnCause(c plugin.SpawnReason, fn func()) {
 // spawn reason. The mob is registered BEFORE the event fires so a handler can
 // fetch its handle and adjust stats; a cancel unregisters it silently.
 func (h *hub) spawnMobCause(players map[int32]*tracked, etype, dim int, x, y, z float64, cause plugin.SpawnReason) *mob {
+	if h.worldFor(dim) == nil {
+		return nil // no such dimension here (a saved or plugin-given id)
+	}
 	eid := h.allocEID()
 	m := &mob{living: living{attrs: newMobAttributes(etype)}, eid: eid, etype: etype, dim: dim, behavior: wanderBehavior{}, health: mobHealth(etype), x: x, y: y, z: z, sx: x, sy: y, sz: z, spawnTick: h.tick.Load()}
 	binary.BigEndian.PutUint32(m.uuid[12:], uint32(eid)) // unique enough for the client

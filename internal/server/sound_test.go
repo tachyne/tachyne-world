@@ -56,7 +56,7 @@ func TestBlockBreakEventShape(t *testing.T) {
 // three-way one (growl when angry, otherwise a pant or whine one time in
 // three).
 func TestWolfSoundVariants(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 
 	for i, suffix := range wolfSoundSuffixes {
 		m := &mob{etype: entityWolf, soundSet: int8(i)}

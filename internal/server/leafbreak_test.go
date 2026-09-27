@@ -11,7 +11,7 @@ import (
 // the distance recompute through the canopy: every leaf ends at 7 and the
 // random tick then rots it.
 func TestFelledTrunkRotsCanopy(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 700, 200, 700
 	h.world.ForceLoad(x, z, 1)

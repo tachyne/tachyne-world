@@ -11,12 +11,12 @@ import (
 // boot; it used to reset to sunrise with every restart.
 func TestDayTimeSurvivesARestart(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "settings.json")
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rulesPath = path
 	h.dayTime.Store(123456)
 	h.saveRules()
 
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	h2.rulesPath = path
 	h2.loadRules()
 	if got := h2.dayTime.Load(); got != 123456 {

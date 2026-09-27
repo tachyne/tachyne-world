@@ -165,7 +165,7 @@ func TestUnlitCampfireTakesFood(t *testing.T) {
 // A campfire over a hay bale is a signal fire, and stops being one when the
 // hay goes (CampfireBlock.updateShape / getStateForPlacement).
 func TestCampfireSignalFire(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	players := map[int32]*tracked{}
 	w := h.world

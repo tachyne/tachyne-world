@@ -13,8 +13,8 @@ import (
 // entity that can use a portal, not only players — into the End onto the
 // obsidian pad at (100,50,0), and from the End to the world spawn.
 func TestEndPortalTakesMobsAndItems(t *testing.T) {
-	h := newHub(world.New(1))
-	h.end = world.New(3)
+	h := newTestHub(world.New(1))
+	h.dims.set(dimEnd, world.New(3))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -32,11 +32,11 @@ func TestEndPortalTakesMobsAndItems(t *testing.T) {
 	if it.dim != dimEnd {
 		t.Fatalf("the stick should go through too: dim %d", it.dim)
 	}
-	if got := h.end.At(100, 48, 0); got != obsidianBlock {
+	if got := h.worldFor(dimEnd).At(100, 48, 0); got != obsidianBlock {
 		t.Fatalf("the arrival pad should be obsidian, got state %d", got)
 	}
 	// And back out of the End to the world spawn.
-	h.end.SetBlock(100, 50, 0, worldgen.EndPortalBlock)
+	h.worldFor(dimEnd).SetBlock(100, 50, 0, worldgen.EndPortalBlock)
 	cow.portalCool = 0
 	h.updateEndPortalEntities(players)
 	if cow.dim != dimOverworld {
@@ -50,13 +50,13 @@ func TestEndPortalTakesMobsAndItems(t *testing.T) {
 // client asks to respawn; a Bedrock player, whose gateway has no credits,
 // goes straight home.
 func TestFirstEndExitRollsTheCredits(t *testing.T) {
-	h := newHub(world.New(1))
-	h.end = world.New(3)
+	h := newTestHub(world.New(1))
+	h.dims.set(dimEnd, world.New(3))
 	pl := survPlayer(h)
 	pl.dim = dimEnd
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
-	h.end.SetBlock(0, 60, 0, worldgen.EndPortalBlock)
+	h.worldFor(dimEnd).SetBlock(0, 60, 0, worldgen.EndPortalBlock)
 	pl.x, pl.y, pl.z = 0.5, 60, 0.5
 	pl.p.pendingDim.Store(-1)
 	drainOut(pl.p)

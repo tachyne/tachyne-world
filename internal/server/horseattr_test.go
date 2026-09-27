@@ -9,7 +9,7 @@ import (
 // Every horse was a clone: 22 health, one speed, no jump at all. Vanilla rolls
 // all three, which is the entire reason anyone breeds for a good one.
 func TestHorsesVary(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 
 	seenHP, seenSpeed, seenJump := map[int]bool{}, map[float64]bool{}, map[float64]bool{}
@@ -42,7 +42,7 @@ func TestHorsesVary(t *testing.T) {
 // their health (15–30) and nothing else; a skeleton horse rolls its jump; a
 // zombie horse rolls its own 0.5–0.7 jump and its speed.
 func TestChestedHorsesRollHealth(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	for _, et := range []int{entityDonkey, entityMule, entityLlama, entityTraderLlama} {
 		first := h.spawnSpecies(players, et, 0, 0, 70, 0)
@@ -83,7 +83,7 @@ func TestChestedHorsesRollHealth(t *testing.T) {
 
 // A foal lands between its parents rather than being rolled from scratch.
 func TestFoalInheritsFromItsParents(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	a := h.spawnSpecies(players, entityHorse, 0, 0, 70, 0)
 	b := h.spawnSpecies(players, entityHorse, 0, 1, 70, 0)

@@ -7,7 +7,7 @@ import (
 )
 
 func TestPeacefulClearsAndBlocksHostiles(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	z := h.spawnHostile(players, entityZombie, 5, 5)
@@ -30,7 +30,7 @@ func TestPeacefulClearsAndBlocksHostiles(t *testing.T) {
 }
 
 func TestKeepInventoryGamerule(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	pl.inv.slots[0] = invStack{item: 35, count: 5}
@@ -47,7 +47,7 @@ func TestKeepInventoryGamerule(t *testing.T) {
 // one by rather less than half. Peaceful erases a scaled hit entirely, and a
 // type that never scales is untouched at every difficulty.
 func TestDifficultyScalesByDamageType(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	for _, tc := range []struct {
 		name  string
 		dt    dmgType

@@ -10,7 +10,7 @@ import (
 // A warm frog eats a small magma cube for a pearlescent froglight and a
 // small slime for nothing; a big slime is not food.
 func TestFrogEatsForFroglight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.rules.DoMobLoot = true
@@ -57,7 +57,7 @@ func TestFrogEatsForFroglight(t *testing.T) {
 // Frogs do not have babies: a bred pair lays a clutch of frogspawn on the
 // water beside them, and it hatches into a handful of tadpoles.
 func TestFrogLaysSpawnThatHatches(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	// A bank at y=70 with a pool of water beside it.
 	for dx := -2; dx <= 2; dx++ {
@@ -108,7 +108,7 @@ func TestFrogLaysSpawnThatHatches(t *testing.T) {
 // entities/slime's frog branch: a small slime a frog eats leaves exactly
 // one slime ball.
 func TestFrogEatenSlimeDropsOneBall(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.rules.DoMobLoot = true

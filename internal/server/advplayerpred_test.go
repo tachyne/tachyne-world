@@ -12,7 +12,7 @@ import (
 func TestDistractPiglinNeedsNoGoldArmour(t *testing.T) {
 	const adv, crit = "minecraft:nether/distract_piglin", "distract_piglin_directly"
 	give := func(helmet string) bool {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		pl := survPlayer(h)
 		pl.adv = advState{}
 		players := map[int32]*tracked{pl.p.eid: pl}
@@ -43,7 +43,7 @@ func TestDistractPiglinNeedsNoGoldArmour(t *testing.T) {
 func TestTradeAtWorldHeightNeedsTheHeight(t *testing.T) {
 	const adv, crit = "minecraft:adventure/trade_at_world_height", "trade_at_world_height"
 	trade := func(y float64) bool {
-		h := newHub(world.New(7))
+		h := newTestHub(world.New(7))
 		pl := testTracked()
 		pl.adv = advState{}
 		players := map[int32]*tracked{1: pl}
@@ -75,7 +75,7 @@ func TestTradeAtWorldHeightNeedsTheHeight(t *testing.T) {
 // that finishes the repair does.
 func TestRepairWolfArmorNeedsAMendedCoat(t *testing.T) {
 	const adv, crit = "minecraft:husbandry/repair_wolf_armor", "repair_wolf_armor"
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.adv = advState{}
 	players := map[int32]*tracked{pl.p.eid: pl}

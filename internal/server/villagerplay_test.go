@@ -9,7 +9,7 @@ import (
 
 func playSetup(t *testing.T, n int) (*hub, map[int32]*tracked, []*mob) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.dayTime.Store(4000) // daytime: the children are out

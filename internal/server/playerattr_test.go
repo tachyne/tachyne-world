@@ -27,7 +27,7 @@ func TestPlayerMaxHealthStartsAtTwenty(t *testing.T) {
 // a health-boost effect (or an enchantment, or a plugin) raises the ceiling
 // instead of healing into a hard-coded 20.
 func TestRegenClampsToRaisedMaxHealth(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl

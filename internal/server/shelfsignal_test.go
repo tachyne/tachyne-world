@@ -11,7 +11,7 @@ import (
 // only a comparator reading it from behind (direction == FACING's opposite);
 // from the front or a side it gives nothing.
 func TestShelfSignalReadFromBehind(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pos := simPos{blockPos: blockPos{3, 180, 3}}
 	shelf := worldgen.BlockBase("oak_shelf")
 	info, _ := worldgen.InfoForState(shelf)

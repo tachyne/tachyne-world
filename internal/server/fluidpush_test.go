@@ -12,7 +12,7 @@ import (
 // current was applied in itemphys.go and nowhere else. Entity.updateFluidHeight
 // AndDoFluidPushing runs for every entity in the fluid.
 func TestACurrentCarriesAMob(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	y := 180
 	// A one-cell-wide channel running east, with a source at the west end so
@@ -45,7 +45,7 @@ func TestACurrentCarriesAMob(t *testing.T) {
 
 // Still water and dry land move nothing.
 func TestStillWaterPushesNothing(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	y := 180
 	for x := -1; x <= 1; x++ {
@@ -70,7 +70,7 @@ func TestStillWaterPushesNothing(t *testing.T) {
 // Lava has a current too (0.0023 a tick outside the Nether), and a fish is
 // never pushed (isPushedByFluid).
 func TestLavaCurrentAndUnpushedSpecies(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	y := 180
 	for x := 0; x < 6; x++ {

@@ -8,7 +8,7 @@ import (
 )
 
 func TestSkeletonShootsAndArrowHits(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 80, 0.5 // high in open air: no terrain in the flight path
 	players := map[int32]*tracked{1: pl}
@@ -52,7 +52,7 @@ func TestSkeletonShootsAndArrowHits(t *testing.T) {
 }
 
 func TestArrowSticksInTerrainAndExpires(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	surface := float64(h.world.SurfaceFeet(0, 0))
 	pl.x, pl.y, pl.z = 0.5, surface, 0.5
@@ -85,7 +85,7 @@ func TestArrowSticksInTerrainAndExpires(t *testing.T) {
 }
 
 func TestSkeletonKites(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	m := &mob{etype: entitySkeleton, hasTarget: true, x: 0, z: 0}
 	m.setMoveSpeed(speedFor(entitySkeleton))
 
@@ -124,7 +124,7 @@ func TestSkeletonKites(t *testing.T) {
 // AbstractSkeleton.reassessWeaponGoal: what it holds decides the goal it
 // runs — a bow keeps its distance, anything else walks in and swings.
 func TestSkeletonReassessesItsWeapon(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnHostileY(players, entitySkeleton, 0.5, 70, 0.5)
 	m.held = itemBow

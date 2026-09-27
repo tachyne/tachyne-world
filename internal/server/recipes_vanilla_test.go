@@ -77,7 +77,7 @@ func TestPaddedPatternsAreTrimmed(t *testing.T) {
 // for each cell an item its ingredient accepts — so two oak and two spruce
 // planks fill a crafting table, as vanilla's recipe placement does.
 func TestPlaceRecipeFillsFromMixedMaterials(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl

@@ -9,7 +9,7 @@ import (
 // TestRavagerStunAndRoar: a stunned ravager stands still for forty ticks,
 // then roars, hurting a player within four blocks; a bite pauses it ten.
 func TestRavagerStunAndRoar(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

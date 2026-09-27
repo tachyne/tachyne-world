@@ -11,7 +11,7 @@ import (
 // thirty-five across and ten high, and they come for YOU rather than just
 // seething where they stand.
 func TestHittingOneZombifiedPiglinAlertsThePack(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
@@ -41,7 +41,7 @@ func TestHittingOneZombifiedPiglinAlertsThePack(t *testing.T) {
 // Opening a chest a piglin considers its own turns it on you — the rule that
 // makes looting a bastion a decision rather than a stroll.
 func TestOpeningAGuardedChestAngersPiglins(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

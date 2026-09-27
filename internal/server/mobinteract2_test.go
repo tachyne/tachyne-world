@@ -11,7 +11,7 @@ import (
 // ingot mends a hurt golem; flint and steel lights a creeper; a cookie
 // kills a parrot.
 func TestOtherMobInteractions(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5

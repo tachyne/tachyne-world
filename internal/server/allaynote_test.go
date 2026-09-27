@@ -11,7 +11,7 @@ import (
 // a cake on the note block it heard earns its player "Birthday Song" in
 // the Nether too. Only an overworld delivery used to count.
 func TestAllayNoteBlockDeliveryCountsInAnyDimension(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nether := h.worldFor(dimNether)
 	nether.ForceLoad(0, 0, 1)
 	pl := survPlayer(h)
@@ -41,7 +41,7 @@ func TestAllayNoteBlockDeliveryCountsInAnyDimension(t *testing.T) {
 // It hears the jukebox's JUKEBOX_PLAY, sent once a second while the song
 // runs.
 func TestAllayDancesInAnyDimension(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nether := h.worldFor(dimNether)
 	nether.ForceLoad(0, 0, 1)
 	h.world.ForceLoad(0, 0, 1)
@@ -70,7 +70,7 @@ func TestAllayDancesInAnyDimension(t *testing.T) {
 // vibration listener's sixteen; the song's end stops the dance, and so does
 // walking ten away or the jukebox being broken (shouldStopDancing).
 func TestAllayJukeboxListener(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	players := map[int32]*tracked{}
 	h.playersRef = players

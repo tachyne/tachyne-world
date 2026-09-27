@@ -38,8 +38,9 @@ type Config struct {
 	Token      string    // shared secret gateways must present; "" = refuse all
 	Spawn      proto.Pos // fallback spawn (used when Join is nil — solo mode)
 
-	// Worlds picks the world for a dimension (0 overworld, 1 nether, 2 end);
-	// nil = World only (solo/test mode).
+	// Worlds picks the world for a dimension id (world.Dimensions), nil for
+	// one the engine does not run, whose chunks are never sent; a nil Worlds
+	// means World only (solo/test mode).
 	Worlds func(dim int32) *world.World
 
 	// BlockEntities renders a chunk's block-entity section in canonical wire
@@ -313,9 +314,7 @@ func session(c net.Conn, cfg Config) {
 	sent := map[[3]int32]bool{}
 	worldFor := func(dim int32) *world.World {
 		if cfg.Worlds != nil {
-			if w := cfg.Worlds(dim); w != nil {
-				return w
-			}
+			return cfg.Worlds(dim) // nil: a dimension the engine does not run
 		}
 		return cfg.World
 	}
@@ -334,11 +333,15 @@ func session(c net.Conn, cfg Config) {
 	for range workers {
 		go func() {
 			for cc := range wants {
+				w := worldFor(cc[0])
+				if w == nil {
+					continue // never sent: there is no such dimension to stream
+				}
 				var bes []byte
 				if cfg.BlockEntities != nil {
-					bes = cfg.BlockEntities(worldFor(cc[0]), cc[1], cc[2])
+					bes = cfg.BlockEntities(w, cc[1], cc[2])
 				}
-				b, err := buildChunk(worldFor(cc[0]), cc[0], cc[1], cc[2], bes)
+				b, err := buildChunk(w, cc[0], cc[1], cc[2], bes)
 				if err != nil {
 					log.Printf("attach %s: chunk %d,%d: %v", c.RemoteAddr(), cc[0], cc[1], err)
 					continue

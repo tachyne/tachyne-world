@@ -10,7 +10,7 @@ import (
 // (wheat → emerald, base cost 4, maxUses 12) ready to trade.
 func vTradeVillager(t *testing.T) (*hub, *tracked, *mob, map[int32]*tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	m := h.spawnMob(players, entityVillager, pl.x+1, pl.y, pl.z)
@@ -105,7 +105,7 @@ func TestRestockGating(t *testing.T) {
 // TestGolemDamageRange — golem punches deal vanilla's 7.5–21.5 (integer target
 // health sees 7..21), never the old flat 8.
 func TestGolemDamageRange(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	g := h.spawnMob(players, entityIronGolem, 0, 70, 0)
 	g.behavior = golemBehavior{}
@@ -155,7 +155,7 @@ func TestRaidRiderType(t *testing.T) {
 // TestRiderGluedToVehicle — a mounted rider tracks its vehicle and dismounts
 // when the vehicle dies.
 func TestRiderGluedToVehicle(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	rav := h.spawnMob(players, entityRavager, 10, 70, 10)
 	rider := h.spawnMob(players, entityPillager, 10, 70, 10)

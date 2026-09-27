@@ -10,7 +10,7 @@ import (
 // A magma block burns whoever stands on it — unless they are fire-resistant or
 // wearing Frost Walker boots.
 func TestMagmaBlockBurns(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -55,7 +55,7 @@ func TestMagmaBlockBurns(t *testing.T) {
 
 // A berry bush only scratches while you move through it, and only once grown.
 func TestBerryBushScratchesOnlyWhileMoving(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -93,7 +93,7 @@ func TestBerryBushScratchesOnlyWhileMoving(t *testing.T) {
 
 // A wither rose withers what stands in it, but never the undead.
 func TestWitherRoseWithers(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -145,7 +145,7 @@ func TestMobEffectImmunities(t *testing.T) {
 
 // Mobs meet these blocks too — that is what makes a hedge a defence.
 func TestBerryBushHurtsMobsButNotFoxesOrBees(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	w.SetBlock(0, 180, 0, berryBushMax)
@@ -171,7 +171,7 @@ func TestBerryBushHurtsMobsButNotFoxesOrBees(t *testing.T) {
 
 // The block probe must look at the feet, the body and the floor.
 func TestBlocksTouchingCoversFeetBodyAndFloor(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.worldFor(0)
 	stone, _ := worldgen.BlockRange("stone")
 	w.SetBlock(0, 179, 0, stone)           // floor
@@ -197,7 +197,7 @@ func TestBlocksTouchingCoversFeetBodyAndFloor(t *testing.T) {
 // Powder snow freezes a player without leather, hurts once fully frozen,
 // and thaws in the open; hay bales soften a fall to a fifth.
 func TestFreezingAndHayFall(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -256,7 +256,7 @@ func TestFreezingAndHayFall(t *testing.T) {
 // the landing costs nothing; standing on the ground or clear of the face,
 // nothing happens.
 func TestHoneyBlockSlide(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	w := h.worldFor(0)
@@ -300,7 +300,7 @@ func (h *hub) insideBoth(players map[int32]*tracked) {
 // hazard between samples. At the old one-second cadence a player crossing a
 // cactus in half a second was never looked at.
 func TestPlayerContactIsCheckedEveryTick(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{pl.p.eid: pl}
 	x, y, z := 12, 180, 12
@@ -320,7 +320,7 @@ func TestPlayerContactIsCheckedEveryTick(t *testing.T) {
 // A zombie standing on turtle eggs cracks them in time (one in a hundred a
 // tick, with mob griefing); a turtle never does. Any mob lights redstone ore.
 func TestMobsStepOnEggsAndOre(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	h.rules.MobGriefing = true
 	players := map[int32]*tracked{}

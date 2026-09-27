@@ -31,7 +31,7 @@ func litChamber(h *hub, x, y, z int, lit bool) {
 }
 
 func TestIceMeltsUnderBrightBlockLight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 40, 40, 40
 
@@ -48,7 +48,7 @@ func TestIceMeltsUnderBrightBlockLight(t *testing.T) {
 }
 
 func TestIceSurvivesInTheDark(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 60, 40, 60
 
@@ -68,7 +68,7 @@ func TestIceSurvivesInTheDark(t *testing.T) {
 
 // Daylight must NOT melt ice — it is sky light, and vanilla reads block light.
 func TestDaylightDoesNotMeltIce(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 90, 200, 90 // open sky, full sky light, no block light
 
@@ -91,7 +91,7 @@ func TestDaylightDoesNotMeltIce(t *testing.T) {
 }
 
 func TestSnowLayerMeltsAndDropsSnowballs(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 80, 40, 80
 
@@ -115,13 +115,13 @@ func TestIceEvaporatesInTheNether(t *testing.T) {
 	players := map[int32]*tracked{}
 	x, y, z := 50, 40, 50
 
-	h.nether.SetBlock(x, y, z, iceBlock)
-	h.nether.SetBlock(x+1, y, z, worldgen.BlockID("glowstone"))
+	h.worldFor(dimNether).SetBlock(x, y, z, iceBlock)
+	h.worldFor(dimNether).SetBlock(x+1, y, z, worldgen.BlockID("glowstone"))
 	if bl := h.blockLight(1, x, y, z); bl <= 11 {
 		t.Skipf("nether test setup: block light %d, need > 11", bl)
 	}
 	h.tickThaw(players, 1, x, y, z, iceBlock)
-	if got := h.nether.At(x, y, z); got != worldgen.Air {
+	if got := h.worldFor(dimNether).At(x, y, z); got != worldgen.Air {
 		t.Errorf("nether ice left state %d, want air (water evaporates)", got)
 	}
 }
@@ -130,7 +130,7 @@ func TestIceEvaporatesInTheNether(t *testing.T) {
 // light exceeds 11 less the ice's dampening of 1, so light 11 is enough; and
 // only the Nether evaporates water, so End ice becomes water.
 func TestIceMeltsAtElevenAndInTheEnd(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 40, 40, 40
 	for dx := -2; dx <= 6; dx++ {
@@ -153,14 +153,14 @@ func TestIceMeltsAtElevenAndInTheEnd(t *testing.T) {
 		t.Errorf("ice at block light 11 is state %d, want water", got)
 	}
 
-	h.end = world.New(3)
-	h.end.SetBlock(x, y, z, iceBlock)
-	h.end.SetBlock(x+1, y, z, worldgen.BlockID("glowstone"))
+	h.dims.set(dimEnd, world.New(3))
+	h.worldFor(dimEnd).SetBlock(x, y, z, iceBlock)
+	h.worldFor(dimEnd).SetBlock(x+1, y, z, worldgen.BlockID("glowstone"))
 	if bl := h.blockLight(2, x, y, z); bl <= 10 {
 		t.Skipf("End test setup: block light %d", bl)
 	}
 	h.tickThaw(players, 2, x, y, z, iceBlock)
-	if got := h.end.At(x, y, z); got != worldgen.WaterBase {
+	if got := h.worldFor(dimEnd).At(x, y, z); got != worldgen.WaterBase {
 		t.Errorf("End ice left state %d, want water (only the Nether evaporates it)", got)
 	}
 }

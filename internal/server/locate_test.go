@@ -12,7 +12,7 @@ import (
 // /locate structure names the nearest site in vanilla's words, refuses an
 // unknown id, and is for operators only.
 func TestCommandLocate(t *testing.T) {
-	s := &Server{hub: newHub(world.New(1)), Ops: map[string]bool{"tester": true}}
+	s := &Server{hub: newTestHub(world.New(1)), Ops: map[string]bool{"tester": true}}
 	startHub(t, s.hub) // a found structure is a command success, which the hub delivers
 	p := newPlayer(1, "tester", [16]byte{})
 	g := s.hub.worldFor(p.dim).Gen()

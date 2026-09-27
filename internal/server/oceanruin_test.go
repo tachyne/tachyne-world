@@ -23,7 +23,7 @@ func findTestRuin(g *worldgen.Generator) (worldgen.OceanRuins, bool) {
 // its suspicious blocks brush from the warm/cold ocean-ruin archaeology
 // tables.
 func TestOceanRuinSeedsAndLoots(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	r, ok := findTestRuin(h.world.Gen())
@@ -95,7 +95,7 @@ func TestOceanRuinSeedsAndLoots(t *testing.T) {
 
 // The desert temple's cellar sand brushes from the desert_pyramid table.
 func TestDesertTempleBrushTable(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	g := h.world.Gen()
 	var d worldgen.DesertTemple
 	for cx := 0; cx < 24000 && !d.Exists; cx += 336 {
@@ -123,7 +123,7 @@ func TestDesertTempleBrushTable(t *testing.T) {
 // Trail-ruins suspicious gravel brushes from the common and rare tables the
 // capped rules appended, and both tables are baked.
 func TestTrailRuinsBrushTables(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	g := h.world.Gen()
 	var site worldgen.TrailRuins
 	for i := -40; i < 40 && !site.Exists; i++ {

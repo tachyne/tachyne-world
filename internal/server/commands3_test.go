@@ -43,7 +43,7 @@ func wantChat(t *testing.T, lines []string, want string) {
 
 // cmdHub is a hub with one survival player (eid 1, "tester") at y=180.
 func cmdHub() (*hub, *tracked, map[int32]*tracked) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 0.5, 180, 0.5
 	pl.adv = advState{}
@@ -378,7 +378,7 @@ func TestForceLoadCommand(t *testing.T) {
 	wantChat(t, cmdChats(pl.p), "Too many chunks in the specified area (maximum 256, but specified 361)")
 
 	// A restart re-pins what was saved.
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	h2.rules.Forced = h.rules.Forced
 	h2.restoreForced()
 	if !h2.world.Forced(1, 0) {
@@ -425,7 +425,7 @@ func TestWorldSpawnAndDefaultGamemodePersist(t *testing.T) {
 	// Boot: a fresh server with a -spawn flag and -gamemode survival.
 	s := New()
 	s.world = world.New(1)
-	s.hub = newHub(s.world)
+	s.hub = newTestHub(s.world)
 	s.hub.rulesPath = h.rulesPath
 	s.modes = newModeStore("", gmSurvival)
 	s.SpawnSet, s.SpawnX, s.SpawnY, s.SpawnZ = true, 5, 64, 5

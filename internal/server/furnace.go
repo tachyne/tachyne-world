@@ -270,11 +270,7 @@ func (h *hub) updateFurnaces(players map[int32]*tracked) {
 // (lit is the fast-varying state bit: even offset = lit.)
 func (h *hub) reconcileFurnaceBlocks() {
 	out, relit := 0, 0
-	for dim := dimOverworld; dim <= dimEnd; dim++ {
-		w := h.worldFor(dim)
-		if dim != dimOverworld && w == h.world {
-			continue // no such dimension loaded
-		}
+	for dim, w := range h.allDims() {
 		o, r := h.reconcileFurnaceBlocksIn(dim, w)
 		out, relit = out+o, relit+r
 	}

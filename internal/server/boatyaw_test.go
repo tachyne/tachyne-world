@@ -11,7 +11,7 @@ import (
 // BoatItem.use turns the new boat to the placer's yaw (setYRot(player.getYRot())):
 // a boat put on water came out facing south whichever way its owner looked.
 func TestPlacedBoatFacesThePlacer(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}

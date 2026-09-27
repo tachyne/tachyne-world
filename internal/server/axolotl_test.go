@@ -11,7 +11,7 @@ import (
 // it (a cod it may not hunt again for two minutes after), plays dead when
 // hurt, and a player who finishes its foe gets regeneration.
 func TestAxolotlHuntsAndPlaysDead(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -72,7 +72,7 @@ func TestAxolotlHuntsAndPlaysDead(t *testing.T) {
 // in any activity, and its one answer to a blow is the play-dead roll —
 // which only a blow from something can set off, never fire or a fall.
 func TestStruckAxolotlPlaysDeadNotPanics(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}

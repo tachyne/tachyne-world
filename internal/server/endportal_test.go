@@ -45,7 +45,7 @@ func TestStrongholdGeneratesWithFrames(t *testing.T) {
 
 func TestTwelveEyesOpenThePortal(t *testing.T) {
 	w := world.New(7)
-	h := newHub(w)
+	h := newTestHub(w)
 	st, ok := findStronghold(w)
 	if !ok {
 		t.Skip("no stronghold")
@@ -71,8 +71,8 @@ func TestTwelveEyesOpenThePortal(t *testing.T) {
 func TestEndPortalContactFlagsTravel(t *testing.T) {
 	ow := world.New(7)
 	ew, _ := world.NewEnd(7, nil)
-	h := newHub(ow)
-	h.end = ew
+	h := newTestHub(ow)
+	h.dims.set(dimEnd, ew)
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 20.5, 30, 20.5
 	ow.SetBlock(20, 30, 20, worldgen.EndPortalBlock)
@@ -94,7 +94,7 @@ func TestEndPortalContactFlagsTravel(t *testing.T) {
 
 func TestPlayerBuiltEndPortalOpens(t *testing.T) {
 	w := world.New(7)
-	h := newHub(w)
+	h := newTestHub(w)
 	pl := testTracked()
 	pl.gamemode = gmCreative
 	players := map[int32]*tracked{1: pl}
@@ -124,12 +124,12 @@ func TestPlayerBuiltEndPortalOpens(t *testing.T) {
 // a charge, because a walk out is not a death.
 func TestEndExitGoesToYourRespawnPoint(t *testing.T) {
 	ow := world.New(7)
-	h := newHub(ow)
+	h := newTestHub(ow)
 	ew, err := world.NewEnd(7, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	h.end = ew
+	h.dims.set(dimEnd, ew)
 	pl := testTracked()
 	pl.dim = dimEnd
 	pl.seenCredits = true // a returning visitor: no credits, straight home

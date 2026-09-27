@@ -30,7 +30,7 @@ func TestParseTargetSpec(t *testing.T) {
 }
 
 func TestSelectPlayersAndMobs(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	me := testTracked()
 	me.p.name = "Me"
 	me.x, me.y, me.z = 0, 70, 0

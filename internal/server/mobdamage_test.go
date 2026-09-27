@@ -41,7 +41,7 @@ func armouredMobVsBare(t *testing.T, h *hub, dt dmgType, dmg float64) (armoured,
 // TestMobArmourAppliesExactlyWhereVanillaSaysItDoes — the same invariant the
 // player side holds, on the other half of the engine.
 func TestMobArmourAppliesExactlyWhereVanillaSaysItDoes(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	for _, dt := range []dmgType{
 		// Armour helps. Lava, fire, magma and berry bushes are the four the
 		// old "environmental damage bypasses armour" premise got wrong.
@@ -66,7 +66,7 @@ func TestMobArmourAppliesExactlyWhereVanillaSaysItDoes(t *testing.T) {
 // must do the same to a mob. The player side was fixed and the mob side was
 // still running the fangs through plate.
 func TestFangsIgnoreMobArmour(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	armoured, bare := armouredMobVsBare(t, h, dtIndirectMagic, 6)
 	if armoured != bare {
 		t.Errorf("evoker fangs should ignore a mob's armour: %d vs %d", armoured, bare)
@@ -76,7 +76,7 @@ func TestFangsIgnoreMobArmour(t *testing.T) {
 // Netherite carries vanilla's damage_resistant component against is_fire,
 // which is what lets a set survive a lava bath that would eat diamond.
 func TestNetheriteArmourDoesNotWearInFire(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 
 	wear := func(set string, dt dmgType) int {
@@ -107,7 +107,7 @@ func TestNetheriteArmourDoesNotWearInFire(t *testing.T) {
 // A mob's Resistance and its gear's protection enchantments are mitigations
 // like any other, so the bypass tags carve them out on the mob side too.
 func TestMobBypassTagsSkipTheirOwnMitigation(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 
 	resisted := func(dt dmgType) int {

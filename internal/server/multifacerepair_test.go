@@ -13,7 +13,7 @@ import (
 // was a full cube with its other five sides standing in the air.
 func TestMultifaceRepairTrimsUnheldFaces(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	lichen := worldgen.BlockBase("glow_lichen") // the old, all-faces-on default
 	info, _ := worldgen.InfoForState(lichen)
 	for _, f := range []string{"down", "up", "north", "south", "east", "west"} {

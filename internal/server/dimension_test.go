@@ -13,8 +13,8 @@ func TestNetherWorldIsDistinct(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h := newHub(ow)
-	h.nether = nw
+	h := newTestHub(ow)
+	h.dims.set(dimNether, nw)
 	if h.worldFor(0) != ow || h.worldFor(1) != nw {
 		t.Fatal("worldFor must route by dimension")
 	}
@@ -33,8 +33,8 @@ func TestNetherWorldIsDistinct(t *testing.T) {
 func TestDimSwitchIsolation(t *testing.T) {
 	ow := world.New(7)
 	nw, _ := world.NewNether(7, nil)
-	h := newHub(ow)
-	h.nether = nw
+	h := newTestHub(ow)
+	h.dims.set(dimNether, nw)
 	a, b := testTracked(), testTracked()
 	b.p.eid = 2
 	players := map[int32]*tracked{1: a, 2: b}
@@ -75,8 +75,8 @@ func TestDimSwitchIsolation(t *testing.T) {
 func TestDeathInNetherRespawnsToOverworld(t *testing.T) {
 	ow := world.New(7)
 	nw, _ := world.NewNether(7, nil)
-	h := newHub(ow)
-	h.nether = nw
+	h := newTestHub(ow)
+	h.dims.set(dimNether, nw)
 	pl := testTracked()
 	pl.gamemode = gmSurvival
 	pl.dim, pl.p.dim = 1, 1
@@ -100,8 +100,8 @@ func TestDeathInNetherRespawnsToOverworld(t *testing.T) {
 func TestNetherMovementNotBlockedByOverworldTerrain(t *testing.T) {
 	ow := world.New(7)
 	nw, _ := world.NewNether(7, nil)
-	h := newHub(ow)
-	h.nether = nw
+	h := newTestHub(ow)
+	h.dims.set(dimNether, nw)
 	// A spot solid in the overworld but open cavern in the nether.
 	var x, z int
 	found := false

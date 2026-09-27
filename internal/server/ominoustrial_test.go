@@ -14,7 +14,7 @@ import (
 // into Trial Omen for fifteen minutes a level and goes ominous, restarting
 // its round on the ominous rewards.
 func TestOminousBottleAndTrialOmen(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	captain := h.spawnMob(players, entityPillager, 10.5, 200, 10.5)
@@ -84,7 +84,7 @@ func TestOminousBottleAndTrialOmen(t *testing.T) {
 // An ominous spawner's zombies come armed from the trial-chamber melee
 // table, and that gear never drops.
 func TestOminousTrialMobsAreEquipped(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	armed := 0
@@ -109,7 +109,7 @@ func TestOminousTrialMobsAreEquipped(t *testing.T) {
 // An ominous spawner conjures an item spawner above a detected player on
 // the 160-tick cadence; it drops its projectile 60–120 ticks later.
 func TestOminousItemSpawner(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	pl := testTracked()
@@ -163,7 +163,7 @@ func TestOminousItemSpawner(t *testing.T) {
 // one charge, with the wind-charge dispense event, at DispenseConfig's power
 // 1.0; a player joining late sees the item the spawner holds.
 func TestOminousItemSpawnerResidue(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.p.eid = 500
 	players := map[int32]*tracked{pl.p.eid: pl}

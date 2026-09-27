@@ -132,7 +132,7 @@ func mustEntity(t *testing.T, h *hub, etype int32, ctx lootCtx) []drop {
 // #cluster_max_harvestables: an amethyst cluster broken with a pickaxe gives
 // four shards (plus Fortune), and two with anything else.
 func TestAmethystClusterNeedsAPickaxe(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	cluster := worldgen.BlockBase("amethyst_cluster")
 	if cluster == 0 {
 		t.Skip("no amethyst cluster in this registry")

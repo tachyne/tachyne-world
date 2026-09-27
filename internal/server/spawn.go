@@ -179,10 +179,7 @@ func (h *hub) naturalSpawn(players map[int32]*tracked) {
 	if !h.rules.DoMobSpawning || len(players) == 0 {
 		return
 	}
-	for dim := 0; dim <= 2; dim++ {
-		if dim != 0 && (h.worldFor(dim) == nil || h.worldFor(dim) == h.world) {
-			continue // no such dimension on this server
-		}
+	for dim := range h.allDims() {
 		h.naturalSpawnDim(players, dim)
 	}
 }

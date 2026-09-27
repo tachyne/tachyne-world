@@ -10,7 +10,7 @@ import (
 // VexChargeAttackGoal: a vex with a player about darts at them, charging,
 // and the blow lands when it touches them.
 func TestVexChargesAndStrikes(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -36,7 +36,7 @@ func TestVexChargesAndStrikes(t *testing.T) {
 // VexRandomMoveGoal: with nobody to fight, a summoned vex drifts about its
 // bound origin, never far from it.
 func TestVexDriftsAboutItsOrigin(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	players := map[int32]*tracked{}
 	v := h.spawnMob(players, entityVex, 0.5, 200, 0.5)
@@ -58,7 +58,7 @@ func TestVexDriftsAboutItsOrigin(t *testing.T) {
 // evoker summons against a villager go for the villager. They used to go
 // only for players, and a raid's vexes ignored the village.
 func TestVexCopiesItsEvokersTarget(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	players := map[int32]*tracked{}
 	h.playersRef = players

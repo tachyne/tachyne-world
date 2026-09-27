@@ -9,7 +9,7 @@ import (
 
 func lodeHub(t *testing.T) (*hub, *tracked, map[int32]*tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := riderAt(1, 11.5, 70, 10.5)
 	pl.adv = advState{}
 	players := map[int32]*tracked{1: pl}
@@ -119,7 +119,7 @@ func TestLodestoneTrackerRoundTrips(t *testing.T) {
 		t.Errorf("component bytes lack the dimension key: %x", comps)
 	}
 	// Dropped and picked back up, the tracker survives.
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	it := h.spawnItemIn(map[int32]*tracked{}, 0, st.item, 1, 0, 70, 0)
 	it.lode = st.lode
 	if it.stack() != st {

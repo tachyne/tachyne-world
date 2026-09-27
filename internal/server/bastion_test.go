@@ -9,7 +9,7 @@ import (
 // A player arriving at a bastion seeds its garrison once; the bastion's
 // chests fill from their own vanilla tables.
 func TestBastionSeedsAndLoots(t *testing.T) {
-	h := newHub(world.New(3))
+	h := newTestHub(world.New(3))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	g := h.worldFor(dimNether).Gen()

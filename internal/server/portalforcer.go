@@ -66,7 +66,7 @@ func (h *hub) netherPortalExit(players map[int32]*tracked, fromDim int, entry bl
 		toDim, scale = dimOverworld, 8
 	}
 	toNether := toDim == dimNether
-	if h.worldFor(toDim) == nil || (toNether && h.nether == nil) {
+	if !h.hasDim(toDim) {
 		return portalArrival{}, false
 	}
 	// WorldBorder.clampToBounds, then BlockPos.containing.

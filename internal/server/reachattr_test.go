@@ -12,7 +12,7 @@ import (
 // box): a raised range reaches a zombie nine blocks off, the default does
 // not, and a creative player gets vanilla's +2 on the attribute.
 func TestReachFollowsInteractionRange(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
 	players := map[int32]*tracked{1: pl}

@@ -11,7 +11,7 @@ import (
 // The zombie family raises its arms while it is chasing, and drops them when
 // it gives up — and walking through a village is not a chase.
 func TestZombieRaisesArmsWhileChasing(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnMob(players, entityZombie, 0.5, 70, 0.5)
 	m.hostile = true
@@ -59,7 +59,7 @@ func TestMobFlagsMetaShape(t *testing.T) {
 // nearest village point a villager has claimed, then on to the next one it
 // has not visited; points nobody holds are no village.
 func TestZombieDriftsThroughVillageAtNight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.world.ForceLoad(0, 0, 2)
 	poiFloor(h, 0, 0, 16)
@@ -101,7 +101,7 @@ func TestZombieDriftsThroughVillageAtNight(t *testing.T) {
 // Drowned.okTarget: by daylight a drowned only hunts somebody in the water,
 // and it heads back to the water itself when the sun catches it ashore.
 func TestDrownedDaylightRules(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	// A pool beside a dry bank at y=70.
 	for dx := -3; dx <= 3; dx++ {
@@ -144,7 +144,7 @@ func TestDrownedDaylightRules(t *testing.T) {
 // An errand never survives a real target: a drifting zombie that spots
 // somebody drops the walk, raises its arms and chases.
 func TestRealTargetOutranksTheErrand(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	m := h.spawnHostileY(players, entityZombie, pl.x+2, pl.y, pl.z)
@@ -165,7 +165,7 @@ func TestRealTargetOutranksTheErrand(t *testing.T) {
 // PiglinAi / PiglinBruteAi.updateActivity: a piglin or brute with an attack
 // target is aggressive, which the client draws as a raised melee weapon.
 func TestPiglinsRaiseTheirWeapons(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	for _, et := range []int{entityPiglin, entityPiglinBrute} {
 		m := h.spawnMob(players, et, 0.5, 70, 0.5)

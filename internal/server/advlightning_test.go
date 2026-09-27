@@ -12,7 +12,7 @@ import (
 func TestLightningBystanderBox(t *testing.T) {
 	const adv, crit = "minecraft:adventure/lightning_rod_with_villager_no_fire", "lightning_rod_with_villager_no_fire"
 	strike := func(vx float64, vdim int) bool {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		h.rules.Difficulty = diffEasy // no fire from the bolt
 		pl := survPlayer(h)
 		pl.adv = advState{}

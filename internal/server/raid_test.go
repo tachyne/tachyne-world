@@ -9,7 +9,7 @@ import (
 
 func TestRaidWavesAndVictory(t *testing.T) {
 	skipHeavy(t)
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	lx, lz := h.findLand(120, 120) // a spawnable spot so raiders can appear
@@ -67,7 +67,7 @@ func TestRaidWavesAndVictory(t *testing.T) {
 }
 
 func TestBadOmenTriggersRaidNearVillage(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[pl.p.eid] = pl
@@ -114,7 +114,7 @@ func TestRaidBuffsArmTheLaterWaves(t *testing.T) {
 		}
 	}
 
-	h := newHub(world.New(59))
+	h := newTestHub(world.New(59))
 	players := map[int32]*tracked{}
 	// Omen 5 makes the roll near-certain enough to see both outcomes over
 	// many spawns; the wave decides the level.
@@ -176,7 +176,7 @@ func raidVillage(h *hub, center blockPos) {
 // A raid whose village is gone is lost once a wave has come: the bar reads
 // "Raid - Defeat" for thirty seconds and the raid ends.
 func TestRaidLostWhenTheVillageIsGone(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	center := blockPos{64, 100, 64}
 	h.world.ForceLoad(center.x, center.z, 2)
@@ -199,7 +199,7 @@ func TestRaidLostWhenTheVillageIsGone(t *testing.T) {
 // With its village standing the raid goes on, and a raid never outlasts
 // 48000 ticks.
 func TestRaidKeepsItsVillageAndTimesOut(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	center := blockPos{64, 100, 64}
 	raidVillage(h, center)
@@ -218,7 +218,7 @@ func TestRaidKeepsItsVillageAndTimesOut(t *testing.T) {
 // A raid whose centre stops being a village moves to the nearest village
 // section around it instead of being lost (moveRaidCenterToNearbyVillageSection).
 func TestRaidRecentresOnNearbyVillage(t *testing.T) {
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	center := blockPos{64, 100, 64}
 	near := blockPos{center.x + 32, center.y, center.z} // two sections east

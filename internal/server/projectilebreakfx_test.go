@@ -19,7 +19,7 @@ func TestProjectileBreakEffects(t *testing.T) {
 	}
 	fly := func(t *testing.T, etype int, setup func(a *arrowEntity)) seen {
 		t.Helper()
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		h.world.ForceLoad(0, 0, 2)
 		h.rules.MobGriefing = false
 		h.arrows = map[int32]*arrowEntity{}

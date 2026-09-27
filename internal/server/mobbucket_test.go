@@ -10,7 +10,7 @@ import (
 // A water bucket on an axolotl scoops it: the bucket becomes an axolotl
 // bucket, the mob is gone, and "The Cutest Predator" is granted.
 func TestWaterBucketScoopsAxolotl(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := riderAt(1, 30, 70, 30)
 	pl.adv = advState{}
 	players := map[int32]*tracked{1: pl}
@@ -46,7 +46,7 @@ func TestWaterBucketScoopsAxolotl(t *testing.T) {
 // Pouring a tadpole bucket places the water and releases a persistent
 // tadpole in the cell; the bucket is left empty.
 func TestMobBucketReleasesMob(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := riderAt(1, 30, 70, 30)
 	players := map[int32]*tracked{1: pl}
 	h.playersRef = players
@@ -88,7 +88,7 @@ func TestMobBucketReleasesMob(t *testing.T) {
 // bucket with its Health and name, survives a save, and comes back out of a
 // poured bucket hurt and named.
 func TestBucketKeepsHealthAndName(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}

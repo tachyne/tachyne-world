@@ -9,7 +9,7 @@ import (
 // Hurt by something that is not a living thing (a cactus, fire, a fall) an
 // enderman blinks away nine times in ten; a player's blow does not move it.
 func TestEndermanTeleportsFromNonLivingHurt(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	players := map[int32]*tracked{}
 	moved := func(dt dmgType) int {

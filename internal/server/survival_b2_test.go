@@ -27,7 +27,7 @@ func TestCarpetOnAnythingButAir(t *testing.T) {
 // FireBlock.canSurvive on a neighbour change: a fire with no floor and
 // nothing to burn beside it goes out at once.
 func TestFireGoesWithItsFloor(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	players := map[int32]*tracked{}
 	const x, y, z = 100, 180, 100

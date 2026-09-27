@@ -10,7 +10,7 @@ import (
 // minus the species' interval and no call can come until it climbs back
 // past zero; the interval is per class (a cow 120, a horse 400, a zombie 80).
 func TestAmbientCadence(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	cow := &mob{eid: 1, etype: entityCow, x: 0.5, y: 200, z: 0.5}
 	h.mobs[cow.eid] = cow

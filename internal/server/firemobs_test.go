@@ -11,7 +11,7 @@ import (
 // ticks then fires and rests; a blaze flares, waits sixty, fires three
 // fireballs six ticks apart and rests a hundred.
 func TestGhastChargeAndBlazeVolley(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -51,7 +51,7 @@ func TestGhastChargeAndBlazeVolley(t *testing.T) {
 // A ghast drifts: it never closes on its target, and it ignores anyone far
 // above or below it.
 func TestGhastFloatsAndIgnoresHeight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

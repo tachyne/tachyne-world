@@ -13,7 +13,7 @@ func TestStrongholdChestTables(t *testing.T) {
 	seen := map[string]bool{}
 	for seed := int64(1); seed <= 4; seed++ {
 		w := world.New(seed)
-		h := newHub(w)
+		h := newTestHub(w)
 		st, ok := findStronghold(w)
 		if !ok {
 			t.Fatalf("seed %d: no stronghold", seed)
@@ -37,7 +37,7 @@ func TestStrongholdChestTables(t *testing.T) {
 // world where the hub looks for it.
 func TestStrongholdSpawnerIsSilverfish(t *testing.T) {
 	w := world.New(7)
-	h := newHub(w)
+	h := newTestHub(w)
 	st, ok := findStronghold(w)
 	if !ok {
 		t.Fatal("no stronghold")
@@ -77,7 +77,7 @@ func findMineshaftWith(g *worldgen.Generator, ok func(worldgen.Mineshaft) bool) 
 // A mineshaft nest's spawner is a cave spider spawner.
 func TestMineshaftSpawnerIsCaveSpider(t *testing.T) {
 	w := world.New(7)
-	h := newHub(w)
+	h := newTestHub(w)
 	g := w.Gen()
 	var sp [3]int
 	_, ok := findMineshaftWith(g, func(m worldgen.Mineshaft) bool {
@@ -108,7 +108,7 @@ func TestMineshaftSpawnerIsCaveSpider(t *testing.T) {
 // save.
 func TestMineshaftChestMinecart(t *testing.T) {
 	w := world.New(7)
-	h := newHub(w)
+	h := newTestHub(w)
 	g := w.Gen()
 	var cart [3]int
 	_, ok := findMineshaftWith(g, func(m worldgen.Mineshaft) bool {
@@ -138,7 +138,7 @@ func TestMineshaftChestMinecart(t *testing.T) {
 		t.Fatalf("cart carries %q, want %q", v.loot, worldgen.MineshaftCartTable)
 	}
 	saved := h.snapshotVehicles()
-	h2 := newHub(world.New(7))
+	h2 := newTestHub(world.New(7))
 	h2.restoreVehicles(saved)
 	for _, c := range h2.vehicles {
 		if c.loot != worldgen.MineshaftCartTable || c.lootPos != (blockPos{cart[0], cart[1], cart[2]}) {

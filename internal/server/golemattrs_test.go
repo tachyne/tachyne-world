@@ -14,7 +14,7 @@ import (
 // 2, the giant's MOVEMENT_SPEED 0.5. A blow that moves an iron golem to a
 // new crack stage plays IRON_GOLEM_DAMAGE; one within the stage does not.
 func TestGolemAttributesAndCrackSound(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	for x := -3; x <= 3; x++ {
 		for z := -3; z <= 3; z++ {

@@ -11,7 +11,7 @@ import (
 // player's own shot; a ghast it kills is a player's kill by a fireball,
 // which drops the disc. Melee and mob-owned fireballs never do.
 func TestDeflectFireball(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z, pl.yaw, pl.pitch = 0, 180, 0, 0, 0 // looking +z
 	players := map[int32]*tracked{pl.p.eid: pl}

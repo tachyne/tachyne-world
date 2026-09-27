@@ -9,7 +9,7 @@ import (
 // A totem in the off hand answers a lethal blow: one health, effects cleared
 // and replaced by the totem's three, the totem spent; /kill ignores it.
 func TestTotemOfUndying(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pl.health = 2

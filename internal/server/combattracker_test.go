@@ -11,7 +11,7 @@ import (
 // ladder", a fall after a mob's blow "was doomed to fall by", and a plain
 // short fall keeps the plain fall message.
 func TestFallDeathMessages(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}

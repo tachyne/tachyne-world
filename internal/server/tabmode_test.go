@@ -15,7 +15,7 @@ func TestTabListCarriesGameMode(t *testing.T) {
 	if got := infoAdd(newPlayer(1, "a", [16]byte{}), gmSpectator); got.Gamemode != int32(gmSpectator) {
 		t.Fatalf("infoAdd gamemode %d, want spectator", got.Gamemode)
 	}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.DoMobSpawning = false
 	startHub(t, h)
 	a := newPlayer(h.allocEID(), "alice", [16]byte{1})

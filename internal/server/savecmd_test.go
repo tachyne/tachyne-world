@@ -21,7 +21,7 @@ func TestCommandSave(t *testing.T) {
 		t.Fatal(err)
 	}
 	nw.SetBlock(0, 70, 0, worldgen.BlockID("stone"))
-	s.nether = nw // saveEverything writes every dimension's edits
+	s.dims.set(dimNether, nw) // saveEverything writes every dimension's edits
 
 	s.handleCommand(alice, "save-all flush")
 	settle(t, h, logs, "S1")

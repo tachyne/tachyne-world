@@ -43,8 +43,8 @@ func TestPortalFrameDetection(t *testing.T) {
 func TestPortalDwellFlagsSwitch(t *testing.T) {
 	ow := world.New(1)
 	nw, _ := world.NewNether(1, nil)
-	h := newHub(ow)
-	h.nether = nw
+	h := newTestHub(ow)
+	h.dims.set(dimNether, nw)
 	pl := testTracked()
 	pl.gamemode = gmSurvival
 	x, y, z := 50, 80, 50
@@ -89,8 +89,8 @@ func TestPortalDwellFlagsSwitch(t *testing.T) {
 func TestPortalLatchStopsBounce(t *testing.T) {
 	ow := world.New(1)
 	nw, _ := world.NewNether(1, nil)
-	h := newHub(ow)
-	h.nether = nw
+	h := newTestHub(ow)
+	h.dims.set(dimNether, nw)
 	pl := testTracked()
 	pl.gamemode = gmSurvival
 	x, y, z := 60, 80, 60
@@ -149,7 +149,7 @@ func TestNearestEditedFindsDistantPortal(t *testing.T) {
 
 func TestOrphanPortalBlocksPop(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	x, y, z := 400, 80, 400
 	buildFrame(w, x, y, z)
@@ -175,8 +175,8 @@ func TestOrphanPortalBlocksPop(t *testing.T) {
 func TestNetherPortalDemolishCascades(t *testing.T) {
 	ow := world.New(1)
 	nw, _ := world.NewNether(1, nil)
-	h := newHub(ow)
-	h.nether = nw
+	h := newTestHub(ow)
+	h.dims.set(dimNether, nw)
 	players := map[int32]*tracked{}
 	x, y, z := 70, 60, 70
 	for dx := -1; dx <= 2; dx++ {
@@ -204,12 +204,12 @@ func TestNetherPortalDemolishCascades(t *testing.T) {
 // read the overworld, so any neighbour update popped a Nether portal whose
 // coordinates held no overworld frame.
 func TestNetherPortalSurvivesItsUpdates(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nw, err := world.NewNether(1, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	h.nether = nw
+	h.dims.set(dimNether, nw)
 	x, y, z := 8, 70, 8
 	nw.ForceLoad(0, 0, 1)
 	h.world.ForceLoad(0, 0, 1)

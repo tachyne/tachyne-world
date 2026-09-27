@@ -13,7 +13,7 @@ import (
 func TestSmallFireballLightsTheStruckFace(t *testing.T) {
 	stone := worldgen.BlockBase("stone")
 	rig := func(griefing bool) (*hub, map[int32]*tracked, *mob) {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		h.world.ForceLoad(0, 0, 2)
 		h.rules.MobGriefing = griefing
 		h.arrows = map[int32]*arrowEntity{}

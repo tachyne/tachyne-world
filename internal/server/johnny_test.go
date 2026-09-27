@@ -9,7 +9,7 @@ import (
 // A vindicator named Johnny attacks every living thing; an ordinary one
 // does not.
 func TestVindicatorJohnny(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	v := h.spawnMob(players, entityVindicator, 0.5, 70, 0.5)
 	cow := h.spawnMob(players, entityCow, 3.5, 70, 0.5)
@@ -35,7 +35,7 @@ func TestVindicatorJohnny(t *testing.T) {
 
 // Pillagers advance at half pace with a charged or charging crossbow.
 func TestPillagerHalfPaceWhileLoaded(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pl.x, pl.y, pl.z = 12.5, 70, 0.5 // inside the follow range, outside crossbow reach

@@ -11,7 +11,7 @@ import (
 // and the attach Welcome's remote carry it; it survives a re-record of the
 // loadout; a player who never died carries none.
 func TestLastDeathLocation(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.invs = newInvStore("")
 	players := map[int32]*tracked{}
 	pl := testTracked()

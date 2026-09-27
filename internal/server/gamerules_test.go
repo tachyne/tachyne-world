@@ -29,7 +29,7 @@ func TestGameruleNamesAcceptBothSpellings(t *testing.T) {
 
 // Setting a rule by either name reaches the same field.
 func TestGameruleAppliesUnderEitherName(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.rules.KeepInventory = false
 	h.applyRule(players, evSetRule{rule: "keepInventory", on: true})
@@ -44,7 +44,7 @@ func TestGameruleAppliesUnderEitherName(t *testing.T) {
 
 // The new rules actually gate something.
 func TestNewGamerulesGateTheirMechanic(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 
 	// tnt_explodes off: the fuse burns out and leaves the world alone.

@@ -11,7 +11,7 @@ import (
 // tick and inertia, so one launched at its 0.1 works up toward 1.9 a tick
 // on a level line. A wind charge coasts at the speed it left with.
 func TestHurtingProjectileMotion(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(40, 0, 3) // the fireball's whole flight is in loaded chunks
 	players := map[int32]*tracked{}
 	fb := h.launchProjectileIn(players, entityLargeFireball, 0, 0, 200, 0, hurtingSpeed, 0, 0)

@@ -20,7 +20,7 @@ func loadAround(w *world.World, cx, cz, r int32) {
 // chunkSeedBudget new chunks per tick, seeds every chunk exactly once, and never
 // re-seeds a chunk it has already handled.
 func TestVanillaSeedChunksOnceAndBudget(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 64, 0.5
 	players := map[int32]*tracked{1: pl}
@@ -53,7 +53,7 @@ func TestVanillaSeedChunksOnceAndBudget(t *testing.T) {
 // loads (the NaturalSpawner port is the only spawner).
 func TestVanillaSpawnerSeedsChunks(t *testing.T) {
 	skipHeavy(t)
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.dayTime.Store(18000)
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 64, 0.5
@@ -70,7 +70,7 @@ func TestVanillaSpawnerSeedsChunks(t *testing.T) {
 
 // TestNearWorldSpawnExclusion: the 24-block no-spawn ring around world spawn.
 func TestNearWorldSpawnExclusion(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	if h.nearWorldSpawn(0, 0, 0) {
 		t.Fatal("with no world spawn set there is no exclusion")
 	}
@@ -92,7 +92,7 @@ func TestNearWorldSpawnExclusion(t *testing.T) {
 // scaled monster cap — the same guarantees as the default sampler.
 func TestVanillaSpawnerFillsCaves(t *testing.T) {
 	skipHeavy(t)
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 64, 0.5
 	players := map[int32]*tracked{1: pl}

@@ -10,7 +10,7 @@ import (
 // TestDolphinsGrace: a dolphin near a sprint-swimming player follows them
 // and grants Dolphin's Grace; a wading player gets nothing.
 func TestDolphinsGrace(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

@@ -149,7 +149,7 @@ func TestNoteBlockAndJukeboxFlow(t *testing.T) {
 // be right when the event goes out. The engine works the instrument out on
 // demand, so it corrects the state at the moment the note plays.
 func TestPlayingCorrectsTheStoredInstrument(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 20, 70, 20
 	h.world.SetBlock(x, y-1, z, worldgen.BlockBase("gold_block")) // bell

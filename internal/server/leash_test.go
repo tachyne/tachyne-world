@@ -11,7 +11,7 @@ import (
 
 func leashWorld(t *testing.T) (*hub, map[int32]*tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	airBox(t, h.world, -8, 70, -8, 40, 90, 40)

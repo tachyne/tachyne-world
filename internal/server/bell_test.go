@@ -36,7 +36,7 @@ func TestBellProperHit(t *testing.T) {
 // or a stray zombie is left alone. A patrolling pillager (no raid) is still
 // in #raiders.
 func TestBellRevealsRaiders(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.world.SetBlock(200, 70, 200, withProps(t, worldgen.BlockBase("bell"), map[string]string{"attachment": "floor", "facing": "north"}))
@@ -67,7 +67,7 @@ func TestBellRevealsRaiders(t *testing.T) {
 // With no raider within 32 blocks the bell never resonates, so a raider 40
 // blocks off stays dark.
 func TestBellNeedsARaiderWithin32(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.world.SetBlock(200, 70, 200, withProps(t, worldgen.BlockBase("bell"), map[string]string{"attachment": "floor", "facing": "north"}))
@@ -84,7 +84,7 @@ func TestBellNeedsARaiderWithin32(t *testing.T) {
 // Villagers within 32 blocks of a rung bell go and hide at their beds for
 // fifteen seconds.
 func TestBellSendsVillagersToHide(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.world.SetBlock(300, 70, 300, withProps(t, worldgen.BlockBase("bell"), map[string]string{"attachment": "floor", "facing": "north"}))

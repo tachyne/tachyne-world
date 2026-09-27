@@ -11,7 +11,7 @@ import (
 // with a throw from the bartering table; a gold-clad player is not hunted;
 // a blow ends the admiring and keeps the ingot.
 func TestPiglinBartering(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.tick.Store(100)
@@ -61,7 +61,7 @@ func TestPiglinBartering(t *testing.T) {
 
 // A piglin keeps away from soul lights and from its own undead.
 func TestPiglinAvoidsRepellentsAndZombified(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnMob(players, entityPiglin, 0.5, 70, 0.5)
 	m.setMoveSpeed(0.2)

@@ -12,7 +12,7 @@ import (
 // sword or (one in ten of those) a golden spear. They used to all be grown
 // and all carry a golden sword.
 func TestNaturalPiglinSpawnRolls(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	const n = 2000
@@ -61,7 +61,7 @@ func TestNaturalPiglinSpawnRolls(t *testing.T) {
 // A baby piglin shows as one on its own flag (index 17, not the ageable
 // 16) and walks a fifth faster.
 func TestPiglinBabyFlagAndSpeed(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	m := h.spawnMob(players, entityPiglin, 0.5, 70, 0.5)
 	adult := m.moveSpeed()
@@ -79,7 +79,7 @@ func TestPiglinBabyFlagAndSpeed(t *testing.T) {
 // A bastion's piglins are template mobs: they hold what their piece says
 // (a crossbow or a golden sword) and none is a baby.
 func TestBastionPiglinsHoldTheirPieceWeapon(t *testing.T) {
-	h := newHub(world.New(3))
+	h := newTestHub(world.New(3))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	g := h.worldFor(dimNether).Gen()
@@ -117,7 +117,7 @@ func TestBastionPiglinsHoldTheirPieceWeapon(t *testing.T) {
 
 // A crossbow piglin shoots its target from range instead of meleeing.
 func TestCrossbowPiglinShoots(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

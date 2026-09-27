@@ -112,7 +112,7 @@ func (h *hub) refreshItemMeta(players map[int32]*tracked, it *itemEntity) {
 
 // spawnItemIn drops into an explicit dimension.
 func (h *hub) spawnItemIn(players map[int32]*tracked, dim int, item int32, count int, x, y, z float64) *itemEntity {
-	if item == 0 || count <= 0 {
+	if item == 0 || count <= 0 || h.worldFor(dim) == nil {
 		return nil
 	}
 	// Fall from the spawn point to the local floor, so a drop mined underground

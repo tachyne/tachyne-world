@@ -11,7 +11,7 @@ import (
 // resync every one of them, never apply.
 
 func TestSurvivalClientCannotConjureCreativeItems(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked() // gamemode survival
 	players[1] = pl
@@ -40,7 +40,7 @@ func TestSurvivalClientCannotConjureCreativeItems(t *testing.T) {
 }
 
 func TestAttackBeyondReachIgnored(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
@@ -60,7 +60,7 @@ func TestAttackBeyondReachIgnored(t *testing.T) {
 }
 
 func TestClickCannotFabricateItems(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl

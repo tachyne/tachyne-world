@@ -10,7 +10,7 @@ import (
 // IceBlock.playerDestroy: ice melts to water only over something that stops
 // movement or over a liquid; over air it just goes.
 func TestIceMeltsOnlyOverAFloorOrLiquid(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	players := map[int32]*tracked{}
 	const x, y, z = 70, 180, 70

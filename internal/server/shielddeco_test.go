@@ -13,7 +13,7 @@ import (
 // wear. A decorated shield takes no second banner, and the base rides the
 // wire as base_color and the save as its own column.
 func TestCraftDecoratesShield(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	grid := make([]invStack, 9)
 	red := int32(itemByName["red_banner"])
 	grid[0] = invStack{item: int32(itemShield), count: 1, dmg: 7}

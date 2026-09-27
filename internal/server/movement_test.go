@@ -22,7 +22,7 @@ func walkSetup(h *hub) (*tracked, map[int32]*tracked) {
 }
 
 func TestLegitWalkIsNeverRejected(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl, players := walkSetup(h)
 	start := pl.x
 	// Sprint-jump pace (~7.1 m/s = 0.36/tick) along +x for 4 seconds, feet
@@ -40,7 +40,7 @@ func TestLegitWalkIsNeverRejected(t *testing.T) {
 }
 
 func TestSustainedUphillSprintIsNeverRejected(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl, players := walkSetup(h)
 	start := pl.x
 	// Sprint-jumping up a mountainside: ~7.1 m/s forward + constant step-up
@@ -60,7 +60,7 @@ func TestSustainedUphillSprintIsNeverRejected(t *testing.T) {
 // blocks (squared 100) from the last good position, per move packet seen in
 // the tick; sustained fast motion within that is never refused.
 func TestMovedTooQuicklyIsVanillas(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl, players := walkSetup(h)
 	pl.gamemode = gmCreative
 	pl.y += 30
@@ -86,7 +86,7 @@ func TestMovedTooQuicklyIsVanillas(t *testing.T) {
 }
 
 func TestTeleportHackRejectedOutright(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl, players := walkSetup(h)
 	x, y, z := pl.x, pl.y, pl.z
 	h.tick.Store(101)
@@ -102,7 +102,7 @@ func TestTeleportHackRejectedOutright(t *testing.T) {
 }
 
 func TestNaNPositionRejected(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl, players := walkSetup(h)
 	x := pl.x
 	h.tick.Store(101)
@@ -117,7 +117,7 @@ func TestNaNPositionRejected(t *testing.T) {
 }
 
 func TestFlyHackIsGrounded(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl, players := walkSetup(h)
 	surface := pl.y
 	pl.y = surface + 20 // hovering high in open air
@@ -134,7 +134,7 @@ func TestFlyHackIsGrounded(t *testing.T) {
 }
 
 func TestStandingStillNeverTripsFloatCheck(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl, players := walkSetup(h)
 	y := pl.y                  // feet on the ground: the block below is always within reach
 	for i := 1; i <= 60; i++ { // 300 ticks ≫ floatLimit
@@ -147,7 +147,7 @@ func TestStandingStillNeverTripsFloatCheck(t *testing.T) {
 }
 
 func TestCreativeMayFly(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl, players := walkSetup(h)
 	pl.gamemode = gmCreative
 	surface := pl.y

@@ -68,11 +68,27 @@ func (h *hub) beginHandover(t *tracked, dest int32) {
 	}
 }
 
+// migrationDim is the dimension a migrating entity arrives in.
+func migrationDim(me handover.MigrateEntity) (int, bool) {
+	switch {
+	case me.Kind == handover.KindPlayer && me.Player != nil:
+		return int(me.Player.Dim), true
+	case me.Kind == handover.KindMob && me.Mob != nil:
+		return int(me.Mob.Dim), true
+	}
+	return 0, false
+}
+
 // applyMigration receives an entity from a neighbour: it becomes ours. For a
 // player we recreate it from the snapshot (same eid), announce it to everyone
 // already here, and ack. The player's gateway session binds later, on resume
 // (Hello{Purpose:"resume", token}) — PR4.
 func (h *hub) applyMigration(players map[int32]*tracked, from int32, me handover.MigrateEntity) {
+	if dim, ok := migrationDim(me); ok && h.worldFor(dim) == nil {
+		// A dimension this pod does not run: refuse it, and the sender keeps it.
+		h.peers.send(from, handover.MsgAck, handover.Ack{MigID: me.MigID, OK: false, Err: fmt.Sprintf("dimension %d not run here", dim)})
+		return
+	}
 	switch me.Kind {
 	case handover.KindPlayer:
 		if me.Player == nil {

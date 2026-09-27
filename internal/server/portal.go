@@ -143,7 +143,7 @@ func (h *hub) fireOnPlace(players map[int32]*tracked, dim int, pos blockPos, old
 // accumulate contact; at the threshold the connection is flagged to switch.
 func (h *hub) updatePortalDwell(players map[int32]*tracked) {
 	for _, t := range players {
-		if t.dim > 1 {
+		if t.dim != dimOverworld && t.dim != dimNether {
 			continue // nether portals link the overworld and nether only
 		}
 		feet := h.worldFor(t.dim).At(floorInt(t.x), floorInt(t.y+0.05), floorInt(t.z))

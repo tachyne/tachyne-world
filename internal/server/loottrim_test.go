@@ -13,7 +13,7 @@ func TestTrialEquipmentIsTrimmedAndEnchanted(t *testing.T) {
 	if !ok {
 		t.Fatal("the melee equipment table should be baked")
 	}
-	h := newHub(nil)
+	h := newTestHub(nil)
 	r := rand.New(rand.NewSource(7))
 	trimmed, protected, weapons := 0, 0, 0
 	for i := 0; i < 200; i++ {

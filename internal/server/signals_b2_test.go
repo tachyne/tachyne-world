@@ -25,7 +25,7 @@ func TestJukeboxSongEndUpdatesNeighbours(t *testing.T) {
 
 // A trapped chest in the Nether emits the count of its own viewers.
 func TestTrappedChestSignalInItsOwnDimension(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	const x, y, z = 74, 80, 74
 	trapped := worldgen.BlockID("trapped_chest")
 	h.worldFor(dimNether).SetBlock(x, y, z, trapped)

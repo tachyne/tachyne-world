@@ -11,7 +11,7 @@ import (
 // bottle its glass. Both simply vanished, which is a quiet tax on every bowl
 // a player owns.
 func TestEatingReturnsTheBowl(t *testing.T) {
-	h := newHub(world.New(97))
+	h := newTestHub(world.New(97))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -61,7 +61,7 @@ func TestEatingReturnsTheBowl(t *testing.T) {
 // DyeItem.interactLivingEntity refuses a SHEARED sheep — there is no wool on
 // it to take the colour — where the engine spent the dye anyway.
 func TestDyeRefusesAShearedSheep(t *testing.T) {
-	h := newHub(world.New(101))
+	h := newTestHub(world.New(101))
 	players := map[int32]*tracked{}
 	m := h.spawnMob(players, entitySheep, 0, 70, 0)
 	m.color = 0 // DyeColor.WHITE
@@ -79,7 +79,7 @@ func TestDyeRefusesAShearedSheep(t *testing.T) {
 // IceBlock.playerDestroy: ice mined without Silk Touch leaves water.
 func TestMinedIceLeavesWater(t *testing.T) {
 	w := world.New(103)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	pos := blockPos{4, 70, 4}
 	w.SetBlock(pos.x, pos.y, pos.z, worldgen.Air)

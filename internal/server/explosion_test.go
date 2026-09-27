@@ -14,7 +14,7 @@ import (
 // a stone wall between leaves only the flat 1, and out of reach is out of
 // reach. The shove comes as a velocity from the eyes.
 func TestExplosionDamageModel(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	for x := -8; x <= 8; x++ {
 		for z := -8; z <= 8; z++ {
@@ -72,7 +72,7 @@ func TestExplosionDamageModel(t *testing.T) {
 
 // A mob in a blast takes the same damage and is shoved off.
 func TestExplosionHurtsMobs(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	for x := -8; x <= 8; x++ {
 		for z := -8; z <= 8; z++ {

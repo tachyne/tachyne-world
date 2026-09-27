@@ -9,7 +9,7 @@ import (
 
 func TestLavaSetsAfterburnAndWaterClears(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
 	pl.food = 10
@@ -37,7 +37,7 @@ func TestLavaSetsAfterburnAndWaterClears(t *testing.T) {
 
 func TestFireBlockBurnsOutOnItsOwn(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	// Fire only spreads or burns out within fire_spread_radius_around_player
 	// of somebody, so the fixture needs a witness.
 	pl := testTracked()
@@ -55,7 +55,7 @@ func TestFireBlockBurnsOutOnItsOwn(t *testing.T) {
 
 func TestTNTFuseAndChainReaction(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	pl := testTracked()
 	lx, lz := h.findLand(30, 30)
 	pl.x, pl.z = float64(lx), float64(lz)
@@ -86,7 +86,7 @@ func TestTNTFuseAndChainReaction(t *testing.T) {
 
 func TestExplosionRespectsBlastResistance(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	lx, lz := h.findLand(50, 50)
 	y := h.world.SurfaceFeet(lx, lz)
@@ -106,7 +106,7 @@ func TestExplosionRespectsBlastResistance(t *testing.T) {
 // to fire) and the fire propagates (new fire blocks appear).
 func TestFireSpreadsAndConsumes(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	pl := testTracked() // fire needs a player within the spread radius
 	pl.x, pl.y, pl.z = 100.5, 70, 100.5
 	players := map[int32]*tracked{1: pl}
@@ -172,7 +172,7 @@ func TestFireSpreadsAndConsumes(t *testing.T) {
 // burn anywhere, and 0 is the old doFireTick=false.
 func TestFireSpreadRadiusRule(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
 	players := map[int32]*tracked{1: pl}
@@ -221,13 +221,13 @@ func TestLegacyFireTickMigrates(t *testing.T) {
 		{"a world with neither keeps the default", nil, defaultFireSpreadRadius},
 	} {
 		dir := t.TempDir()
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		h.rules = defaultRules()
 		h.rules.LegacyFireTick = tc.legacy
 		h.rulesPath = dir + "/rules.json"
 		h.saveRules()
 		// Re-read into a fresh hub, the way a restart does.
-		h2 := newHub(world.New(1))
+		h2 := newTestHub(world.New(1))
 		h2.rules = defaultRules()
 		h2.rulesPath = h.rulesPath
 		h2.loadRules()
@@ -244,7 +244,7 @@ func TestLegacyFireTickMigrates(t *testing.T) {
 // does. Vanilla lights one cleared cell in three, where the cell is air and
 // what is under it is solid.
 func TestBadRespawnBlastLightsFires(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	dim := 1 // the Nether, where a bed explodes
 	w := h.worldFor(dim)
@@ -289,7 +289,7 @@ func TestBadRespawnBlastLightsFires(t *testing.T) {
 // TNT leaves no fire: vanilla only sets the flag for a bad respawn point and
 // a ghast's fireball.
 func TestTNTBlastLeavesNoFire(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.world
 	cx, cy, cz := 340, 70, 340

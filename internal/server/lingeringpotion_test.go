@@ -42,7 +42,7 @@ func TestLingeringPotionFliesAsItsOwnEntity(t *testing.T) {
 			item int32
 			want int
 		}{{itemLingerPotion, entityLingerProj}, {itemSplashPotion, entitySplashProj}} {
-			h := newHub(world.New(1))
+			h := newTestHub(world.New(1))
 			h.world.ForceLoad(0, 0, 1)
 			h.arrows = map[int32]*arrowEntity{}
 			state := eastDispenser(t)
@@ -59,7 +59,7 @@ func TestLingeringPotionFliesAsItsOwnEntity(t *testing.T) {
 	})
 
 	t.Run("ominous item spawner", func(t *testing.T) {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		h.arrows = map[int32]*arrowEntity{}
 		h.itemSpawners = map[int32]*itemSpawnerEnt{}
 		h.tick.Store(500)

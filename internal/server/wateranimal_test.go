@@ -12,7 +12,7 @@ import (
 // second; an axolotl five minutes; a dolphin two minutes of moisture and
 // then dies; none of them come to harm in water.
 func TestWaterAnimalsDryOut(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.world
 	for x := -4; x <= 4; x++ {
@@ -62,7 +62,7 @@ func TestWaterAnimalsDryOut(t *testing.T) {
 
 // A dolphin low on air makes for the surface.
 func TestDolphinBreathesAtSurface(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.world
 	for x := -6; x <= 6; x++ {

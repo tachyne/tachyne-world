@@ -8,7 +8,7 @@ import (
 )
 
 func bowSetup() (*hub, *tracked, map[int32]*tracked) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 80, 0.5 // high in the air: clear flight path
 	pl.p.setHotbarSlot(0, itemBow)

@@ -12,7 +12,7 @@ import (
 
 func standFixture(t *testing.T) (*hub, map[int32]*tracked, *armorStand) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	for x := -3; x <= 3; x++ {
 		for z := -3; z <= 3; z++ {
@@ -121,7 +121,7 @@ func TestArmorStandHealthAndFireSurviveARestart(t *testing.T) {
 		t.Fatalf("after a restart: %+v, want hurt 7.5 and fire 140", got)
 	}
 
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.armorStands[got.eid] = got
 	pl := survPlayer(h)
 	drain(pl.p)

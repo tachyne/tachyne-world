@@ -169,7 +169,7 @@ func TestStewAndRepairCostComponents(t *testing.T) {
 // slots ride — and the whole thing has to walk cleanly, because the copier
 // recurses into every nested stack.
 func TestShulkerBoxCarriesItsContents(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pos := simPos{blockPos: blockPos{3, 70, 3}}
 	c := &chest{}
 	c.slots[0] = invStack{item: itemByName["diamond"], count: 5}
@@ -235,7 +235,7 @@ func TestOminousBottleIsNotABrew(t *testing.T) {
 // A rocket's flight duration comes from the gunpowder in its recipe, survives
 // a save, reaches the client, and is what decides how long it flies.
 func TestRocketFlightDuration(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	for powder := 1; powder <= 3; powder++ {
 		grid := make([]invStack, 9)
 		grid[0] = invStack{item: itemPaper, count: 1}

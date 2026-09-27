@@ -9,7 +9,7 @@ import (
 // The beam locks on (synced attack target), charges for the attack
 // duration without hurting, lands its hits at the end, and lets go.
 func TestGuardianBeamChargesThenFires(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := riderAt(1, 100.5, 180, 100.5) // open sky: the beam needs line of sight
 	players := map[int32]*tracked{1: pl}
 	h.playersRef = players

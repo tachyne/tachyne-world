@@ -10,7 +10,7 @@ import (
 // 9-35 are the main inventory at the same index).
 func clickRig(t *testing.T) (*hub, map[int32]*tracked, *tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{pl.p.eid: pl}
 	return h, players, pl

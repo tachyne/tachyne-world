@@ -14,7 +14,7 @@ func TestCampMapsAreNamed(t *testing.T) {
 	if !ok {
 		t.Skip("no abandoned camp table")
 	}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	named := 0
 	for _, p := range tbl.Pools {
 		for _, e := range p.Entries {

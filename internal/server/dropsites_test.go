@@ -9,7 +9,7 @@ import (
 // A mob's picked-up gear drops whole: a plain but named, dyed helmet keeps
 // its name and colour instead of going out bare through the id-only list.
 func TestMobGearDropsWhole(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.world.ForceLoad(0, 0, 1)
@@ -32,7 +32,7 @@ func TestMobGearDropsWhole(t *testing.T) {
 
 // Trade-slot leftovers that no longer fit the inventory land whole.
 func TestTradeLeftoversDropWhole(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

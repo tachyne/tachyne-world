@@ -12,7 +12,7 @@ import (
 // scared (blows lose a point and halve), then unrolling once the danger
 // memory lapses; a blow from a living thing is danger in itself.
 func TestArmadilloRollsUp(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.tick.Store(80) // on the scare check
@@ -65,7 +65,7 @@ func TestArmadilloRollsUp(t *testing.T) {
 // out (entity event 64) — not at once, but 150 to 450 ticks on, and again
 // after as long.
 func TestArmadilloPeeks(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	for x := -2; x <= 5; x++ {
 		for z := -2; z <= 2; z++ {

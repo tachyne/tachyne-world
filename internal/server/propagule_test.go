@@ -52,7 +52,7 @@ func TestPropaguleStateLayout(t *testing.T) {
 
 // Hanging under mangrove leaves, it ripens to max age with no roll and no light.
 func TestHangingPropaguleRipens(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 30, 40, 30 // underground: proves no light gate applies
 
@@ -74,7 +74,7 @@ func TestHangingPropaguleRipens(t *testing.T) {
 
 // With nothing to hang from it does not ripen.
 func TestHangingPropaguleNeedsLeaves(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 50, 40, 50
 
@@ -92,7 +92,7 @@ func TestHangingPropaguleNeedsLeaves(t *testing.T) {
 
 // Planted, it advances its stage and then grows a mangrove.
 func TestPlantedPropaguleGrowsAMangrove(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 70, 100, 70
 
@@ -151,7 +151,7 @@ func TestPlantedPropaguleGrowsAMangrove(t *testing.T) {
 // The propagule must not be picked up by the ordinary sapling handler, which
 // would grow the wrong species and skip the hanging behaviour entirely.
 func TestPropaguleIsNotASapling(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 90, 100, 90
 

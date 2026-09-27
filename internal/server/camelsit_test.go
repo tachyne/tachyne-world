@@ -11,7 +11,7 @@ import (
 // held still while sat, stands for a rider pushing forward, and stands
 // instantly when hit; the pose metadata carries the change tick.
 func TestCamelSits(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

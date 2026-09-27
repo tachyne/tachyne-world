@@ -18,7 +18,7 @@ func closeTo(a, b float64) bool { return math.Abs(a-b) < 1e-9 }
 // own default of 32. Those differ, and taking the registry default would
 // silently widen every mob's aggro range by half again.
 func TestMobFollowRangeStartsAtMobBase(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	m := h.spawnMobIn(nil, entityCow, 0, 0, 70, 0)
 	if m == nil {
 		t.Fatal("spawn returned nil")
@@ -33,7 +33,7 @@ func TestMobFollowRangeStartsAtMobBase(t *testing.T) {
 
 // Species that raise follow range keep their exact vanilla numbers.
 func TestSpeciesFollowRangeOverrides(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	for _, c := range []struct {
 		etype int
 		want  float64
@@ -61,7 +61,7 @@ func TestSpeciesFollowRangeOverrides(t *testing.T) {
 // The point of the migration: the stat can now be modified, and removing the
 // modifier restores the base.
 func TestFollowRangeTakesModifiers(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	m := h.spawnMobIn(nil, entityCow, 0, 0, 70, 0)
 	if m == nil {
 		t.Fatal("spawn returned nil")
@@ -98,7 +98,7 @@ func TestFollowRangeSurvivesMissingMap(t *testing.T) {
 // so these cover both round trips as well as the value itself.
 
 func TestMobMaxHealthMatchesSpecies(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	for _, etype := range []int{entityCow, entityZombie, entityCreeper, entityEnderman} {
 		m := h.spawnMobIn(nil, etype, 0, 0, 70, 0)
 		if m == nil {
@@ -116,7 +116,7 @@ func TestMobMaxHealthMatchesSpecies(t *testing.T) {
 // A plugin raising max health goes through the attribute, and the value
 // survives a save/reload round trip.
 func TestMaxHealthOverrideSurvivesReload(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	m := h.spawnMobIn(nil, entityCow, 0, 0, 70, 0)
 	if m == nil {
 		t.Fatal("spawn returned nil")
@@ -132,7 +132,7 @@ func TestMaxHealthOverrideSurvivesReload(t *testing.T) {
 	if sm.Max != 100 {
 		t.Fatalf("saved row carries max %d, want 100", sm.Max)
 	}
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	back := h2.reloadMob(nil, &sm)
 	if back == nil {
 		t.Fatal("reload returned nil")
@@ -146,7 +146,7 @@ func TestMaxHealthOverrideSurvivesReload(t *testing.T) {
 // on top of it, which is what the modifier layer is for.
 
 func TestZombieFamilyKeepsItsBaseArmor(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	for _, etype := range []int{entityZombie, entityHusk, entityDrowned} {
 		m := h.spawnHostile(players, etype, 0, 0)
@@ -170,7 +170,7 @@ func TestZombieFamilyKeepsItsBaseArmor(t *testing.T) {
 // Worn gear adds to the base, and taking the piece off leaves the base intact —
 // the delta-arithmetic version could only ever add.
 func TestGearArmorLayersOnTheBase(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	z := h.spawnHostile(players, entityZombie, 0, 0)
 	if z == nil {
@@ -199,7 +199,7 @@ func TestGearArmorLayersOnTheBase(t *testing.T) {
 // Gear is persisted but the armour bonus was not, so a restart used to leave
 // an armoured mob wearing a helmet that protected it from nothing.
 func TestReloadedGearStillProtects(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	z := h.spawnHostile(players, entityZombie, 0, 0)
 	if z == nil {
@@ -211,7 +211,7 @@ func TestReloadedGearStillProtects(t *testing.T) {
 	want := z.armorValue()
 
 	sm := toSavedMob(z)
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	back := h2.reloadMob(players, &sm)
 	if back == nil {
 		t.Fatal("reload returned nil")
@@ -228,7 +228,7 @@ func TestReloadedGearStillProtects(t *testing.T) {
 // numbers are unchanged and that the baby modifier now behaves like vanilla's.
 
 func TestSpawnSeedsSpeciesSpeed(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	for _, etype := range []int{entityCow, entityZombie, entitySpider, entityEnderman, entityWolf} {
 		m := h.spawnMobIn(nil, etype, 0, 0, 70, 0)
 		if m == nil {
@@ -253,7 +253,7 @@ func TestHandBuiltMobWalksAtTheGrazingDefault(t *testing.T) {
 // Vanilla's SPEED_MODIFIER_BABY is a multiply-base +0.5, so a baby is exactly
 // 1.5× its species pace.
 func TestBabySpeedIsAModifier(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	m := h.spawnMobIn(nil, entityZombie, 0, 0, 70, 0)
 	if m == nil {
 		t.Fatal("spawn returned nil")
@@ -272,7 +272,7 @@ func TestBabySpeedIsAModifier(t *testing.T) {
 // The bug the modifier layer removes: a behaviour swap resets the base, and a
 // baby used to lose its 1.5× for good because the multiplier had been baked in.
 func TestBabySpeedSurvivesABehaviorSwap(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	m := h.spawnHostile(map[int32]*tracked{}, entityZombie, 0, 0)
 	if m == nil {
 		t.Fatal("spawn returned nil")
@@ -292,7 +292,7 @@ func TestBabySpeedSurvivesABehaviorSwap(t *testing.T) {
 // A plugin override wins over the species pace and survives a behaviour swap,
 // which is what ovrSpeed exists for.
 func TestSpeedOverrideSurvivesABehaviorSwap(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	m := h.spawnHostile(map[int32]*tracked{}, entityZombie, 0, 0)
 	if m == nil {
 		t.Fatal("spawn returned nil")
@@ -310,7 +310,7 @@ func TestSpeedOverrideSurvivesABehaviorSwap(t *testing.T) {
 // A saved baby zombie comes back a baby, at baby pace — the spawn path rolls
 // its own 5% baby chance, so the flag and the modifier have to be re-synced.
 func TestReloadedBabyKeepsItsPace(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	z := h.spawnHostile(players, entityZombie, 0, 0)
 	if z == nil {
@@ -321,7 +321,7 @@ func TestReloadedBabyKeepsItsPace(t *testing.T) {
 	for _, baby := range []bool{true, false} {
 		z.baby = baby
 		sm := toSavedMob(z)
-		h2 := newHub(world.New(1))
+		h2 := newTestHub(world.New(1))
 		h2.reloading = true
 		back := h2.reloadMob(players, &sm)
 		if back == nil {
@@ -340,7 +340,7 @@ func TestReloadedBabyKeepsItsPace(t *testing.T) {
 // ATTACK_DAMAGE, and with it the cube family whose every stat is its size.
 
 func TestSpawnSeedsSpeciesAttackDamage(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	for _, etype := range []int{entityZombie, entitySpider, entityEnderman, entityZombifiedPiglin} {
 		m := h.spawnHostile(players, etype, 0, 0)
@@ -397,7 +397,7 @@ func TestCubeSizeDrivesEveryStat(t *testing.T) {
 // KNOCKBACK_RESISTANCE is a fraction, not a flag: the mobs between 0 and 1
 // were previously rounded to immovable or not, with nothing in between.
 func TestKnockbackResistanceIsFractional(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	for _, c := range []struct {
 		etype int

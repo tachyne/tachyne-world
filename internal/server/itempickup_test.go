@@ -32,7 +32,7 @@ func TestPickupKeepsEveryStoredField(t *testing.T) {
 			if st.item == 0 {
 				t.Fatalf("unknown item in case %s", name)
 			}
-			h := newHub(world.New(1))
+			h := newTestHub(world.New(1))
 			pl := testTracked()
 			players := map[int32]*tracked{1: pl}
 			pl.x, pl.y, pl.z = 0.5, h.world.SurfaceY(0, 0), 0.5
@@ -73,7 +73,7 @@ func TestStacksMergeOnlyWithTheSameData(t *testing.T) {
 }
 
 func TestGroundItemsMergeOnlyWithTheSameData(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	rocket := itemByName["firework_rocket"]
 	y := h.world.SurfaceY(0, 0)
@@ -99,7 +99,7 @@ func TestCreativePicksUpSpectatorDoesNot(t *testing.T) {
 		mode int
 		want bool
 	}{{gmCreative, true}, {gmSpectator, false}} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		pl := testTracked()
 		pl.gamemode = tc.mode
 		players := map[int32]*tracked{1: pl}

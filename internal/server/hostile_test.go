@@ -9,7 +9,7 @@ import (
 )
 
 func TestHostileChasesTarget(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	m := &mob{hasTarget: true, x: 0, z: 0, tx: 10, tz: 0}
 	m.setMoveSpeed(speedFor(entityZombie))
 	vx, vz := hostileBehavior{}.steer(h, m)
@@ -22,7 +22,7 @@ func TestHostileChasesTarget(t *testing.T) {
 }
 
 func TestZombieBitesPlayer(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
@@ -44,7 +44,7 @@ func TestZombieBitesPlayer(t *testing.T) {
 }
 
 func TestZombieOutOfReachDoesNotBite(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
@@ -57,7 +57,7 @@ func TestZombieOutOfReachDoesNotBite(t *testing.T) {
 }
 
 func TestHostileDoesNotFleeWhenHit(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	pl.x, pl.z = 0, 0
@@ -75,7 +75,7 @@ func TestHostileDoesNotFleeWhenHit(t *testing.T) {
 }
 
 func TestDaylightBurnsHostiles(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	pl.x, pl.z = 0.5, 0.5
@@ -101,7 +101,7 @@ func TestDaylightBurnsHostiles(t *testing.T) {
 }
 
 func TestBurnFlagClearsUnderCoverAndAtNight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -151,7 +151,7 @@ func TestBurnFlagClearsUnderCoverAndAtNight(t *testing.T) {
 // lava or Fire Aspect; the old once-a-second night branch cleared the flag
 // and mobEnvironment set it again, so the flame flickered.
 func TestNightKeepsAMobAlight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{1: testTracked()}
 	h.world.ForceLoad(0, 0, 2)
 	for x := -1; x <= 1; x++ {
@@ -177,7 +177,7 @@ func TestNightKeepsAMobAlight(t *testing.T) {
 // and a wet mob never rolls: a drowned standing in open water never
 // ignites at noon, and MONSTERS_BURN follows the overworld timeline.
 func TestSunBurnSkipsWetMobs(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{1: testTracked()}
 	h.world.ForceLoad(0, 0, 2)
 	for x := -2; x <= 2; x++ {
@@ -226,7 +226,7 @@ func TestFireMetadataShape(t *testing.T) {
 // step-up the mob refuses. Ring one in with doors and it must stay penned.
 func TestClosedDoorBlocksZombie(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -259,7 +259,7 @@ func TestClosedDoorBlocksZombie(t *testing.T) {
 }
 
 func TestNightSpawnsHostiles(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	pl.x, pl.z = 0.5, 0.5
@@ -300,7 +300,7 @@ func TestNightSpawnsHostiles(t *testing.T) {
 }
 
 func TestHostileStandoff(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	// Target within standoff distance: the mob should hold, not keep closing.
 	m := &mob{hasTarget: true, x: 0, z: 0, tx: 0.5, tz: 0}
 	m.setMoveSpeed(speedFor(entityZombie))

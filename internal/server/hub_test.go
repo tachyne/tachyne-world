@@ -73,7 +73,7 @@ func waitFor(t *testing.T, p *player, id int32, what string) {
 // leaves, and we assert the other player receives the right entity packets.
 func TestHubMultiplayer(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	// Player-relay assertions only: without this, natural spawning fills the
 	// seed-1 ocean with mobs whose movement events flood the undrained test
 	// queues until trySendEv drops the packets this test waits for.
@@ -108,7 +108,7 @@ func TestHubMultiplayer(t *testing.T) {
 // TestHubBlockBroadcast: an edit by one player reaches a nearby player but not
 // the editor (who already predicted it).
 func TestHubBlockBroadcast(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.DoMobSpawning = false // see TestHubMultiplayer: keep mob noise out
 	startHub(t, h)
 

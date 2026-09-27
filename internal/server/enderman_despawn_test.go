@@ -13,7 +13,7 @@ import (
 // carried meant it needed thirty fresh seconds after a put-down, picked the
 // next block up long before that, and never went (bug #31).
 func TestEndermanDespawnsSoonAfterPuttingItsBlockDown(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}

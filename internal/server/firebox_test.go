@@ -11,7 +11,7 @@ import (
 // player or a mob whose box leans into a fire's cell burns, not only one
 // whose feet or head cell holds it.
 func TestFireTouchesTheWholeBox(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	for x := -2; x <= 3; x++ {
 		for z := -2; z <= 2; z++ {

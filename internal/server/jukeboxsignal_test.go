@@ -12,7 +12,7 @@ import (
 // comparator reading, which says WHICH disc is in it — the engine had the
 // comparator and not the signal.
 func TestPlayingJukeboxPowersRedstone(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	const x, y, z = 60, 180, 60
 	for dx := -1; dx <= 1; dx++ {
@@ -49,7 +49,7 @@ func TestPlayingJukeboxPowersRedstone(t *testing.T) {
 // keep power from a block that is no longer there. This pins the two lists
 // together so a source added to one cannot be forgotten in the other.
 func TestEveryEmitterAnnouncesItsRemoval(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	for _, name := range []string{
 		"lever", "stone_button", "redstone_torch", "repeater", "comparator",
 		"observer", "redstone_block", "stone_pressure_plate", "detector_rail",

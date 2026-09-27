@@ -26,7 +26,7 @@ func waitDayTime(t *testing.T, h *hub, want uint64) {
 
 // TestExecuteCommand checks the shared bus-command router (backend-agnostic).
 func TestExecuteCommand(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.DoMobSpawning = false
 	h.rules.DoDaylight = false // hold the clock still so the settime poll target is exact
 	startHub(t, h)
@@ -50,7 +50,7 @@ func TestExecuteCommand(t *testing.T) {
 
 // TestBusCommands exercises the facade-parity command set.
 func TestBusCommands(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.DoMobSpawning = false
 	startHub(t, h)
 
@@ -136,7 +136,7 @@ func TestBusCommands(t *testing.T) {
 // TestBusEventBridge: with the bridge registered, plugin events publish as
 // JSON on mc.event.<name>; cancelled events don't.
 func TestBusEventBridge(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.DoMobSpawning = false
 	rec := &recordingBus{}
 	h.bus = rec

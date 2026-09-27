@@ -13,11 +13,12 @@ import (
 // then tells the hub via evDim so the authoritative record and everyone's
 // entity views move between dimensions.
 
-// The three dimensions, by the index every dim-carrying field uses.
+// The dimensions, by the index every dim-carrying field uses (the table is
+// world.Dimensions).
 const (
-	dimOverworld = 0
-	dimNether    = 1
-	dimEnd       = 2
+	dimOverworld = world.DimOverworld
+	dimNether    = world.DimNether
+	dimEnd       = world.DimEnd
 )
 
 // bedWorks and anchorWorks are DimensionType.bedWorks / respawnAnchorWorks: the
@@ -37,7 +38,7 @@ func (evDim) isHubEvent() {}
 // switchDimension moves a player between the overworld (0) and nether (1),
 // landing them at (x,z) scaled 8:1 the vanilla way.
 func (s *Server) switchDimension(p *player, dim int) {
-	if dim == p.dim {
+	if dim == p.dim || s.worldIn(dim) == nil {
 		return
 	}
 	var x, z float64
@@ -81,7 +82,7 @@ func (s *Server) switchDimension(p *player, dim int) {
 // switchDimensionTo is switchDimension landing beside a KNOWN cell (a bed,
 // the spawn, a teleport target) instead of derived coordinates.
 func (s *Server) switchDimensionTo(p *player, dim int, dest blockPos) {
-	if dim == p.dim {
+	if dim == p.dim || s.worldIn(dim) == nil {
 		return
 	}
 	p.dim = dim
@@ -96,7 +97,7 @@ func (s *Server) switchDimensionTo(p *player, dim int, dest blockPos) {
 // switchDimensionAt is switchDimension landing at a nether portal's exact
 // arrival spot and heading, as the hub worked them out (portalforcer.go).
 func (s *Server) switchDimensionAt(p *player, dim int, x, y, z float64, yaw float32) {
-	if dim == p.dim {
+	if dim == p.dim || s.worldIn(dim) == nil {
 		return
 	}
 	p.dim = dim
@@ -109,7 +110,7 @@ func (s *Server) switchDimensionAt(p *player, dim int, x, y, z float64, yaw floa
 }
 
 // buildEndPlatform lays the vanilla 5x5 obsidian arrival pad at (100,48,0).
-func (s *Server) buildEndPlatform(p *player) { endPlatform(s.end) }
+func (s *Server) buildEndPlatform(p *player) { endPlatform(s.dims.get(dimEnd)) }
 
 // endPlatform is EndPlatformFeature.createEndPlatform under END_SPAWN_POINT
 // (100,50,0): obsidian at y 48, three cells of air above it.

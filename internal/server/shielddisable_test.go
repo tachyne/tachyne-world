@@ -10,7 +10,7 @@ import (
 // drops, the next blow lands, and it cannot be raised until the cooldown is
 // out; a sword blow does nothing of the kind.
 func TestAxeDisablesShield(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := blocking(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

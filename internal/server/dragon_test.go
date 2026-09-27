@@ -10,9 +10,9 @@ import (
 
 func endHub(t *testing.T) (*hub, *tracked, map[int32]*tracked) {
 	t.Helper()
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	ew, _ := world.NewEnd(7, nil)
-	h.end = ew
+	h.dims.set(dimEnd, ew)
 	pl := testTracked()
 	pl.gamemode = gmSurvival
 	pl.dim = 1 // will switch to 2
@@ -90,10 +90,10 @@ func TestDragonDeathOpensExitEggAndXP(t *testing.T) {
 	// Exit portal blocks exist near the origin, the egg on top.
 	portalY, egg := 0, false
 	for y := worldgen.EndSurfaceY - 2; y < worldgen.EndSurfaceY+10; y++ {
-		if h.end.At(1, y, 0) == worldgen.EndPortalBlock && portalY == 0 {
+		if h.worldFor(dimEnd).At(1, y, 0) == worldgen.EndPortalBlock && portalY == 0 {
 			portalY = y
 		}
-		if h.end.At(0, y, 0) == worldgen.DragonEgg {
+		if h.worldFor(dimEnd).At(0, y, 0) == worldgen.DragonEgg {
 			egg = true
 		}
 	}
@@ -118,8 +118,8 @@ func TestDragonDeathOpensExitEggAndXP(t *testing.T) {
 	}
 	// A second fight: 500 XP, and the egg is not set again.
 	for y := worldgen.EndSurfaceY - 2; y < worldgen.EndSurfaceY+10; y++ {
-		if h.end.At(0, y, 0) == worldgen.DragonEgg {
-			h.end.SetBlock(0, y, 0, worldgen.Air) // someone took it
+		if h.worldFor(dimEnd).At(0, y, 0) == worldgen.DragonEgg {
+			h.worldFor(dimEnd).SetBlock(0, y, 0, worldgen.Air) // someone took it
 		}
 	}
 	h.enterEnd(players, nil)
@@ -140,7 +140,7 @@ func TestDragonDeathOpensExitEggAndXP(t *testing.T) {
 		t.Fatalf("a second kill gave %d XP, want 500", got)
 	}
 	for y := worldgen.EndSurfaceY - 2; y < worldgen.EndSurfaceY+10; y++ {
-		if h.end.At(0, y, 0) == worldgen.DragonEgg {
+		if h.worldFor(dimEnd).At(0, y, 0) == worldgen.DragonEgg {
 			t.Fatal("a second kill set another egg")
 		}
 	}

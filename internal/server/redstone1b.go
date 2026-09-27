@@ -410,10 +410,7 @@ func (h *hub) updateDaylight(players map[int32]*tracked, pos blockPos, state uin
 // updatePlates is the per-tick occupancy scan: entities standing on plates
 // press them; empty pressed plates release. platesOn tracks what's pressed.
 func (h *hub) updatePlates(players map[int32]*tracked) {
-	for dim := 0; dim <= 2; dim++ {
-		if dim != 0 && h.worldFor(dim) == h.world {
-			continue
-		}
+	for dim := range h.allDims() {
 		h.inDim(dim, func() { h.updatePlatesIn(players, dim) })
 	}
 }

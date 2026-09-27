@@ -11,7 +11,7 @@ import (
 // everyone aboard a happy ghast is credited happy_ghast_one_cm (nothing
 // was).
 func TestRidingStatisticsByMount(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}

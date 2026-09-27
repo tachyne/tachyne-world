@@ -10,7 +10,7 @@ import (
 // thousand ticks, a slime ball hurries it; a vex's charging flag follows
 // its target.
 func TestTadpoleGrowsAndVexCharges(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

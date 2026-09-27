@@ -10,7 +10,7 @@ import (
 // it, one below takes the bone meal and empties it. That pair is the whole
 // composter farm.
 func TestHoppersFeedAndEmptyAComposter(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	x, y, z := 30, 70, 30

@@ -59,7 +59,7 @@ func sawMove(fs []any, eid int32) bool {
 // removes a player's body the moment they leave a viewer's range and spawns
 // it again when they return.
 func TestPlayerBodyLeavesAndReturnsWithRange(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.tick.Store(100)
 	h.rules.LocatorBar = false
 	players := map[int32]*tracked{}
@@ -102,7 +102,7 @@ func TestPlayerBodyLeavesAndReturnsWithRange(t *testing.T) {
 // A player who leaves is removed for everyone holding their body, and no
 // viewer keeps a stale entry that would remove it a second time.
 func TestPlayerBodyRemovedOnLeave(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	a := &tracked{p: newPlayer(1, "a", [16]byte{1}), x: 0, y: 80, z: 0}
 	b := &tracked{p: newPlayer(2, "b", [16]byte{2}), x: 5, y: 80, z: 5}
@@ -121,7 +121,7 @@ func TestPlayerBodyRemovedOnLeave(t *testing.T) {
 // ServerPlayer.broadcastToPlayer: a spectator's body is sent only to other
 // spectators.
 func TestSpectatorBodyOnlyForSpectators(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	spec := &tracked{p: newPlayer(1, "spec", [16]byte{1}), x: 0, y: 80, z: 0, gamemode: gmSpectator}
 	surv := &tracked{p: newPlayer(2, "surv", [16]byte{2}), x: 5, y: 80, z: 5}
@@ -140,7 +140,7 @@ func TestSpectatorBodyOnlyForSpectators(t *testing.T) {
 // Want radius), not a fixed interest radius — and only in a chunk the client
 // has actually been sent (ChunkMap.isChunkTracked).
 func TestPlayerTrackingFollowsTheClientsChunkView(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	viewer := &tracked{p: newPlayer(1, "viewer", [16]byte{1}), x: 8, y: 80, z: 8}
 	far := &tracked{p: newPlayer(2, "far", [16]byte{2}), x: 10*16 + 8, y: 80, z: 8} // ten chunks east

@@ -10,7 +10,7 @@ import (
 // MossyCarpetBlock.updateShape: a carpet's side up a wall goes when the wall
 // does, and an upper layer that is left with no side at all goes with it.
 func TestPaleMossCarpetSidesFollowTheWall(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	players := map[int32]*tracked{}
 	const x, y, z = 44, 180, 44
@@ -40,7 +40,7 @@ func TestPaleMossCarpetSidesFollowTheWall(t *testing.T) {
 // BambooSaplingBlock.updateShape turns the shoot into a stalk when bamboo
 // grows on it; BambooStalkBlock.updateShape passes an older stalk's AGE down.
 func TestBambooShootAndStalkFollowTheBambooAbove(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	players := map[int32]*tracked{}
 	const x, y, z = 48, 180, 48
@@ -62,7 +62,7 @@ func TestBambooShootAndStalkFollowTheBambooAbove(t *testing.T) {
 // HangingMossBlock: moss hangs from moss (canStayAtPosition), and TIP marks
 // the strand's last cell.
 func TestHangingMossStrand(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	players := map[int32]*tracked{}
 	const x, y, z = 52, 180, 52
@@ -88,7 +88,7 @@ func TestHangingMossStrand(t *testing.T) {
 // BigDripleafBlock.updateShape: a leaf with another leaf set on top of it
 // becomes stem, keeping its facing.
 func TestBigDripleafUnderALeafBecomesStem(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	players := map[int32]*tracked{}
 	const x, y, z = 56, 180, 56

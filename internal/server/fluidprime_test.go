@@ -38,7 +38,7 @@ func TestGeneratedSpringsRun(t *testing.T) {
 		t.Fatalf("spring at %v has no opening", spring)
 	}
 	w.ForceLoad(spring[0], spring[2], 1) // the player's view around it
-	h := newHub(w)
+	h := newTestHub(w)
 	tr := testTracked()
 	tr.x, tr.y, tr.z = float64(spring[0]), float64(spring[1]), float64(spring[2])
 	players := map[int32]*tracked{1: tr}
@@ -69,7 +69,7 @@ func TestPrimingWakesFrozenLavaAndFire(t *testing.T) {
 	flowing := worldgen.LavaBase + 2 // flowing lava, no source, nothing under it
 	w.SetBlock(x, y, z, flowing)
 	w.SetBlock(x+2, y, z, fireDefault) // fire with nothing flammable about
-	h := newHub(w)
+	h := newTestHub(w)
 	tr := testTracked()
 	tr.x, tr.y, tr.z = float64(x)+0.5, float64(y), float64(z)+0.5
 	players := map[int32]*tracked{1: tr}
@@ -93,7 +93,7 @@ func TestPrimingRearmsFrogspawn(t *testing.T) {
 	w.ForceLoad(x, z, 1)
 	w.SetBlock(x, y-1, z, worldgen.WaterBase)
 	w.SetBlock(x, y, z, frogspawnBlock)
-	h := newHub(w)
+	h := newTestHub(w)
 	tr := testTracked()
 	tr.x, tr.y, tr.z = float64(x), float64(y), float64(z)
 	players := map[int32]*tracked{1: tr}

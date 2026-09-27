@@ -16,7 +16,7 @@ import (
 // new heading, which reads exactly like "knockback does nothing".
 func knockbackRig(t *testing.T) (*hub, *tracked, map[int32]*tracked, *mob) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	const y, z = 180, 40
 	for x := 30; x <= 60; x++ {
@@ -125,7 +125,7 @@ func lastKnockVY(t *testing.T, tr *tracked) float64 {
 // because the server tells it. Without this every compass pointed at the
 // world origin — the client's own default — wherever spawn actually was.
 func TestJoinerIsToldTheWorldSpawn(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.worldSpawnX, h.worldSpawnY, h.worldSpawnZ = -1533.5, 300, 4175.5
 	h.hasWorldSpawn = true
 	tr := &tracked{p: newPlayer(1, "p", [16]byte{})}

@@ -13,7 +13,7 @@ import (
 // spawner or out of a dispenser — which a creative player notices at once.
 func TestSpawnEggPlacesItsMob(t *testing.T) {
 	w := world.New(61)
-	h := newHub(w)
+	h := newTestHub(w)
 	pl := testTracked()
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -96,7 +96,7 @@ func TestSpawnEggPlacesItsMob(t *testing.T) {
 // bred from it — a lamb takes its parent's fleece — and the egg is spent;
 // an egg of another species does nothing to the mob.
 func TestSpawnEggOnItsOwnSpeciesMakesABaby(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -148,7 +148,7 @@ func TestSpawnEggOnItsOwnSpeciesMakesABaby(t *testing.T) {
 // SpawnEggItem.use: an egg used while looking at water (the client sends a
 // plain use, a fluid not being clickable) puts the mob in the water.
 func TestSpawnEggUsedOnWaterSpawnsInIt(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -194,7 +194,7 @@ func TestSpawnEggUsedOnWaterSpawnsInIt(t *testing.T) {
 func TestSpawnEggMobIsConfiguredLikeItsKind(t *testing.T) {
 	w := world.New(61)
 	w.ForceLoad(0, 0, 1)
-	h := newHub(w)
+	h := newTestHub(w)
 	pl := testTracked()
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

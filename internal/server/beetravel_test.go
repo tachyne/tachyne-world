@@ -15,7 +15,7 @@ import (
 
 func beeTravelWorld(t *testing.T) (*hub, map[int32]*tracked, blockPos) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.hives = map[simPos][]hiveOccupant{}
@@ -229,7 +229,7 @@ func TestBeeFlowerRidesThroughTheHive(t *testing.T) {
 // Bee.BeeAttackGoal(1.4): an angry bee closes on its target at 1.4 times
 // its pace, not the plain chase.
 func TestAngryBeeChasesAtOnePointFour(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	airBox(t, h.world, -4, 170, -4, 30, 190, 12)
 	pl := survPlayer(h)

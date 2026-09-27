@@ -11,7 +11,7 @@ import (
 // A newly tamed wolf wears a red collar; the owner's dye recolours it and is
 // spent; the collar rides in the mob's metadata at DATA_COLLAR_COLOR.
 func TestPetCollarDye(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	w := h.spawnAnimal(players, entityWolf, 0, 0)

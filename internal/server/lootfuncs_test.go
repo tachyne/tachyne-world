@@ -10,7 +10,7 @@ import (
 // The item-shaping chest functions: potions, names, horns, stews and
 // ominous levels come out of the table, not generic.
 func TestChestFunctionsShapeItems(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	r := rand.New(rand.NewSource(7))
 	ctx := &lootCtx{rng: r.Intn, randf: r.Float64}
 
@@ -50,7 +50,7 @@ func TestChestFunctionsShapeItems(t *testing.T) {
 // A shipwreck's map chest hands out a real treasure map: a filled map
 // centred near the nearest buried treasure with a red cross on it.
 func TestShipwreckMapLeadsToBuriedTreasure(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.maps = newMapStore("")
 	tx, tz, ok := h.world.Gen().LocateStructure("buried_treasure", 0, 0, 20000)
 	if !ok {

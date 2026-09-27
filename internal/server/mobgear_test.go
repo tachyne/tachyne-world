@@ -8,7 +8,7 @@ import (
 )
 
 func TestMobEquipment(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	z := h.spawnHostile(players, entityZombie, 0, 0)
 	z.x, z.y, z.z = 0.5, 64, 0.5
@@ -56,7 +56,7 @@ func TestMobEquipment(t *testing.T) {
 }
 
 func TestMobPickupScan(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	z := h.spawnHostile(players, entityZombie, 0, 0)
 	z.x, z.y, z.z = 0.5, 64, 0.5
@@ -91,7 +91,7 @@ func TestMobPickupScan(t *testing.T) {
 // an empty hand takes a whole stack of anything and drops it all on death;
 // equal weapons are settled by enchantments, then wear.
 func TestMobGearReplacementRules(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	one := func(name string) invStack { return invStack{item: int32(itemByName[name]), count: 1} }
 
@@ -161,7 +161,7 @@ func TestMobGearReplacementRules(t *testing.T) {
 // reload, in the drop when it dies — and a player it kills with it is slain
 // "using" it (death.attack.mob.item).
 func TestMobHeldItemKeepsItsName(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.gamemode = gmSurvival
 	pl.x, pl.y, pl.z = 0.5, 64, 0.5

@@ -11,7 +11,7 @@ import (
 // (the block change, then the drop): the box comes back with its contents
 // and nothing scatters.
 func TestShulkerBoxHandBreakRealPath(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -41,7 +41,7 @@ func TestShulkerBoxHandBreakRealPath(t *testing.T) {
 // A blast takes the box the same way: setBlockAt removes it, then the
 // explosion's loot drop carries the contents.
 func TestShulkerBoxExplodedKeepsContents(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	players := map[int32]*tracked{}
 	h.playersRef = players

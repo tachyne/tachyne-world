@@ -11,7 +11,7 @@ import (
 // (ridden or led off) re-anchors there. An untamed one keeps no home, and a
 // happy ghast keeps one of 64 whether tamed or not.
 func TestNautilusAndGhastHomes(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nautilusSea(h)
 	players := map[int32]*tracked{}
 	n := h.spawnSpecies(players, entityNautilus, 0, 0.5, 184, 0.5)

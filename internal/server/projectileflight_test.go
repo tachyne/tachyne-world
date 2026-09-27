@@ -11,7 +11,7 @@ import (
 // creative players) standing in open air at y=180, facing +z on the level.
 func flightHub(t *testing.T) (*hub, map[int32]*tracked, *tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2) // loaded ground: ageless projectiles end at the loaded edge
 	pl := survPlayer(h)
 	pl.gamemode = gmCreative
@@ -188,7 +188,7 @@ func TestDispenserShotPowerAndMouth(t *testing.T) {
 		pow  float64
 		unc  float64
 	}{{itemSnowball, 1.1, 6}, {itemSplashPotion, 1.375, 3}} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		h.world.ForceLoad(0, 0, 1)
 		h.arrows = map[int32]*arrowEntity{}
 		state := eastDispenser(t)

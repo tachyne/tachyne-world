@@ -53,7 +53,7 @@ func recordChat(t *testing.T, p *player) *chatLog {
 func feedbackServer(t *testing.T) (*Server, *hub, map[string]*player, map[string]*chatLog) {
 	t.Helper()
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	h.rules.DoMobSpawning = false
 	s := &Server{world: w, hub: h, modes: newModeStore("", gmCreative), Ops: map[string]bool{"alice": true, "bob": true}}
 	h.isOp = s.isOp

@@ -11,7 +11,7 @@ import (
 // carries its rider, dashes on the jump key with a forty-tick cooldown,
 // and keeps its rider breathing on Breath of the Nautilus.
 func TestNautilusMount(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

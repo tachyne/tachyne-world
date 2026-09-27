@@ -95,7 +95,7 @@ func glidingPlayer(h *hub) (*tracked, map[int32]*tracked) {
 // flight (updateFallFlying spends one every twentieth tick), and only while
 // the player is actually gliding.
 func TestGlidingWearsTheElytra(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	tr, players := glidingPlayer(h)
 	for i := 0; i < 59; i++ {
 		h.tickGliding(players)
@@ -122,7 +122,7 @@ func TestGlidingWearsTheElytra(t *testing.T) {
 
 // Creative flies for free — hasInfiniteMaterials spares the wing.
 func TestCreativeGlidingCostsNothing(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	tr, players := glidingPlayer(h)
 	tr.gamemode = gmCreative
 	for i := 0; i < 40; i++ {
@@ -137,7 +137,7 @@ func TestCreativeGlidingCostsNothing(t *testing.T) {
 // wing whose next damage would destroy it, so the flight ends, the elytra
 // stays in the slot unusable, and the client is told the flag is off.
 func TestASpentElytraEndsTheGlide(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	tr, players := glidingPlayer(h)
 	max := itemMaxDurability[itemElytra]
 	tr.armor[chestArmorSlot].dmg = max - 2 // one point left to spend
@@ -207,7 +207,7 @@ func TestGlidingRefusedOnASpentElytra(t *testing.T) {
 // canGlide's other two refusals: riding something, and Levitation. Either one
 // ends the glide the same way a landing does.
 func TestRidingAndLevitationEndTheGlide(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 
 	tr, players := glidingPlayer(h)
 	tr.ridingEID = 99 // sat on a boat mid-flight
@@ -235,7 +235,7 @@ func TestRidingAndLevitationEndTheGlide(t *testing.T) {
 // ten less three, as fly_into_wall damage. A glider that merely eases off, or
 // one whose speed drop has no wall behind it, is left alone.
 func TestFlyIntoWallHurts(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := elytraPlayer()
 	players[pl.p.eid] = pl

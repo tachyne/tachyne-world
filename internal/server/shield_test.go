@@ -18,7 +18,7 @@ func blocking(h *hub) *tracked {
 }
 
 func TestShieldBlocksFrontArc(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := blocking(h)
 	if h.shieldBlocked(pl, 4, dtPlayerAttack, from(5, 0)) != 4 {
 		t.Fatal("should block an attacker in front (+x)")
@@ -29,7 +29,7 @@ func TestShieldBlocksFrontArc(t *testing.T) {
 }
 
 func TestShieldBlockDelay(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := blocking(h)
 	pl.blockingSince = 98 // only 2 ticks ago — under the 5-tick raise delay
 	if h.shieldBlocked(pl, 4, dtPlayerAttack, from(5, 0)) != 0 {
@@ -41,7 +41,7 @@ func TestShieldBlockDelay(t *testing.T) {
 // set as bypasses_armor — it is that set plus the environmental hazards — so
 // grading a shield off the armour tag would let it catch lava.
 func TestShieldHonoursTheBypassTag(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := blocking(h)
 	for _, c := range []struct {
 		dt    dmgType
@@ -75,7 +75,7 @@ func TestShieldHonoursTheBypassTag(t *testing.T) {
 // source position and a missing one lands outside every arc. This is what lets
 // starving and drowning through a raised shield without a tag for each.
 func TestUnsourcedDamageIsNeverBlocked(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := blocking(h)
 	if h.shieldBlocked(pl, 4, dtPlayerAttack, dmgFrom{}) != 0 {
 		t.Fatal("a hit with no source position should not be blockable")
@@ -101,7 +101,7 @@ func TestShieldWearScalesWithTheHit(t *testing.T) {
 // Blocking cancels what the blow would have delivered — vanilla gates a hit's
 // follow-on effects on its return value, and a caught bite carries no venom.
 func TestBlockedHitReportsNotLanded(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := blocking(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	if h.hurtFrom(players, pl, 4, dtMobAttack, deathCause{}, from(5, 0)) {
@@ -121,7 +121,7 @@ func TestBlockedHitReportsNotLanded(t *testing.T) {
 // A falling anvil batters the helmet in particular and loses a quarter of its
 // force doing it.
 func TestDamagesHelmetWearsTheHelmetAndSoftensTheBlow(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.health = maxHealth
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -144,7 +144,7 @@ func TestDamagesHelmetWearsTheHelmetAndSoftensTheBlow(t *testing.T) {
 }
 
 func TestRaiseShieldRequiresShield(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.tick.Store(50)
 	pl := testTracked()
 	pl.p.setHotbarSlot(0, itemShield)

@@ -14,7 +14,7 @@ import (
 // the burst takes that scaled by how close it stood.
 func TestFireworkRocketBlast(t *testing.T) {
 	w := world.New(3)
-	h := newHub(w)
+	h := newTestHub(w)
 	h.initStars(newStarStore())
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}

@@ -117,7 +117,7 @@ func TestDropperKeepsItemData(t *testing.T) {
 // EnderChestBlock.useWithoutItem: a solid block on the lid keeps an ender
 // chest shut.
 func TestEnderChestBlockedByConductor(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -138,7 +138,7 @@ func TestEnderChestBlockedByConductor(t *testing.T) {
 // A banner blown up (or knocked off its wall) still drops with its layers:
 // the loot table copies them from the block entity.
 func TestExplodedBannerKeepsPattern(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	players := map[int32]*tracked{}
 	pos := blockPos{0, 100, 0}
@@ -160,7 +160,7 @@ func TestExplodedBannerKeepsPattern(t *testing.T) {
 // A decorated pot blown up keeps its faces: the removal holds them for the
 // drop that follows.
 func TestExplodedPotKeepsSherds(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	players := map[int32]*tracked{}
 	pos := blockPos{0, 100, 0}

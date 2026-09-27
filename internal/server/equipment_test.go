@@ -59,7 +59,7 @@ func TestEquipmentPacketShape(t *testing.T) {
 }
 
 func TestLeaveKeepsArmorWorn(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.invs = newInvStore(t.TempDir() + "/inv.json")
 	players := map[int32]*tracked{}
 	pl := testTracked()

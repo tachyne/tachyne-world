@@ -27,7 +27,7 @@ func TestMobWeaponAddsItsModifierOnly(t *testing.T) {
 // A witch targets players only; the raiders with villager goals keep them,
 // and a ravager leaves baby villagers alone.
 func TestRaiderPrey(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.world.ForceLoad(0, 0, 2)
 	spawn := func(et int, x float64) *mob { return h.spawnMob(players, et, x, 180, 0.5) }
@@ -60,7 +60,7 @@ func TestParchedIsASlowerSkeleton(t *testing.T) {
 	if burnsInDaylight[entityParched] {
 		t.Error("a parched burns in daylight; 26.3's #burn_in_daylight leaves it out")
 	}
-	h := newHub(world.New(83))
+	h := newTestHub(world.New(83))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -86,7 +86,7 @@ func TestParchedIsASlowerSkeleton(t *testing.T) {
 // every 40 ticks, at anything within 20 blocks. It used to reach 40 blocks
 // and fire every 18 ticks.
 func TestWitherCentreHeadCadenceAndRange(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -125,7 +125,7 @@ func TestStruckMobPanicsOnlyIfItsSpeciesDoes(t *testing.T) {
 		panic bool
 	}{{entityCow, true}, {entityOcelot, false}, {entitySnowGolem, false}, {entityZombieHorse, false},
 		{entitySquid, false}, {entityGlowSquid, false}, {entityBat, false}} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		pl := survPlayer(h)
 		players := map[int32]*tracked{pl.p.eid: pl}
 		h.playersRef = players
@@ -145,7 +145,7 @@ func TestStruckMobPanicsOnlyIfItsSpeciesDoes(t *testing.T) {
 
 // The target classes vanilla hangs on these species besides players.
 func TestMoreTargetClasses(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.world.ForceLoad(0, 0, 2)
 	spawn := func(et int, x float64) *mob { return h.spawnMob(players, et, x, 180, 0.5) }

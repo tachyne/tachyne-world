@@ -12,7 +12,7 @@ import (
 // (vanilla Painting.create), the spawn + variant metadata reach viewers, and
 // breaking a support block pops the painting as an item drop.
 func TestPaintingPlacement(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 2.5, 201, -2.5

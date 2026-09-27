@@ -9,7 +9,7 @@ import (
 // Given a cobblestone, an allay collects matching drops and throws them back
 // at its player once close; an empty hand takes everything back.
 func TestAllayCollectsAndDelivers(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.rules.MobGriefing = true

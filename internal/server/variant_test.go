@@ -40,7 +40,7 @@ func TestFrogVariantByBiome(t *testing.T) {
 // A spawned frog or axolotl carries a variant; the metadata names it at
 // index 17 under the right serializer; other species send nothing.
 func TestVariantMetadataAndPersistence(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	frog := h.spawnSpecies(players, entityFrog, 0, 10.5, 70, 10.5)
 	if !frog.variantSet {
@@ -179,7 +179,7 @@ func TestRabbitAndFoxVariantByBiome(t *testing.T) {
 // Every variant species names its own entry: index and serializer per the
 // 1.21.5 synched-data layout, llamas with strength alongside.
 func TestVariantMetaEntries(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	cases := []struct {
 		etype int
@@ -234,7 +234,7 @@ func TestVariantMetaEntries(t *testing.T) {
 // Horses pack colour and markings; a herd shares its colour and rolls
 // markings per horse; over many rolls every colour and marking appears.
 func TestHorseVariantRollsAndHerds(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	colours, marks := map[int32]int{}, map[int32]int{}
 	for i := 0; i < 2000; i++ {
@@ -277,7 +277,7 @@ func TestHorseVariantRollsAndHerds(t *testing.T) {
 // Breeding: a foal draws colour and markings from its parents (or fresh),
 // a cria's strength from the stronger parent, everyone else a parent's coat.
 func TestVariantInheritance(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	a := &mob{etype: entityHorse, variant: horseVariant(horseBlack, horseMarkWhiteDots), variantSet: true}
 	b := &mob{etype: entityHorse, variant: horseVariant(horseGray, horseMarkNone), variantSet: true}
 	fresh := 0
@@ -332,7 +332,7 @@ func TestVariantInheritance(t *testing.T) {
 // Cats: all_black is only in the pool under a full moon; the other ten
 // coats always are.
 func TestCatVariantMoon(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	allBlack := catVariantID[catAllBlack]
 	h.dayTime.Store(24000 * 2) // phase 2: half moon
 	seen := map[int32]bool{}

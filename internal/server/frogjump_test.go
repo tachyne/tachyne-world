@@ -11,7 +11,7 @@ import (
 // off across a drop cannot walk over, so within a few cooldowns it leaps
 // it and lands on top.
 func TestFrogLongJumpsAGap(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	w := h.world
 	for x := -6; x <= 8; x++ {

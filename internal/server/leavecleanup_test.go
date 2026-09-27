@@ -10,7 +10,7 @@ import (
 // unique per join, so anything left behind is a permanent entry — the exact
 // "map keyed by session id with no delete on disconnect" shape.
 func TestLeaveReleasesPerPlayerSculkState(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[pl.p.eid] = pl

@@ -23,7 +23,7 @@ func drain(p *player) int {
 // mover's body but NOT to one far outside tracking range — the O(n²) fan-out
 // fix, now carried by the tracked set.
 func TestMoveRelayIsInterestManaged(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.tick.Store(100)          // a live clock: at tick 0 the movement budget has no bank yet
 	h.rules.LocatorBar = false // this test is about entity-move interest, not the all-dim locator bar
 	players := map[int32]*tracked{}

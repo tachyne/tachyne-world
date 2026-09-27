@@ -22,7 +22,7 @@ func TestCoralDeadMappingCoversTheFamilies(t *testing.T) {
 
 // Coral out of water bleaches; coral with water beside it does not.
 func TestCoralDiesOutOfWater(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	live, _, _ := worldgen.BlockRangeOK("tube_coral_block")
@@ -46,7 +46,7 @@ func TestCoralDiesOutOfWater(t *testing.T) {
 
 // Taking the water away arms the die tick on the coral next to it.
 func TestRemovingWaterSchedulesCoralDeath(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.worldFor(0)
 	// The BASE state of a coral plant is waterlogged=true — the first value of
 	// the property — and waterlogged coral never dies. The one that can dry out
@@ -82,7 +82,7 @@ func TestRemovingWaterSchedulesCoralDeath(t *testing.T) {
 // Water taken away by the world, not a player (a sponge, a piston, a flow
 // receding: every setBlockAt), arms the die tick too, and the coral bleaches.
 func TestCoralDiesWhenTheWorldDrainsIt(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)

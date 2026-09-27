@@ -10,7 +10,7 @@ import (
 // TestCakeSliceSaturation: CakeBlock.eat is FoodData.eat(2, 0.1F), and
 // saturationByModifier makes that 2 × 0.1 × 2 = 0.4 saturation a slice.
 func TestCakeSliceSaturation(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

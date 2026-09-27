@@ -40,7 +40,7 @@ func TestSaplingsGrowTheirOwnSpecies(t *testing.T) {
 		{"cherry_sapling", "cherry_log", "cherry_leaves"},
 	}
 	for i, c := range cases {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		players := map[int32]*tracked{}
 		x, y, z := 100+i*16, 200, 100
 
@@ -89,7 +89,7 @@ func TestSaplingsGrowTheirOwnSpecies(t *testing.T) {
 // one sapling on its own must never grow.
 func TestDarkOakNeedsFourSaplings(t *testing.T) {
 	for _, name := range []string{"dark_oak_sapling", "pale_oak_sapling"} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		players := map[int32]*tracked{}
 		x, y, z := 40, 200, 40
 
@@ -108,7 +108,7 @@ func TestDarkOakNeedsFourSaplings(t *testing.T) {
 
 // Four in a square do grow, and consume all four.
 func TestDarkOakSquareGrows(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 60, 200, 60
 
@@ -135,7 +135,7 @@ func TestDarkOakSquareGrows(t *testing.T) {
 
 // A sapling's canopy must not eat a player's build: leaves only replace air.
 func TestGrowingTreeDoesNotOverwriteBlocks(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 80, 200, 80
 
@@ -159,7 +159,7 @@ func TestGrowingTreeDoesNotOverwriteBlocks(t *testing.T) {
 func TestPoplarSaplingGrowsAPoplar(t *testing.T) {
 	logLo, logHi := worldgen.BlockRange("poplar_log")
 	colours := map[string]bool{}
-	h := newHub(world.New(1)) // one hub: its seeded draws differ sapling to sapling
+	h := newTestHub(world.New(1)) // one hub: its seeded draws differ sapling to sapling
 	players := map[int32]*tracked{}
 	for i := 0; i < 9; i++ {
 		x, y, z := 100+i*32, 200, 100

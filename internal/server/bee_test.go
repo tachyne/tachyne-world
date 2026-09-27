@@ -14,7 +14,7 @@ import (
 
 func beeWorld(t *testing.T) (*hub, map[int32]*tracked, blockPos) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.hivestore = newHiveStore("") // in-memory
 	h.hivesLoad()
 	players := map[int32]*tracked{}

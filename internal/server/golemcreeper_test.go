@@ -9,7 +9,7 @@ import (
 // TestGolemIgnoresCreepers: an iron golem punches a zombie in reach but
 // never a creeper, and does not walk toward one either.
 func TestGolemIgnoresCreepers(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

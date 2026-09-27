@@ -33,7 +33,7 @@ func TestAdoptIdentityRolesAndSkin(t *testing.T) {
 // client draws its own skin from it (else a default skin by UUID), and it is
 // the only entry a player alone on the server gets.
 func TestJoinSendsOwnPlayerInfoWithSkin(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	p := newPlayer(h.allocEID(), "EdgeZA", [16]byte{0x43, 0x08})
 	p.props = []skinProperty{{Name: "textures", Value: "dGV4", Signature: "c2ln"}}

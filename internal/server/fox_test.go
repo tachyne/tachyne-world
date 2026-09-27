@@ -27,7 +27,7 @@ func foxArena(h *hub, r int) float64 {
 // blocks and stays down until it is fully crouched, then springs at it
 // (StalkPreyGoal, FoxPounceGoal).
 func TestFoxStalksCrouchesAndPounces(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	y := foxArena(h, 20)
 	h.dayTime.Store(15000) // night: no sleep, no shelter
@@ -85,7 +85,7 @@ func TestFoxStalksCrouchesAndPounces(t *testing.T) {
 // Coming down in snow, a pouncing fox ends up face down in it for forty
 // ticks and forgets its quarry (FoxPounceGoal.tick, FaceplantGoal).
 func TestFoxFaceplantsInSnow(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	y := foxArena(h, 20)
 	for x := -20; x <= 20; x++ {
@@ -135,7 +135,7 @@ func TestFoxFaceplantsInSnow(t *testing.T) {
 
 // A fox picks up a loaf lying beside it and eats it after half a minute.
 func TestFoxPicksUpAndEats(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	y := foxArena(h, 12)
 	h.dayTime.Store(15000)
@@ -164,7 +164,7 @@ func TestFoxPicksUpAndEats(t *testing.T) {
 // within twelve blocks — a cow, not only a player — keeps it up
 // (FoxAlertableEntitiesSelector).
 func TestFoxSleepsOnlyWhenQuietAndSheltered(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	y := foxArena(h, 14)
 	for x := -14; x <= 14; x++ {
@@ -204,7 +204,7 @@ func TestFoxSleepsOnlyWhenQuietAndSheltered(t *testing.T) {
 // (SeekShelterGoal at 1.25); in a thunderstorm it goes at once, even at night.
 func TestFoxSeeksShelter(t *testing.T) {
 	for _, storm := range []bool{false, true} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		players := map[int32]*tracked{}
 		y := foxArena(h, 16)
 		// A dark stone hall to the east: floor, walls and roof.
@@ -246,7 +246,7 @@ func TestFoxSeeksShelter(t *testing.T) {
 		}
 	}
 	// At night, with no storm, it stays out.
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	y := foxArena(h, 8)
 	h.dayTime.Store(15000)
@@ -265,7 +265,7 @@ func TestFoxSeeksShelter(t *testing.T) {
 // one berry in its mouth, the rest on the ground, the bush back to age one.
 // A cave vine in fruit gives up its glow berries the same way.
 func TestFoxEatsBerries(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	y := foxArena(h, 14)
 	h.dayTime.Store(15000)
@@ -293,7 +293,7 @@ func TestFoxEatsBerries(t *testing.T) {
 	}
 
 	// Glow berries.
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	y = foxArena(h2, 14)
 	h2.dayTime.Store(15000)
 	vineBase := worldgen.BlockBase("cave_vines")
@@ -322,7 +322,7 @@ func TestFoxEatsBerries(t *testing.T) {
 // Idle and unalarmed, a fox now and then sits down and looks about, holding
 // still until its two to four looks are done (PerchAndSearchGoal).
 func TestFoxPerchesAndLooksAround(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	y := foxArena(h, 14)
 	h.dayTime.Store(15000)
@@ -351,7 +351,7 @@ func TestFoxPerchesAndLooksAround(t *testing.T) {
 // A fox watches a player from as far as twenty-four blocks
 // (FoxLookAtPlayerGoal), where most animals stop at eight.
 func TestFoxLooksAtPlayerFromAfar(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	y := foxArena(h, 14)

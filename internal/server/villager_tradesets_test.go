@@ -16,7 +16,7 @@ import (
 // sane counts.
 func TestTradeSetsDrawTheirAmount(t *testing.T) {
 	w := world.New(41)
-	h := newHub(w)
+	h := newTestHub(w)
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	for _, name := range []string{"farmer", "fisherman", "armorer", "cleric", "librarian", "leatherworker", "toolsmith"} {

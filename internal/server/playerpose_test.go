@@ -32,7 +32,7 @@ func waitFlags(t *testing.T, watcher *player, eid int32, want, not byte, what st
 // Other clients draw a player's pose from the shared flags (updatePlayerPose
 // → getDesiredPose): crouching, sprinting and swimming must be in the byte.
 func TestOthersSeeCrouchSprintAndSwim(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.DoMobSpawning = false // natural spawning ran ticks past a second on CI
 	h.world.ForceLoad(0, 0, 2)
 	for x := -6; x <= 6; x++ {

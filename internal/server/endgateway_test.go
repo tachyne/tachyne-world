@@ -24,10 +24,10 @@ func TestDragonDeathBuildsTheGatewayRing(t *testing.T) {
 			t.Fatalf("gateway %d off the ring: r=%.1f", i, r)
 		}
 		// The frame: bedrock above and below, air across the middle layer.
-		if h.end.At(p.x, p.y+2, p.z) != worldgen.Bedrock {
+		if h.worldFor(dimEnd).At(p.x, p.y+2, p.z) != worldgen.Bedrock {
 			t.Fatalf("gateway %d has no cap", i)
 		}
-		if h.end.At(p.x+1, p.y, p.z) != worldgen.Air {
+		if h.worldFor(dimEnd).At(p.x+1, p.y, p.z) != worldgen.Air {
 			t.Fatalf("gateway %d doorway is blocked", i)
 		}
 	}
@@ -50,7 +50,7 @@ func TestGatewayThrowsYouOutAndBringsYouBack(t *testing.T) {
 	if out := math.Hypot(pl.x, pl.z); out < endGatewayCast-16*16 {
 		t.Fatalf("stepping into a gateway should throw you out to the islands, got r=%.0f", out)
 	}
-	if !worldgen.IsFullCube(h.end.At(int(math.Floor(pl.x)), int(pl.y)-1, int(math.Floor(pl.z)))) {
+	if !worldgen.IsFullCube(h.worldFor(dimEnd).At(int(math.Floor(pl.x)), int(pl.y)-1, int(math.Floor(pl.z)))) {
 		t.Fatal("landed on nothing — the gateway must leave somewhere to stand")
 	}
 	// The cooldown holds you in place for a moment.
@@ -62,7 +62,7 @@ func TestGatewayThrowsYouOutAndBringsYouBack(t *testing.T) {
 
 	// The far gateway hangs over the island and the two are a pair.
 	far, _, ok := h.gatewayExitOf(g)
-	if !ok || h.end.At(far.x, far.y, far.z) != endGatewayState {
+	if !ok || h.worldFor(dimEnd).At(far.x, far.y, far.z) != endGatewayState {
 		t.Fatalf("no far gateway recorded/built for %v (got %v ok=%v)", g, far, ok)
 	}
 	if back, _, ok := h.gatewayExitOf(far); !ok || back != g {

@@ -13,7 +13,7 @@ import (
 // chunk then unloads and MERGES that snapshot with its live mobs, the herd
 // doubles every autosave-then-unload cycle.
 func TestNoDoublingOnAutosaveThenUnload(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.mobstore = newMobStore(filepath.Join(t.TempDir(), "mobs.json"))
 	players := map[int32]*tracked{}
 	h.tick.Store(1000)
@@ -50,7 +50,7 @@ func TestNoDoublingOnAutosaveThenUnload(t *testing.T) {
 // block never despawns, so every copy stayed. Now the stray's chunk becomes
 // active (its saved mobs load, nothing is overwritten) and saves with it.
 func TestStrayMobIsNotCopiedOnItsChunksLoad(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.mobstore = newMobStore(filepath.Join(t.TempDir(), "mobs.json"))
 	players := map[int32]*tracked{}
 	h.tick.Store(1000)
@@ -85,7 +85,7 @@ func TestStrayMobIsNotCopiedOnItsChunksLoad(t *testing.T) {
 // overworld player loading that chunk brought a copy back into its own
 // dimension beside the original. Each dimension now keeps its own buckets.
 func TestOtherDimensionMobIsNotCopiedByAnOverworldLoad(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.mobstore = newMobStore(filepath.Join(t.TempDir(), "mobs.json"))
 	players := map[int32]*tracked{}
 	h.tick.Store(1000)
@@ -131,7 +131,7 @@ func TestMobStoreRefilesBucketsByDimension(t *testing.T) {
 // mobs and other dimensions alone, backs the store up, and runs only once.
 func TestEndermanCullRunsOnce(t *testing.T) {
 	dir := t.TempDir()
-	s := &Server{MobFile: filepath.Join(dir, "mobs.json"), hub: newHub(world.New(1))}
+	s := &Server{MobFile: filepath.Join(dir, "mobs.json"), hub: newTestHub(world.New(1))}
 	s.hub.mobstore = newMobStore(s.MobFile)
 	s.hub.mobstore.stash(0, 1, 1, []savedMob{
 		{Etype: entityEnderman, X: 20, Y: 70, Z: 20, CustomName: "Ender"},

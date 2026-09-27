@@ -14,7 +14,8 @@ func TestSetWorldSpawnInTheNether(t *testing.T) {
 	s, h, ps, logs := feedbackServer(t)
 	alice := ps["alice"]
 	onHub(t, h, func() {
-		h.nether, _ = world.NewNether(1, nil)
+		nw, _ := world.NewNether(1, nil)
+		h.dims.set(dimNether, nw)
 		for _, tr := range h.playersRef {
 			if tr.p.name == "alice" {
 				tr.dim = dimNether

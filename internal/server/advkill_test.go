@@ -11,7 +11,7 @@ import (
 // tracking advancements, for driving kills through the real combat paths.
 func killRig(t *testing.T) (*hub, *tracked, map[int32]*tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.adv = advState{}
 	pl.x, pl.y, pl.z, pl.yaw, pl.pitch = 0, 180, 0, 0, 0 // looking +z

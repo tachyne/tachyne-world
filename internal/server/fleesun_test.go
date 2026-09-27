@@ -11,7 +11,7 @@ import (
 // heads for a roofed dim spot nearby; one with a target, or in the dark,
 // stays put.
 func TestSkeletonFleesSun(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -66,7 +66,7 @@ func TestSkeletonFleesSun(t *testing.T) {
 // into the sun, even after a player standing in it; a helmet lifts that.
 func TestSkeletonKeepsToTheShade(t *testing.T) {
 	run := func(helmet bool) float64 {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		h.world.ForceLoad(0, 0, 2)
 		w := h.worldFor(0)
 		for x := -8; x <= 16; x++ {

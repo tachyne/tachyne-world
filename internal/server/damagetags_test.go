@@ -31,7 +31,7 @@ func armouredVsBare(t *testing.T, h *hub, dt dmgType, amount float32) (armoured,
 // type is NOT tagged bypasses_armor. Every type below is one the engine really
 // deals.
 func TestArmourAppliesExactlyWhereVanillaSaysItDoes(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	for _, dt := range []dmgType{
 		// Armour helps against all of these. Six of them silently did not.
 		dtLava, dtInFire, dtCampfire, dtCactus, dtHotFloor, dtSweetBerryBush,
@@ -58,7 +58,7 @@ func TestArmourAppliesExactlyWhereVanillaSaysItDoes(t *testing.T) {
 // guardian's bite reduced but never wore, which is how a full set of diamond
 // outlasted a whole End fight.
 func TestArmourWearsWithTheSameTag(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	for _, c := range []struct {
 		dt        dmgType
 		wantsWear bool
@@ -107,7 +107,7 @@ func TestProtectionsStackWhenTagsOverlap(t *testing.T) {
 // TestBypassTagsSkipTheirOwnMitigation — three tags each carve out exactly one
 // step of the pipeline, and nothing else.
 func TestBypassTagsSkipTheirOwnMitigation(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 
 	// sonic_boom: bypasses_enchantments, so protection does nothing…
 	warded := testTracked()

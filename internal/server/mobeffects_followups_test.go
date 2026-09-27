@@ -8,7 +8,7 @@ import (
 
 // A lingering cloud doses the mobs standing in it, not only players.
 func TestLingeringCloudDosesMobs(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	m := h.spawnSpecies(players, entityZombie, 0, 50.5, 70, 50.5)
@@ -28,7 +28,7 @@ func TestLingeringCloudDosesMobs(t *testing.T) {
 // A hostile that picks up gear becomes persistent: the despawn sweep leaves
 // it alone however far away it is, and the flag survives the store.
 func TestPickedUpGearMakesMobPersistent(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := riderAt(1, 10, 70, 10)
 	players := map[int32]*tracked{1: pl}
 	h.playersRef = players

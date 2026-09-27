@@ -47,7 +47,7 @@ type crystal struct {
 // enterEnd is called when a player arrives in dim 2: first arrival stages
 // the fight (unless the dragon is already defeated).
 func (h *hub) enterEnd(players map[int32]*tracked, arriving *tracked) {
-	if h.rules.DragonDefeated || h.dragon != nil || h.end == nil {
+	if h.rules.DragonDefeated || h.dragon != nil || !h.hasDim(dimEnd) {
 		return
 	}
 	// Built by hand (not spawnMobIn): its radius broadcast could reach the
@@ -474,7 +474,7 @@ func (h *hub) dragonDefeated(players map[int32]*tracked) {
 	h.rules.DragonHealth = 0 // the fight is over; nothing left to resume
 	h.saveRules()
 	cx, cy := 0, worldgen.EndSurfaceY
-	for h.end.At(cx, cy, 0) != worldgen.Air && cy < worldgen.EndSurfaceY+8 {
+	for h.worldFor(dimEnd).At(cx, cy, 0) != worldgen.Air && cy < worldgen.EndSurfaceY+8 {
 		cy++
 	}
 	// Exit portal: a bedrock dais with end-portal blocks and the egg on top.

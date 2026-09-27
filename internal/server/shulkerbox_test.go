@@ -11,7 +11,7 @@ import (
 // through a hopper. It is the rule that stops a box holding a base inside a
 // base, and the engine had neither half of it.
 func TestShulkerBoxRefusesToNest(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{pl.p.eid: pl}
 	x, y, z := 6, 70, 6

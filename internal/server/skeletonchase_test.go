@@ -12,7 +12,7 @@ import (
 // survival player on it at x=18.5.
 func skeletonRig(t *testing.T) (*hub, map[int32]*tracked, *tracked) {
 	t.Helper()
-	h := newHub(world.New(3))
+	h := newTestHub(world.New(3))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.world.ForceLoad(20, 0, 1)

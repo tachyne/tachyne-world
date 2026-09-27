@@ -74,7 +74,7 @@ func buildBeach(w *world.World, cx, cz int) map[int]blockPos {
 
 func TestWaveWashesUpAndRollsBack(t *testing.T) {
 	skipHeavy(t)
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.waves = true
 	cx, cz := biomeSpot(t, h.world, 200, isOceanBiome)
 	sheets := buildBeach(h.world, cx, cz)
@@ -112,7 +112,7 @@ func TestWaveWashesUpAndRollsBack(t *testing.T) {
 
 func TestWaveNeverWritesWorld(t *testing.T) {
 	skipHeavy(t)
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.waves = true
 	cx, cz := biomeSpot(t, h.world, 400, isOceanBiome)
 	sheets := buildBeach(h.world, cx, cz)
@@ -136,7 +136,7 @@ func TestWaveNeverWritesWorld(t *testing.T) {
 // crest peaks above the cliff top.
 func TestWaveCannotClimbTwoBlockStep(t *testing.T) {
 	skipHeavy(t)
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.waves = true
 	sl := worldgen.SeaLevel
 	cx, cz := biomeSpot(t, h.world, 800, isOceanBiome)
@@ -180,7 +180,7 @@ func TestWaveCannotClimbTwoBlockStep(t *testing.T) {
 // rather than every cell being a full source cube.
 func TestWaveEdgesAreFlowing(t *testing.T) {
 	skipHeavy(t)
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.waves = true
 	cx, cz := biomeSpot(t, h.world, 1000, isOceanBiome)
 	buildBeach(h.world, cx, cz)
@@ -208,7 +208,7 @@ func TestWaveEdgesAreFlowing(t *testing.T) {
 }
 
 func TestWaveNeedsOcean(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.waves = true
 	sl := worldgen.SeaLevel
 	cx, cz := biomeSpot(t, h.world, 600, isOceanBiome)
@@ -268,7 +268,7 @@ func TestWaveBumpPausesAndSwells(t *testing.T) {
 // shallow flowing film (levels 1..7) so it reads as a low, consistent wash.
 func TestWaveWaterIsThin(t *testing.T) {
 	skipHeavy(t)
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.waves = true
 	cx, cz := biomeSpot(t, h.world, 1600, isOceanBiome)
 	buildBeach(h.world, cx, cz)
@@ -292,7 +292,7 @@ func TestWaveWaterIsThin(t *testing.T) {
 // them), and the front never inverts (far wet while near dry).
 func TestWaveFrontIsGradualOnFlat(t *testing.T) {
 	skipHeavy(t)
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.waves = true
 	sl := worldgen.SeaLevel
 	cx, cz := biomeSpot(t, h.world, 1800, isOceanBiome)
@@ -348,7 +348,7 @@ func TestWaveFrontIsGradualOnFlat(t *testing.T) {
 // TestWaveRecedesFully — a receding wave leaves NO cells behind: once the crest
 // drops below the shore tier (the pause), every wave cell is gone.
 func TestWaveRecedesFully(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.waves = true
 	cx, cz := biomeSpot(t, h.world, 1400, isOceanBiome)
 	buildBeach(h.world, cx, cz)
@@ -374,7 +374,7 @@ func TestWaveRecedesFully(t *testing.T) {
 // gets no waves (bug #28): only an ocean, or a beach, has a coast.
 func TestWaveOnlyOnCoasts(t *testing.T) {
 	skipHeavy(t)
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.waves = true
 	inland := func(b string) bool {
 		return !isOceanBiome(b) && b != "minecraft:beach" && b != "minecraft:snowy_beach" && b != "minecraft:stony_shore"

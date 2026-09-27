@@ -16,7 +16,7 @@ import (
 // generation made, and now leaves no edit.
 func TestAVillagersDoorLeavesNoEdit(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	v := w.Gen().VillageIn(-249, -586) // a plains village
 	if !v.Exists {

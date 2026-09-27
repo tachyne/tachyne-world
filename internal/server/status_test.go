@@ -30,7 +30,7 @@ func rosterOnline(t *testing.T, s *Server, want int) attachproto.Status {
 // from its own books, which hold only the clients on its protocol range.
 // The roster has to come from the world, and this is what it says.
 func TestStatusRosterCountsPlayers(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	s := &Server{world: h.world, hub: h}
 	startHub(t, h)
 
@@ -69,7 +69,7 @@ func TestStatusRosterCountsPlayers(t *testing.T) {
 
 // The sample is capped the way vanilla caps it, however many are on.
 func TestStatusSampleCapped(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	s := &Server{world: h.world, hub: h}
 	startHub(t, h)
 

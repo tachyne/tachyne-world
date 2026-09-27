@@ -60,7 +60,7 @@ func TestEnderCarryMetaBytes(t *testing.T) {
 // An enderman lifts a holdable block out of the world (leaving air) and latches
 // it as its carried state.
 func TestEndermanTakesBlock(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	ex, ez := h.findLand(0, 0)
 	ey := h.world.SurfaceFeet(ex, ez) + 10 // well clear of terrain
@@ -102,7 +102,7 @@ func TestEndermanTakesBlock(t *testing.T) {
 // A carrying enderman sets its block back down on a solid full block and clears
 // its carried state.
 func TestEndermanPlacesBlock(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	ex, ez := h.findLand(30, 30)
 	ey := h.world.SurfaceFeet(ex, ez) + 10
@@ -160,7 +160,7 @@ func TestEndermanCarriesInItsOwnDimension(t *testing.T) {
 	h := dimHub()
 	players := map[int32]*tracked{}
 	h.playersRef = players
-	nw := h.nether // dimHub gives the hub a second world; use it as the far dimension
+	nw := h.worldFor(dimNether) // dimHub gives the hub a second world; use it as the far dimension
 
 	const ex, ey, ez = 300, 70, 300
 	m := h.spawnMobIn(players, entityEnderman, dimNether, ex+0.5, ey, ez+0.5)
@@ -249,7 +249,7 @@ func TestEndermanSightChangesTheTakeRate(t *testing.T) {
 		}},
 	} {
 		w := world.New(73)
-		h := newHub(w)
+		h := newTestHub(w)
 		tc.build(w)
 		m := h.spawnMob(map[int32]*tracked{}, entityEnderman, 0.5, 180, 0.5)
 		holdable, visible := 0, 0
@@ -282,7 +282,7 @@ func TestEndermanSightChangesTheTakeRate(t *testing.T) {
 // (Legion reported endermen crowding up, 2026-09-20.)
 func TestEndermanTakesOnlyWhatItCanSee(t *testing.T) {
 	w := world.New(67)
-	h := newHub(w)
+	h := newTestHub(w)
 	h.rules.MobGriefing = true
 	grass := worldgen.BlockBase("grass_block")
 	stone := worldgen.BlockBase("stone")
@@ -331,7 +331,7 @@ func TestEndermanTakesOnlyWhatItCanSee(t *testing.T) {
 
 // EnderMan.dropCustomDeathLoot: a killed enderman drops what it carried.
 func TestEndermanDropsItsCarriedBlock(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	h.rules.DoMobLoot = true
 	pl := survPlayer(h)
@@ -361,7 +361,7 @@ func TestEndermanPlacesFlowerOnlyWhereItSurvives(t *testing.T) {
 		floor string
 		want  bool
 	}{{"stone", false}, {"grass_block", true}} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		players := map[int32]*tracked{}
 		ex, ez := h.findLand(30, 30)
 		ey := h.world.SurfaceFeet(ex, ez) + 10
@@ -399,7 +399,7 @@ func TestEndermanPlacesFlowerOnlyWhereItSurvives(t *testing.T) {
 // LeaveBlockGoal also refuses a cell another entity stands in: with a mob
 // filling every target cell but the enderman's own, the block stays held.
 func TestEndermanWillNotPlaceIntoAnEntity(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	ex, ez := h.findLand(30, 30)
 	ey := h.world.SurfaceFeet(ex, ez) + 10

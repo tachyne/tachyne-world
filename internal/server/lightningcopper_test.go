@@ -36,7 +36,7 @@ func TestLightningClearsCopper(t *testing.T) {
 	}
 
 	// Waxed: the struck block keeps its wax and stage.
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	h2.rules.Difficulty = diffEasy
 	w2 := h2.world
 	waxed := worldgen.BlockID("waxed_oxidized_copper")

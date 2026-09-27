@@ -12,7 +12,7 @@ import (
 // hangs, a player coming within four wakes it; a parrot knows a zombie's
 // call but not a cow's.
 func TestBatHangsAndParrotMimics(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -54,7 +54,7 @@ func TestBatHangsAndParrotMimics(t *testing.T) {
 // cell — within six blocks sideways, two below to three above — and moves
 // through the mob update toward it rather than drifting at a hover height.
 func TestBatFliesToItsTarget(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	for x := -12; x <= 12; x++ {
 		for z := -12; z <= 12; z++ {
@@ -85,7 +85,7 @@ func TestBatFliesToItsTarget(t *testing.T) {
 // FollowMobGoal(1.0, 3, 7): a parrot flies to a mob within seven, holds off
 // at three and backs away when closer; another parrot is no company.
 func TestParrotFollowsAMob(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	for x := -12; x <= 12; x++ {
 		for z := -4; z <= 4; z++ {
@@ -122,7 +122,7 @@ func TestParrotFollowsAMob(t *testing.T) {
 // (getTreePos, all but one time in a thousand) and settles there instead of
 // strolling about in the air.
 func TestParrotWandersToATree(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	for x := -12; x <= 12; x++ {
 		for z := -12; z <= 12; z++ {

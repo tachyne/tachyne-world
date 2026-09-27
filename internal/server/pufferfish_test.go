@@ -10,7 +10,7 @@ import (
 // TestPufferfishPuffsAndStings: a player within two blocks inflates it in
 // two stages, leaving deflates it in two, and a puffed fish stings on touch.
 func TestPufferfishPuffsAndStings(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -69,7 +69,7 @@ func TestPufferfishPuffsAndStings(t *testing.T) {
 
 // TestMobSpeedFactor: soul sand and honey under a walker slow it to 0.4×.
 func TestMobSpeedFactor(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	z := h.spawnMob(players, entityZombie, 0.5, 180, 0.5)

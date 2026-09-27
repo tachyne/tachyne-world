@@ -11,7 +11,7 @@ import (
 // the given stack in hotbar slot 0.
 func bucketSetup(t *testing.T, held invStack) (*hub, *tracked, map[int32]*tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 496.5, 200, 500.5
 	pl.yaw = -90 // facing +x
@@ -193,7 +193,7 @@ func TestPowderSnowBucketWorksInTheNether(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h.nether = nw
+	h.dims.set(dimNether, nw)
 	pl.dim = dimNether
 	nw.SetBlock(499, 60, 500, worldgen.Air) // an empty cell in the caverns
 	h.bucketEmpty(players, pl, 0, 499, 60, 500, 499, 60-1, 500)

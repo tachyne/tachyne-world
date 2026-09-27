@@ -11,7 +11,7 @@ import (
 // Opening a chest sends its lid block event (action 1, one opener) to the
 // players nearby — the opener and a bystander — and closing sends zero.
 func TestChestLidEvents(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	opener := survPlayer(h)
 	watcher := survPlayer(h)
 	watcher.p.eid = 2

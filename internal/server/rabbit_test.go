@@ -11,7 +11,7 @@ import (
 // stage off it, and is full for a while; a first-stage carrot is eaten
 // whole; mobGriefing off stops it.
 func TestRabbitRaidsCarrots(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	w := h.worldFor(0)

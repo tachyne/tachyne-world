@@ -10,7 +10,7 @@ import (
 // An engine-driven block change (not a player's edit) drops what leaned on
 // the old block: a torch loses its floor, a crop its farmland.
 func TestEngineBlockChangeDropsUnsupported(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 1100, 180, 1100
 	flatFloor(h.world, x, y, z, 4)

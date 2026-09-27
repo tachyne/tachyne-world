@@ -25,7 +25,7 @@ func nautilusSea(h *hub) {
 // and its FIGHT activity outranks its panic — it charges back at 0.6 a tick
 // and the blow lands, then it waits out its eighty-tick cooldown.
 func TestNautilusChargesWhoeverHurtIt(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nautilusSea(h)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -67,7 +67,7 @@ func TestNautilusChargesWhoeverHurtIt(t *testing.T) {
 // TEMPTING_PLAYER), and the nautilus swims up to them at 1.3 instead —
 // tamed or not.
 func TestNautilusTemptation(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nautilusSea(h)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -107,7 +107,7 @@ func TestNautilusTemptation(t *testing.T) {
 // The zombie nautilus is not a monster: it leaves a player alone until it
 // is hurt, never panics, and then charges at 0.5.
 func TestZombieNautilusFightsOnlyWhenAngered(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nautilusSea(h)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -142,7 +142,7 @@ func TestZombieNautilusFightsOnlyWhenAngered(t *testing.T) {
 // the nearest pufferfish it can see — never one out of the water, and never
 // while tamed, a baby or ashore.
 func TestNautilusHuntsPufferfish(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nautilusSea(h)
 	players := map[int32]*tracked{}
 	m := h.spawnSpecies(players, entityNautilus, 0, 0.5, 184, 0.5)
@@ -181,7 +181,7 @@ func TestNautilusHuntsPufferfish(t *testing.T) {
 // calf is born in the water where they are, tamed to the same owner. A wild
 // adult will not eat fish at all (it takes only the pufferfish that tames).
 func TestNautilusBreeds(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	nautilusSea(h)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -236,7 +236,7 @@ func TestNautilusBreeds(t *testing.T) {
 // the clamp — and Slowness takes it back off.
 func TestNautilusChargeKnockbackSpeedBoost(t *testing.T) {
 	shove := func(effect int32, amp int) float64 {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		nautilusSea(h)
 		pl := survPlayer(h)
 		pl.p.eid = 500

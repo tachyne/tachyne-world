@@ -9,7 +9,7 @@ import (
 // TestWolfBegs: a wolf near a player holding a bone tilts its head and
 // watches them for forty to eighty ticks; putting the bone away ends it.
 func TestWolfBegs(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

@@ -56,7 +56,7 @@ func TestFootstepChooser(t *testing.T) {
 // The cadence is vanilla's: 0.6 × distance accumulates and a step plays
 // each time it passes a whole number — about every 1.67 blocks walked.
 func TestFootstepCadence(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 1320, 180, 1320
 	flatFloor(h.world, x, y, z, 6)

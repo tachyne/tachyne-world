@@ -11,7 +11,7 @@ import (
 // frame hung facing north at (0, 200, 0) and a painting beside it.
 func hangingWall(t *testing.T) (*hub, map[int32]*tracked, *itemFrame, *painting) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 2.5, 201, -6.5
@@ -152,7 +152,7 @@ func TestPunchingAKnotUntiesEverything(t *testing.T) {
 // not one laid on top; a carpet holds nothing. Hung through the placement
 // event, and a slab-hung frame outlasts its hundred-tick checks.
 func TestItemFrameHangsOnSlabsAndDiodes(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	pl := testTracked()
 	pl.gamemode = gmCreative

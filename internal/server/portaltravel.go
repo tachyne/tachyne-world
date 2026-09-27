@@ -141,7 +141,7 @@ func (h *hub) updatePortalTravel(players map[int32]*tracked) {
 // portalTravelCandidate is the cheap half of the test: the right dimensions,
 // the gamerule, and a portal block where the entity's feet are.
 func (h *hub) portalTravelCandidate(dim int, x, y, z float64) bool {
-	if dim > 1 {
+	if dim != dimOverworld && dim != dimNether {
 		return false // nether portals link the overworld and nether only
 	}
 	// ServerLevel.isAllowedToEnterPortal gates the way IN to the Nether only;
@@ -172,10 +172,10 @@ func (h *hub) updateEndPortalEntities(players map[int32]*tracked) {
 			}
 			return dimOverworld, x, float64(w.MobFeet(floorInt(x), floorInt(z))), z, true
 		}
-		if h.end == nil {
+		if !h.hasDim(dimEnd) {
 			return 0, 0, 0, 0, false
 		}
-		endPlatform(h.end)
+		endPlatform(h.worldFor(dimEnd))
 		return dimEnd, 100.5, 50, 0.5, true
 	}
 	for _, m := range h.mobs {

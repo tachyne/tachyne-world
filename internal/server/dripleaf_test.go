@@ -22,7 +22,7 @@ func flatDripleaf(t *testing.T) uint32 {
 // → full on vanilla's clock, and it springs back a hundred ticks later; a
 // neighbour update between stages leaves the clock alone.
 func TestDripleafTiltsUnderALoad(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -76,7 +76,7 @@ func TestDripleafTiltsUnderALoad(t *testing.T) {
 // TestDripleafPinnedByPowerAndShot: a signal beside the leaf keeps it flat,
 // and a projectile tips it fully at once.
 func TestDripleafPinnedByPowerAndShot(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl

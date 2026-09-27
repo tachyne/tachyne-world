@@ -12,7 +12,7 @@ import (
 // its pose, and a lone dust toggles between cross and dot (which the wire
 // update then preserves).
 func TestBlockClicks(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	w := h.worldFor(0)

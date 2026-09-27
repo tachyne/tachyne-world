@@ -31,7 +31,7 @@ func testFalling(h *hub, players map[int32]*tracked, x, y, z float64) *fallingBl
 // An upward bubble column lifts a falling block (onInsideBubbleColumn), a
 // whirlpool pulls it down faster than it would fall.
 func TestFallingBlockInBubbleColumn(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, z := 40, 40
 	fallPad(h, x, z)
@@ -60,7 +60,7 @@ func TestFallingBlockInBubbleColumn(t *testing.T) {
 // A blast shoves a falling block like any other entity: sideways off its
 // column, and it lands where the push carried it.
 func TestFallingBlockPushedByExplosion(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, z := 60, 60
 	fallPad(h, x, z)

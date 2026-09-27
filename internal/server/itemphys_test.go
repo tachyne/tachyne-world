@@ -23,7 +23,7 @@ func flatFloor(w *world.World, x, y, z, r int) {
 // A pushed item slides, ground friction stops it within a fraction of a
 // block, and it never leaves the floor.
 func TestItemSlidesAndStops(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 1000, 180, 1000
 	flatFloor(h.world, x, y, z, 4)
@@ -51,7 +51,7 @@ func TestItemSlidesAndStops(t *testing.T) {
 // An item pushed off a ledge falls to the floor below; an item whose floor
 // is removed falls too.
 func TestItemFallsOffLedgeAndWhenFloorGoes(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 1020, 180, 1020
 	flatFloor(h.world, x, y, z, 4)
@@ -81,7 +81,7 @@ func TestItemFallsOffLedgeAndWhenFloorGoes(t *testing.T) {
 
 // Flowing water carries an item downstream; still water does not.
 func TestWaterCurrentCarriesItem(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 1040, 180, 1040
 	h.world.ForceLoad(x, z, 1)
@@ -122,7 +122,7 @@ func TestWaterCurrentCarriesItem(t *testing.T) {
 // Two blocks' drops, popped side by side, come to rest close enough to
 // merge into one stack.
 func TestNeighbouringBlockDropsMerge(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 1060, 180, 1060
 	flatFloor(h.world, x, y, z, 4)
@@ -148,7 +148,7 @@ func TestNeighbouringBlockDropsMerge(t *testing.T) {
 
 // A toss leaves from the eyes along the look and lands a block or two out.
 func TestTossArcsForward(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	x, y, z := 1080, 180, 1080
@@ -174,7 +174,7 @@ func TestTossArcsForward(t *testing.T) {
 // ItemEntity.setUnderLavaMovement: a fire-resistant drop in lava is lifted
 // as in water (it does not sink to the bottom) and rides the surface.
 func TestNetheriteFloatsUpThroughLava(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 1000, 180, 1000
 	flatFloor(h.world, x, y, z, 2)
@@ -196,12 +196,12 @@ func TestNetheriteFloatsUpThroughLava(t *testing.T) {
 // ItemEntity.age: a drop's age is its own and is saved, so a restart does
 // not give it a fresh five minutes; merging keeps the younger age.
 func TestDroppedItemAgeSurvivesRestart(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	none := map[int32]*tracked{}
 	it := h.spawnItemIn(none, 0, itemByName["cobblestone"], 1, 10, 70, 10)
 	it.age = 5900
 	saved := h.snapshotItems()
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	h2.restoreItems(saved)
 	var back *itemEntity
 	for _, e := range h2.items {
@@ -235,7 +235,7 @@ func TestDroppedItemAgeSurvivesRestart(t *testing.T) {
 // GiveCommand: what does not fit is dropped at once for the receiver alone
 // (ItemEntity.target); another player cannot pick it up.
 func TestGiveOverflowIsTheReceiversAlone(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	flatFloor(h.world, 0, 180, 0, 3)
 	a, b := survPlayer(h), survPlayer(h)

@@ -10,7 +10,7 @@ import (
 // summoned two blocks from a standing survival player must land bites.
 func TestZombieBitesIdlePlayer(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	pl := testTracked()
 	pl.gamemode = gmSurvival
 	// Find open, walkable ground so the fight isn't blocked by water/trees.

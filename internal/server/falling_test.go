@@ -191,17 +191,17 @@ func TestSandFallsInTheNether(t *testing.T) {
 	h := dimHub()
 	players := map[int32]*tracked{}
 	x, y, z := 400, 100, 400
-	h.nether.ForceLoad(x, z, 1)
+	h.worldFor(dimNether).ForceLoad(x, z, 1)
 	h.world.ForceLoad(x, z, 1)
-	h.nether.SetBlock(x, y-1, z, worldgen.BlockBase("netherrack"))
+	h.worldFor(dimNether).SetBlock(x, y-1, z, worldgen.BlockBase("netherrack"))
 	for dy := 0; dy <= 6; dy++ {
-		h.nether.SetBlock(x, y+dy, z, worldgen.Air)
+		h.worldFor(dimNether).SetBlock(x, y+dy, z, worldgen.Air)
 	}
 	before := h.world.At(x, y, z)
 	h.setBlockAt(players, dimNether, blockPos{x, y + 5, z}, worldgen.Gravel)
 	stepTicks(h, players, 40)
-	if h.nether.At(x, y, z) != worldgen.Gravel || h.nether.At(x, y+5, z) != worldgen.Air {
-		t.Fatalf("the Nether gravel should have fallen: floor %d, start %d", h.nether.At(x, y, z), h.nether.At(x, y+5, z))
+	if h.worldFor(dimNether).At(x, y, z) != worldgen.Gravel || h.worldFor(dimNether).At(x, y+5, z) != worldgen.Air {
+		t.Fatalf("the Nether gravel should have fallen: floor %d, start %d", h.worldFor(dimNether).At(x, y, z), h.worldFor(dimNether).At(x, y+5, z))
 	}
 	if h.world.At(x, y, z) != before {
 		t.Fatal("a Nether fall wrote into the overworld")
@@ -219,7 +219,7 @@ func TestFallingBlockSurvivesARestart(t *testing.T) {
 	}
 	saved := h.snapshotFalling()
 
-	h2 := newHub(h.world)
+	h2 := newTestHub(h.world)
 	h2.tick.Store(h.tick.Load())
 	h2.restoreFalling(saved)
 	stepTicks(h2, players, 60)

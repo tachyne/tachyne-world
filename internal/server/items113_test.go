@@ -9,7 +9,7 @@ import (
 
 // A thrown bottle o' enchanting shatters into orbs worth 3-11.
 func TestXPBottleShattersIntoExperience(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pl.x, pl.y, pl.z = 0.5, 180, 0.5
@@ -44,7 +44,7 @@ func TestXPBottleShattersIntoExperience(t *testing.T) {
 
 // A goat horn sounds once, then holds for its full seven seconds.
 func TestGoatHornCooldown(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pl.inv.slots[0] = invStack{item: itemGoatHorn, count: 1, instrument: 3}
@@ -70,7 +70,7 @@ func TestGoatHornCooldown(t *testing.T) {
 
 // Frogspawn lands on the surface of a water source, not against a face.
 func TestFrogspawnPlacesOnWaterSurface(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	w := h.worldFor(0)
@@ -102,7 +102,7 @@ func TestFrogspawnPlacesOnWaterSurface(t *testing.T) {
 // A rocket used while gliding attaches to the player and boosts them; used
 // with both feet on the ground it does nothing.
 func TestFireworkBoostsOnlyAGlider(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pl.x, pl.y, pl.z = 0.5, 180, 0.5
@@ -155,7 +155,7 @@ func TestFireworkBoostsOnlyAGlider(t *testing.T) {
 
 // A loose rocket climbs and pops on its own.
 func TestLooseRocketClimbsAndPops(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	r := h.spawnRocket(players, 0, 0.5, 200, 0.5, 0, invStack{item: itemFireworkRocket, count: 1, flight: 1})
 	y0 := r.y
@@ -173,7 +173,7 @@ func TestLooseRocketClimbsAndPops(t *testing.T) {
 // A spyglass holds a scope until it is released, and drops it after the
 // twenty seconds vanilla allows.
 func TestSpyglassScopeStartsAndEnds(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	pl.inv.slots[0] = invStack{item: itemSpyglass, count: 1}

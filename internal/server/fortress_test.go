@@ -11,11 +11,11 @@ import (
 // garrison table (the structure's spawn override), and the corridor chests
 // fill from nether_bridge.
 func TestFortressSpawnsAndLoots(t *testing.T) {
-	h := newHub(world.New(9))
+	h := newTestHub(world.New(9))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	nw, _ := world.NewNether(9, nil)
-	h.nether = nw
+	h.dims.set(dimNether, nw)
 	g := nw.Gen()
 	var f worldgen.Fortress
 	for cx := -6; cx < 6 && !f.Exists; cx++ {

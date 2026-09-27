@@ -9,7 +9,7 @@ import (
 var tWoodPick = itemByName["wooden_pickaxe"] // 59 durability, from items_meta_gen
 
 func TestToolWearAndBreak(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.inv.slots[0] = invStack{item: tWoodPick, count: 1}
 	max := itemMaxDurability[tWoodPick]
@@ -29,7 +29,7 @@ func TestToolWearAndBreak(t *testing.T) {
 }
 
 func TestToolWearIgnoresNonTools(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.inv.slots[0] = invStack{item: 1, count: 64} // stone
 	h.applyToolWear(pl, 0, 1)
@@ -102,7 +102,7 @@ func equipSet(t *testing.T, pl *tracked, points [4]int, toughness float64) {
 }
 
 func TestArmorWearsAndShatters(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	equipSet(t, pl, [4]int{2, 6, 5, 2}, 0)
@@ -132,7 +132,7 @@ func TestSwordsDoNotStack(t *testing.T) {
 }
 
 func TestClickPreservesToolDamage(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -152,7 +152,7 @@ func TestClickPreservesToolDamage(t *testing.T) {
 }
 
 func TestPickupAndDeathDropKeepDamage(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl

@@ -15,7 +15,7 @@ import (
 // a live tick loop and a facade host, following hub_test.go's pattern.
 func pluginTestHub(t *testing.T) (*hub, srvFacade) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.DoMobSpawning = false // keep mob noise out (see TestHubMultiplayer)
 	host := &pluginHost{h: h, s: New(), cmds: map[string]*plugin.Command{}}
 	h.plugHost = host

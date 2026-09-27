@@ -12,7 +12,7 @@ var tDiamondSword = itemByName["diamond_sword"] // meleeDamage 7
 // enchSetup: a survival player with an open enchanting window on real land.
 func enchSetup(t *testing.T) (*hub, *tracked, map[int32]*tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	lx, lz := h.findLand(10, 10)
 	pl.x, pl.z = float64(lx), float64(lz)
@@ -91,7 +91,7 @@ func TestUnenchantableItemRollsNothing(t *testing.T) {
 }
 
 func TestSharpnessAddsMeleeDamage(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
 	players := map[int32]*tracked{1: pl}

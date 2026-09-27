@@ -10,7 +10,7 @@ import (
 // A calf six blocks from a cow walks toward it; within three it stops; a
 // baby with no adult of its kind about does nothing.
 func TestBabyFollowsParent(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	cow := h.spawnAnimal(players, entityCow, 0, 0)

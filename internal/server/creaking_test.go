@@ -14,7 +14,7 @@ import (
 // heart, returning the hub, the heart position and its link.
 func paleTrunk(t *testing.T) (*hub, blockPos, *heartLink) {
 	t.Helper()
-	h := newHub(world.New(3))
+	h := newTestHub(world.New(3))
 	pos := blockPos{100, 80, 100}
 	for dy := -3; dy <= 3; dy++ {
 		h.world.SetBlock(pos.x, pos.y+dy, pos.z, worldgen.PaleOakLog)
@@ -68,7 +68,7 @@ func TestHeartUprootsWithoutItsLogs(t *testing.T) {
 // A creaking with a standing heart cannot be hurt by anything ordinary, and the
 // blow is recorded for the heart to answer.
 func TestHeartBoundCreakingIsInvulnerable(t *testing.T) {
-	h := newHub(world.New(3))
+	h := newTestHub(world.New(3))
 	players := map[int32]*tracked{}
 	m := h.spawnHostile(players, entityCreaking, 0, 0)
 	if m == nil {
@@ -100,7 +100,7 @@ func TestHeartBoundCreakingIsInvulnerable(t *testing.T) {
 
 // Without a heart it is an ordinary one-health mob.
 func TestUnboundCreakingTakesDamageNormally(t *testing.T) {
-	h := newHub(world.New(3))
+	h := newTestHub(world.New(3))
 	m := h.spawnHostile(map[int32]*tracked{}, entityCreaking, 0, 0)
 	if m == nil {
 		t.Fatal("creaking spawn returned nil")
@@ -114,7 +114,7 @@ func TestUnboundCreakingTakesDamageNormally(t *testing.T) {
 
 // The signature mechanic: watched, it cannot move.
 func TestCreakingFreezesWhileWatched(t *testing.T) {
-	h := newHub(world.New(3))
+	h := newTestHub(world.New(3))
 	m := h.spawnHostile(map[int32]*tracked{}, entityCreaking, 0, 0)
 	if m == nil {
 		t.Fatal("creaking spawn returned nil")
@@ -145,7 +145,7 @@ func TestCreakingFreezesWhileWatched(t *testing.T) {
 // Creative and dead players are not watchers — the freeze is a survival threat,
 // and a corpse staring at it should not pin it in place.
 func TestOnlyLivingSurvivalPlayersFreezeIt(t *testing.T) {
-	h := newHub(world.New(3))
+	h := newTestHub(world.New(3))
 	m := h.spawnHostile(map[int32]*tracked{}, entityCreaking, 0, 0)
 	if m == nil {
 		t.Fatal("creaking spawn returned nil")

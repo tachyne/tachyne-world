@@ -30,9 +30,9 @@ func twoShardMesh(t *testing.T) (hubA, hubB *hub, playersA, playersB map[int32]*
 		{SID: 1, MinCX: 0, MinCZ: -8, W: 16, H: 16},   // east
 	}}
 	shardOf := func(cx, cz int32) int32 { return topo.ShardOf(0, cx, cz) }
-	hubA = newHub(world.New(1))
+	hubA = newTestHub(world.New(1))
 	hubA.sid, hubA.shardOf, hubA.topo = 0, shardOf, topo
-	hubB = newHub(world.New(1))
+	hubB = newTestHub(world.New(1))
 	hubB.sid, hubB.shardOf, hubB.topo = 1, shardOf, topo
 	playersA = map[int32]*tracked{}
 	playersB = map[int32]*tracked{}

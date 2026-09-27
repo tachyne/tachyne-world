@@ -27,7 +27,7 @@ func TestStrollSpeeds(t *testing.T) {
 // one side and night on the other, its draws land away from the light. A
 // passive mob has no such preference.
 func TestMonsterStrollPrefersTheDark(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.dayTime.Store(18000) // midnight: the sky is dark everywhere
 	x, y, z := 600, 80, 600
 	for dx := -12; dx <= 12; dx++ {

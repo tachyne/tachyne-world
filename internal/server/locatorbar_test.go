@@ -24,7 +24,7 @@ func drainWaypoints(pl *tracked) (ops []int8) {
 // player off the others' locator bars; taking them off puts the player back
 // (isTransmittingWaypoint). A spectator still sees everyone.
 func TestLocatorBarHidesTheHidden(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.LocatorBar = true
 	a, b := survPlayer(h), survPlayer(h)
 	b.p.eid = a.p.eid + 1

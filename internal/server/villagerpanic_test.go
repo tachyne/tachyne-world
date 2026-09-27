@@ -10,7 +10,7 @@ import (
 
 func villagerPanicRig(t *testing.T) (*hub, map[int32]*tracked, *tracked, *mob) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

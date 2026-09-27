@@ -12,7 +12,7 @@ import (
 // the open sound when the first viewer arrives and the close sound when the
 // last one leaves; viewers in between are silent.
 func TestChestSoundsOnlyOnFirstAndLastViewer(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	a, b := survPlayer(h), survPlayer(h)
 	b.p = newPlayer(2, "second", [16]byte{9})
 	players := map[int32]*tracked{a.p.eid: a, b.p.eid: b}
@@ -56,7 +56,7 @@ func TestChestSoundsOnlyOnFirstAndLastViewer(t *testing.T) {
 // closes it (ServerPlayer.disconnect → closeContainer): the close sound
 // plays for the others and the lid event drops the count to zero.
 func TestDisconnectClosesTheOpenChest(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	a, b := survPlayer(h), survPlayer(h)
 	b.p = newPlayer(2, "second", [16]byte{9})
 	players := map[int32]*tracked{a.p.eid: a, b.p.eid: b}
@@ -92,7 +92,7 @@ func TestCopperChestSoundsByWeathering(t *testing.T) {
 		{"weathered_copper_chest", "copper_chest_weathered"},
 		{"waxed_oxidized_copper_chest", "copper_chest_oxidized"},
 	} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		a := survPlayer(h)
 		players := map[int32]*tracked{a.p.eid: a}
 		h.playersRef = players

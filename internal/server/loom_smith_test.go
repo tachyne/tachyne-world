@@ -101,7 +101,7 @@ func TestSmithingFlow(t *testing.T) {
 // ItemStack.onCraftedBy counts a smithing-table result as crafted
 // (SmithingMenu.onTake), as it does a crafting-table one.
 func TestSmithingCountsAsCrafted(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	tr := survPlayer(h)
 	h.playersRef = map[int32]*tracked{tr.p.eid: tr}
 	h.openSmithing(tr, 1, 64, 1)

@@ -11,7 +11,7 @@ import (
 // in water, but not while their head is in a bubble column; a zombie riding
 // a chicken is too, and a horse's rider in dry air stays put.
 func TestDismountsUnderwater(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 180, 0.5
 	players := map[int32]*tracked{pl.p.eid: pl}

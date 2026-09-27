@@ -13,7 +13,7 @@ import (
 // "was shot by X using Y" (DamageSource.getLocalizedDeathMessage reads the
 // causing entity's main hand).
 func TestDeathMessageItemVariants(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.PvP = true
 	a, b, players := pvpPair(h)
 	h.playersRef = players

@@ -8,7 +8,7 @@ import (
 )
 
 func TestCreeperFusesAndExplodes(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	lx, lz := h.findLand(20, 20)
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
@@ -48,7 +48,7 @@ func TestCreeperFusesAndExplodes(t *testing.T) {
 // fuse on the spot, so a player could step out and back in for a fresh
 // 1.5 seconds every time.
 func TestCreeperUnwindsAndResumes(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	lx, lz := h.findLand(40, 40)
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
@@ -98,7 +98,7 @@ func TestCreeperUnwindsAndResumes(t *testing.T) {
 // included: a player 2.5 blocks straight overhead is in range, one 2 up and
 // 2.5 across is not. The engine used to take 3 across and 2 up separately.
 func TestCreeperIgnitionRangeIsSpherical(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{pl.p.eid: pl}
 	x, y, z := 50, 70, 50
@@ -127,7 +127,7 @@ func TestCreeperIgnitionRangeIsSpherical(t *testing.T) {
 // off whether or not anybody is about — a creative player lighting one used
 // to see it stand down on the next update, with no survival target near.
 func TestIgnitedCreeperGoesOffAlone(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	lx, lz := h.findLand(60, 60)
 	pl := testTracked()
 	pl.gamemode = gmCreative
@@ -150,7 +150,7 @@ func TestIgnitedCreeperGoesOffAlone(t *testing.T) {
 // target in SIGHT, and stands the fuse down the moment it loses it. The fuse
 // used to watch only the distance.
 func TestCreeperStandsDownWhenItLosesSight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{pl.p.eid: pl}
 	x, y, z := 50, 70, 50

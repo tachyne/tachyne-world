@@ -14,7 +14,7 @@ import (
 // spreadHub lays a dirt field at y=70 with clear sky, and one spreading block.
 func spreadHub(t *testing.T, spread uint32, x, y, z int) (*hub, map[int32]*tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	for dx := -4; dx <= 4; dx++ {
 		for dz := -4; dz <= 4; dz++ {
 			h.world.SetBlock(x+dx, y, z+dz, worldgen.Dirt)
@@ -97,7 +97,7 @@ func TestGrassStillSpreadsAndSmothers(t *testing.T) {
 // version had no light gate at all.
 func TestSpreadNeedsLight(t *testing.T) {
 	x, y, z := 60, 40, 60 // underground: lighting is height-capped, so go deep
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 
 	for dx := -3; dx <= 3; dx++ {

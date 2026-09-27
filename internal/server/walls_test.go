@@ -147,7 +147,7 @@ func TestWallFencePaneAttachment(t *testing.T) {
 func TestWallColumnCascade(t *testing.T) {
 	def, info := wallDefault(t)
 	w := world.New(1)
-	s := &Server{world: w, hub: newHub(w)}
+	s := &Server{world: w, hub: newTestHub(w)}
 	// two stacked walls with stone beside both levels
 	w.SetBlock(0, 200, 0, def)
 	w.SetBlock(0, 201, 0, def)

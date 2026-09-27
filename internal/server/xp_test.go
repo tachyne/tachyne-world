@@ -23,7 +23,7 @@ func TestXPCurveMatchesVanilla(t *testing.T) {
 }
 
 func TestAddXPRollsLevels(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	h.addXP(pl, 7) // exactly level 0's cost
 	if pl.xpLevel != 1 || pl.xpPoints != 0 {
@@ -40,7 +40,7 @@ func TestAddXPRollsLevels(t *testing.T) {
 }
 
 func TestOrbPickupAndDeathScatter(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.z = 0.5, 0.5
 	pl.y = float64(h.world.SurfaceFeet(0, 0))
@@ -80,7 +80,7 @@ func TestOrbPickupAndDeathScatter(t *testing.T) {
 }
 
 func TestMobXPOnlyForPlayerKills(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 
@@ -106,7 +106,7 @@ func TestMobXPOnlyForPlayerKills(t *testing.T) {
 }
 
 func TestOreXPGatedToSurvivalMiner(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	if xpForBlock(worldgen.CoalOre, func(int) int { return 1 }) != 1 {
 		t.Fatal("coal ore must pay XP")
 	}
@@ -125,7 +125,7 @@ func TestOreXPGatedToSurvivalMiner(t *testing.T) {
 // An award is paid out in the ladder denominations, largest first, the way
 // ExperienceOrb.awardWithDirection walks getExperienceValue down.
 func TestOrbAwardSplitsDownTheLadder(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.spawnXPOrb(players, 100, 0.5, float64(h.world.SurfaceFeet(0, 0)), 0.5)
 	got, total := map[int]int{}, 0
@@ -150,7 +150,7 @@ func TestOrbAwardSplitsDownTheLadder(t *testing.T) {
 // Orbs of the same value lying in the same spot collapse into one entity that
 // stands for several, so a mob farm does not fill the world with orbs.
 func TestOrbsMergeInPlace(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	y := float64(h.world.SurfaceFeet(0, 0))
 	// Two orbs of equal value in the same group merge; force the group by
@@ -287,7 +287,7 @@ func TestSpawnpointCommand(t *testing.T) {
 // /clear with an item and a maximum: count only at 0, take up to the
 // maximum, then everything of that item; other items stay.
 func TestClearItemAndMax(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	stone, dirt := int32(itemByName["stone"]), int32(itemByName["dirt"])
@@ -368,7 +368,7 @@ func TestStopsoundCommand(t *testing.T) {
 }
 
 func TestStopsoundReachesTheTarget(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -392,7 +392,7 @@ func TestStopsoundReachesTheTarget(t *testing.T) {
 // its destination, and a target in another dimension is moved into the
 // destination's.
 func TestTeleportFacingAndAcrossDimensions(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	me, you := survPlayer(h), survPlayer(h)
 	you.p.eid = me.p.eid + 1
 	you.p.name = "you"

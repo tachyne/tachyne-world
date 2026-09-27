@@ -38,7 +38,7 @@ func cartOnTrack(t *testing.T, h *hub, players map[int32]*tracked, x int) *vehic
 }
 
 func cartHub() (*hub, map[int32]*tracked) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	return h, players

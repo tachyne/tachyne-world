@@ -8,7 +8,7 @@ import (
 )
 
 func TestRollDropsGrassSeedsRate(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	const n = 100000
 	seeds := 0
 	for i := 0; i < n; i++ {
@@ -25,7 +25,7 @@ func TestRollDropsGrassSeedsRate(t *testing.T) {
 }
 
 func TestRollDropsFixed(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	if d := h.rollDrops(worldgen.Stone); len(d) != 1 || d[0].item != itemCobble {
 		t.Errorf("stone should drop cobblestone, got %v", d)
 	}
@@ -42,7 +42,7 @@ func TestRollDropsFixed(t *testing.T) {
 }
 
 func TestItemSpawnAndDespawn(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	it := h.spawnItem(players, itemWheatSeeds, 1, 8.5, 0, 8.5)
 	if it == nil || h.items[it.eid] == nil {

@@ -11,7 +11,7 @@ import (
 // put out and the cauldron drops a level (emptying at one); a lava cauldron
 // lights and hurts whoever stands in it.
 func TestCauldronDousesAndLavaBurns(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -53,7 +53,7 @@ func TestCauldronDousesAndLavaBurns(t *testing.T) {
 
 // TestRavagerTramplesCrops: a ravager walking through wheat flattens it.
 func TestRavagerTramplesCrops(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	w.SetBlock(0, 179, 0, worldgen.BlockBase("farmland"))
@@ -82,7 +82,7 @@ func TestRavagerTramplesCrops(t *testing.T) {
 // TestFallingBlockSinksThroughWater: sand falls through water (and frogspawn,
 // which it destroys) to the floor, as the falling-block entity does.
 func TestFallingBlockSinksThroughWater(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
@@ -110,7 +110,7 @@ func TestFallingBlockSinksThroughWater(t *testing.T) {
 // every tick the bee is in it), not on the one-second contact sweep, and
 // poisoned again the update after the dose runs out.
 func TestOpenEyeblossomPoisonsBees(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	players := map[int32]*tracked{}
 	h.playersRef = players

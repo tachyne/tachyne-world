@@ -10,7 +10,7 @@ import (
 // TestCatSitsOnChest: a tamed, idle cat near a closed chest walks onto it
 // and sits; a player opening the chest gets it up.
 func TestCatSitsOnChest(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

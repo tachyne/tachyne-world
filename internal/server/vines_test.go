@@ -36,7 +36,7 @@ func TestGrowingPlantsAdvanceAndLeaveBody(t *testing.T) {
 		{"cave_vines", "cave_vines_plant", -1, worldgen.Air},
 	}
 	for i, c := range cases {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		players := map[int32]*tracked{}
 		g := plantByHead(t, c.head)
 		if g.dy != c.wantDy {
@@ -83,7 +83,7 @@ func TestGrowingPlantsAdvanceAndLeaveBody(t *testing.T) {
 
 // Growth stops at age 25 rather than running forever.
 func TestGrowingPlantStopsAtMaxAge(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	g := plantByHead(t, "twisting_vines")
 	x, y, z := 40, 100, 40
@@ -104,7 +104,7 @@ func TestGrowingPlantStopsAtMaxAge(t *testing.T) {
 
 // Kelp needs water; it must not grow up into air.
 func TestKelpDoesNotGrowIntoAir(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	g := plantByHead(t, "kelp")
 	x, y, z := 60, 100, 60

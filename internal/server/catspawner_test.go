@@ -32,7 +32,7 @@ func villagersWithBeds(h *hub, players map[int32]*tracked, cx, cz, y, n int) {
 // CatSpawner.spawnInVillage: near a village, more than four occupied homes
 // within 48, and fewer than five cats in the box.
 func TestVillageCatsNeedHomesAndStopAtFive(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	cx, cz := 4000, 4000
 	y := catPad(h, cx, cz)
@@ -56,7 +56,7 @@ func TestVillageCatsNeedHomesAndStopAtFive(t *testing.T) {
 // No village about (no claimed beds, workstations or bells), no cats; and
 // nothing spawns where the chunks are not loaded.
 func TestNoCatsInTheWilderness(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	cx, cz := 6000, 6000
 	y := catPad(h, cx, cz)
@@ -72,7 +72,7 @@ func TestNoCatsInTheWilderness(t *testing.T) {
 // CatSpawner.spawnInHut: inside a swamp hut with no cat within 16, one
 // persistent cat — and not a second.
 func TestSwampHutGetsOneCat(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	g := h.world.Gen()
 	var hut worldgen.SwampHut

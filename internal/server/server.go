@@ -49,13 +49,12 @@ func (s *Server) migrateEditsIDSpace() error {
 	if from == idSpaceVersion {
 		return nil
 	}
-	worlds := []*world.World{s.world, s.nether, s.end}
 	for _, pass := range []string{"check", "apply"} {
 		if pass == "apply" {
 			// The edits are rewritten in place: keep each dimension's file as
 			// it was, as the JSON stores keep theirs.
-			dir := filepath.Dir(s.WorldFile)
-			for _, f := range []string{s.WorldFile, filepath.Join(dir, "nether.gob"), filepath.Join(dir, "end.gob")} {
+			for _, dt := range world.Dimensions {
+				f := s.dimFile(dt.ID)
 				if _, err := os.Stat(f); err != nil {
 					continue
 				}
@@ -79,10 +78,7 @@ func (s *Server) migrateEditsIDSpace() error {
 			return n
 		}
 		total := 0
-		for _, w := range worlds {
-			if w == nil {
-				continue
-			}
+		for _, w := range s.allDims() {
 			n, err := w.MigrateEdits(remap)
 			if err != nil {
 				return err
@@ -274,11 +270,10 @@ type Server struct {
 	PeerAddr    string
 	PeerPattern string
 
-	world  *world.World
-	nether *world.World // the second dimension (same seed, nether generator)
+	world *world.World // the overworld
+	dims  dimensions   // every other dimension's world (same seed, its own generator), by id
 
-	gate  *gatekeeper  // whitelist + bans (nil = wide open)
-	end   *world.World // the third dimension (End island)
+	gate  *gatekeeper // whitelist + bans (nil = wide open)
 	hub   *hub
 	modes *modeStore
 
@@ -324,14 +319,16 @@ func (s *Server) Run() error {
 }
 
 // worldFor picks the world a player's dimension lives in.
-func (s *Server) worldFor(p *player) *world.World {
-	switch {
-	case p.dim == 1 && s.nether != nil:
-		return s.nether
-	case p.dim == 2 && s.end != nil:
-		return s.end
+func (s *Server) worldFor(p *player) *world.World { return s.worldIn(p.dim) }
+
+// worldIn is the world for a dimension id: the hub's table once there is a
+// hub (a test's stand-in included), nil for a dimension this server does not
+// run.
+func (s *Server) worldIn(dim int) *world.World {
+	if s.hub != nil {
+		return s.hub.worldFor(dim)
 	}
-	return s.world
+	return s.dimWorld(dim)
 }
 
 func (s *Server) Serve() error {
@@ -370,34 +367,24 @@ func (s *Server) Serve() error {
 			s.world.SetChunkCache(cache)
 		}
 	}
-	if s.nether == nil {
-		var store world.Store
-		if s.WorldFile != "" {
-			dir := filepath.Dir(s.WorldFile)
-			store = world.NewFileStore(filepath.Join(dir, "nether.gob"))
+	// Every other dimension in the table: same seed, its own generator, its
+	// edits beside the overworld's.
+	for _, dt := range world.Dimensions {
+		if dt.ID == dimOverworld || s.dims.has(dt.ID) {
+			continue
 		}
-		n, err := world.NewNether(s.Seed, store)
+		var store world.Store
+		if f := s.dimFile(dt.ID); f != "" {
+			store = world.NewFileStore(f)
+		}
+		w, err := dt.Open(s.Seed, store)
 		if err != nil {
 			return err
 		}
-		s.nether = n
 		if cache := s.openChunkCache(); cache != nil {
-			s.nether.SetChunkCache(cache)
+			w.SetChunkCache(cache)
 		}
-	}
-	if s.end == nil {
-		var store world.Store
-		if s.WorldFile != "" {
-			store = world.NewFileStore(filepath.Join(filepath.Dir(s.WorldFile), "end.gob"))
-		}
-		e, err := world.NewEnd(s.Seed, store)
-		if err != nil {
-			return err
-		}
-		s.end = e
-		if cache := s.openChunkCache(); cache != nil {
-			s.end.SetChunkCache(cache)
-		}
+		s.dims.set(dt.ID, w)
 	}
 	// One-time block-state id-space migration. Edits saved before the 1.21.11
 	// canonical bump hold 1.21.5 (proto 770) block-state ids; the engine now
@@ -413,7 +400,8 @@ func (s *Server) Serve() error {
 		// Generation's build guard reads the builds as they stood when this
 		// GenVersion first booted, not as they are now (world/guardsnap.go).
 		dir := filepath.Dir(s.WorldFile)
-		for name, w := range map[string]*world.World{"world": s.world, "nether": s.nether, "end": s.end} {
+		for id, w := range s.allDims() {
+			name := strings.TrimSuffix(dimType(id).File, ".gob") // "world", "nether", "end"
 			if err := w.FreezeGuard(dir, name); err != nil {
 				log.Fatalf("build guard snapshot for %s: %v", name, err)
 			}
@@ -433,8 +421,7 @@ func (s *Server) Serve() error {
 	}
 	if s.hub == nil {
 		s.hub = newHub(s.world)
-		s.hub.nether = s.nether
-		s.hub.end = s.end
+		s.hub.dims = s.dims
 		if s.Sharded {
 			sid, topo := s.SID, s.Topo
 			s.hub.sid = sid
@@ -652,24 +639,15 @@ func (s *Server) Serve() error {
 				return nil
 			},
 			BlockEntities: func(w *world.World, cx, cz int32) []byte {
-				dim := 0
-				switch w {
-				case s.nether:
-					dim = 1
-				case s.end:
-					dim = 2
+				dim := dimOverworld
+				for id, dw := range s.allDims() {
+					if dw == w {
+						dim = id
+					}
 				}
 				return appendBlockEntities(nil, w, cx, cz, dim, s.hub.signs, s.hub.cfStore, s.hub.banners, s.hub.shelfView, s.hub.potSherds)
 			},
-			Worlds: func(dim int32) *world.World {
-				switch dim {
-				case 1:
-					return s.nether
-				case 2:
-					return s.end
-				}
-				return s.world
-			},
+			Worlds: func(dim int32) *world.World { return s.dimWorld(int(dim)) },
 		}
 		if s.SpawnSet { // SpawnY already resolved (surface) for the auto x,z form
 			spawn.Spawn = attachproto.Pos{X: s.SpawnX, Y: s.SpawnY, Z: s.SpawnZ}
@@ -773,7 +751,7 @@ func (s *Server) autosave() {
 	t := time.NewTicker(autosaveInterval)
 	defer t.Stop()
 	last := s.world.EditCount()
-	lastNether := 0
+	lastEdits := map[int]int{} // every other dimension's, for the same chatter
 	for range t.C {
 		if s.hub != nil && s.hub.saveOff.Load() {
 			continue // /save-off
@@ -782,17 +760,16 @@ func (s *Server) autosave() {
 			log.Printf("world autosave failed: %v", err)
 			continue
 		}
-		if s.nether != nil {
-			if err := s.nether.Save(); err != nil {
-				log.Printf("nether autosave failed: %v", err)
-			} else if n := s.nether.EditCount(); n != lastNether {
-				log.Printf("nether autosaved (%d block edits)", n)
-				lastNether = n
+		for id, w := range s.allDims() {
+			if id == dimOverworld {
+				continue
 			}
-		}
-		if s.end != nil {
-			if err := s.end.Save(); err != nil {
-				log.Printf("end autosave failed: %v", err)
+			name := dimType(id).Name
+			if err := w.Save(); err != nil {
+				log.Printf("%s autosave failed: %v", name, err)
+			} else if n := w.EditCount(); n != lastEdits[id] {
+				log.Printf("%s autosaved (%d block edits)", name, n)
+				lastEdits[id] = n
 			}
 		}
 		if n := s.world.EditCount(); n != last { // only chatter when something changed
@@ -830,11 +807,10 @@ func (s *Server) Save() error {
 	if s.world == nil {
 		return nil
 	}
-	if s.nether != nil {
-		s.nether.Save()
-	}
-	if s.end != nil {
-		s.end.Save()
+	for id, w := range s.allDims() {
+		if id != dimOverworld {
+			w.Save()
+		}
 	}
 	return s.world.Save()
 }

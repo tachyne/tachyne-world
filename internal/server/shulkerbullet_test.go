@@ -11,7 +11,7 @@ import (
 // A shulker bullet must work its way toward its target (homing) and not
 // fall — vanilla ShulkerBullet steers its motion each tick and has no gravity.
 func TestShulkerBulletHomes(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2) // projectiles fly only through loaded chunks
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 20, 80, 0 // target off to the +x
@@ -40,7 +40,7 @@ func TestShulkerBulletHomes(t *testing.T) {
 
 // A shulker bullet hit inflicts Levitation (vanilla LEVITATION I, 10 s).
 func TestShulkerBulletLevitatesOnHit(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2) // projectiles fly only through loaded chunks
 	pl := testTracked()
 	pl.gamemode = gmSurvival
@@ -67,7 +67,7 @@ func TestShulkerBulletLevitatesOnHit(t *testing.T) {
 // y=179 in open air, the player eight blocks off on both horizontal axes.
 func shulkerBulletRig(t *testing.T) (*hub, map[int32]*tracked, *tracked, *mob) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(4, 4, 2)
 	h.arrows = map[int32]*arrowEntity{}
 	for x := -4; x <= 12; x++ {

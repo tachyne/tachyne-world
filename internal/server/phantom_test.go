@@ -26,7 +26,7 @@ func worldSurfaceForTest(h *hub, x, z int) int {
 // The whole point of the mob: sleeping buys them off, and not sleeping does
 // not. A player who has just risen must never be harried.
 func TestPhantomsNeedInsomnia(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl, players := phantomPlayer(h)
 	h.rules.Difficulty = diffHard
 	h.dayTime.Store(15000)
@@ -64,7 +64,7 @@ func TestPhantomsNeedInsomnia(t *testing.T) {
 // Climbing into a bed is what stops the clock — vanilla resets on getting IN,
 // so being woken early still counts.
 func TestSleepingResetsTheInsomniaClock(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -86,7 +86,7 @@ func TestSleepingResetsTheInsomniaClock(t *testing.T) {
 
 // The gamerule still switches them off wholesale.
 func TestSpawnPhantomsRuleOff(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl, players := phantomPlayer(h)
 	h.rules.Difficulty = diffHard
 	h.rules.SpawnPhantoms = false

@@ -9,7 +9,7 @@ import (
 
 // A parked boat survives the store round trip: same type, same spot.
 func TestVehiclesPersist(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.world.SetBlock(40, 62, 40, worldgen.WaterBase)
@@ -24,7 +24,7 @@ func TestVehiclesPersist(t *testing.T) {
 	if len(saved) != 2 {
 		t.Fatalf("snapshot has %d vehicles, want 2", len(saved))
 	}
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	h2.restoreVehicles(saved)
 	if len(h2.vehicles) != 2 {
 		t.Fatalf("restored %d vehicles, want 2", len(h2.vehicles))
@@ -48,7 +48,7 @@ func TestVehiclesPersist(t *testing.T) {
 // A chest boat carries a chest: it opens as a chest window, its cargo
 // persists with the vehicle, and breaking the boat spills it.
 func TestChestBoatCargo(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := riderAt(1, 40.5, 63, 42.5)
 	players := map[int32]*tracked{1: pl}
 	h.playersRef = players
@@ -73,7 +73,7 @@ func TestChestBoatCargo(t *testing.T) {
 		t.Fatal("sneak-click should open the boat's chest")
 	}
 	saved := h.snapshotVehicles()
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	h2.restoreVehicles(saved)
 	for _, c := range h2.vehicles {
 		if c.chest == nil || c.chest.slots[3].item != itemByName["diamond"] || c.chest.slots[3].count != 5 {
@@ -96,7 +96,7 @@ func TestChestBoatCargo(t *testing.T) {
 // A boat placed on Nether lava does not float, but a cart on a Nether rail
 // rolls; vehicles carry their dimension and are only shown to players in it.
 func TestVehiclesInOtherDimensions(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	if h.worldFor(dimNether) == nil {

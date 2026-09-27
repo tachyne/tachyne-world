@@ -84,7 +84,7 @@ func TestMobDisplayNames(t *testing.T) {
 // The cause rides with the damage, survives to the death, and resets on
 // respawn — the three things that make attribution work at all.
 func TestDeathCauseRidesWithTheDamage(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 

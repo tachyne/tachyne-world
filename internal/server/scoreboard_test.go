@@ -31,7 +31,7 @@ func drainSB(pl *tracked) (objs []attachproto.Objective, scores []attachproto.Sc
 // TestScoreboardCommandsAndCriteria drives the op-command surface and the
 // automatic criteria end to end.
 func TestScoreboardCommandsAndCriteria(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -99,7 +99,7 @@ func TestScoreboardCommandsAndCriteria(t *testing.T) {
 // The sixteen team-colour sidebars are display slots 3-18 (DisplaySlot
 // order), and a joining player is sent them with the rest.
 func TestScoreboardTeamSidebarSlots(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	h.cmdScoreboard(players, evScoreboardCmd{p: pl.p, args: []string{"objectives", "add", "reds", "dummy"}})
@@ -161,7 +161,7 @@ func TestTriggerCommand(t *testing.T) {
 // read-only to /scoreboard players set, and the death criterion is vanilla's
 // deathCount.
 func TestScoreboardGaugeCriteria(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.food, pl.xpLevel = 13, 4
 	players := map[int32]*tracked{1: pl}
@@ -189,7 +189,7 @@ func TestScoreboardGaugeCriteria(t *testing.T) {
 // deathMessageVisibility: hideForOtherTeams keeps a death to the team,
 // hideForOwnTeam keeps it from them, never from everyone.
 func TestTeamDeathMessageVisibility(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	cmd := func(args ...string) { h.cmdTeam(players, evTeamCmd{p: pl.p, args: args}) }

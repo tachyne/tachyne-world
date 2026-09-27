@@ -12,7 +12,7 @@ import (
 // player standing a few blocks back.
 func vehRig(t *testing.T) (*hub, *tracked, map[int32]*tracked) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	pl := survPlayer(h)
 	pl.x, pl.y, pl.z = 0.5, 180, -4

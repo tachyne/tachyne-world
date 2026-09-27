@@ -10,7 +10,7 @@ import (
 // within sixteen onto the same player; a sat camel led six blocks off
 // stands up.
 func TestHoglinPackAndCamelLeash(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

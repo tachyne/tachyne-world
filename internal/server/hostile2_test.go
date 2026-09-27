@@ -7,7 +7,7 @@ import (
 )
 
 func TestSlimeSplitsOnDeath(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	m := h.spawnHostile(players, entitySlime, 5, 5)
@@ -38,7 +38,7 @@ func TestSlimeSplitsOnDeath(t *testing.T) {
 }
 
 func TestEndermanNeutralUntilHitThenHunts(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
 	players := map[int32]*tracked{1: pl}
@@ -65,7 +65,7 @@ func TestEndermanNeutralUntilHitThenHunts(t *testing.T) {
 }
 
 func TestBiomeVariantsConfigured(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	husk := h.spawnHostile(players, entityHusk, 1, 1)
 	if burnsInDaylight[husk.etype] {
@@ -81,7 +81,7 @@ func TestBiomeVariantsConfigured(t *testing.T) {
 }
 
 func TestPearlTeleportsThrower(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 80, 0.5
 	pl.inv.slots[0] = invStack{item: itemEnderPearl, count: 2}

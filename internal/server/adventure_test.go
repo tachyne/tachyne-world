@@ -9,7 +9,7 @@ import (
 // GameType.isSurvival covers adventure: a zombie hunts an adventure player,
 // and the blow lands.
 func TestAdventurePlayersAreHuntedAndHurt(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.gamemode = gmAdventure
 	players := map[int32]*tracked{pl.p.eid: pl}

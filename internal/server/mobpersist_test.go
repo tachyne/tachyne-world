@@ -14,7 +14,7 @@ func TestMobPersistRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "mobs.json")
 	players := map[int32]*tracked{}
 
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.mobstore = newMobStore(path)
 
 	cow := h.spawnMob(players, entityCow, 10.5, 70, 10.5)
@@ -37,7 +37,7 @@ func TestMobPersistRoundTrip(t *testing.T) {
 	h.mobstore.flush()
 
 	// A fresh hub reloads them when those chunks enter range.
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	h2.mobstore = newMobStore(path)
 	chunkSet := map[[3]int32]bool{{0, 0, 0}: true, {0, 1, 1}: true}
 	h2.reconcileMobChunks(players, chunkSet)
@@ -73,7 +73,7 @@ func TestMobPersistRoundTrip(t *testing.T) {
 // TestMobUnloadReload: a mob whose chunk leaves range unloads after the grace
 // window (saved to the store, dropped from the live set) and reloads on return.
 func TestMobUnloadReload(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.mobstore = newMobStore(filepath.Join(t.TempDir(), "mobs.json"))
 	players := map[int32]*tracked{}
 	h.tick.Store(1000)
@@ -122,7 +122,7 @@ func TestMobUnloadReload(t *testing.T) {
 
 // TestPersistMobFilter: dying mobs, bosses and villagers are never persisted.
 func TestPersistMobFilter(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 
 	keep := h.spawnMob(players, entityCow, 0.5, 70, 0.5)
@@ -148,7 +148,7 @@ func TestPersistMobFilter(t *testing.T) {
 // TestPetOwnerResolvesOnJoin: a restored pet re-links to its owner's live eid
 // when a player with the matching UUID joins.
 func TestPetOwnerResolvesOnJoin(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	uuid := [16]byte{9, 8, 7}
 	pet := h.spawnMob(map[int32]*tracked{}, entityWolf, 5.5, 70, 5.5)
 	pet.tamed, pet.ownerUUID = true, uuid
@@ -175,7 +175,7 @@ func TestVillagerPersistRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "mobs.json")
 	players := map[int32]*tracked{}
 
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.mobstore = newMobStore(path)
 	v := h.spawnMob(players, entityVillager, 10.5, 70, 10.5)
 	h.initVillagerTrades(v, 4)     // librarian
@@ -189,7 +189,7 @@ func TestVillagerPersistRoundTrip(t *testing.T) {
 	h.mobstore.bucketLive(h.mobs, h.persistMob, active)
 	h.mobstore.flush()
 
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	h2.mobstore = newMobStore(path)
 	h2.reconcileMobChunks(players, map[[3]int32]bool{{0, 0, 0}: true})
 
@@ -229,7 +229,7 @@ func TestVillagerPersistRoundTrip(t *testing.T) {
 // merchant screen.
 func TestPreV21VillagerRowGetsStock(t *testing.T) {
 	players := map[int32]*tracked{}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	sm := savedMob{Etype: entityVillager, X: 10.5, Y: 70, Z: 10.5, Health: 20, Profession: 2}
 	m := h.reloadMob(players, &sm)
 	if m == nil {
@@ -244,7 +244,7 @@ func TestPreV21VillagerRowGetsStock(t *testing.T) {
 // village guardian (behavior + knockback immunity + home anchor).
 func TestGolemReloadKeepsGuardianStance(t *testing.T) {
 	players := map[int32]*tracked{}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	sm := savedMob{Etype: entityIronGolem, X: 10.5, Y: 70, Z: 10.5, Health: 80, Home: [3]int{12, 70, 12}}
 	m := h.reloadMob(players, &sm)
 	if m == nil {
@@ -262,7 +262,7 @@ func TestGolemReloadKeepsGuardianStance(t *testing.T) {
 // mobs.json — the npc registry owns it.
 func TestNPCMobNotPersisted(t *testing.T) {
 	players := map[int32]*tracked{}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	n := h.spawnNPC(players, "Testy", "a test persona", 10.5, 10.5)
 	if n == nil {
 		t.Fatal("npc spawn failed")

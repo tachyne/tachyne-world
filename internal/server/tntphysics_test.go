@@ -19,7 +19,7 @@ func tntFloor(w *world.World, y int) {
 // Lit TNT hops, falls and comes to rest on the ground with its fuse still
 // burning; one lit over a drop lands on the floor below.
 func TestPrimedTNTFalls(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	tntFloor(w, 179)
 	players := map[int32]*tracked{}
@@ -50,7 +50,7 @@ func TestPrimedTNTFalls(t *testing.T) {
 // A blast throws primed TNT that stands beside it — the TNT cannon — the
 // charge shoved away from the blast and sliding on down the field.
 func TestBlastPushesPrimedTNT(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	tntFloor(w, 179)
 	players := map[int32]*tracked{}

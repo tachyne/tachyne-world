@@ -10,7 +10,7 @@ import (
 // poison when healthy, harming otherwise), a splash lands on everyone
 // within four blocks, and a burning witch drinks fire resistance.
 func TestWitchPotions(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

@@ -19,7 +19,7 @@ func TestWanderingTrader(t *testing.T) {
 			}
 		}
 	}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -144,7 +144,7 @@ func TestTraderPoolsMatchVanilla(t *testing.T) {
 	// Rolling a trader gives the sets' amounts, and the two special listings
 	// arrive carrying their component.
 	w := world.New(23)
-	h := newHub(w)
+	h := newTestHub(w)
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	m := h.spawnMob(players, entityWanderingTrader, pl.x+1, pl.y, pl.z)
@@ -181,7 +181,7 @@ func TestTraderPoolsMatchVanilla(t *testing.T) {
 // TraderLlama: a trader llama goes for zombies and illagers it can see,
 // and for whatever mob hurt its trader — not only a player.
 func TestTraderLlamaTargets(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.p.eid = 500
 	pl.x, pl.y, pl.z = 40, 180, 40
@@ -222,7 +222,7 @@ func TestTraderLlamaTargets(t *testing.T) {
 // 0.35 until within two, and MoveTowardsRestrictionGoal brings it back
 // inside its home.
 func TestTraderWandersToTheBell(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.p.eid = 500
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -264,7 +264,7 @@ func TestTraderWandersToTheBell(t *testing.T) {
 // TestTraderWanderTargetSurvivesReload is WanderingTrader's wander_target:
 // a trader still on its way to the bell keeps that point across a save.
 func TestTraderWanderTargetSurvivesReload(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.world.ForceLoad(0, 0, 2)

@@ -11,7 +11,7 @@ import (
 // every player does in vanilla (bug #24: the hotbar came back empty).
 func TestCreativeRejoinGetsTheSavedInventory(t *testing.T) {
 	for _, mode := range []int{gmCreative, gmSurvival, gmAdventure} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		h.invs = newInvStore("")
 		players := map[int32]*tracked{}
 		p := newPlayer(h.allocEID(), "builder", [16]byte{9})

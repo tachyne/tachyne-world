@@ -79,7 +79,7 @@ func TestSupportShapesLookTheRightWay(t *testing.T) {
 // Mining a wall drops what was fixed to it — the case the old six-block,
 // above-only check could never catch.
 func TestMiningAWallDropsWhatWasOnIt(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	wall := blockPos{0, 180, 0}
@@ -105,7 +105,7 @@ func TestMiningAWallDropsWhatWasOnIt(t *testing.T) {
 
 // A stack comes down together: dirt, grass on it, and the flower on that.
 func TestUnsupportedBlocksCascade(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	base := blockPos{0, 180, 0}
@@ -204,7 +204,7 @@ func TestColumnPlantsSurviveANeighbourEdit(t *testing.T) {
 		{"cactus", "sand"},
 		{"bamboo", "dirt"},
 	} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		players := map[int32]*tracked{}
 		w := h.worldFor(0)
 		x, y, z := 400, 180, 400
@@ -248,7 +248,7 @@ func TestGrindstoneNeverDrops(t *testing.T) {
 // the same way. Once placed it never drops: vanilla leaves canSurvive alone,
 // so breaking both sides leaves it hanging.
 func TestWallHangingSignHeldFromTheSides(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	players := map[int32]*tracked{}
 	stone := worldgen.BlockBase("stone")
@@ -277,7 +277,7 @@ func TestWallHangingSignHeldFromTheSides(t *testing.T) {
 // the other still stands — breaking the upper half drops seeds too — and a
 // plant whose halves fall one after the other rolls only once.
 func TestTallGrassSeedsFromEitherHalf(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	upper := tallGrassLo
 	seeds := 0
 	for i := 0; i < 800; i++ {

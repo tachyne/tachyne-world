@@ -10,7 +10,7 @@ import (
 // Putting something in a pot puffs seven dust motes off the rim
 // (DecoratedPotBlock.useItemOn), in the pot's own dimension.
 func TestPotInsertPuffsDust(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl

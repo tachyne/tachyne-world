@@ -9,7 +9,7 @@ import (
 // Cod form a shoal: one becomes the leader and the rest follow it, breaking
 // off if they fall too far behind.
 func TestFishSchool(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	a := h.spawnMob(players, entityCod, 0.5, 62, 0.5)
 	b := h.spawnMob(players, entityCod, 2.5, 62, 0.5)
@@ -57,7 +57,7 @@ func TestSchoolSizes(t *testing.T) {
 	for _, tc := range []struct {
 		etype, size int
 	}{{entityCod, 8}, {entitySalmon, 5}} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		players := map[int32]*tracked{}
 		lead := h.spawnMob(players, tc.etype, 0.5, 62, 0.5)
 		lead.schoolFollowers = tc.size - 2 // one place left

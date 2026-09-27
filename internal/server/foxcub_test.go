@@ -10,7 +10,7 @@ import (
 
 // FoxFollowParentGoal(1.25): a fox kit trots after the nearest adult fox.
 func TestFoxKitFollowsAnAdult(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.world.ForceLoad(0, 0, 2)
 	for x := -2; x <= 10; x++ {

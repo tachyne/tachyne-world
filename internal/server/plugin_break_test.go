@@ -37,7 +37,7 @@ func placeBody(x, y, z int, face int32) []byte {
 func breakPlaceServer(t *testing.T) (*Server, *hub, *player) {
 	t.Helper()
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	h.rules.DoMobSpawning = false
 	h.plugHost = &pluginHost{h: h, cmds: map[string]*plugin.Command{}}
 	s := &Server{world: w, hub: h, modes: newModeStore("", gmCreative), Ops: map[string]bool{}}

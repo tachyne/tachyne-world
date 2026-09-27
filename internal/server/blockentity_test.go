@@ -15,7 +15,7 @@ import (
 // An ender chest is a door onto the PLAYER's storage, so two of them anywhere
 // in the world show the same 27 slots.
 func TestEnderChestIsPerPlayerNotPerBlock(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -39,7 +39,7 @@ func TestEnderChestIsPerPlayerNotPerBlock(t *testing.T) {
 
 // Two players never see each other's ender contents.
 func TestEnderChestsAreSeparatePerPlayer(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	a, b := survPlayer(h), survPlayer(h)
 	a.enderChest().slots[0] = invStack{item: itemByName["diamond"], count: 1}
 	if b.enderChest().slots[0].item != 0 {
@@ -51,7 +51,7 @@ func TestEnderChestsAreSeparatePerPlayer(t *testing.T) {
 // inventory rather than any block.
 func TestEnderChestPersists(t *testing.T) {
 	store := newInvStore(t.TempDir() + "/inv.json")
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.enderChest().slots[4] = invStack{item: itemByName["emerald"], count: 7, dmg: 0}
 	store.save("wesley", pl)
@@ -65,7 +65,7 @@ func TestEnderChestPersists(t *testing.T) {
 
 // The point of a shulker box: breaking it keeps what is inside.
 func TestShulkerBoxKeepsItsContents(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pos := blockPos{3, 70, 3}
 
 	c := &chest{}
@@ -101,7 +101,7 @@ func TestShulkerBoxKeepsItsContents(t *testing.T) {
 
 // An EMPTY box needs no id — it drops as a plain item.
 func TestEmptyShulkerBoxNeedsNoIdentity(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pos := blockPos{1, 70, 1}
 	h.chests[simPos{blockPos: pos}] = &chest{}
 	if id := h.stowShulkerBox(simPos{blockPos: pos}); id != 0 {
@@ -202,7 +202,7 @@ func TestEveryContainerBlockOpensSomething(t *testing.T) {
 // A decorated pot takes ONE item per click and never hands anything back:
 // what goes in comes out only when the pot is broken (DecoratedPotBlock).
 func TestDecoratedPotTakesOneAtATime(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -251,7 +251,7 @@ func TestDecoratedPotTakesOneAtATime(t *testing.T) {
 
 // A hopper fills a pot one item at a time and one underneath empties it.
 func TestDecoratedPotHopperFlow(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pos := simPos{dim: 0, blockPos: blockPos{3, 70, 3}}
 	st := invStack{item: itemByName["diamond"], count: 5}
 	if !h.potInsert(pos, st) || h.pots[pos].count != 1 {
@@ -281,7 +281,7 @@ func TestDecoratedPotHopperFlow(t *testing.T) {
 
 // Breaking a pot scatters what is inside.
 func TestDecoratedPotSpillsOnBreak(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pos := blockPos{4, 70, 4}
 	h.pots = map[simPos]invStack{{dim: 0, blockPos: pos}: {item: itemByName["emerald"], count: 3}}
@@ -304,7 +304,7 @@ func TestDecoratedPotSpillsOnBreak(t *testing.T) {
 // The conduit frame: vanilla needs 16 blocks on the 5x5x5 rings and water all
 // around the conduit itself.
 func TestConduitNeedsWaterAndAFrame(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.worldFor(0)
 	pos := blockPos{0, 180, 0}
 	w.SetBlock(pos.x, pos.y, pos.z, conduitState)
@@ -366,7 +366,7 @@ func TestConduitNeedsWaterAndAFrame(t *testing.T) {
 
 // The conduit registry is what makes them findable without scanning blocks.
 func TestConduitRegistryTracksPlacement(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pos := blockPos{7, 70, 7}
 	h.noteConduitBlock(0, pos, conduitState)
 	if !h.conduits[simPos{dim: 0, blockPos: pos}] {
@@ -467,7 +467,7 @@ func TestEveryInteractionEventIsHandled(t *testing.T) {
 
 // A full hive gives honeycomb to shears and honey to a bottle, and empties.
 func TestBeehiveHarvest(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -543,7 +543,7 @@ func TestBeehiveStateMath(t *testing.T) {
 // needs the player in water or in rain at their own position, not merely
 // a storm somewhere.
 func TestConduitTargetMemoryAndRain(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.worldFor(0)
 	w.ForceLoad(0, 0, 2)
 	pos := blockPos{0, 180, 0}

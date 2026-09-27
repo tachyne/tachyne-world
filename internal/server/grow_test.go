@@ -11,7 +11,7 @@ import (
 // deterministically regardless of the seed-1 terrain below.
 
 func TestCropGrowsInLight(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 5, 200, 5
 	h.world.SetBlock(x, y, z, worldgen.BlockBase("wheat")) // wheat, age 0
@@ -24,7 +24,7 @@ func TestCropGrowsInLight(t *testing.T) {
 }
 
 func TestStackPlantGrowsUpward(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 5, 200, 5
 	h.world.SetBlock(x, y-1, z, worldgen.BlockID("sand")) // cane stands on sand beside water
@@ -40,7 +40,7 @@ func TestStackPlantGrowsUpward(t *testing.T) {
 }
 
 func TestLeafDecaysWhenIsolated(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 5, 200, 5
 	h.world.SetBlock(x, y, z, worldgen.OakLeaves) // default = non-persistent
@@ -51,7 +51,7 @@ func TestLeafDecaysWhenIsolated(t *testing.T) {
 }
 
 func TestPersistentLeafSurvives(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 5, 200, 5
 	persistentOakLeaf := worldgen.BlockBase("oak_leaves") // distance 1, persistent=true
@@ -63,7 +63,7 @@ func TestPersistentLeafSurvives(t *testing.T) {
 }
 
 func TestLeafSurvivesNearLog(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 5, 200, 5
 	h.world.SetBlock(x+1, y, z, worldgen.OakLog) // a log right next to it
@@ -100,7 +100,7 @@ func TestSpeciesLeavesSurviveNearTheirLog(t *testing.T) {
 		{"mangrove", worldgen.MangroveLog, worldgen.MangroveLeaves},
 	}
 	for _, c := range cases {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		players := map[int32]*tracked{}
 		x, y, z := 5, 200, 5
 		h.world.SetBlock(x+1, y, z, c.log)
@@ -137,7 +137,7 @@ func TestSimRadiusIsConfigurable(t *testing.T) {
 // random ticks in three reach the crop rule, so beetroot grows at two thirds
 // of wheat's rate under the same conditions.
 func TestBeetrootGrowsTwoThirdsAsOften(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	// Moist farmland all round makes growth frequent (speed ~10), so a few
 	// thousand ticks settle the ratio; the crop is reset only when it grew,
@@ -171,7 +171,7 @@ func TestBeetrootGrowsTwoThirdsAsOften(t *testing.T) {
 // column ageing (it stops only at height 3 AND age 15), grows a cactus
 // flower from age 8, and the flower stands on the cactus.
 func TestCactusAgesAndFlowers(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	w := h.world
 	x, y, z := 5, 200, 5

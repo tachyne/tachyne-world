@@ -9,7 +9,7 @@ import (
 // TestPolarBearGuardsCub: a bear with a cub beside it turns on a player
 // within ten blocks and rears up as it closes; alone, it leaves the player be.
 func TestPolarBearGuardsCub(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

@@ -30,7 +30,7 @@ func TestSlimeChunkOracle(t *testing.T) {
 // TestSkyDarken: vanilla's SKY_LIGHT_LEVEL curve — clear noon 0, night 11,
 // and storms darken the daytime sky (the daytime-storm-spawn mechanic).
 func TestSkyDarken(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.dayTime.Store(6000) // noon
 	if d := h.skyDarken(); d != 0 {
 		t.Fatalf("noon skyDarken = %d, want 0", d)
@@ -59,7 +59,7 @@ func TestSkyDarken(t *testing.T) {
 // light) is absolute protection; the noon surface never passes; the noon
 // surface UNDER A THUNDERSTORM sometimes does (vanilla storm spawns).
 func TestDarkEnoughToSpawn(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.dayTime.Store(6000)
 	for i := 0; i < 200; i++ {
 		if !h.darkEnoughToSpawn(0, 0) {
@@ -101,7 +101,7 @@ func TestDarkEnoughToSpawn(t *testing.T) {
 // TestSpawnCategoriesAndDespawn: category classification and the vanilla
 // despawn distances (fish at 64, monsters/ambient at 128, creatures never).
 func TestSpawnCategoriesAndDespawn(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 64, 0.5 // level with the mobs: the despawn distance is three-axis
 	players := map[int32]*tracked{1: pl}
@@ -150,7 +150,7 @@ func TestSpawnCategoriesAndDespawn(t *testing.T) {
 // TestSpawnPools: biome routing (husk desert, stray snow, drowned oceans)
 // and sane vanilla pack ranges.
 func TestSpawnPools(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	has := func(pool []spawnerEntry, etype int) bool {
 		for _, e := range pool {
 			if e.etype == etype {
@@ -187,7 +187,7 @@ func TestSpawnPools(t *testing.T) {
 // TestSpawnPositionRules: land mobs need solid ground and clear body space;
 // water mobs need water.
 func TestSpawnPositionRules(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.SetBlock(10, 99, 10, worldgen.Stone)
 	h.world.SetBlock(10, 100, 10, worldgen.Air)
 	h.world.SetBlock(10, 101, 10, worldgen.Air)
@@ -209,7 +209,7 @@ func TestSpawnPositionRules(t *testing.T) {
 // teleported up into daylight. Seating must be relative to the mob's own
 // height: a mob in a sealed cavity stays on its cave floor.
 func TestCaveMobsStayUnderground(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 64, 0.5
 	players := map[int32]*tracked{1: pl}
@@ -245,7 +245,7 @@ func TestCaveMobsStayUnderground(t *testing.T) {
 // noon through thirty blocks of stone. Exposure now scans from the mob's own
 // height; a surface control zombie must still catch fire.
 func TestCaveZombieDoesNotBurn(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.DoMobSpawning = false // isolate the two hand-placed zombies
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
@@ -307,7 +307,7 @@ func TestSurfaceSeatingUnchanged(t *testing.T) {
 // and never exceed the scaled category cap.
 func TestNaturalSpawnFillsCaves(t *testing.T) {
 	skipHeavy(t)
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 64, 0.5
 	players := map[int32]*tracked{1: pl}
@@ -356,7 +356,7 @@ func TestResolvedItemConstants(t *testing.T) {
 // #bats_spawnable_on (#base_stone_overworld) — a dark cave floored with
 // planks or dirt never spawns bats.
 func TestBatSpawnFloor(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	for x := -1; x <= 1; x++ {
 		for z := -1; z <= 1; z++ {

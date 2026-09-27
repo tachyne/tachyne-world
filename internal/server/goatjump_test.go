@@ -10,7 +10,7 @@ import (
 // TestGoatLongJumps: a goat on a ledge with a gap to another crouches and
 // jumps it; on flat ground it finds nothing to jump.
 func TestGoatLongJumps(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

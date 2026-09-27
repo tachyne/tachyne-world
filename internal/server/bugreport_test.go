@@ -14,7 +14,7 @@ import (
 // "pistons adjacent to a dust line are not working" arrives as something that
 // can be rebuilt rather than guessed at.
 func TestBugReportCapturesTheBuild(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	pl := survPlayer(h)
@@ -149,7 +149,7 @@ func TestRegionRoundTrips(t *testing.T) {
 // usual case, since whoever answers a report is rarely online at the same
 // time as whoever filed it.
 func TestReplyReachesOnlineAndWaitsForOffline(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	here := survPlayer(h)
@@ -191,7 +191,7 @@ func TestReplyReachesOnlineAndWaitsForOffline(t *testing.T) {
 // Answering a report records the answer against it, so the list shows what
 // has been dealt with.
 func TestReplyNotesTheReport(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	pl := survPlayer(h)
@@ -348,7 +348,7 @@ func TestBugListSummarises(t *testing.T) {
 // the thread it was meant to join — which is exactly what happened to
 // LegionZA's follow-up on the endermen.
 func TestBugHashNumberAnnotatesInsteadOfFiling(t *testing.T) {
-	s := &Server{hub: newHub(world.New(1))}
+	s := &Server{hub: newTestHub(world.New(1))}
 	p := &player{eid: 1, name: "LegionZA"}
 
 	drain := func() hubEvent {

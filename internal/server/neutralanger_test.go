@@ -9,7 +9,7 @@ import (
 
 func angerRig(t *testing.T, etype int) (*hub, map[int32]*tracked, *tracked, *tracked, *mob) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	h.arrows = map[int32]*arrowEntity{}
 	for x := -6; x <= 6; x++ {

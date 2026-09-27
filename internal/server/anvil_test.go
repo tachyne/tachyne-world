@@ -52,7 +52,7 @@ func TestAnvilRepairAndRename(t *testing.T) {
 }
 
 func TestAnvilChargesLevels(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	pl.winID, pl.winKind = 5, winAnvil
@@ -74,7 +74,7 @@ func TestAnvilChargesLevels(t *testing.T) {
 }
 
 func TestGrindstoneStripsAndRefunds(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	pl.winID, pl.winKind = 5, winGrind
@@ -105,7 +105,7 @@ func TestSilkTouchAndFortune(t *testing.T) {
 }
 
 func TestLootingBoostsMobDrops(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	total := 0
 	for i := 0; i < 40; i++ {
@@ -128,7 +128,7 @@ func TestLootingBoostsMobDrops(t *testing.T) {
 // stage, and a damaged one goes altogether — with the use/broken sounds as
 // level events the client plays.
 func TestAnvilWearsWithUse(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -178,7 +178,7 @@ func TestAnvilBlankNameAndValidation(t *testing.T) {
 		t.Fatalf("blank box on an unnamed sword made %+v, want nothing", res)
 	}
 
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	r := &remotePlayer{s: &Server{hub: h}, p: survPlayer(h).p, gm: -1}
 	r.Action(attachproto.NameItem{Name: "§cRed\x7f Sword"})
 	if ev := (<-h.events).(evRename); ev.name != "cRed Sword" {
@@ -198,7 +198,7 @@ func TestAnvilBlankNameAndValidation(t *testing.T) {
 // GrindstoneMenu's take pays its orbs at the grindstone's centre, not at
 // the player.
 func TestGrindstoneOrbsAtTheGrindstone(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}

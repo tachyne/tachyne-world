@@ -11,7 +11,7 @@ import (
 // ServerLevel.tickPrecipitation does: a floor under a roof 40 blocks up stays
 // clear, however long it snows, and the roof collects it (bug #29).
 func TestSnowNeverSettlesUnderAHighRoof(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	cold := func(b string) bool { return worldgen.PrecipitationAt(b, 200) == worldgen.PrecipSnow }
 	cx, cz := biomeSpot(t, h.world, 500, cold)
 	chx, chz := cx>>4, cz>>4

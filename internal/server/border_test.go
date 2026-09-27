@@ -47,7 +47,7 @@ func TestBorderInterpolatesOverTime(t *testing.T) {
 // Damage starts only beyond the safe zone, scales with distance, and never
 // falls below half a heart.
 func TestBorderDamageOnlyBeyondTheSafeZone(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -79,7 +79,7 @@ func TestBorderDamageOnlyBeyondTheSafeZone(t *testing.T) {
 
 // The command drives the state, and a timed set leaves a border in motion.
 func TestWorldBorderCommand(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -128,7 +128,7 @@ func TestWorldBorderCommand(t *testing.T) {
 // player damage and the ender egg's teleport and nowhere else — a shrunken
 // border kept hurting you while mobs carried on spawning past it.
 func TestNothingSpawnsOutsideTheBorder(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	y := 180
 	// A stone pad well away from the origin, with room for anything to stand.

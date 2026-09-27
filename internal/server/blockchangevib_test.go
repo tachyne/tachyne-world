@@ -10,7 +10,7 @@ import (
 // TestSculkHearsABell: BellBlock.attemptToRing is a BLOCK_CHANGE game
 // event, so a sculk sensor in range hears a bell being rung.
 func TestSculkHearsABell(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -43,7 +43,7 @@ func TestSculkHearsABell(t *testing.T) {
 // EAT game event when the player cannot eat, so a full player's refused
 // bite is silent to sculk; a taken bite is heard.
 func TestCakeBiteVibratesOnlyWhenEaten(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -82,7 +82,7 @@ func TestCakeBiteVibratesOnlyWhenEaten(t *testing.T) {
 // TestSculkHearsARedstoneDoor: DoorBlock.neighborChanged sends BLOCK_OPEN
 // when a signal swings the door open, so sculk hears it.
 func TestSculkHearsARedstoneDoor(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

@@ -27,7 +27,7 @@ func TestArrowAmmoOrder(t *testing.T) {
 // A bow shoots a spectral arrow as one, Infinity does not spare it, and the
 // arrow comes back as itself; what it hits glows.
 func TestSpectralArrowFromABow(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

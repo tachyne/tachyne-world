@@ -12,7 +12,7 @@ import (
 // LlamaFollowCaravanGoal: free llamas near a led one fall in behind it in a
 // line, and the line breaks up when the lead comes off.
 func TestLlamaCaravan(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	for x := -12; x <= 12; x++ {
 		for z := -4; z <= 4; z++ {
@@ -52,7 +52,7 @@ func TestLlamaCaravan(t *testing.T) {
 // TraderLlamaDefendWanderingTraderGoal: hit the trader and its llamas turn
 // on you.
 func TestTraderLlamasDefendTheirTrader(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
@@ -89,7 +89,7 @@ func TestTemptRangeAttribute(t *testing.T) {
 // LlamaAttackWolfGoal: a llama spits at a wild wolf within ten blocks, and
 // leaves a tamed one alone.
 func TestLlamaSpitsAtWildWolves(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	players := map[int32]*tracked{}
 	l := h.spawnMob(players, entityLlama, 0.5, 200, 0.5)
@@ -113,7 +113,7 @@ func TestLlamaSpitsAtWildWolves(t *testing.T) {
 // Efficiency and Sweeping Edge on the held item are attribute modifiers the
 // client reads: level² + 1 mining efficiency, level / (level + 1) sweep.
 func TestHeldEnchantAttributes(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pick := invStack{item: itemByName["diamond_pickaxe"], count: 1}
 	pick.ench = enchSetLevel(pick.ench, enchEfficiency, 5)
@@ -146,7 +146,7 @@ func TestWeaponAttackSpeed(t *testing.T) {
 	if p := attackPeriod(itemByName["diamond_sword"]); p != 12 {
 		t.Errorf("sword period %d, want 12", p)
 	}
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	pl.inv.slots[pl.p.heldSlot()] = invStack{item: itemByName["diamond_sword"], count: 1}
 	pl.refreshGearIfChanged()
@@ -209,7 +209,7 @@ func TestSweepReach(t *testing.T) {
 // Lightning belongs to the overworld: a bolt strikes what is there, not a
 // mob at the same coordinates in the Nether.
 func TestLightningStaysInTheOverworld(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	near := h.spawnMobIn(players, entityZombie, dimNether, 0.5, 100, 0.5)

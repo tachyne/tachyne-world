@@ -31,7 +31,7 @@ func TestTropicalVariantPacking(t *testing.T) {
 // Nine spawns in ten are one of the twenty-two named fish; the rest are drawn
 // freely, which is where a fish nobody has seen before comes from.
 func TestTropicalVariantRollFavoursTheNamedFish(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	common := map[int32]bool{}
 	for _, v := range tropicalCommon {
 		common[v] = true
@@ -67,7 +67,7 @@ func TestTropicalFishVariantIndex(t *testing.T) {
 // A salmon spawns at one of three sizes, weighted 30/50/15, and the size
 // scales its box the way vanilla's getDefaultDimensions does.
 func TestSalmonSizeVariant(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	counts := map[int32]int{}
 	for i := 0; i < 6000; i++ {
 		counts[h.rollSalmonSize()]++

@@ -169,11 +169,7 @@ func (h *hub) applyForceLoadCommand(players map[int32]*tracked, e evForceLoadCmd
 // saveForced writes every dimension's forced chunks into the settings.
 func (h *hub) saveForced() {
 	var out []forcedChunk
-	for dim := dimOverworld; dim <= dimEnd; dim++ {
-		w := h.worldFor(dim)
-		if dim != dimOverworld && w == h.world {
-			continue
-		}
+	for dim, w := range h.allDims() {
 		for _, c := range w.ForcedChunks() {
 			out = append(out, forcedChunk{Dim: dim, X: c[0], Z: c[1]})
 		}
@@ -185,10 +181,10 @@ func (h *hub) saveForced() {
 // restoreForced re-pins the saved forced chunks (boot, after loadRules).
 func (h *hub) restoreForced() {
 	for _, c := range h.rules.Forced {
-		w := h.worldFor(c.Dim)
-		if c.Dim != dimOverworld && w == h.world {
+		if !h.hasDim(c.Dim) {
 			continue // that dimension is not running
 		}
+		w := h.worldFor(c.Dim)
 		w.SetForced(c.X, c.Z, true)
 		warmForced(w, [][2]int32{{c.X, c.Z}})
 	}

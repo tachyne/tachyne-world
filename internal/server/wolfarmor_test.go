@@ -9,7 +9,7 @@ import (
 // The owner armours a tamed wolf; the armour soaks blows as durability and
 // breaks when spent; shears take it off; a scute repairs an eighth.
 func TestWolfArmor(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	w := h.spawnAnimal(players, entityWolf, 0, 0)

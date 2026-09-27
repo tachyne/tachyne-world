@@ -14,7 +14,7 @@ import (
 // raises it a lot, it goes for whoever it is angriest at, and the anger ebbs
 // while nothing happens.
 func TestWardenAngerManagement(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	loud := testTracked()
 	loud.p.name, loud.p.eid = "Loud", 500 // well clear of the mob eids
 	loud.x, loud.y, loud.z = 6, 70, 0
@@ -74,7 +74,7 @@ func TestWardenAngerManagement(t *testing.T) {
 // the tendrils from it. Viewers get it when it changes, and a late viewer
 // gets the current value with the rest of the Warden's state.
 func TestWardenSyncsClientAnger(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	for x := -6; x <= 12; x++ {
 		for z := -6; z <= 6; z++ {

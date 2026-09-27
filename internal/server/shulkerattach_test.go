@@ -12,7 +12,7 @@ import (
 // (and it can land on a ceiling or a wall, not only a floor). Clinging to
 // the floor, its box rises as it opens.
 func TestShulkerClingsToAnyFace(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	players := map[int32]*tracked{}
 	h.playersRef = players

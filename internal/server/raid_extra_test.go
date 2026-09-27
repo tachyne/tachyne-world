@@ -11,7 +11,7 @@ import (
 // one brings a bonus wave, a raid survives a save/restore with its raiders,
 // and a grateful villager throws a hero a gift.
 func TestRaidBonusSpawnsAndPersistence(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.mobstore = newMobStore(filepath.Join(t.TempDir(), "mobs.json"))
@@ -60,7 +60,7 @@ func TestRaidBonusSpawnsAndPersistence(t *testing.T) {
 	if len(sr) != 1 || sr[0].Omen != 2 || sr[0].Wave != r.numGroups {
 		t.Fatalf("saved raid %+v", sr)
 	}
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	h2.mobstore = newMobStore(filepath.Join(t.TempDir(), "mobs2.json"))
 	m2 := h2.spawnMob(players, entityPillager, 105, 64, 105)
 	m2.raidCenter = center
@@ -75,7 +75,7 @@ func TestRaidBonusSpawnsAndPersistence(t *testing.T) {
 }
 
 func TestVillagerGiftsHero(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	v := h.spawnMob(players, entityVillager, 10.5, 200, 10.5)

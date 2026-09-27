@@ -9,7 +9,7 @@ import (
 // TestPillagerCrossbow: within eight blocks a pillager draws (flag up)
 // for twenty-five ticks, aims for twenty to forty, fires and draws again.
 func TestPillagerCrossbow(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

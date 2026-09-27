@@ -12,7 +12,7 @@ import (
 // it is not despawned for want of a player in the level.
 func TestForcedChunkTicksMobsWithNobodyOnline(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	h.rules.DoMobSpawning = false
 	w.ForceLoad(8, 8, 1)
 	w.SetForced(0, 0, true)

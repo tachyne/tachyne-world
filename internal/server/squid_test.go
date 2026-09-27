@@ -11,7 +11,7 @@ import (
 // hundred ticks and jets away from its attacker; an endermite lives two
 // minutes; one pearl in twenty lands one.
 func TestSquidInkAndEndermite(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players

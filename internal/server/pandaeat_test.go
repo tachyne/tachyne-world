@@ -11,7 +11,7 @@ import (
 // TestPandaSitsAndEats: an adult panda fetches bamboo lying nearby, sits
 // with it, chews, and finishes it; a cub leaves it alone.
 func TestPandaSitsAndEats(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
@@ -71,7 +71,7 @@ func TestPandaSitsAndEats(t *testing.T) {
 // sulks — UNHAPPY_COUNTER 32, two PANDA_CANT_BREED grumbles — and will not
 // sulk again for 600 ticks.
 func TestPandaSulksWithoutBamboo(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	for x := -12; x <= 12; x++ {
 		for z := -12; z <= 12; z++ {

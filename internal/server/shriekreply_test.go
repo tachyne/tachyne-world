@@ -16,7 +16,7 @@ func TestShriekerReplySoundByLevel(t *testing.T) {
 		2: "minecraft:entity.warden.nearby_closer",
 		3: "minecraft:entity.warden.nearby_closest",
 	} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		pl := survPlayer(h)
 		pl.x, pl.y, pl.z = 0.5, 180, 0.5
 		players := map[int32]*tracked{pl.p.eid: pl}

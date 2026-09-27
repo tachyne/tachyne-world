@@ -16,7 +16,7 @@ func survPlayer(h *hub) *tracked {
 }
 
 func TestResistanceReducesDamage(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -29,7 +29,7 @@ func TestResistanceReducesDamage(t *testing.T) {
 }
 
 func TestAbsorptionSoaksDamage(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -47,7 +47,7 @@ func TestAbsorptionSoaksDamage(t *testing.T) {
 }
 
 func TestSlowFallingNoFallDamage(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
@@ -67,7 +67,7 @@ func TestPlayerFallReadsAttributes(t *testing.T) {
 		safe, mult float64
 		want       float32
 	}{{3, 1, 15}, {3, 2, 10}, {10, 1, 20}} {
-		h := newHub(world.New(1))
+		h := newTestHub(world.New(1))
 		h.world.ForceLoad(0, 0, 1)
 		pl := survPlayer(h)
 		players := map[int32]*tracked{pl.p.eid: pl}

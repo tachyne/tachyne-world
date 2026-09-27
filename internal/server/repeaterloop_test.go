@@ -17,7 +17,7 @@ import (
 // real game does, or whether something is keeping the repeater on that should
 // not be.
 func TestRepeaterFedByItsOwnOutputLatchesOn(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	w := h.world
 	players := map[int32]*tracked{}
 	const y, z = 180, 40

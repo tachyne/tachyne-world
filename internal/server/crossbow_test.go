@@ -10,7 +10,7 @@ import (
 // xbowSetup arms a survival player with a plain crossbow and a stack of arrows,
 // standing high in the air with a clear flight path (mirrors bowSetup).
 func xbowSetup() (*hub, *tracked, map[int32]*tracked) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 80, 0.5
 	pl.yaw, pl.pitch = 0, 0 // facing +z, level
@@ -187,7 +187,7 @@ func TestCrossbowFiresRockets(t *testing.T) {
 // Pillager.enchantSpawnedWeapon: one pillager in 300 or so comes with a
 // Piercing crossbow (more at hard difficulty, from the general roll).
 func TestPillagerCrossbowSometimesPierces(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.Difficulty = diffEasy
 	pierce, n := 0, 6000
 	for i := 0; i < n; i++ {

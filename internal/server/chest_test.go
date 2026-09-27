@@ -8,7 +8,7 @@ import (
 )
 
 func chestSetup() (*hub, map[int32]*tracked, *tracked, *chest) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl

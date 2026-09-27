@@ -11,7 +11,7 @@ import (
 // an empty chest, all at y=100.
 func hopperRig(t *testing.T) (*hub, map[int32]*tracked, simPos, *chest, *chest) {
 	t.Helper()
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
 	players := map[int32]*tracked{}
 	h.playersRef = players

@@ -13,7 +13,7 @@ import (
 func TestHalloweenPumpkinHeads(t *testing.T) {
 	defer func(f func() time.Time) { spawnClock = f }(spawnClock)
 	spawnClock = func() time.Time { return time.Date(2026, time.October, 31, 12, 0, 0, 0, time.Local) }
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	x, z := 10.5, 10.5

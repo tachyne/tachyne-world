@@ -9,7 +9,7 @@ import (
 // VillagerGoalPackages RAID: during a wave a villager hides at a bed; after
 // a victory it cheers under the sky and sends up fireworks.
 func TestVillagersHideAndCelebrate(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 3)
 	poiFloor(h, 0, 0, 24)
 	pl := survPlayer(h)

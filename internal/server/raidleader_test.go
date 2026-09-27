@@ -12,7 +12,7 @@ import (
 // ravager) carries the ominous banner on its head.
 func TestRaidWaveHasABannerCaptain(t *testing.T) {
 	skipHeavy(t) // real terrain under the wave
-	h := newHub(world.New(7))
+	h := newTestHub(world.New(7))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	lx, lz := h.findLand(120, 120)
@@ -79,7 +79,7 @@ func TestRaidWaveHasABannerCaptain(t *testing.T) {
 // vindicator captain drops only the banner (the bottle is in the
 // pillager's loot table alone, and needs the banner on its head).
 func TestCaptainDeathDrops(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.world.ForceLoad(10, 10, 1)
@@ -117,7 +117,7 @@ func TestCaptainDeathDrops(t *testing.T) {
 // stack, the banner drops as itself, keeps its identity in a save, and a
 // captain saved in the old plain banner gets the ominous one back.
 func TestCaptainWearsTheOminousBanner(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.world.ForceLoad(0, 0, 1)
@@ -136,7 +136,7 @@ func TestCaptainWearsTheOminousBanner(t *testing.T) {
 	}
 	old := toSavedMob(p)
 	old.Gear[0] = packStack(invStack{item: itemWhiteBanner, count: 1})
-	h2 := newHub(world.New(1))
+	h2 := newTestHub(world.New(1))
 	h2.reloading = true
 	if r := h2.reloadMob(map[int32]*tracked{}, &old); r == nil || !isCaptain(r) {
 		t.Error("a captain saved in a plain white banner should get the ominous one back")

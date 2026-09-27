@@ -49,7 +49,7 @@ func (h *hub) endGatewayOrder() []int {
 func (h *hub) endGatewaysOpen() int {
 	n := 0
 	for i := 0; i < endGatewayCount; i++ {
-		if p := endGatewayRingPos(i); h.end.At(p.x, p.y, p.z) == endGatewayState {
+		if p := endGatewayRingPos(i); h.worldFor(dimEnd).At(p.x, p.y, p.z) == endGatewayState {
 			n++
 		}
 	}
@@ -63,7 +63,7 @@ func (h *hub) spawnNextEndGateway(players map[int32]*tracked) {
 	order := h.endGatewayOrder()
 	for k := len(order) - 1; k >= 0; k-- {
 		p := endGatewayRingPos(order[k])
-		if h.end.At(p.x, p.y, p.z) != endGatewayState {
+		if h.worldFor(dimEnd).At(p.x, p.y, p.z) != endGatewayState {
 			h.buildEndGateway(players, p)
 			return
 		}
@@ -209,7 +209,7 @@ func (h *hub) exitPortalXZTentative(entry blockPos) (float64, float64) {
 
 // endChunkEmpty is isChunkEmpty: not one block in the chunk column.
 func (h *hub) endChunkEmpty(x, z float64) bool {
-	ch := h.end.Chunk(int32(math.Floor(x/16)), int32(math.Floor(z/16)))
+	ch := h.worldFor(dimEnd).Chunk(int32(math.Floor(x/16)), int32(math.Floor(z/16)))
 	for s := range ch.Sections {
 		for _, st := range ch.Sections[s] {
 			if st != worldgen.Air {
@@ -223,7 +223,7 @@ func (h *hub) endChunkEmpty(x, z float64) bool {
 // validSpawnInChunk is findValidSpawnInChunk: of the end stone from y 30 up
 // with two blocks over it that are not full cubes, the one nearest (0,0,0).
 func (h *hub) validSpawnInChunk(cx, cz int32) (blockPos, bool) {
-	ch := h.end.Chunk(cx, cz)
+	ch := h.worldFor(dimEnd).Chunk(cx, cz)
 	top := -1
 	for s := len(ch.Sections) - 1; s >= 0 && top < 0; s-- {
 		for _, st := range ch.Sections[s] {
@@ -264,7 +264,7 @@ func (h *hub) validSpawnInChunk(cx, cz int32) (blockPos, bool) {
 // own column only when bedrock counts), the highest full block, bedrock
 // counted or not; around itself when there is none.
 func (h *hub) findTallestBlock(around blockPos, dist int, allowBedrock bool) blockPos {
-	maxY := worldgen.MinY + h.end.Ceiling() - 1
+	maxY := worldgen.MinY + h.worldFor(dimEnd).Ceiling() - 1
 	var tallest blockPos
 	found := false
 	for xd := -dist; xd <= dist; xd++ {
@@ -277,7 +277,7 @@ func (h *hub) findTallestBlock(around blockPos, dist int, allowBedrock bool) blo
 				floor = tallest.y
 			}
 			for y := maxY; y > floor; y-- {
-				st := h.end.At(around.x+xd, y, around.z+zd)
+				st := h.worldFor(dimEnd).At(around.x+xd, y, around.z+zd)
 				if worldgen.IsFullCube(st) && (allowBedrock || st != worldgen.Bedrock) {
 					tallest, found = blockPos{around.x + xd, y, around.z + zd}, true
 					break
@@ -317,7 +317,7 @@ func (h *hub) teleportInEnd(players map[int32]*tracked, t *tracked, to blockPos)
 
 // updateEndGateways carries anyone standing in a gateway to its partner.
 func (h *hub) updateEndGateways(players map[int32]*tracked) {
-	if h.end == nil {
+	if !h.hasDim(dimEnd) {
 		return
 	}
 	now := h.tick.Load()
@@ -326,7 +326,7 @@ func (h *hub) updateEndGateways(players map[int32]*tracked) {
 			continue
 		}
 		gx, gy, gz := int(math.Floor(t.x)), int(math.Floor(t.y)), int(math.Floor(t.z))
-		if h.end.At(gx, gy, gz) != endGatewayState {
+		if h.worldFor(dimEnd).At(gx, gy, gz) != endGatewayState {
 			continue
 		}
 		// TheEndGatewayBlockEntity holds the cooldown, not the player: a
@@ -357,7 +357,7 @@ const endGatewayAttention = 2400
 func (h *hub) gatewayOpenAt(players map[int32]*tracked, x, y, z float64, now uint64) (blockPos, bool) {
 	for _, dy := range [2]float64{0, 1} { // the feet cell, or the body's
 		gx, gy, gz := int(math.Floor(x)), int(math.Floor(y+dy)), int(math.Floor(z))
-		if h.end.At(gx, gy, gz) != endGatewayState {
+		if h.worldFor(dimEnd).At(gx, gy, gz) != endGatewayState {
 			continue
 		}
 		gpos := simPos{dim: 2, blockPos: blockPos{gx, gy, gz}}
@@ -434,7 +434,7 @@ func (h *hub) gatewayCarryEntities(players map[int32]*tracked, now uint64) {
 func (h *hub) gatewayAttentionBeams(players map[int32]*tracked, now uint64) {
 	seen := map[blockPos]bool{}
 	fire := func(p blockPos) {
-		if seen[p] || h.end.At(p.x, p.y, p.z) != endGatewayState {
+		if seen[p] || h.worldFor(dimEnd).At(p.x, p.y, p.z) != endGatewayState {
 			return
 		}
 		seen[p] = true

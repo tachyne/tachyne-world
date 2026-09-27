@@ -10,7 +10,7 @@ import (
 // A pot shattered by a projectile drops its faces: the sherds it wears and
 // a brick for each plain side (the loot table's dynamic sherds entry).
 func TestCrackedPotDropsItsFaces(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.world.ForceLoad(0, 0, 2)
 	players := map[int32]*tracked{}
 	for x := -2; x <= 2; x++ {

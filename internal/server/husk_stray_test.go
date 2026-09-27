@@ -7,7 +7,7 @@ import (
 )
 
 func TestHuskBiteHunger(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.Difficulty = diffNormal
 	pl := testTracked()
 	pl.gamemode = gmSurvival
@@ -33,7 +33,7 @@ func TestHuskBiteHunger(t *testing.T) {
 }
 
 func TestStrayArrowSlowness(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.Difficulty = diffNormal
 	pl := testTracked()
 	pl.gamemode = gmSurvival
@@ -66,7 +66,7 @@ func TestStrayArrowSlowness(t *testing.T) {
 }
 
 func TestDrownedTridentThrow(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.rules.Difficulty = diffNormal
 	pl := testTracked()
 	pl.gamemode = gmSurvival
@@ -113,7 +113,7 @@ func TestDrownedThrowsAtItsVillager(t *testing.T) {
 }
 
 func TestZombieDrownedConversion(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 64, 0.5
 	players := map[int32]*tracked{pl.p.eid: pl}

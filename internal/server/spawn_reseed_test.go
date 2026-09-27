@@ -15,7 +15,7 @@ import (
 // herd on top of the reloaded one, doubling animals every restart.
 func TestSeedSkipsPersistedChunks(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "mobs.json")
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	h.mobstore = newMobStore(path)
 
 	// Park a cow herd in chunk (0,0)'s store bucket, as a boot-time restore

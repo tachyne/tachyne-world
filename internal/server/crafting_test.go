@@ -97,7 +97,7 @@ func TestMatchEmptyGrid(t *testing.T) {
 // TestClickCraftLoop drives the real click path: put a log in the 2x2 grid,
 // take the planks result, and check consumption + cursor.
 func TestClickCraftLoop(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -133,7 +133,7 @@ func TestClickCraftLoop(t *testing.T) {
 }
 
 func TestShiftClickCraftsIntoInventory(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -149,7 +149,7 @@ func TestShiftClickCraftsIntoInventory(t *testing.T) {
 }
 
 func TestOpenAndCloseCraftingTable(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -170,7 +170,7 @@ func TestOpenAndCloseCraftingTable(t *testing.T) {
 }
 
 func TestWeaponDamage(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -185,7 +185,7 @@ func TestWeaponDamage(t *testing.T) {
 }
 
 func TestPlaceRecipeFromBook(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -211,7 +211,7 @@ func TestPlaceRecipeFromBook(t *testing.T) {
 }
 
 func TestPlaceRecipeMissingIngredients(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl // empty inventory
@@ -233,7 +233,7 @@ func TestPlaceRecipeMissingIngredients(t *testing.T) {
 }
 
 func TestPlaceRecipeTooBigForPlayerGrid(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -261,7 +261,7 @@ func TestPlaceRecipeTooBigForPlayerGrid(t *testing.T) {
 
 // TestTossHeldQ: Q with no window open drops one of the held item as an entity.
 func TestTossHeldQ(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -286,7 +286,7 @@ func TestTossHeldQ(t *testing.T) {
 // TestClickOutsideDropsCursor: clicking outside the window (slot -999) with a
 // stack on the cursor must spawn it as a drop, not delete it.
 func TestClickOutsideDropsCursor(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -310,7 +310,7 @@ func TestClickOutsideDropsCursor(t *testing.T) {
 // TestQOverSlotDropsOne: mode-4 click (Q while hovering a slot in a window)
 // reports the slot decrement; the difference must spawn as a drop.
 func TestQOverSlotDropsOne(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -331,7 +331,7 @@ func TestQOverSlotDropsOne(t *testing.T) {
 // TestMoveClickDropsNothing: an ordinary move (slot -> cursor) conserves items
 // and must not spawn drops.
 func TestMoveClickDropsNothing(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -354,7 +354,7 @@ func TestMoveClickDropsNothing(t *testing.T) {
 // Faking it by moving born FORWARD underflowed the unsigned despawn age and
 // vanished thrown items within a second (field report).
 func TestTossedItemSurvivesDespawnSweep(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -391,7 +391,7 @@ func TestTossedItemSurvivesDespawnSweep(t *testing.T) {
 // hub inventory, so pushes don't revert the hotbar and it survives a switch
 // back to survival.
 func TestCreativeSlotWritesThrough(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	pl.gamemode = gmCreative
@@ -414,7 +414,7 @@ func TestCreativeSlotWritesThrough(t *testing.T) {
 // (the ledge, or the ground below if the hop carried it off the edge).
 func TestLedgeEndDropComesToRest(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	for x := 10; x <= 12; x++ {
 		w.SetBlock(x, 90, 10, worldgen.Stone)
@@ -439,7 +439,7 @@ func TestLedgeEndDropComesToRest(t *testing.T) {
 // block offset keep it within the block) and rests exactly on the floor.
 func TestFloorDropStaysPut(t *testing.T) {
 	w := world.New(1)
-	h := newHub(w)
+	h := newTestHub(w)
 	players := map[int32]*tracked{}
 	for dx := -1; dx <= 1; dx++ {
 		for dz := -1; dz <= 1; dz++ {
@@ -462,7 +462,7 @@ func TestFloorDropStaysPut(t *testing.T) {
 // Crafting a cake gives the three milk buckets back as empty ones
 // (Item.craftRemainder), in the slots the milk came out of.
 func TestCraftReturnsBuckets(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -494,7 +494,7 @@ func TestCraftReturnsBuckets(t *testing.T) {
 // (vanilla's QUICK_MOVE loop), so a stack of logs becomes a stack of planks
 // in one click.
 func TestCraftShiftClickRepeats(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -519,7 +519,7 @@ func TestCraftShiftClickRepeats(t *testing.T) {
 // The repeat stops when the inventory fills rather than dumping the overflow
 // on the floor: vanilla's quick-move simply fails and the craft doesn't happen.
 func TestCraftShiftClickStopsWhenFull(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
@@ -543,7 +543,7 @@ func TestCraftShiftClickStopsWhenFull(t *testing.T) {
 // limited_crafting: with the rule on, a player can only make what their
 // recipe book has unlocked. Off by default, as in vanilla.
 func TestLimitedCraftingNeedsTheRecipeUnlocked(t *testing.T) {
-	h := newHub(world.New(1))
+	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
