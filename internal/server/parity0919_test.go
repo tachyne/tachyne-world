@@ -60,7 +60,7 @@ func TestSplashVibrationOnEnteringWater(t *testing.T) {
 		t.Fatal("splash fires on entry only")
 	}
 	move(float64(x)+3.5, float64(y)+1, float64(z)+0.5) // out
-	pl.p.sneaking = true
+	pl.sneaking, pl.p.sneaking = true, true
 	move(float64(x)+3.5, float64(y), float64(z)+0.5)
 	if _, heard := h.sculkVib[pos]; heard {
 		t.Fatal("a sneaking entry is silent")

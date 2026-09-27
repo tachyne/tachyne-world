@@ -24,7 +24,7 @@ const (
 
 // playerEyeY is a player's getEyeY.
 func playerEyeY(t *tracked) float64 {
-	if t.p.sneaking {
+	if t.sneaking {
 		return t.y + playerEyeSneak
 	}
 	return t.y + playerEyeStand

@@ -55,7 +55,7 @@ func TestPickupAreaHeight(t *testing.T) {
 	if !near(lo[1], 179.5) || !near(hi[1], 182.3) || !near(lo[0], -0.8) || !near(hi[0], 1.8) {
 		t.Fatalf("standing area %v..%v, want y 179.5..182.3 and x -0.8..1.8", lo, hi)
 	}
-	pl.p.sneaking = true
+	pl.sneaking, pl.p.sneaking = true, true
 	if _, hi := h.pickupArea(pl); !near(hi[1], 182) {
 		t.Fatalf("a crouched player's area tops out at %v, want 182", hi[1])
 	}

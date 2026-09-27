@@ -1328,7 +1328,7 @@ func (h *hub) run() {
 					if !t.dead {
 						h.incCustom(t, "time_since_death", survivalTickN)
 					}
-					if t.p.sneaking {
+					if t.sneaking {
 						h.incCustom(t, "sneak_time", survivalTickN)
 					}
 					// Insomnia: the clock the phantom spawner reads. Vanilla

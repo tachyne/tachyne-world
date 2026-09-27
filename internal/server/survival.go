@@ -338,7 +338,7 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 	}
 	if inWater := h.inWater(t.dim, e.x, e.y, e.z); inWater { // swimming, walking under or on water: 0.01 a block
 		t.exhaust(waterExhaustion * float32(math.Hypot(e.x-t.x, e.z-t.z)))
-		if !t.wasInWater && !t.p.sneaking {
+		if !t.wasInWater && !t.sneaking {
 			h.vibAt(t.dim, freqSplash, e.x, e.y, e.z, t.p.eid) // Entity.doWaterSplashEffect: SPLASH (sneaking is silent)
 			// …and the splash itself, which had never been audible. The volume
 			// is the speed going in, so a dive is loud and wading is not.
@@ -381,7 +381,7 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 			return
 		}
 		dist := t.peakY - e.y
-		if dist > 0 && !t.p.sneaking {
+		if dist > 0 && !t.sneaking {
 			h.vibAt(t.dim, freqHitGround, t.x, e.y, t.z, t.p.eid) // HIT_GROUND (sneaking is silent)
 		}
 		h.advance(players, t, "fall_from_height", advMatch{distY: dist, startY: t.peakY, endY: e.y})
@@ -411,7 +411,7 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 				// reads them — /attribute moves either.
 				a := t.playerAttrs()
 				grace, mult := a.Value(attr.SafeFallDistance), a.Value(attr.FallDamageMultiplier)
-				hurt = fallDamageOn(landed, dist, grace, mult, t.p.sneaking) // hay, honey, beds and slime soften; powder snow catches
+				hurt = fallDamageOn(landed, dist, grace, mult, t.sneaking) // hay, honey, beds and slime soften; powder snow catches
 				if hurt <= 0 {
 					return
 				}

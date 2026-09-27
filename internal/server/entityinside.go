@@ -196,11 +196,11 @@ func (h *hub) playerInsideTick(players map[int32]*tracked) {
 		h.blocksTouching(t.dim, t.x, t.y, t.z, func(s uint32, onFloor bool) {
 			switch {
 			case onFloor && isTurtleEgg(s): // TurtleEggBlock.stepOn: one in a hundred a tick, not when sneaking
-				if !t.p.sneaking && h.rng.Intn(100) == 0 {
+				if !t.sneaking && h.rng.Intn(100) == 0 {
 					h.crushTurtleEgg(players, t.dim, fx, feet-1, fz, s)
 				}
 			case onFloor && isRedstoneOre(s) && !boolProp(s, "lit"): // RedStoneOreBlock.stepOn: lights up
-				if !t.p.sneaking {
+				if !t.sneaking {
 					h.setBlockLive(players, t.dim, fx, feet-1, fz, setBoolProp(s, "lit", true))
 				}
 			case isBigDripleaf(s) && t.onGround: // BigDripleafBlock.entityInside: a load starts it tipping
@@ -223,7 +223,7 @@ func (h *hub) playerInsideTick(players map[int32]*tracked) {
 			case onFloor && s == magmaBlockState:
 				// Fire Resistance and Frost Walker boots spare you, and so does
 				// crouching (MagmaBlock.stepOn: !isSteppingCarefully).
-				if t.p.sneaking || t.hasEffect(effFireRes) > 0 || t.armor[3].enchLvl(enchFrostWalker) > 0 {
+				if t.sneaking || t.hasEffect(effFireRes) > 0 || t.armor[3].enchLvl(enchFrostWalker) > 0 {
 					return
 				}
 				h.hurtBy(players, t, magmaDamage, dtHotFloor, deathCause{})

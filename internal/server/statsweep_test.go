@@ -29,12 +29,12 @@ func TestMovementStatisticsFamily(t *testing.T) {
 	if got := stat(pl, "walk_one_cm"); got != 100 {
 		t.Errorf("walk_one_cm %d, want 100", got)
 	}
-	pl.p.sneaking = true
+	pl.sneaking, pl.p.sneaking = true, true
 	h.moveStats(pl, evMove{x: 101.5, y: 70, z: 100.5, onGround: true})
 	if got := stat(pl, "crouch_one_cm"); got != 100 {
 		t.Errorf("crouch_one_cm %d, want 100", got)
 	}
-	pl.p.sneaking = false
+	pl.sneaking, pl.p.sneaking = false, false
 	h.moveStats(pl, evMove{x: 101.5, y: 70, z: 100.5, onGround: true, sprinting: true})
 	if got := stat(pl, "sprint_one_cm"); got != 100 {
 		t.Errorf("sprint_one_cm %d, want 100", got)

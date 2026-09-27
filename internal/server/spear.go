@@ -244,7 +244,7 @@ func (h *hub) spearLine(players map[int32]*tracked, dim int, ex, ey, ez, lx, ly,
 			continue
 		}
 		ht := 1.8
-		if o.p.sneaking {
+		if o.sneaking {
 			ht = 1.5
 		}
 		if hits(o.x-0.3, o.y, o.z-0.3, o.x+0.3, o.y+ht, o.z+0.3) {

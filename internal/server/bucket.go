@@ -129,7 +129,7 @@ func (h *hub) bucketFill(players map[int32]*tracked, t *tracked, slot int32) {
 	h.vibAt(t.dim, freqFluidPickup, t.x, t.y, t.z, t.p.eid)
 	dx, dy, dz := lookVector(t.yaw, t.pitch)
 	eye := playerEyeStand
-	if t.p.sneaking {
+	if t.sneaking {
 		eye = playerEyeSneak
 	}
 	ox, oy, oz := t.x, t.y+eye*t.scale(), t.z

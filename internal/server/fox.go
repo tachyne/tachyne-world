@@ -101,7 +101,7 @@ func foxTamable(etype int) bool {
 // and monsters always count; creative and spectator players never do.
 func (h *hub) foxAlertable(players map[int32]*tracked, m *mob) bool {
 	for _, t := range players {
-		if t.dim != m.dim || t.dead || t.gamemode == gmCreative || t.gamemode == gmSpectator || t.p.sneaking || foxTrusts(m, t) {
+		if t.dim != m.dim || t.dead || t.gamemode == gmCreative || t.gamemode == gmSpectator || t.sneaking || foxTrusts(m, t) {
 			continue
 		}
 		if math.Abs(t.y-m.y) <= foxAlertHeight && dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= foxAlertRange {

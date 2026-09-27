@@ -42,7 +42,7 @@ func (h *hub) moveStats(t *tracked, e evMove) {
 	case e.onGround:
 		if d := cm(horiz); d > 0 {
 			switch {
-			case t.p.sneaking:
+			case t.sneaking:
 				h.incCustom(t, "crouch_one_cm", d)
 			case e.sprinting:
 				h.incCustom(t, "sprint_one_cm", d)

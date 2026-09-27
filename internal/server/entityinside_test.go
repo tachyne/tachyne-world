@@ -26,13 +26,13 @@ func TestMagmaBlockBurns(t *testing.T) {
 
 	// Crouching spares you (isSteppingCarefully).
 	pl.health = 20
-	pl.p.sneaking = true
+	pl.sneaking, pl.p.sneaking = true, true
 	h.tick.Add(20)
 	h.insideBoth(players)
 	if pl.health != 20 {
 		t.Errorf("a crouching player took %v from magma", 20-pl.health)
 	}
-	pl.p.sneaking = false
+	pl.sneaking, pl.p.sneaking = false, false
 
 	// Fire resistance spares you.
 	pl.health = 20

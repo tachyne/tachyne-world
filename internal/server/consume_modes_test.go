@@ -356,7 +356,7 @@ func TestBucketFillRayOutlineAndEye(t *testing.T) {
 	if h.world.At(0, 200, 3) != worldgen.WaterBase {
 		t.Fatal("a standing player's level ray should pass over the water")
 	}
-	pl.p.sneaking = true
+	pl.sneaking, pl.p.sneaking = true, true
 	h.bucketFill(players, pl, int32(pl.p.heldSlot()))
 	if h.world.At(0, 200, 3) == worldgen.WaterBase || pl.inv.slots[pl.p.heldSlot()].item != itemBucketH2O {
 		t.Fatal("a crouched player's lower eye should scoop it")

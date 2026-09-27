@@ -109,7 +109,7 @@ func TestAxeYieldsToShieldIntent(t *testing.T) {
 	if h.world.At(10, 70, 10) != log {
 		t.Fatal("axe stripped while a shield was raised in the offhand")
 	}
-	pl.p.sneaking = true
+	pl.sneaking, pl.p.sneaking = true, true
 	h.onUseAxe(players, evUseAxe{eid: 1, x: 10, y: 70, z: 10, slot: 0})
 	if h.world.At(10, 70, 10) == log {
 		t.Fatal("sneaking should let the axe strip past the shield")

@@ -372,7 +372,7 @@ func (h *hub) ventNausea(players map[int32]*tracked, dim int, w *world.World, po
 }
 
 func playerHeight(t *tracked) float64 {
-	if t.p.sneaking {
+	if t.sneaking {
 		return psPlayerSneakHeight * t.scale()
 	}
 	return psPlayerHeight * t.scale()

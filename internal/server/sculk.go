@@ -486,7 +486,7 @@ func (h *hub) tickSculk(players map[int32]*tracked) {
 			continue
 		}
 		h.sculkStep[t.p.eid] = now + 3
-		if t.p.sneaking {
+		if t.sneaking {
 			// VibrationSystem: a sneaking entity makes no step vibration
 			// (#ignore_vibrations_sneaking), and a sensor that would have
 			// heard it awards "Sneak 100" instead.

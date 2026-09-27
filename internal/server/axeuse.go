@@ -139,7 +139,7 @@ func (h *hub) onUseAxe(players map[int32]*tracked, e evUseAxe) {
 	}
 	// playerHasBlockingItemUseIntent: main hand with a shield in the offhand
 	// and not sneaking means the player wants to block, not strip.
-	if !t.useOffhand && t.offhand.item == itemShield && !t.p.sneaking {
+	if !t.useOffhand && t.offhand.item == itemShield && !t.sneaking {
 		return
 	}
 	state := h.worldFor(t.dim).At(e.x, e.y, e.z)
