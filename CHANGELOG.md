@@ -22,6 +22,16 @@ the public history since the project was open-sourced on 2026-07-10.
   does, and a dose that would wear off within a second is skipped. A splash
   of water now puts out fire, candles and campfires beside the block it
   breaks on, and gives a drying axolotl 90 seconds of air back.
+- **Dispensers equip anything that can wear the item.** A dispenser puts
+  armour, heads and elytras on a player standing in front of it, not just on
+  an armour stand. It also dresses mobs that pick up loot, saddles an adult
+  pig or strider, harnesses a happy ghast, and saddles or armours a tame
+  nautilus. This works in every dimension; the stand and shears searches
+  used to look only in the overworld. Anything a dispenser tosses keeps all
+  its data, so a water bottle stays a water bottle and dyed or named armour
+  keeps its colour and name. Unbreaking now protects a dispensed flint and
+  steel, shears and brush. A dispensed flint and steel primes TNT and lights
+  an explosive sulfur cube.
 
 ## 2026-09-26
 

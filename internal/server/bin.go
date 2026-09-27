@@ -359,6 +359,18 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			return
 		}
 	}
+	// toss is DefaultDispenseItemBehavior: one of the stack flies out whole —
+	// a potion keeps its brew, dyed or named armour its colour and name, a
+	// filled bundle its contents. Every behaviour that falls back to a toss
+	// uses it.
+	toss := func() {
+		if it := h.spawnItemIn(players, h.rsDim, item, 1, fx, fy, fz); it != nil {
+			one := *st
+			one.count = 1
+			it.setFrom(one)
+			h.refreshItemMeta(players, it)
+		}
+	}
 	eggEnt, isEgg := spawnEggEntity[item]
 	vehEt, isVeh := vehicleItems[item]
 	took := true
@@ -423,6 +435,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			h.dispenseCarvedPumpkin(players, pos.dim, state, front)
 		} else {
 			took = false
+			h.dispenseEquipment(players, pos.dim, front, st) // else a head for whoever stands there
 		}
 	case dispense && isShulkerBoxItem(item):
 		// ShulkerBoxDispenseBehavior: the box is placed in the cell ahead, its
@@ -439,10 +452,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		// Brushes the armadillo in front for a scute, wearing the brush 16.
 		took = false
 		if h.dispenseBrush(players, pos.dim, front) {
-			st.dmg += 16
-			if max := itemMaxDurability[item]; max > 0 && st.dmg >= max {
-				*st = invStack{}
-			}
+			h.wearDispensed(st, 16)
 		}
 	case dispense && item == itemWindCharge:
 		// Vanilla WindChargeItem projectile behaviour — the same burst the Breeze
@@ -469,8 +479,8 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 				float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 			*st = invStack{item: itemGlassBottle, count: 1}
 			took = false
-		} else if it := h.spawnItemIn(players, h.rsDim, item, 1, fx, fy, fz); it != nil {
-			it.dmg, it.ench = st.dmg, st.ench
+		} else {
+			toss()
 		}
 	case dispense && item == itemGlassBottle:
 		// Vanilla GLASS_BOTTLE behaviour: a FULL hive ahead fills the bottle
@@ -501,19 +511,21 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 					h.spawnItemIn(players, h.rsDim, itemGlassBottle, 1, fx, fy, fz) // no room: refund a bottle
 				}
 			}
-		} else if it := h.spawnItemIn(players, h.rsDim, item, 1, fx, fy, fz); it != nil {
-			it.dmg, it.ench = st.dmg, st.ench
+		} else {
+			toss()
 		}
 	case dispense && item == itemWitherSkull:
 		// Vanilla WITHER_SKELETON_SKULL behaviour (a dedicated behaviour that
 		// overrides the default equip-a-wearable): place the skull in the empty
 		// cell ahead and try to raise a wither; if the cell is blocked, fail
 		// (skull kept, like OptionalDispenseItemBehavior).
+		took = false
 		if w.At(front.x, front.y, front.z) == worldgen.Air {
 			h.rsSet(players, front, witherSkullBlock)
 			h.checkWitherBuild(players, 0, pos.dim, front.x, front.y, front.z, witherSkullBlock) // no builder: a machine placed the skull
+			took = true
 		} else {
-			took = false
+			h.dispenseEquipment(players, pos.dim, front, st) // else a head for whoever stands there
 		}
 	case dispense && item == itemArmorStand:
 		// Vanilla ARMOR_STAND behaviour: spawn a stand on the cell ahead facing
@@ -536,29 +548,16 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 				h.toNearbyEv(players, sd.dim, sd.x, sd.z, metaEv(nameMeta(sd.eid, sd.name)))
 			}
 			h.rsSound(players, "minecraft:entity.armor_stand.place", sndBlock, sd.x, sd.y, sd.z, 0.75, 0.8)
-		} else if it := h.spawnItemIn(players, h.rsDim, item, 1, fx, fy, fz); it != nil {
-			it.dmg, it.ench = st.dmg, st.ench
+		} else {
+			toss()
 		}
-	case dispense && standSlotFor(item) >= 0:
-		// Vanilla EquipmentDispenseItemBehavior: dress a wearable onto an armor
-		// stand in the cell ahead whose matching slot is free; else toss it.
-		slot := standSlotFor(item)
-		equipped := false
-		for _, sd := range h.armorStands {
-			if sd.dim == 0 && sd.equip[slot].item == 0 &&
-				floorInt(sd.x) == front.x && floorInt(sd.y) == front.y && floorInt(sd.z) == front.z {
-				piece := *st
-				piece.count = 1
-				sd.equip[slot] = piece
-				h.toNearbyEv(players, sd.dim, sd.x, sd.z, h.standEquipEv(sd))
-				equipped = true
-				break
-			}
-		}
-		if !equipped {
-			if it := h.spawnItemIn(players, h.rsDim, item, 1, fx, fy, fz); it != nil {
-				it.dmg, it.ench = st.dmg, st.ench
-			}
+	case dispense && dispenseEquippable(item):
+		// Vanilla EquipmentDispenseItemBehavior: put the piece on the first
+		// living thing in the cell ahead that can wear it; else toss it.
+		if h.dispenseEquipment(players, pos.dim, front, st) {
+			took = false // dispenseEquipment took its one
+		} else {
+			toss()
 		}
 	case dispense && item == itemTNTBlock:
 		// The TNT behaviour spawns a lit charge in the cell ahead and leaves
@@ -571,22 +570,28 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		h.spawnPrimedTNT(players, h.rsDim, front.x, front.y, front.z, tntFuseTicks)
 		h.vib(h.rsDim, freqEntityPlace, front.x, front.y, front.z, 0)
 	case dispense && item == itemFlintSteel:
-		if fs := w.At(front.x, front.y, front.z); fs == worldgen.Air {
+		// FlintAndSteelDispenseItemBehavior: an explosive sulfur cube in the
+		// cell is lit first; else a fire, a lightable block or TNT. Only TNT
+		// that will not prime (tnt_explodes off) spares the tool; anything
+		// else, even lighting nothing, wears it a point.
+		took = false // vanilla damages the tool instead of consuming it
+		lit := true
+		if cube := h.cubeInCell(pos.dim, front); cube != nil {
+			h.primeSulfurCube(players, cube, false)
+		} else if fs := w.At(front.x, front.y, front.z); fs == worldgen.Air {
 			h.igniteFire(players, front, 0) // light a fire in the cell ahead
 		} else if canLightBlock(fs) {
 			h.lightBlock(players, pos.dim, front, fs, sndFlintSteelUse)
+		} else if isTNT(fs) {
+			lit = h.primeTNTBy(players, pos.dim, front.x, front.y, front.z, tntFuseTicks, 0) != nil
 		}
-		took = false // vanilla damages the tool instead of consuming it
-		st.dmg++
-		if max := itemMaxDurability[item]; max > 0 && st.dmg >= max {
-			*st = invStack{} // worn out
+		if lit {
+			h.wearDispensed(st, 1)
 		}
 	case dispense && item == itemBoneMeal:
 		if !h.applyBoneMeal(players, pos.dim, front.x, front.y, front.z, w.At(front.x, front.y, front.z)) {
 			// nothing growable ahead → fall back to tossing the meal out
-			if it := h.spawnItemIn(players, h.rsDim, item, 1, fx, fy, fz); it != nil {
-				it.dmg, it.ench = st.dmg, st.ench
-			}
+			toss()
 		}
 	case dispense && isEgg:
 		// Spawn the egg's mob in the block ahead (facing offset so it clears
@@ -609,17 +614,14 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			sheared = true
 		} else {
 			for _, m := range h.mobs {
-				if m.dim == 0 && mobInBlock(m, front) && h.shearMob(players, m) {
+				if m.dim == pos.dim && mobInBlock(m, front) && h.shearMob(players, m) {
 					sheared = true
 					break
 				}
 			}
 		}
 		if sheared {
-			st.dmg++
-			if max := itemMaxDurability[item]; max > 0 && st.dmg >= max {
-				*st = invStack{} // worn out
-			}
+			h.wearDispensed(st, 1)
 		}
 	case dispense && isVeh:
 		// Place a boat/minecart in the cell ahead (rail for carts, water for
@@ -634,16 +636,14 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			yaw = 270
 		}
 		if !h.spawnVehicleFacing(players, pos.dim, vehEt, front.x, front.y, front.z, yaw) {
-			if it := h.spawnItemIn(players, h.rsDim, item, 1, fx, fy, fz); it != nil {
-				it.dmg, it.ench = st.dmg, st.ench
-			}
+			toss()
 		}
 	case dispense && item == int32(itemHoneycomb):
 		// Wax the copper block ahead (HoneycombItem.getWaxed); otherwise toss.
 		if ws, ok := waxedCopper(w.At(front.x, front.y, front.z)); ok {
 			h.rsSet(players, front, ws)
-		} else if it := h.spawnItemIn(players, h.rsDim, item, 1, fx, fy, fz); it != nil {
-			it.dmg, it.ench = st.dmg, st.ench
+		} else {
+			toss()
 		}
 	case dispense && (item == itemBucketH2O || item == itemBucketLav):
 		// Pour the bucket's fluid into the cell ahead (buckets are no longer
@@ -687,12 +687,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			}
 		}
 	default: // dropper (or a dispenser with a plain item): toss it out
-		if it := h.spawnItemIn(players, h.rsDim, item, 1, fx, fy, fz); it != nil {
-			one := *st
-			one.count = 1
-			it.setFrom(one) // the whole stack's data: a potion, a named sword, a filled bundle
-			h.refreshItemMeta(players, it)
-		}
+		toss()
 	}
 	if took {
 		st.count--
