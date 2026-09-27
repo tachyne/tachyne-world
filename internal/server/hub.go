@@ -700,6 +700,8 @@ type hub struct {
 	lastPotSherds    potSherds       // …and its faces, for the drop that follows
 	lastNamedPos     simPos          // a named block just removed…
 	lastNamedName    string          // …and its name, for the drop that follows
+	lastPosePos      simPos          // a copper golem statue just removed…
+	lastPose         int8            // …and its pose + 1, for the drop that follows (copy_state)
 	hopperTicking    map[simPos]bool // hoppers among the block-entity tickers (tickHoppers)…
 	hopperOrder      []simPos        // …in the order they joined
 	lastBoxPos       simPos          // a shulker box just removed…
@@ -2817,7 +2819,14 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	if t := players[e.by]; t != nil && e.broken == 0 && e.placed {
 		// A renamed stack names the block it places. The session posts this
 		// before the evConsume that empties the slot (the channel is FIFO).
-		h.nameBlockFromStack(simPos{dim: e.dim, blockPos: blockPos{e.x, e.y, e.z}}, e.state, heldStack(t))
+		st := placedStack(t, e.state)
+		h.nameBlockFromStack(simPos{dim: e.dim, blockPos: blockPos{e.x, e.y, e.z}}, e.state, st)
+		// A statue's stack carries its pose (block_state): the placed block
+		// takes it, which the placer's own prediction could not know.
+		if posed := withStatuePose(e.state, st.golemPose); posed != e.state {
+			h.setBlockAt(players, e.dim, blockPos{e.x, e.y, e.z}, posed)
+			e.state = posed
+		}
 	}
 	if t := players[e.by]; t != nil && e.broken != 0 && guardedByPiglins[e.broken] {
 		h.angerNearbyPiglins(players, t, false) // Block.playerWillDestroy: #guarded_by_piglins, sight not needed

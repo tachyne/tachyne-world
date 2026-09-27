@@ -89,8 +89,7 @@ func (h *hub) copperGolemToStatue(players map[int32]*tracked, m *mob, x, y, z in
 	statue := worldgen.BlockID("oxidized_copper_golem_statue")
 	state := statue
 	if info, ok := worldgen.InfoForState(statue); ok {
-		poses := []string{"standing", "sitting", "running", "star"}
-		state = worldgen.SetProperty(info, statue, "copper_golem_pose", poses[h.rng.Intn(len(poses))])
+		state = worldgen.SetProperty(info, statue, "copper_golem_pose", statuePoses[h.rng.Intn(len(statuePoses))])
 		state = worldgen.SetProperty(info, state, "facing", yawFacing(m.yaw))
 	}
 	h.setBlockAt(players, m.dim, blockPos{x, y, z}, state)
@@ -358,4 +357,61 @@ func depositIntoChest(c *chest, s invStack) invStack {
 		}
 	}
 	return s // no room — keep carrying
+}
+
+// statuePoses is CopperGolemStatueBlock.Pose in declaration order.
+var statuePoses = []string{"standing", "sitting", "running", "star"}
+
+// statuePoseOf is the statue's copper_golem_pose as a stack's golemPose:
+// 1 + its index in statuePoses (0 when the state is no statue).
+func statuePoseOf(state uint32) int8 {
+	info, ok := worldgen.InfoForState(state)
+	if !ok || !isGolemStatue(state) {
+		return 0
+	}
+	p := worldgen.GetProperty(info, state, "copper_golem_pose")
+	for i, n := range statuePoses {
+		if n == p {
+			return int8(i + 1)
+		}
+	}
+	return 0
+}
+
+// holdStatuePose runs as a statue is removed: its pose is held for the drop
+// that follows (the loot table's copy_state of copper_golem_pose), as a
+// named block's name is.
+func (h *hub) holdStatuePose(pos simPos, old, now uint32) {
+	if !isGolemStatue(old) || sameBlockKind(old, now) {
+		return
+	}
+	h.lastPosePos, h.lastPose = pos, statuePoseOf(old)
+}
+
+// takeHeldStatuePose is the held pose for a drop of item at pos, if the drop
+// is the statue's own item (copy_state names the block it copies from).
+func (h *hub) takeHeldStatuePose(pos simPos, item int32) int8 {
+	if h.lastPose == 0 || h.lastPosePos != pos {
+		return 0
+	}
+	base, ok := protocol.BlockForItem(item)
+	if !ok || !isGolemStatue(base) {
+		return 0
+	}
+	p := h.lastPose
+	h.lastPosePos, h.lastPose = simPos{}, 0
+	return p
+}
+
+// withStatuePose is BlockItem.updateBlockStateFromTag for a statue: a placed
+// statue takes the pose its stack's block_state carries.
+func withStatuePose(state uint32, pose int8) uint32 {
+	if pose <= 0 || int(pose) > len(statuePoses) || !isGolemStatue(state) {
+		return state
+	}
+	info, ok := worldgen.InfoForState(state)
+	if !ok {
+		return state
+	}
+	return worldgen.SetProperty(info, state, "copper_golem_pose", statuePoses[pose-1])
 }

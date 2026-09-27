@@ -39,6 +39,10 @@ the public history since the project was open-sourced on 2026-07-10.
   in the offhand casts, reels in and wears there, and the line holds while
   either hand has a rod. An offhand written book opens. Armour and frogspawn
   used from the offhand are taken from the offhand.
+- **Copper golem statues keep their pose.** A statue you break drops with its
+  pose, and it goes back down in that pose, where it used to reset to
+  standing. The pose is saved with the item. Clients don't show it in the
+  tooltip yet.
 
 ## 2026-09-26
 
