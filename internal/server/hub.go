@@ -1754,7 +1754,7 @@ func (h *hub) run() {
 					st := h.rsWorld().At(e.x, e.y, e.z)
 					switch {
 					case isButton(st):
-						h.pressButton(players, pos, st)
+						h.pressButton(players, pos, st, players[e.eid])
 					case isLever(st):
 						h.toggleLever(players, pos, st)
 					default:

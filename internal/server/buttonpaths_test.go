@@ -6,6 +6,7 @@ import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/protocol"
 
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -25,8 +26,9 @@ func useOnBody(hand int32, x, y, z int, face int32) []byte {
 // TestButtonPressPaths presses stone and wooden buttons on the floor, the
 // ceiling and a wall through the click a client sends (ButtonBlock
 // .useWithoutItem → press): the button powers the block it is on strongly,
-// so a lamp on that block's far side lights; it clicks on, stays down 20
-// ticks (stone) or 30 (wood), then clicks off and the lamp goes dark.
+// so a lamp on that block's far side lights; it clicks on (for everyone but
+// the presser), stays down 20 ticks (stone) or 30 (wood), then clicks off
+// and the lamp goes dark.
 func TestButtonPressPaths(t *testing.T) {
 	s, h, p := breakPlaceServer(t)
 	w := s.world
@@ -108,8 +110,10 @@ func TestButtonPressPaths(t *testing.T) {
 					done = true
 				}
 			}
-			if on == 0 || off == 0 {
-				t.Errorf("%s: heard %d click-on and %d click-off sounds", label, on, off)
+			// ButtonBlock.playSound(player, …): the Java presser's client
+			// played its own click-on; the release is everyone's.
+			if on != 0 || off == 0 {
+				t.Errorf("%s: the presser heard %d click-on and %d click-off sounds, want 0 and some", label, on, off)
 			}
 		}
 	}
@@ -202,5 +206,40 @@ func TestButtonClickHands(t *testing.T) {
 	s.handlePlace(p, useOnBody(0, x, y, z, 4))
 	if !pressed() {
 		t.Error("a main-hand click holding a stick should press the button")
+	}
+}
+
+// The server's click-on skips only a Java presser: a bystander hears it,
+// and so does a Bedrock presser, whose client plays no click of its own.
+func TestButtonClickSkipsOnlyTheJavaPresser(t *testing.T) {
+	h := newTestHub(world.New(1))
+	x, y, z := 0, 180, 0
+	h.world.ForceLoad(x, z, 1)
+	btn := withProps(t, worldgen.BlockBase("stone_button"), map[string]string{"face": "floor", "facing": "north", "powered": "false"})
+	heard := func(p *player) bool {
+		for {
+			select {
+			case pkt := <-p.out:
+				if ev, ok := pkt.ev.(attachproto.Sound); ok && ev.Name == "minecraft:block.stone_button.click_on" {
+					return true
+				}
+			default:
+				return false
+			}
+		}
+	}
+	for _, bedrock := range []bool{false, true} {
+		presser, other := testTracked(), testTracked()
+		other.p = newPlayer(2, "other", [16]byte{2})
+		presser.p.bedrock = bedrock
+		players := map[int32]*tracked{1: presser, 2: other}
+		h.world.SetBlock(x, y, z, btn)
+		h.pressButton(players, blockPos{x, y, z}, btn, presser)
+		if got := heard(presser.p); got != bedrock {
+			t.Errorf("bedrock %v: the presser heard the click %v", bedrock, got)
+		}
+		if !heard(other.p) {
+			t.Errorf("bedrock %v: a bystander did not hear the click", bedrock)
+		}
 	}
 }

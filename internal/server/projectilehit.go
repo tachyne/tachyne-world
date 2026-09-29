@@ -101,7 +101,7 @@ func (h *hub) projectileHitBlock(players map[int32]*tracked, a *arrowEntity, pos
 		}
 	case isButton(state): // ButtonBlock.entityInside: an arrow presses a wooden button
 		if _, _, _, wooden := buttonKind(state); wooden {
-			h.inDim(a.dim, func() { h.pressButton(players, pos, state) })
+			h.inDim(a.dim, func() { h.pressButton(players, pos, state, nil) })
 		}
 	case isTNT(state): // TntBlock.onProjectileHit: a burning projectile primes it
 		// projectile.mayInteract: a mob's shot needs mob_griefing; prime's

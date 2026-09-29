@@ -30,6 +30,9 @@ the public history since the project was open-sourced on 2026-07-10.
   copper golem, and a wither skeleton skull only onto a wither's soul-sand
   base; anywhere else it goes on the head of whoever stands in front, and
   with nobody there the dispenser clicks and keeps it.
+- **A button no longer clicks twice for the Java player pressing it.** The
+  server's click goes to everyone else, as in vanilla, since the presser's
+  own game already played it; Bedrock players still get it.
 
 ## 2026-09-27
 
