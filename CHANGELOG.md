@@ -25,6 +25,11 @@ the public history since the project was open-sourced on 2026-07-10.
   onto a single fence, wall or closed gate and across, and it plans its
   walks over them; a fence two high still holds it, and every other mob
   still goes round.
+- **Dispensers place pumpkins and wither skulls only to finish a build.** A
+  dispensed carved pumpkin is placed only where it completes a snow, iron or
+  copper golem, and a wither skeleton skull only onto a wither's soul-sand
+  base; anywhere else it goes on the head of whoever stands in front, and
+  with nobody there the dispenser clicks and keeps it.
 
 ## 2026-09-27
 

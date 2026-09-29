@@ -28,19 +28,69 @@ func (h *hub) dispenseChest(players map[int32]*tracked, dim int, front blockPos)
 	return true
 }
 
-// dispenseCarvedPumpkin places the pumpkin facing back toward the
-// dispenser and tries the snow, iron and copper golem patterns.
-func (h *hub) dispenseCarvedPumpkin(players map[int32]*tracked, dim int, binState uint32, front blockPos) {
-	facing := "north" // DirectionalPlaceContext.getHorizontalDirection for an up/down dispenser
-	if f := stateFacing(binState); f != "up" && f != "down" {
-		facing = f
+// dispenseCarvedPumpkin is the CARVED_PUMPKIN behaviour's placement: the
+// pumpkin in its default state (facing north), which completes the golem
+// canSpawnGolem found below it.
+func (h *hub) dispenseCarvedPumpkin(players map[int32]*tracked, dim int, front blockPos) {
+	st := carvedPumpkinBase
+	if info, ok := worldgen.InfoForState(carvedPumpkinBase); ok {
+		st = worldgen.SetProperty(info, carvedPumpkinBase, "facing", "north")
 	}
-	info, _ := worldgen.InfoForState(carvedPumpkinBase)
-	st := worldgen.SetProperty(info, carvedPumpkinBase, "facing", oppositeFacing(facing))
 	h.setBlockAt(players, dim, front, st)
 	if !h.checkGolemBuild(players, dim, front.x, front.y, front.z, st) {
 		h.checkCopperGolemBuild(players, dim, front.x, front.y, front.z, st)
 	}
+}
+
+// canSpawnGolem is CarvedPumpkinBlock.canSpawnGolem for a pumpkin at p: a
+// snow golem's two snow blocks, an iron golem's T (with its air), or a
+// copper block waiting under the cell — the golems' bodies without the
+// head, upright as the engine builds them.
+func (h *hub) canSpawnGolem(dim int, p blockPos) bool {
+	w := h.worldFor(dim)
+	at := func(dx, dy, dz int) uint32 { return w.At(p.x+dx, p.y+dy, p.z+dz) }
+	if at(0, -1, 0) == snowBlockState && at(0, -2, 0) == snowBlockState {
+		return true
+	}
+	if at(0, -1, 0) == ironBlockState && at(0, -2, 0) == ironBlockState {
+		for _, d := range [][2]int{{1, 0}, {0, 1}} {
+			ax, az := d[0], d[1]
+			if at(ax, -1, az) == ironBlockState && at(-ax, -1, -az) == ironBlockState &&
+				at(ax, 0, az) == worldgen.Air && at(-ax, 0, -az) == worldgen.Air &&
+				at(ax, -2, az) == worldgen.Air && at(-ax, -2, -az) == worldgen.Air {
+				return true
+			}
+		}
+	}
+	return copperBlockStates[at(0, -1, 0)]
+}
+
+// canSpawnWither is WitherSkullBlock.canSpawnMob for a skull at p: not in
+// peaceful, two above the world's floor, and the soul-sand T of the wither
+// base under the top row p sits in (the other two skulls need not be there
+// yet).
+func (h *hub) canSpawnWither(dim int, p blockPos) bool {
+	if h.rules.Difficulty == diffPeaceful || p.y < worldgen.MinY+2 {
+		return false
+	}
+	w := h.worldFor(dim)
+	air := func(s uint32) bool { return s == worldgen.Air || s == caveAirState || s == voidAirState }
+	for _, ax := range [][2]int{{1, 0}, {0, 1}} {
+	centre:
+		for k := -1; k <= 1; k++ {
+			cx, cz := p.x-k*ax[0], p.z-k*ax[1]
+			for j := -1; j <= 1; j++ {
+				x, z := cx+j*ax[0], cz+j*ax[1]
+				if !soulFireBase(w.At(x, p.y-1, z)) || (j != 0 && !air(w.At(x, p.y-2, z))) {
+					continue centre
+				}
+			}
+			if soulFireBase(w.At(cx, p.y-2, cz)) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // dispenseShulkerBox places the box, contents and all, opening along the

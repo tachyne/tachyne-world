@@ -388,6 +388,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 	eggEnt, isEgg := spawnEggEntity[item]
 	vehEt, isVeh := vehicleItems[item]
 	took := true
+	failed := false // an OptionalDispenseItemBehavior that did nothing: the fail click (1001)
 	switch {
 	case dispense && (item == itemArrowAmmo || item == itemSpectralArr || item == itemTippedArrow):
 		// Vanilla registerProjectileBehavior: plain, spectral and tipped arrows
@@ -443,13 +444,15 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 	case dispense && item == int32(itemByName["chest"]) && h.dispenseChest(players, pos.dim, front):
 		// Strapped onto a tamed, unchested donkey, mule or llama in front.
 	case dispense && item == itemCarvedPumpkin:
-		// Placed facing back at the dispenser (BlockItem placement through a
-		// DirectionalPlaceContext), then the golem patterns are tried.
-		if ts := w.At(front.x, front.y, front.z); ts == worldgen.Air || worldgen.IsReplaceable(ts) {
-			h.dispenseCarvedPumpkin(players, pos.dim, state, front)
+		// The CARVED_PUMPKIN behaviour: placed only into an empty cell where
+		// it completes a golem (canSpawnGolem); otherwise it is a head for
+		// whoever stands there, and with nobody to wear it the dispenser
+		// fails and keeps it.
+		if w.At(front.x, front.y, front.z) == worldgen.Air && h.canSpawnGolem(pos.dim, front) {
+			h.dispenseCarvedPumpkin(players, pos.dim, front)
 		} else {
 			took = false
-			h.dispenseEquipment(players, pos.dim, front, st) // else a head for whoever stands there
+			failed = !h.dispenseEquipment(players, pos.dim, front, st)
 		}
 	case dispense && isShulkerBoxItem(item):
 		// ShulkerBoxDispenseBehavior: the box is placed in the cell ahead, its
@@ -531,15 +534,16 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 	case dispense && item == itemWitherSkull:
 		// Vanilla WITHER_SKELETON_SKULL behaviour (a dedicated behaviour that
 		// overrides the default equip-a-wearable): place the skull in the empty
-		// cell ahead and try to raise a wither; if the cell is blocked, fail
-		// (skull kept, like OptionalDispenseItemBehavior).
+		// cell ahead only where the wither's base stands under it
+		// (canSpawnMob), and try to raise a wither; otherwise it is a head for
+		// whoever stands there, and with nobody the dispenser fails and keeps it.
 		took = false
-		if w.At(front.x, front.y, front.z) == worldgen.Air {
+		if w.At(front.x, front.y, front.z) == worldgen.Air && h.canSpawnWither(pos.dim, front) {
 			h.rsSet(players, front, witherSkullBlock)
 			h.checkWitherBuild(players, 0, pos.dim, front.x, front.y, front.z, witherSkullBlock) // no builder: a machine placed the skull
 			took = true
 		} else {
-			h.dispenseEquipment(players, pos.dim, front, st) // else a head for whoever stands there
+			failed = !h.dispenseEquipment(players, pos.dim, front, st)
 		}
 	case dispense && item == itemArmorStand:
 		// Vanilla ARMOR_STAND behaviour: spawn a stand on the cell ahead facing
@@ -713,12 +717,15 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			*st = invStack{}
 		}
 	}
-	snd := "minecraft:block.dispenser.dispense" // SOUND_DISPENSER_DISPENSE (1000)
-	if len(h.arrows) > arrowsBefore {
+	snd, vol, pitch := "minecraft:block.dispenser.dispense", float32(0.5), float32(1) // SOUND_DISPENSER_DISPENSE (1000)
+	switch {
+	case failed:
+		snd, vol, pitch = "minecraft:block.dispenser.fail", 1, 1.2 // SOUND_DISPENSER_FAIL (1001), as an empty dispenser's
+	case len(h.arrows) > arrowsBefore:
 		snd = "minecraft:block.dispenser.launch" // SOUND_DISPENSER_PROJECTILE_LAUNCH (1002)
 	}
 	h.rsSound(players, snd, sndBlock,
-		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 1)
+		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, vol, pitch)
 	h.levelEvent(players, pos.dim, worldEventDispenserSmoke, pos.x, pos.y, pos.z, dir3D(dx, dy, dz)) // the puff out of the face
 	h.containerChanged(players, pos)
 }
