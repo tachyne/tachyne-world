@@ -81,6 +81,7 @@ func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power
 	h.explosionHurtsVehicles(players, dim, cx, cy, cz, power, dt)
 	h.explosionHitsHanging(players, dim, cx, cy, cz, power)
 	h.explosionHitsStands(players, dim, cx, cy, cz, power, dt)
+	h.explosionHitsCushions(players, dim, cx, cy, cz, power)
 	if bp := h.blastPlayer(players); bp != nil {
 		cause.byEID = bp.p.eid // the player behind the blast is who its victims remember
 	}

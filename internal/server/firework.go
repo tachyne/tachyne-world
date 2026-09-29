@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"math"
 
-	attachproto "github.com/tachyne/tachyne-common/attach"
+	"github.com/tachyne/tachyne-common/protocol"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -16,7 +16,11 @@ import (
 // horizontal accelerator and +0.04 vertical every tick, popping after
 // 10*(1+flight) ticks plus a small random tail. A rocket attached to a
 // gliding player instead drags them toward where they are looking, which is
-// what makes elytra travel work at all.
+// what makes elytra travel work at all. That drag is the CLIENT's to do: the
+// rocket names its glider in DATA_ATTACHED_TO_TARGET, and the gliding
+// player's own client runs FireworkRocketEntity.tick against its own motion
+// (v += look·0.1 + (look·1.5 − v)·0.5), which keeps the momentum it already
+// had. The server only keeps the rocket at the glider's side.
 
 var (
 	itemFireworkRocket = itemByName["firework_rocket"]
@@ -28,10 +32,24 @@ const (
 	fireworkClimb     = 0.04
 	fireworkAccel     = 1.15
 	fireworkLaunchVY  = 0.05
-	fireworkBoostPull = 1.5 // how hard a glider is pulled toward their look
-	fireworkBoostAdd  = 0.1
-	fireworkFlightMax = 3 // Fireworks.flightDuration is 1-3 from the recipe
+	fireworkLaunchXZ  = 0.002297 // the launch's triangle(0, 0.002297) sideways drift
+	fireworkFlightMax = 3        // Fireworks.flightDuration is 1-3 from the recipe
+
+	// FireworkRocketEntity's synced fields after Entity's eight — the same
+	// indices on 26.2 and 26.3.
+	metaIndexRocketAttached = 9  // DATA_ATTACHED_TO_TARGET: OPTIONAL_UNSIGNED_INT, the glider's id + 1
+	metaIndexRocketAngled   = 10 // DATA_SHOT_AT_ANGLE: BOOLEAN
 )
+
+// rocketAttachedMeta is DATA_ATTACHED_TO_TARGET naming the glider: what makes
+// the glider's own client do the boosting.
+func rocketAttachedMeta(eid, glider int32) []byte {
+	b := protocol.AppendVarInt(nil, eid)
+	b = protocol.AppendU8(b, metaIndexRocketAttached)
+	b = protocol.AppendVarInt(b, metaTypeOptUInt)
+	b = protocol.AppendVarInt(b, glider+1)
+	return protocol.AppendU8(b, itemMetaEnd)
+}
 
 // rocketFlight is a stack's flight duration, with vanilla's default for a
 // rocket that has none (a spawn-egg rocket, a dispenser fed an old stack).
@@ -56,6 +74,7 @@ type rocketEntity struct {
 	attached   int32 // eid of the gliding player being boosted (0 = loose)
 	explosions int   // how many stars it carries — what its blast is worth
 	angled     bool  // shot from a crossbow (DATA_SHOT_AT_ANGLE): flies straight, no climb
+	walled     bool  // horizontalCollision last tick: no sideways acceleration
 	shooter    int32 // who shot it, whom it will not strike
 }
 
@@ -131,7 +150,9 @@ func (h *hub) spawnRocket(players map[int32]*tracked, dim int, x, y, z float64, 
 	r := &rocketEntity{
 		eid: eid, dim: dim, x: x, y: y, z: z,
 		sx: x, sy: y, sz: z,
+		vx:         h.triangle(0, fireworkLaunchXZ),
 		vy:         fireworkLaunchVY,
+		vz:         h.triangle(0, fireworkLaunchXZ),
 		lifetime:   fireworkLifeBase*(1+flight) + h.rng.Intn(6) + h.rng.Intn(7),
 		attached:   attached,
 		explosions: h.starCount(st),
@@ -144,6 +165,11 @@ func (h *hub) spawnRocket(players map[int32]*tracked, dim int, x, y, z float64, 
 	// on 26.2/26.3 — Entity has the same eight synced fields in both).
 	if st.item != 0 {
 		h.toNearbyEv(players, dim, x, z, metaEv(itemMetadata(eid, st)))
+	}
+	if attached != 0 {
+		// The glider's client boosts itself from this; the server sends no
+		// velocity of its own.
+		h.toNearbyEv(players, dim, x, z, metaEv(rocketAttachedMeta(eid, attached)))
 	}
 	h.playSoundDim(players, dim, "minecraft:entity.firework_rocket.launch", sndAmbient, x, y, z, 3, 1)
 	return r
@@ -162,34 +188,27 @@ func (h *hub) starCount(st invStack) int {
 // updateRockets flies every rocket one tick.
 func (h *hub) updateRockets(players map[int32]*tracked) {
 	for _, r := range h.rockets {
-		if t := players[r.attached]; r.attached != 0 && t != nil {
-			// Riding a glider: pull them toward their look and follow along.
-			if !t.gliding() || t.dead {
-				h.popRocket(players, r)
-				continue
-			}
-			lx, ly, lz := lookVector(t.yaw, t.pitch)
-			t.p.trySendEv(attachproto.Velocity{
-				EID: t.p.eid,
-				VX:  lx * (fireworkBoostPull + fireworkBoostAdd),
-				VY:  ly * (fireworkBoostPull + fireworkBoostAdd),
-				VZ:  lz * (fireworkBoostPull + fireworkBoostAdd),
-			})
-			r.x, r.y, r.z = t.x, t.y+1, t.z
-		} else if r.attached != 0 {
-			h.popRocket(players, r) // the player it was boosting is gone
-			continue
-		} else if r.angled {
-			if h.flyAngledRocket(players, r) {
-				continue // it struck something and went off
+		if r.attached != 0 {
+			// Riding a glider: the boost itself is the glider's client's
+			// (it holds DATA_ATTACHED_TO_TARGET). A rocket stays with its
+			// player to the end of its fuse even when the glide stops, and
+			// one whose player has left sits where it last was.
+			if t := players[r.attached]; t != nil {
+				r.x, r.y, r.z = t.x, t.y, t.z
 			}
 		} else {
-			r.vx, r.vz = r.vx*fireworkAccel, r.vz*fireworkAccel
-			r.vy += fireworkClimb
-			r.x, r.y, r.z = r.x+r.vx, r.y+r.vy, r.z+r.vz
-			if worldgen.Collides(h.worldFor(r.dim).At(int(math.Floor(r.x)), int(math.Floor(r.y)), int(math.Floor(r.z)))) {
-				h.popRocket(players, r)
-				continue
+			if !r.angled {
+				// Unangled: 1.15 sideways (1.0 while pressed against a wall)
+				// and +0.04 up, every tick.
+				acc := fireworkAccel
+				if r.walled {
+					acc = 1
+				}
+				r.vx, r.vz = r.vx*acc, r.vz*acc
+				r.vy += fireworkClimb
+			}
+			if h.flyRocket(players, r) {
+				continue // it struck something and went off
 			}
 		}
 		if r.life++; r.life > r.lifetime {
@@ -203,11 +222,14 @@ func (h *hub) updateRockets(players map[int32]*tracked) {
 	}
 }
 
-// flyAngledRocket is a crossbow rocket's tick: straight on at its launch
-// velocity (no acceleration, no climb), exploding on the first mob or player
-// in its path, or on a block when it carries stars; a starless one that hits
-// a block stops there until its time runs out. Reports whether it went off.
-func (h *hub) flyAngledRocket(players map[int32]*tracked, r *rocketEntity) bool {
+// flyRocket moves a loose rocket along its velocity, exploding on the first
+// mob or player in its path (onHitEntity), or on a block when it carries
+// stars (onHitBlock); a starless one that meets a block goes no further into
+// it. A crossbow's rocket stops dead there until its time runs out; a
+// climbing one keeps its velocity (move() collides, setDeltaMovement puts the
+// push back) and presses on against the block, with its sideways
+// acceleration off while a wall holds it. Reports whether it went off.
+func (h *hub) flyRocket(players map[int32]*tracked, r *rocketEntity) bool {
 	w := h.worldFor(r.dim)
 	const samples = 4
 	for i := 1; i <= samples; i++ {
@@ -224,7 +246,7 @@ func (h *hub) flyAngledRocket(players map[int32]*tracked, r *rocketEntity) bool 
 			}
 		}
 		for _, m := range h.mobs {
-			if m.dim != r.dim || m.dying > 0 {
+			if m.dim != r.dim || m.dying > 0 || (m.eid == r.shooter && players[r.shooter] == nil) {
 				continue
 			}
 			if math.Abs(m.x-px) < 0.6 && math.Abs(m.z-pz) < 0.6 && py >= m.y-0.125 && py <= m.y+1.9 {
@@ -239,10 +261,32 @@ func (h *hub) flyAngledRocket(players map[int32]*tracked, r *rocketEntity) bool 
 				h.popRocket(players, r)
 				return true
 			}
-			r.vx, r.vy, r.vz = 0, 0, 0 // nothing to set off: it stops against the block
+			if r.angled {
+				r.vx, r.vy, r.vz = 0, 0, 0 // nothing to set off: it stops against the block
+				return false
+			}
+			// Blocked: advance each axis that is still free, and remember a
+			// wall for the next tick's acceleration.
+			bx, by, bz := r.x+r.vx*f, r.y+r.vy*f, r.z+r.vz*f
+			free := func(x, y, z float64) bool {
+				return !worldgen.Collides(w.At(int(math.Floor(x)), int(math.Floor(y)), int(math.Floor(z))))
+			}
+			ox, oy, oz := r.x+r.vx*float64(i-1)/samples, r.y+r.vy*float64(i-1)/samples, r.z+r.vz*float64(i-1)/samples
+			r.walled = !free(bx, oy, oz) || !free(ox, oy, bz)
+			if free(bx, oy, oz) {
+				ox = bx
+			}
+			if free(ox, by, oz) {
+				oy = by
+			}
+			if free(ox, oy, bz) {
+				oz = bz
+			}
+			r.x, r.y, r.z = ox, oy, oz
 			return false
 		}
 	}
+	r.walled = false
 	r.x, r.y, r.z = r.x+r.vx, r.y+r.vy, r.z+r.vz
 	return false
 }

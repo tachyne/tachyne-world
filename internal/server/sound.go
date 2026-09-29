@@ -70,7 +70,20 @@ func (h *hub) spawnParticles(players map[int32]*tracked, dim int, pid int32, x, 
 
 // blockBreakEvent builds the world-event 2001 FX — break particles + sound
 // for a block state, rendered by the client from the state alone.
+//
+// It is Block.spawnDestroyParticles, which is what Level.destroyBlock fires:
+// a straw bed overrides it with 2014, its particles without the break sound.
+// A player's own break (playerWillDestroy) is always 2001: playerBreakEvent.
 func blockBreakEvent(x, y, z int, state uint32) attachproto.WorldFX {
+	if isStrawBed(state) {
+		return attachproto.WorldFX{Event: worldEventDestroyParticles, X: x, Y: y, Z: z, Data: int32(state)}
+	}
+	return playerBreakEvent(x, y, z, state)
+}
+
+// playerBreakEvent is Block.spawnDestroyByEntityParticles: 2001 whatever the
+// block.
+func playerBreakEvent(x, y, z int, state uint32) attachproto.WorldFX {
 	return attachproto.WorldFX{Event: worldEventBlockBreak, X: x, Y: y, Z: z, Data: int32(state)}
 }
 

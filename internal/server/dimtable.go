@@ -129,4 +129,9 @@ func (h *hub) dropUnrunFurniture() {
 			delete(h.armorStands, eid)
 		}
 	}
+	for eid, c := range h.cushions {
+		if h.worldFor(c.dim) == nil {
+			delete(h.cushions, eid)
+		}
+	}
 }

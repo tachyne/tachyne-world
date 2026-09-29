@@ -15,7 +15,7 @@ import "math"
 // players who can see it, once, rather than broadcast and hoped for.
 //
 // It owns the entities that move and come and go — other players, mobs,
-// dropped items and experience orbs. Players were the last in: their bodies
+// dropped items, experience orbs, area-effect clouds and cushions. Players were the last in: their bodies
 // were spawned for the whole dimension at join while their moves reached only
 // viewers within six chunks, and nothing removed them on leaving range — so
 // a player who flew or teleported away stayed standing, frozen, wherever
@@ -36,6 +36,12 @@ func (h *hub) trackable(eid int32) (kind int, ok bool) {
 	if _, live := h.orbs[eid]; live {
 		return trackOrb, true
 	}
+	if _, live := h.clouds[eid]; live {
+		return trackCloud, true
+	}
+	if _, live := h.cushions[eid]; live {
+		return trackCushion, true
+	}
 	return 0, false
 }
 
@@ -43,6 +49,8 @@ const (
 	trackMob = iota
 	trackItem
 	trackOrb
+	trackCloud
+	trackCushion
 )
 
 // trackRange is an entity type's tracking range in blocks — vanilla's
@@ -127,6 +135,18 @@ func (h *hub) syncTracking(players map[int32]*tracked) {
 				want[o.eid] = true
 			}
 		}
+		cloudR := trackRange(entityAreaEffectCloud)
+		for _, c := range h.clouds {
+			if visibleIn(t, v, c.dim, c.x, c.z, cloudR) {
+				want[c.eid] = true
+			}
+		}
+		cushionR := trackRange(entityCushion)
+		for _, c := range h.cushions {
+			if visibleIn(t, v, c.dim, c.x, c.z, cushionR) {
+				want[c.eid] = true
+			}
+		}
 		t.p.unlockView()
 		// Out of view or out of the world: one removal frame for the lot.
 		var gone []int32
@@ -202,6 +222,8 @@ func (h *hub) showPlayerTo(v, o *tracked) {
 			v.p.trySendEv(passengersBody(m.eid, m.playerPassengers()...))
 		} else if veh := h.vehicles[o.ridingEID]; veh != nil {
 			v.p.trySendEv(passengersBody(veh.eid, veh.passengers()...))
+		} else if c := h.cushions[o.ridingEID]; c != nil && v.tracked[c.eid] {
+			v.p.trySendEv(passengersBody(c.eid, o.p.eid))
 		}
 	}
 }
@@ -244,6 +266,10 @@ func (h *hub) showEntityTo(t *tracked, eid int32) {
 	case kind == trackOrb:
 		o := h.orbs[eid]
 		t.p.trySendEv(entAdd(o.eid, entityXPOrb, o.uuid, o.x, o.y, o.z, 0, 0))
+	case kind == trackCloud:
+		h.showCloudTo(t, h.clouds[eid])
+	case kind == trackCushion:
+		h.showCushionTo(t, h.cushions[eid])
 	}
 }
 

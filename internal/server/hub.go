@@ -265,6 +265,8 @@ type tracked struct {
 	graceUntil     uint64           // no environmental damage until this tick (portal arrival)
 	cooldowns      map[int32]uint64 // per-item use cooldown: item id → tick it frees up
 	scopeUntil     uint64           // tick a raised spyglass drops on its own (0 = not scoping)
+	brushFrom      uint64           // tick of a held brush use's first onUseTick (0 = not brushing)
+	brushOff       bool             // …and whether it is the offhand's brush
 	// Advancement bookkeeping (advancement_hooks.go): where a levitation began,
 	// the overworld spot a Nether trip started from, and what last launched us.
 	levStartY      float64
@@ -691,6 +693,7 @@ type hub struct {
 	paintings           map[int32]*painting       // placed hanging paintings (persisted with containers)
 	itemFrames          map[int32]*itemFrame      // placed item frames (persisted with containers)
 	armorStands         map[int32]*armorStand     // placed armor stands (persisted with containers)
+	cushions            map[int32]*cushion        // placed cushions (persisted with containers)
 	knots               map[int32]*leashKnot      // fence leash knots (the far end of a lead)
 	jukeboxes           map[simPos]*jukebox       // discs + playback clocks (persisted with containers)
 	beacons             map[simPos]*beacon        // placed beacons (chosen powers persisted with containers)
@@ -908,6 +911,7 @@ func newHub(w *world.World) *hub {
 		paintings:     map[int32]*painting{},
 		itemFrames:    map[int32]*itemFrame{},
 		armorStands:   map[int32]*armorStand{},
+		cushions:      map[int32]*cushion{},
 		knots:         map[int32]*leashKnot{},
 		bundles:       newBundleStore(),
 		lecterns:      map[simPos]*lectern{},
@@ -1045,6 +1049,7 @@ func (h *hub) run() {
 		h.paintings = h.containers.loadPaintings(h.allocEID)
 		h.itemFrames = h.containers.loadFrames(h.allocEID)
 		h.armorStands = h.containers.loadStands(h.allocEID)
+		h.cushions = h.containers.loadCushions(h.allocEID)
 		h.dropUnrunFurniture()
 		h.jukeboxes = h.containers.loadJukeboxes()
 		h.pots = h.containers.loadPots()
@@ -1202,9 +1207,11 @@ func (h *hub) run() {
 			h.updateEyes(players)          // eyes of ender drift toward their stronghold
 			h.hangingSurvivalTick(players) // frames, paintings, knots: survives() every hundred ticks
 			h.tickStands(players)          // armor stands: lava, fire and burning
+			h.tickCushions(players)        // cushions: survives() and fire every hundred ticks
 			h.tickGliding(players)         // elytra wear: a point a second, and the glide ends with the wing
 			h.tickBoosts(players)          // a food-on-a-stick sprint runs down while its mount is ridden
 			h.expireSpyglass(players)      // a scope held to its full duration drops
+			h.tickBrushing(players)        // held brushes stroke every ten ticks
 			h.updateEating(players)        // apply finished eat-holds (32-tick chew)
 			h.tickSpearCharges(players)    // lowered spears strike what they run into
 			h.borderDamage(players)        // outside the world border hurts (players only)
@@ -1413,6 +1420,7 @@ func (h *hub) run() {
 					h.containers.recordBrews(h.brewProg, h.brewFuel, h.brewIng)
 					h.containers.recordBeacons(h.beacons)
 					h.containers.recordStands(h.armorStands)
+					h.containers.recordCushions(h.cushions)
 					h.containers.recordLecterns(h.lecterns)
 					h.containers.recordShelves(h.bookshelves, h.shelfLast)
 					h.containers.recordWoodShelves(h.woodShelves)
@@ -2018,6 +2026,7 @@ func (h *hub) run() {
 					h.stopEating(players, t)
 					h.lowerShield(t)            // release / hotbar switch also drops a shield
 					h.lowerSpyglass(players, t) // …and takes a spyglass from the eye
+					stopBrushing(t)             // …and lifts a brush
 					stopSpearCharge(t)          // …and raises a lowered spear
 					if e.fire {                 // release_use_item looses a drawn bow / finishes a crossbow load / throws a trident…
 						h.releaseDraw(players, t)
@@ -2414,6 +2423,7 @@ func (h *hub) run() {
 					h.containers.recordBrews(h.brewProg, h.brewFuel, h.brewIng)
 					h.containers.recordBeacons(h.beacons)
 					h.containers.recordStands(h.armorStands)
+					h.containers.recordCushions(h.cushions)
 					h.containers.recordLecterns(h.lecterns)
 					h.containers.recordShelves(h.bookshelves, h.shelfLast)
 					h.containers.recordWoodShelves(h.woodShelves)
@@ -2567,10 +2577,12 @@ func (h *hub) useOnEvent(players map[int32]*tracked, ev hubEvent) bool {
 		eid, off, run = e.eid, e.off, func() { h.onUseHoneycomb(players, e) }
 	case evPlaceStand:
 		eid, off, run = e.eid, e.off, func() { h.onPlaceStand(players, e) }
+	case evPlaceCushion:
+		eid, off, run = e.eid, e.off, func() { h.onPlaceCushion(players, e) }
 	case evBrush:
 		eid, off, run = e.eid, e.off, func() {
 			if t := players[e.eid]; t != nil {
-				h.brush(players, t, e)
+				h.startBrushing(t, e)
 			}
 		}
 	default:
@@ -2791,7 +2803,8 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 	if h.rbstore != nil {
 		h.rbstore.save(p.key(), t)
 	}
-	for _, v := range h.vehicles { // a leaver stands up first
+	h.leaveCushion(players, t, false) // a leaver stands up first
+	for _, v := range h.vehicles {
 		if v.rider == p.eid || v.rider2 == p.eid {
 			v.leaveSeat(p.eid) // a mob left aboard keeps its seat; the back seat moves up
 			h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid, v.passengers()...))
@@ -2851,7 +2864,7 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 		}
 		t.p.trySendEv(body)
 		if e.broken != 0 { // break particles + sound, rendered from the old state
-			t.p.trySendEv(blockBreakEvent(e.x, e.y, e.z, e.broken))
+			t.p.trySendEv(playerBreakEvent(e.x, e.y, e.z, e.broken))
 		}
 	}
 	if e.placed {

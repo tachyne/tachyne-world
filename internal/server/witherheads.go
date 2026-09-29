@@ -122,7 +122,7 @@ func (h *hub) witherSkullAt(players map[int32]*tracked, m *mob, x, y, z float64,
 	a := h.launchProjectileIn(players, entityWitherSkull, m.dim, m.x, m.y+2, m.z, ux*v, uy*v, uz*v)
 	a.shooter, a.dmg, a.withers, a.breaks, a.mobShot = m.eid, 8, true, true, true // a skull strikes whatever it meets
 	a.explode, a.dangerous = witherSkullBlast, dangerous
-	h.playSoundDim(players, m.dim, "minecraft:entity.wither.shoot", sndHostile, m.x, m.y, m.z, 2, 1)
+	h.levelEvent(players, m.dim, worldEventWitherShoot, floorInt(m.x), floorInt(m.y), floorInt(m.z), 0)
 }
 
 // witherSmashTick is WitherBoss.destroyBlocksTick: twenty ticks after it is
@@ -155,7 +155,7 @@ func (h *hub) witherSmashTick(players map[int32]*tracked, m *mob) {
 		}
 	}
 	if broke {
-		h.playSoundDim(players, m.dim, "minecraft:entity.wither.break_block", sndHostile, m.x, m.y, m.z, 1, 1)
+		h.levelEvent(players, m.dim, worldEventWitherBreak, floorInt(m.x), floorInt(m.y), floorInt(m.z), 0)
 	}
 }
 

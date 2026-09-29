@@ -4,6 +4,7 @@ import (
 	"log"
 	"sync/atomic"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -189,7 +190,7 @@ func (h *hub) updatePortalDwell(players map[int32]*tracked) {
 				continue
 			}
 			t.p.pendingDestOK = false
-			t.p.pendingAt = true
+			t.p.pendingAt, t.p.pendingPortal = true, true
 			t.p.pendingPos = [3]float64{a.x, a.y, a.z}
 			t.p.pendingYaw = t.yaw + a.turn
 			t.p.pendingDim.Store(int32(a.dim)) // release: fields above are visible after Load
@@ -216,6 +217,14 @@ func (s *Server) checkPendingDim(p *player) {
 		s.switchDimensionTo(p, int(dim), p.pendingDest)
 	default:
 		s.switchDimension(p, int(dim))
+	}
+	if p.pendingPortal {
+		// TeleportTransition.playPortalSound: the arrival's whoosh, to the
+		// traveller alone, once they are in the new level.
+		p.pendingPortal = false
+		if p.dim == int(dim) {
+			p.sendEv(attachproto.WorldFX{Event: worldEventPortalTravel})
+		}
 	}
 }
 

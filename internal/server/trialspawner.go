@@ -282,7 +282,11 @@ func (h *hub) tickTrialSpawner(players map[int32]*tracked, ts *trialSpawner) {
 // detect refreshes the set of players in range and returns its size. Vanilla
 // keeps the set across the fight: everyone who showed up gets paid, even if
 // they wander off before the last mob dies.
+//
+// A set that grows fires level event 3013 (3019 when ominous) with its new
+// size: the flames that mark each player it has seen.
 func (ts *trialSpawner) detect(h *hub, players map[int32]*tracked) int {
+	before := len(ts.detected)
 	for _, t := range players {
 		if t.dim != ts.dim || t.dead || t.gamemode == gmSpectator {
 			continue
@@ -290,6 +294,13 @@ func (ts *trialSpawner) detect(h *hub, players map[int32]*tracked) int {
 		if dist3(t.x, t.y, t.z, ts.fx(), ts.fy(), ts.fz()) <= trialPlayerRange {
 			ts.detected[t.p.uuid] = true
 		}
+	}
+	if n := len(ts.detected); n > before {
+		ev := int32(worldEventTrialDetect)
+		if ts.ominous {
+			ev = worldEventTrialDetectOmen
+		}
+		h.levelEvent(players, ts.dim, ev, ts.pos.x, ts.pos.y, ts.pos.z, int32(n))
 	}
 	return len(ts.detected)
 }

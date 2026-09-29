@@ -27,7 +27,7 @@ func (s *Server) handleDig(p *player, data []byte) {
 	if _, err := io.ReadFull(br, posb[:]); err != nil {
 		return
 	}
-	br.ReadByte()                     // face (unused)
+	face, _ := br.ReadByte()          // the face struck (Direction's 3D value)
 	seq, _ := protocol.ReadVarInt(br) // prediction sequence
 	p.noteAck(seq)                    // the hub acknowledges it at the end of the tick
 
@@ -124,7 +124,7 @@ func (s *Server) handleDig(p *player, data []byte) {
 			}
 		} else if status == digStartBreak {
 			p.digStartAt, p.digPos = s.hub.tick.Load(), blockPos{x, y, z} // arm the timer
-			s.hub.post(evDigStart{eid: p.eid, dim: p.dim, x: x, y: y, z: z})
+			s.hub.post(evDigStart{eid: p.eid, dim: p.dim, x: x, y: y, z: z, face: int32(face)})
 			return
 		} else if status != digFinishBreak {
 			return
@@ -312,6 +312,12 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		replacingClicked = true
 	}
 
+	if isCushionItem(held) { // CushionItem.useOn: on a top face only
+		s.hub.post(evPlaceCushion{eid: p.eid, x: x, y: y, z: z, up: dy == 1, replacing: replacingClicked,
+			hitY: float64(y) + float64(cursorY), off: off})
+		s.sendBlockChange(p, x, y, z, s.worldFor(p).Block(x, y, z), seq)
+		return
+	}
 	if held == itemArmorStand { // spawn the stand at the target cell
 		s.hub.post(evPlaceStand{eid: p.eid, x: tx, y: ty, z: tz, yaw: p.yaw, off: off})
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)

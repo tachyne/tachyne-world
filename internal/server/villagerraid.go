@@ -154,5 +154,5 @@ func (h *hub) villagerFirework(players map[int32]*tracked, m *mob) {
 	c := dyeFireworkColor[h.rng.Intn(len(dyeFireworkColor))]
 	st := invStack{item: itemFireworkRocket, count: 1, flight: int8(h.rng.Intn(3)),
 		starID: h.stars.intern([]fireworkBurst{{Shape: burstBurst, Colors: []int32{c}}})}
-	h.spawnRocket(players, m.dim, m.x, m.y+mobEyeHeight(m), m.z, 0, st)
+	h.spawnRocket(players, m.dim, m.x, m.y+mobEyeHeight(m), m.z, 0, st).shooter = m.eid // its owner, whom it will not strike
 }

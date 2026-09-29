@@ -159,5 +159,10 @@ func (h *hub) smashAround(players map[int32]*tracked, t *tracked, cx, cy, cz flo
 		snd = "minecraft:item.mace.smash_ground_heavy"
 	}
 	h.playSoundDim(players, t.dim, snd, sndPlayer, cx, cy, cz, 1, 1)
-	h.spawnParticles(players, t.dim, particlePoof, cx, cy, cz, maceKnockRadius/2, 0.1, 40)
+	// MaceItem.knockback: level event 2013 at the block under the one struck
+	// (getOnPos) — the client throws up that block's dust.
+	h.levelEvent(players, t.dim, worldEventSmashAttack, floorInt(cx), floorInt(cy-1e-5), floorInt(cz), maceSmashDust)
 }
+
+// maceSmashDust is the level event's data: how much dust flies.
+const maceSmashDust = 750

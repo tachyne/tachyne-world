@@ -4,6 +4,7 @@ import (
 	"math/rand"
 
 	"github.com/tachyne/tachyne-world/internal/worldgen"
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
 // Archaeology: brushing a suspicious block until whatever was buried in it
@@ -40,7 +41,8 @@ type brushing struct {
 	dim       int // which world the block is in
 }
 
-// evBrush is a player's brush stroke on a block face.
+// evBrush is a player's brush click on a block face (BrushItem.useOn), which
+// starts the held use.
 type evBrush struct {
 	eid        int32
 	x, y, z    int
@@ -120,17 +122,98 @@ func (h *hub) brushLootTable(pos blockPos) (string, bool) {
 	return "", false
 }
 
-// brush applies one stroke. Strokes inside the cooldown do nothing but keep
-// the dust from settling, which is what makes brushing a hold rather than a
-// race.
-func (h *hub) brush(players map[int32]*tracked, t *tracked, e evBrush) {
-	pos := blockPos{e.x, e.y, e.z}
+// brushUseTicks is BrushItem.getUseDuration: a held use lasts ten seconds,
+// and the client starts another if the button is still down.
+const brushUseTicks = 200
+
+// startBrushing is BrushItem.useOn: a click on a block with the brush in hand
+// starts a held use when the player's look reaches a block
+// (calculateHitResult), and does nothing else — the strokes come from the
+// hold (tickBrushing), not from clicks.
+func (h *hub) startBrushing(t *tracked, e evBrush) {
+	if s := t.handStack(t.useSlot()); t.dead || s == nil || s.item != itemBrush {
+		return
+	}
+	if _, _, ok := h.brushTarget(t); !ok {
+		return
+	}
+	// The click lands before the next tick's entity update, which is the
+	// use's first onUseTick.
+	t.brushFrom, t.brushOff = h.tick.Load()+1, e.off
+}
+
+// stopBrushing is releaseUsingItem for a brush: the button came up, the hand
+// changed, or the look left the block.
+func stopBrushing(t *tracked) { t.brushFrom = 0 }
+
+// brushTarget is BrushItem.calculateHitResult: the block the player's look
+// strikes (outline shapes, fluids passed through) within their block
+// interaction range, and the face it strikes.
+func (h *hub) brushTarget(t *tracked) (pos, face blockPos, ok bool) {
+	reach := t.playerAttrs().Value(attr.BlockInteractionRange)
+	lx, ly, lz := lookVector(t.yaw, t.pitch)
+	ex, ey, ez := t.x, t.y+t.eyeHeight(), t.z
+	return h.clipOutlineFace(t.dim, ex, ey, ez, ex+lx*reach, ey+ly*reach, ez+lz*reach)
+}
+
+// tickBrushing is BrushItem.onUseTick for every player holding a brush use:
+// the tick of the use counted from one, a stroke on the one before each
+// backswing (% 10 == 5), and the use given up when the look no longer
+// strikes a block or the brush is gone from the hand. It ends on its own
+// after two hundred ticks (completeUsingItem).
+func (h *hub) tickBrushing(players map[int32]*tracked) {
+	now := h.tick.Load()
+	for _, t := range players {
+		if t.brushFrom == 0 || now < t.brushFrom {
+			continue
+		}
+		elapsed := now + 1 - t.brushFrom // getUseDuration − ticksRemaining + 1
+		prev := t.useOffhand
+		t.useOffhand = t.brushOff
+		held := t.handStack(t.useSlot())
+		t.useOffhand = prev
+		if t.dead || held == nil || held.item != itemBrush || elapsed > brushUseTicks {
+			stopBrushing(t)
+			continue
+		}
+		pos, face, ok := h.brushTarget(t)
+		if !ok {
+			stopBrushing(t)
+			continue
+		}
+		if elapsed%10 == 5 {
+			t.useOffhand = t.brushOff
+			h.brushStroke(players, t, pos, face)
+			t.useOffhand = prev
+		}
+		if elapsed == brushUseTicks {
+			stopBrushing(t)
+		}
+	}
+}
+
+// brushStroke is one stroke of the held use: the brushing sound for the
+// others (the brusher's client plays its own), then BrushableBlockEntity.brush
+// on a suspicious block. Strokes inside the block's cooldown do nothing but
+// keep the dust from settling.
+func (h *hub) brushStroke(players map[int32]*tracked, t *tracked, pos, face blockPos) {
 	w := h.worldFor(t.dim)
 	if w == nil {
 		return
 	}
 	state := w.At(pos.x, pos.y, pos.z)
 	turnsInto, ok := suspiciousTurnsInto(state)
+	// BrushableBlock.getBrushSound: sand or gravel by the block, and
+	// BRUSH_GENERIC on anything else.
+	snd := "minecraft:item.brush.brushing.generic"
+	switch {
+	case ok && turnsInto == worldgen.Gravel:
+		snd = "minecraft:item.brush.brushing.gravel"
+	case ok:
+		snd = "minecraft:item.brush.brushing.sand"
+	}
+	h.playSoundExcept(players, t.dim, t.p.eid, snd, sndBlock,
+		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 	if !ok {
 		return
 	}
@@ -139,7 +222,7 @@ func (h *hub) brush(players map[int32]*tracked, t *tracked, e evBrush) {
 	}
 	b := h.brushes[pos]
 	if b == nil {
-		b = &brushing{face: faceIndex(e.dx, e.dy, e.dz), dim: t.dim}
+		b = &brushing{face: faceIndex(face.x, face.y, face.z), dim: t.dim}
 		h.brushes[pos] = b
 	}
 	now := h.tick.Load()
@@ -148,14 +231,6 @@ func (h *hub) brush(players map[int32]*tracked, t *tracked, e evBrush) {
 		return
 	}
 	b.coolUntil = now + brushCooldown
-	// BrushableBlock.getBrushSound: sand or gravel by the block. The
-	// brusher's own client plays it from onUseTick (Level.playSound(player, …)).
-	snd := "minecraft:item.brush.brushing.sand"
-	if turnsInto == worldgen.Gravel {
-		snd = "minecraft:item.brush.brushing.gravel"
-	}
-	h.playSoundExcept(players, t.dim, t.p.eid, snd, sndBlock,
-		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 
 	was := dustedStage(b.count)
 	b.count++

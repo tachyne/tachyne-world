@@ -16,6 +16,8 @@ type digCrack struct {
 	state    uint32 // the block when the dig began
 	progress float64
 	stage    int8
+	face     int32 // destroyDirection: the face being struck
+	ticks    int   // ticks spent destroying
 }
 
 // evDigStart and evDigStop come from the session's player_action handling.
@@ -23,6 +25,7 @@ type evDigStart struct {
 	eid     int32
 	dim     int
 	x, y, z int
+	face    int32
 }
 
 type evDigStop struct{ eid int32 }
@@ -42,7 +45,7 @@ func (h *hub) startDig(players map[int32]*tracked, e evDigStart) {
 		return
 	}
 	pos := blockPos{e.x, e.y, e.z}
-	h.digs[e.eid] = &digCrack{dim: e.dim, pos: pos, state: w.At(pos.x, pos.y, pos.z), stage: -1}
+	h.digs[e.eid] = &digCrack{dim: e.dim, pos: pos, state: w.At(pos.x, pos.y, pos.z), stage: -1, face: e.face}
 }
 
 // stopDig ends a player's dig and clears its cracks.
@@ -72,6 +75,14 @@ func (h *hub) tickDigCracks(players map[int32]*tracked) {
 			d.stage = stage
 			h.sendDigStage(players, eid, d, stage)
 		}
+		// The dig's own effects, every tick of it (ServerPlayerGameMode.tick):
+		// the struck face's crumbs, and on every fourth tick the hit sound too.
+		d.ticks++
+		ev := int32(worldEventDestroyProgress)
+		if d.ticks%4 == 0 {
+			ev = worldEventDestroyProgressSound
+		}
+		h.levelEvent(players, d.dim, ev, d.pos.x, d.pos.y, d.pos.z, d.face)
 	}
 }
 

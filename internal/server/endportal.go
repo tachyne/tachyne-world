@@ -34,8 +34,7 @@ func (h *hub) insertEye(players map[int32]*tracked, t *tracked, pos blockPos, st
 		return
 	}
 	h.setBlockAt(players, t.dim, pos, state-frameEyeStride)
-	h.playSoundDim(players, t.dim, "minecraft:block.end_portal_frame.fill", sndBlock,
-		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
+	h.levelEvent(players, t.dim, worldEventFrameFill, pos.x, pos.y, pos.z, 0) // EnderEyeItem.useOn: the click and the smoke
 	// Any complete 12-frame eyed ring around a 3x3 interior opens — the
 	// stronghold's own ring and player-built rings alike (vanilla parity;
 	// frame facing is not enforced). The clicked frame sits somewhere on the
@@ -166,6 +165,7 @@ func (h *hub) updateEndPortalContact(players map[int32]*tracked) {
 			continue
 		}
 		t.p.pendingDestOK = false
+		t.p.pendingPortal = true // into the End: the portal's travel sound on arrival
 		t.p.pendingDim.Store(int32(dimEnd))
 	}
 }

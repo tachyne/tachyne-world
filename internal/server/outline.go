@@ -74,11 +74,21 @@ func outlineNudge(s uint32, x, z int) (dx, dy, dz float64) {
 // false when nothing stops it, and vanilla's miss then names the cell the
 // segment ends in. A segment of no length is a miss.
 func (h *hub) clipOutline(dim int, x0, y0, z0, x1, y1, z1 float64) (pos blockPos, hit bool) {
+	pos, _, hit = h.clipOutlineFace(dim, x0, y0, z0, x1, y1, z1)
+	return pos, hit
+}
+
+// clipOutlineFace is clipOutline with the BlockHitResult's direction: the
+// face of the struck cell the segment came in through (the step that
+// entered it, reversed). A hit in the cell the segment starts in has entered
+// through no face; it reads as the top.
+func (h *hub) clipOutlineFace(dim int, x0, y0, z0, x1, y1, z1 float64) (pos, face blockPos, hit bool) {
 	end := blockPos{floorInt(x1), floorInt(y1), floorInt(z1)}
 	dx, dy, dz := x1-x0, y1-y0, z1-z0
 	w := h.worldFor(dim)
+	face = blockPos{0, 1, 0}
 	if w == nil || dx*dx+dy*dy+dz*dz < 1e-18 {
-		return end, false
+		return end, face, false
 	}
 	cx, cy, cz := floorInt(x0), floorInt(y0), floorInt(z0)
 	sx, tMaxX, tDeltaX := ddaAxis(x0, dx)
@@ -90,7 +100,7 @@ func (h *hub) clipOutline(dim int, x0, y0, z0, x1, y1, z1 float64) (pos blockPos
 			ox, oy, oz := float64(cx)+nx, float64(cy)+ny, float64(cz)+nz
 			for _, b := range outlineOf(s) {
 				if segmentHitsBox(x0-ox, y0-oy, z0-oz, dx, dy, dz, b) {
-					return blockPos{cx, cy, cz}, true
+					return blockPos{cx, cy, cz}, face, true
 				}
 			}
 		}
@@ -101,15 +111,18 @@ func (h *hub) clipOutline(dim int, x0, y0, z0, x1, y1, z1 float64) (pos blockPos
 		case tMaxX < tMaxY && tMaxX < tMaxZ:
 			cx += sx
 			tMaxX += tDeltaX
+			face = blockPos{-sx, 0, 0}
 		case tMaxY < tMaxZ:
 			cy += sy
 			tMaxY += tDeltaY
+			face = blockPos{0, -sy, 0}
 		default:
 			cz += sz
 			tMaxZ += tDeltaZ
+			face = blockPos{0, 0, -sz}
 		}
 	}
-	return end, false
+	return end, face, false
 }
 
 // segmentHitsBox is AABB.clip for the segment o + t·d, t in [0, 1]: the slab

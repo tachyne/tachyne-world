@@ -107,11 +107,11 @@ feed:
 	}
 	villagerCompact(m)
 	// Level event 1500: the fill sound, a success if the pile rose at all.
-	snd := "minecraft:block.composter.fill"
+	rose := int32(0)
 	if level != start {
-		snd = "minecraft:block.composter.fill_success"
+		rose = 1
 	}
-	h.playSoundDim(players, m.dim, snd, sndBlock, cx, cy, cz, 1, 1)
+	h.levelEvent(players, m.dim, worldEventComposterFill, pos.x, pos.y, pos.z, rose)
 }
 
 // villagerMakeBread is WorkAtComposter.makeBread: up to three loaves from

@@ -183,6 +183,10 @@ func (h *hub) onInteractMob(players map[int32]*tracked, t *tracked, e evInteract
 		h.interactStand(players, t, st)
 		return
 	}
+	if c := h.cushions[e.target]; c != nil {
+		h.interactCushion(players, t, c, e.sneak)
+		return
+	}
 	if k := h.knots[e.target]; k != nil {
 		h.interactKnot(players, t, k, e.sneak)
 		return

@@ -370,6 +370,9 @@ func (h *hub) mountVehicle(players map[int32]*tracked, t *tracked, v *vehicle) {
 
 // dismount stands the rider up beside the vehicle.
 func (h *hub) dismount(players map[int32]*tracked, t *tracked) {
+	if h.leaveCushion(players, t, false) {
+		return
+	}
 	for _, v := range h.vehicles {
 		if v.rider != t.p.eid && v.rider2 != t.p.eid {
 			continue

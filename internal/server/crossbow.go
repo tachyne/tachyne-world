@@ -140,6 +140,7 @@ func (h *hub) fireXbow(players map[int32]*tracked, t *tracked) {
 		if rocket { // FireworkRocketEntity shot at an angle, at FIREWORK_POWER 1.6
 			if r := h.spawnRocket(players, t.dim, t.x, t.y+playerEyeHeightStand-0.15, t.z, 0, ammo); r != nil {
 				r.angled, r.shooter = true, t.p.eid
+				h.toNearbyEv(players, r.dim, r.x, r.z, metaEv(boolMeta(r.eid, metaIndexRocketAngled, true)))
 				r.vx, r.vy, r.vz = h.shootVector(dx, dy, dz, xbowRocketSpeed, throwUncertainty)
 			}
 		} else {

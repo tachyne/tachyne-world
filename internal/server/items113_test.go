@@ -141,15 +141,22 @@ func TestFireworkBoostsOnlyAGlider(t *testing.T) {
 		t.Fatalf("firing should cost one rocket, %d left", pl.inv.slots[0].count)
 	}
 
-	// It follows the player while they glide, and pops when they stop.
+	// It follows the player while they glide, and — as vanilla's does — stays
+	// with them to the end of its fuse after the glide stops.
 	h.updateRockets(players)
 	if len(h.rockets) != 1 {
 		t.Fatal("the rocket died while its glider was still flying")
 	}
 	pl.onGround = true
 	h.updateRockets(players)
+	if len(h.rockets) != 1 {
+		t.Fatal("the rocket should burn out its fuse, not pop when the glide ends")
+	}
+	for i := 0; i < r.lifetime+2; i++ {
+		h.updateRockets(players)
+	}
 	if len(h.rockets) != 0 {
-		t.Fatal("the rocket should pop once the glide ends")
+		t.Fatal("an attached rocket outlived its fuse")
 	}
 }
 

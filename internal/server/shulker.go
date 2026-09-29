@@ -137,6 +137,8 @@ func (h *hub) shulkerTeleport(players map[int32]*tracked, m *mob) bool {
 		m.x, m.y, m.z = float64(x)+0.5, float64(y), float64(z)+0.5
 		m.sx, m.sy, m.sz = m.x, m.y, m.z
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, true))
+		old := blockPos{bx, by, bz} // the blink's particles, from where it was (level event 2016)
+		h.levelEvent(players, m.dim, worldEventShulkerTeleport, bx, by, bz, packDifference(old, blockPos{x, y, z}, 8, 8, 8))
 		h.setShulkerPeek(players, m, 0)
 		m.hasTarget, m.shPeekTicks = false, 0
 		return true

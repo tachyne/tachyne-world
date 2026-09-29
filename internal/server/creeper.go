@@ -121,6 +121,7 @@ func (h *hub) explodeCreeper(players map[int32]*tracked, m *mob) {
 	h.blastChargedCreeper, h.blastSkullDropped = m.charged, false
 	h.explodeBy(players, m.dim, m.x, m.y+0.5, m.z, radius, power, blastMob, mobDisplayName(m.etype), withHiveRelease(), withBlastCause(m.eid, true))
 	h.blastChargedCreeper = false
+	h.spawnCreeperCloud(m) // Creeper.explodeCreeper: whatever it carried lingers
 }
 
 // creeperStateMeta builds set_entity_data for the creeper fuse state (index 16,
