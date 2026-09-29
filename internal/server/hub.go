@@ -2142,6 +2142,7 @@ func (h *hub) run() {
 						*ptr = e.st
 						if hot >= 0 {
 							t.p.setHotbarSlot(hot, e.st.item)
+							t.p.setHandTags(hot, e.st.tags)
 						}
 						h.broadcastEquipment(players, t)
 					}

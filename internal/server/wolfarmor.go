@@ -49,6 +49,9 @@ func crackLevel(dmg, max int) int {
 // breaking at the end. Runs on the mob (no hub); the note is played later.
 func (m *mob) wolfArmorAbsorb(dmg float64) {
 	max := wolfArmorMax()
+	if m.armorSt.tags.unbreakable {
+		return
+	}
 	before := crackLevel(m.armorSt.dmg, max)
 	m.armorSt.dmg += int(math.Ceil(dmg))
 	if m.armorSt.dmg >= max {

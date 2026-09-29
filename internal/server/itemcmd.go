@@ -275,6 +275,7 @@ func (h *hub) playerItemTarget(t *tracked) itemTarget {
 		changed: func(players map[int32]*tracked) {
 			h.sendInventory(t) // the whole of window 0, cursor and crafting included
 			t.p.setOffhand(t.offhand.item)
+			t.p.setHandTags(offhandSlot, t.offhand.tags)
 			t.refreshArmorAttrs()
 			h.broadcastEquipment(players, t)
 			if t.winKind == winChest && t.viewChest != nil && t.viewChest == t.ender {

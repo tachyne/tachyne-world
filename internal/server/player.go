@@ -74,6 +74,7 @@ type player struct {
 	leading        atomic.Int32               // mobs on this player's leads (hub → session): a fence click ties them
 	hmu            sync.Mutex                 // guards hotbar (the hub mirrors the survival inventory in)
 	hotbar         [9]int32                   // item id per hotbar slot (0 = empty)
+	handTags       [10]itemTags               // each hotbar slot's item tags, then the offhand's (adventure can_break / can_place_on)
 	// hotbarPaint carries the painting/variant component of a creative-menu
 	// painting preset per hotbar slot ("" = plain painting → random fit).
 	hotbarPaint [9]string
@@ -412,6 +413,31 @@ func (p *player) setHotbarSlot(slot int, item int32) {
 	}
 	p.hotbar[slot] = item
 	p.hmu.Unlock()
+}
+
+// setHandTags mirrors a hand stack's item tags: a hotbar slot 0-8, or
+// offhandSlot. Digs and block clicks — where adventure mode's can_break and
+// can_place_on decide — arrive on the session goroutine.
+func (p *player) setHandTags(slot int, t itemTags) {
+	if slot == offhandSlot {
+		slot = 9
+	}
+	if slot < 0 || slot > 9 {
+		return
+	}
+	p.hmu.Lock()
+	p.handTags[slot] = t
+	p.hmu.Unlock()
+}
+
+// handTags is the item tags of the stack in a hand.
+func (p *player) handTagsOf(off bool) itemTags {
+	p.hmu.Lock()
+	defer p.hmu.Unlock()
+	if off {
+		return p.handTags[9]
+	}
+	return p.handTags[p.held]
 }
 
 // setHotbarPaint records the painting preset carried by a creative slot set.

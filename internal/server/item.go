@@ -67,6 +67,7 @@ type itemEntity struct {
 	load          xbowLoad    // a crossbow's charged_projectiles
 	golemPose     int8        // a copper golem statue's pose (block_state)
 	standTags     string      // an armor stand's entity_data
+	tags          itemTags    // lore, unbreakable, can_break, can_place_on
 	vx, vy, vz    float64     // motion per tick (tickItem); all 0 at rest
 	born          uint64      // world tick spawned
 	age           int         // ItemEntity.age: ticks it has lain (despawns at 6000; saved)
@@ -85,7 +86,7 @@ func (it *itemEntity) stack() invStack {
 		hiveID: it.hiveID, bundleID: it.bundleID, potion: it.potion, repairCost: it.repairCost,
 		instrument: it.instrument, name: it.name, lode: it.lode, color: it.color, stew: it.stew,
 		shieldBase: it.shieldBase, sherds: it.sherds, flight: it.flight, starID: it.starID, cube: it.cube,
-		ominous: it.ominous, load: it.load, golemPose: it.golemPose, standTags: it.standTags}
+		ominous: it.ominous, load: it.load, golemPose: it.golemPose, standTags: it.standTags, tags: it.tags}
 }
 
 // setFrom is stack()'s inverse: everything a slot carries, onto the dropped
@@ -104,6 +105,7 @@ func (it *itemEntity) setFrom(st invStack) {
 	it.cube, it.ominous, it.load = st.cube, st.ominous, st.load
 	it.golemPose = st.golemPose
 	it.standTags = st.standTags
+	it.tags = st.tags
 }
 
 // refreshItemMeta re-sends a ground item's stack after a drop site has

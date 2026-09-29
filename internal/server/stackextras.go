@@ -78,6 +78,10 @@ func extraComponents(st invStack) (int32, []byte) {
 		b = protocol.AppendString(b, statuePoses[st.golemPose-1])
 		n++
 	}
+	if c, cb := tagComponents(st); c > 0 {
+		n += c
+		b = append(b, cb...)
+	}
 	return n, b
 }
 

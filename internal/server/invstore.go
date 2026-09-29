@@ -124,7 +124,7 @@ func newInvStore(path string) *invStore {
 // name, repairCost and instrument existed on invStack but never reached the
 // row, so every rollout turned potions into water bottles, stripped anvil
 // names, reset the prior-work cost and made every goat horn play ponder.
-type stackRow [46]int32 // 46 on 2026-09-29 for an armor stand's entity_data; 45 on 2026-09-27 for a statue's pose; 41 on 2026-09-26 for the ominous banner, 44 for a crossbow's load; 28 → 30 on 2026-09-19 for enchantments 5-8, 32 on 2026-09-20 for a firework's flight and bursts, 36 for a pot's four sherds, 38 on 2026-09-24 for a sulfur cube bucket's block and age, 39 for a bucketed mob's variant, 40 for its health; older rows load with the tail zero
+type stackRow [50]int32 // 50 on 2026-09-29 for lore, unbreakable, can_break and can_place_on; 46 the same day for an armor stand's entity_data; 45 on 2026-09-27 for a statue's pose; 41 on 2026-09-26 for the ominous banner, 44 for a crossbow's load; 28 → 30 on 2026-09-19 for enchantments 5-8, 32 on 2026-09-20 for a firework's flight and bursts, 36 for a pot's four sherds, 38 on 2026-09-24 for a sulfur cube bucket's block and age, 39 for a bucketed mob's variant, 40 for its health; older rows load with the tail zero
 
 func packStack(st invStack) stackRow {
 	r := stackRow{st.item, int32(st.count), int32(st.dmg), packEnch(st.ench), st.mapID}
@@ -165,6 +165,12 @@ func packStack(st invStack) stackRow {
 	r[43] = st.load.starID                          // …and a loaded rocket's bursts (column 43)
 	r[44] = int32(st.golemPose)                     // a copper golem statue's pose + 1 (column 44)
 	r[45] = globalNames.Load().intern(st.standTags) // an armor stand's entity_data (column 45)
+	r[46] = globalNames.Load().intern(st.tags.lore) // lore (column 46)
+	if st.tags.unbreakable {
+		r[47] = 1 // unbreakable (column 47)
+	}
+	r[48] = globalNames.Load().intern(st.tags.canBreak) // can_break (column 48)
+	r[49] = globalNames.Load().intern(st.tags.canPlace) // can_place_on (column 49)
 	return r
 }
 
@@ -196,6 +202,8 @@ func unpackStack(r stackRow) invStack {
 	}
 	st.golemPose = int8(r[44])
 	st.standTags = globalNames.Load().get(r[45])
+	st.tags = itemTags{lore: globalNames.Load().get(r[46]), unbreakable: r[47] != 0,
+		canBreak: globalNames.Load().get(r[48]), canPlace: globalNames.Load().get(r[49])}
 	return st
 }
 

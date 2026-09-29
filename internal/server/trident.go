@@ -106,7 +106,9 @@ func (h *hub) throwTrident(players map[int32]*tracked, t *tracked, st invStack) 
 	a.channeling = st.enchLvl(enchChanneling) > 0
 	if isSurvival(t.gamemode) {
 		slot := t.useSlot()
-		st.dmg++           // one durability point of wear rides with the thrown stack
+		if _, wears := wearMax(st); wears {
+			st.dmg++ // one durability point of wear rides with the thrown stack
+		}
 		a.pickupStack = st // retrieved / returned trident restores this exact stack
 		if s := t.handStack(slot); s != nil {
 			*s = invStack{}

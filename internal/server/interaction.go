@@ -78,9 +78,10 @@ func (s *Server) handleDig(p *player, data []byte) {
 	}
 	mode := s.modes.get(p.key())
 	// Player.blockActionRestricted: an adventure or spectator player cannot
-	// break anything. The client predicts the break regardless, so the block
-	// has to be sent back.
-	if !mayBuild(mode) {
+	// break anything — unless, in adventure, the main hand's can_break names
+	// the block. The client predicts the break regardless, so the block has
+	// to be sent back.
+	if !mayBuild(mode) && !adventureMayBreak(p, mode, broken) {
 		s.sendBlockChange(p, x, y, z, broken, seq)
 		return
 	}
@@ -108,7 +109,7 @@ func (s *Server) handleDig(p *player, data []byte) {
 		if status != digStartBreak {
 			return
 		}
-	case gmSurvival:
+	case gmSurvival, gmAdventure: // adventure only when can_break allowed it above
 		// Unbreakable blocks (bedrock, barrier, portals) never yield to mining.
 		if !worldgen.Diggable(broken) {
 			s.sendBlockChange(p, x, y, z, broken, seq) // revert the client's prediction
@@ -267,7 +268,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	// ItemStack.useOn refuses every item's use on a block to a player who
 	// may not build: an adventure player neither tills, flattens, strips,
 	// waxes nor binds a compass.
-	canUseOn := mayBuild(placeMode)
+	canUseOn := mayBuild(placeMode) || adventureMayPlaceOn(p, placeMode, off, s.worldFor(p).Block(x, y, z))
 	if canUseOn && s.tryTill(p, off, x, y, z, dir, seq) {
 		return
 	}
@@ -287,7 +288,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	// line puts something INTO the world, which adventure mode may not do.
 	// Using a block — a door, a button, a chest — is allowed and has already
 	// happened above.
-	if !mayBuild(placeMode) {
+	if !canUseOn { // …or, in adventure, the hand's can_place_on names the clicked block
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		return
 	}

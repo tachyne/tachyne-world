@@ -22,7 +22,7 @@ func (h *hub) sunHelmetTakesIt(players map[int32]*tracked, m *mob) bool {
 	if head.item == 0 {
 		return false
 	}
-	if max, ok := itemMaxDurability[head.item]; ok {
+	if max, ok := wearMax(*head); ok {
 		for i := 0; i < sunHelmetRolls; i++ {
 			head.dmg += h.rng.Intn(2)
 		}

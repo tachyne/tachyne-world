@@ -89,6 +89,18 @@ type invStack struct {
 	// An armor stand's entity_data: the stand tags it places with
 	// (armorstandpose.go), "" = none.
 	standTags string
+	// Components a command or a loot table sets and nothing in play does:
+	// lore, unbreakable, and adventure mode's can_break / can_place_on.
+	tags itemTags
+}
+
+// itemTags are the stack's lore, unbreakable flag and adventure predicates
+// (itemtags.go). Strings, so invStack stays comparable.
+type itemTags struct {
+	lore        string // the lore lines, joined by "\n"
+	unbreakable bool
+	canBreak    string // can_break as advPreds JSON ("" = none)
+	canPlace    string // can_place_on, likewise
 }
 
 // xbowLoad is a crossbow's charged_projectiles: the projectile it holds and
@@ -424,6 +436,7 @@ func (h *hub) sendSlot(t *tracked, logical int) {
 		Slot: int32(windowSlot(logical)), Item: stackEv(s)})
 	if logical < 9 { // mirror the hotbar so the connection knows the held item
 		t.p.setHotbarSlot(logical, s.item)
+		t.p.setHandTags(logical, s.tags)
 	}
 }
 
@@ -445,6 +458,7 @@ func (h *hub) syncHotbar(t *tracked) {
 	}
 	for i := 0; i < 9; i++ {
 		t.p.setHotbarSlot(i, t.inv.slots[i].item)
+		t.p.setHandTags(i, t.inv.slots[i].tags)
 	}
 }
 

@@ -83,7 +83,7 @@ func (h *hub) applyToolWear(t *tracked, slot, n int) {
 	if s.item != 0 {
 		h.advance(h.playersRef, t, "item_durability_changed", advMatch{item: s.item})
 	}
-	max, ok := itemMaxDurability[s.item]
+	max, ok := wearMax(*s)
 	if !ok || s.count == 0 {
 		return
 	}
@@ -170,7 +170,7 @@ func (h *hub) wearArmor(players map[int32]*tracked, t *tracked, dmg float32, dt 
 		if a.count == 0 {
 			continue
 		}
-		max, ok := itemMaxDurability[a.item]
+		max, ok := wearMax(*a)
 		if !ok {
 			continue
 		}
@@ -199,7 +199,7 @@ func (h *hub) wearArmorSlot(players map[int32]*tracked, t *tracked, slot, n int,
 	if a.count == 0 {
 		return
 	}
-	max, ok := itemMaxDurability[a.item]
+	max, ok := wearMax(*a)
 	if !ok {
 		return
 	}

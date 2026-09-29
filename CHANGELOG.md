@@ -24,6 +24,17 @@ the public history since the project was open-sourced on 2026-07-10.
   mode may follow the filter (`replace air outline`), and the size cap is
   read from `max_block_modifications` when the fill runs, so a
   `/gamerule` just before it counts.
+- **`/give` takes the rest of the item components the engine models.**
+  `lore`, `unbreakable`, `can_break`, `can_place_on`, `trim`,
+  `banner_patterns`, `fireworks`, `firework_explosion`,
+  `written_book_content`, `writable_book_content`, `charged_projectiles` and
+  `bucket_entity_data` now go onto the given stack, and `!component` takes
+  one off. An unknown component, one named twice, or one the engine does not
+  model is refused in vanilla's words. Lore shows in the tooltip, an
+  unbreakable item never wears, and in adventure mode an item's `can_break`
+  and `can_place_on` let its holder break and build on exactly the blocks
+  they name (Java clients still need the components on their side to try,
+  which lands with the gateways).
 
 ### Fixed
 - **A posed copper golem statue looks posed in the hand.** The statue's
