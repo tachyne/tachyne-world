@@ -498,7 +498,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 			}
 			if a.breath { // a dragon fireball bursts into its breath (levelEvent 2006: the purple burst and its sound)
 				h.levelEvent(players, a.dim, worldEventDragonBreath, floorInt(a.x), floorInt(a.y), floorInt(a.z), 1)
-				h.spawnBreathCloud(a.dim, a.x, a.y, a.z)
+				h.spawnFireballCloud(players, a)
 			}
 			if a.splash { // a thrown potion shatters into its area-of-effect
 				h.splashPotionHit(players, a.dim, a.x, a.y, a.z, a.potion, a.lingering,

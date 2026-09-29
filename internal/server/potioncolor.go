@@ -31,9 +31,13 @@ var effectColorByID = func() map[int32]int32 {
 
 // potionColor mixes a kind's effect colours the way vanilla does: each
 // channel averaged over the effects, weighted by level.
-func potionColor(kind int8) int32 {
+func potionColor(kind int8) int32 { return effectsColor(potionEffects(kind)) }
+
+// effectsColor is the mix itself, for any list of effects (a creeper's
+// cloud carries the creeper's own).
+func effectsColor(effs []potEffect) int32 {
 	var r, g, b, n int
-	for _, e := range potionEffects(kind) {
+	for _, e := range effs {
 		c, ok := effectColorByID[e.id]
 		if !ok {
 			continue

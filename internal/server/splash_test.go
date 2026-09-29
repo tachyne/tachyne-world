@@ -63,12 +63,18 @@ func TestLingeringCloudDosesOverTime(t *testing.T) {
 	if len(h.clouds) != 1 {
 		t.Fatalf("a lingering potion should spawn one cloud, got %d", len(h.clouds))
 	}
-	h.updateClouds(players) // first tick doses whoever is inside
+	for i := 0; i < cloudLingerWait-1; i++ { // it waits out its ten ticks first
+		h.updateClouds(players)
+	}
+	if pl.hasEffect(effSpeed) != 0 {
+		t.Fatal("a cloud still waiting dosed someone")
+	}
+	h.updateClouds(players) // the tenth tick doses whoever is inside
 	if pl.hasEffect(effSpeed) == 0 {
 		t.Fatal("standing in a swiftness cloud should grant speed")
 	}
 	// The cloud eventually expires as it shrinks.
-	for i := 0; i < cloudTicks+5 && len(h.clouds) > 0; i++ {
+	for i := 0; i < cloudLingerTicks+5 && len(h.clouds) > 0; i++ {
 		h.tick.Add(1)
 		h.updateClouds(players)
 	}

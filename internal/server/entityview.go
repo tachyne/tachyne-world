@@ -15,7 +15,7 @@ import "math"
 // players who can see it, once, rather than broadcast and hoped for.
 //
 // It owns the entities that move and come and go — other players, mobs,
-// dropped items and experience orbs. Players were the last in: their bodies
+// dropped items, experience orbs and area-effect clouds. Players were the last in: their bodies
 // were spawned for the whole dimension at join while their moves reached only
 // viewers within six chunks, and nothing removed them on leaving range — so
 // a player who flew or teleported away stayed standing, frozen, wherever
@@ -36,6 +36,9 @@ func (h *hub) trackable(eid int32) (kind int, ok bool) {
 	if _, live := h.orbs[eid]; live {
 		return trackOrb, true
 	}
+	if _, live := h.clouds[eid]; live {
+		return trackCloud, true
+	}
 	return 0, false
 }
 
@@ -43,6 +46,7 @@ const (
 	trackMob = iota
 	trackItem
 	trackOrb
+	trackCloud
 )
 
 // trackRange is an entity type's tracking range in blocks — vanilla's
@@ -125,6 +129,12 @@ func (h *hub) syncTracking(players map[int32]*tracked) {
 		for _, o := range h.orbs {
 			if visibleIn(t, v, o.dim, o.x, o.z, orbR) {
 				want[o.eid] = true
+			}
+		}
+		cloudR := trackRange(entityAreaEffectCloud)
+		for _, c := range h.clouds {
+			if visibleIn(t, v, c.dim, c.x, c.z, cloudR) {
+				want[c.eid] = true
 			}
 		}
 		t.p.unlockView()
@@ -244,6 +254,8 @@ func (h *hub) showEntityTo(t *tracked, eid int32) {
 	case kind == trackOrb:
 		o := h.orbs[eid]
 		t.p.trySendEv(entAdd(o.eid, entityXPOrb, o.uuid, o.x, o.y, o.z, 0, 0))
+	case kind == trackCloud:
+		h.showCloudTo(t, h.clouds[eid])
 	}
 }
 

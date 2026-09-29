@@ -277,7 +277,9 @@ func (h *hub) setDragonPhase(players map[int32]*tracked, m *mob, phase int) {
 		return
 	}
 	if d.phase == phaseSittingFlaming && d.flameCloud != 0 { // DragonSittingFlamingPhase.end: the cloud goes
-		delete(h.clouds, d.flameCloud)
+		if c := h.clouds[d.flameCloud]; c != nil {
+			h.removeCloud(players, c)
+		}
 		d.flameCloud = 0
 	}
 	d.phase = phase

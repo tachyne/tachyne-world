@@ -13,13 +13,16 @@ func TestLingeringCloudDosesMobs(t *testing.T) {
 	h.playersRef = players
 	m := h.spawnSpecies(players, entityZombie, 0, 50.5, 70, 50.5)
 	h.spawnPotionCloud(0, 50.5, 70, 50.5, potSwiftness)
-	h.updateClouds(players)
+	for i := 0; i < cloudLingerWait; i++ {
+		h.updateClouds(players)
+	}
 	if m.effects == nil || m.effects[effSpeed] == nil {
 		t.Fatalf("the zombie in a Swiftness cloud should be sped up: %+v", m.effects)
 	}
 	far := h.spawnSpecies(players, entityZombie, 0, 80.5, 70, 50.5)
-	h.tick.Store(h.tick.Load() + cloudReapply + 1)
-	h.updateClouds(players)
+	for i := 0; i < cloudReapply; i++ {
+		h.updateClouds(players)
+	}
 	if far.effects != nil && far.effects[effSpeed] != nil {
 		t.Error("a zombie thirty blocks away must not be dosed")
 	}

@@ -449,11 +449,7 @@ func (h *hub) fillBottle(players map[int32]*tracked, t *tracked, slot int32) {
 		return // a hotbar slot or the offhand
 	}
 	if c := h.dragonBreathNear(t); c != nil {
-		c.radius -= 0.5
-		if c.radius <= 0 {
-			delete(h.clouds, c.eid)
-			h.entityGone(players, c.dim, c.eid)
-		}
+		h.setCloudRadius(players, c, c.radius-0.5)
 		h.playSoundDim(players, t.dim, "minecraft:item.bottle.fill_dragonbreath", sndNeutral, t.x, t.y, t.z, 1, 1)
 		h.vibAt(t.dim, freqFluidPickup, t.x, t.y, t.z, t.p.eid)
 		h.turnBottleInto(t, slot, invStack{item: int32(itemByName["dragon_breath"]), count: 1})
@@ -468,14 +464,16 @@ func (h *hub) fillBottle(players map[int32]*tracked, t *tracked, slot int32) {
 }
 
 // dragonBreathNear is the AreaEffectCloud search BottleItem.use opens with:
-// a live cloud the DRAGON owns, inside the player's box grown by two.
+// a live cloud the DRAGON owns whose box (radius wide, half a block tall)
+// meets the player's box grown by two.
 func (h *hub) dragonBreathNear(t *tracked) *effectCloud {
 	for _, c := range h.clouds {
-		if !c.breath || c.dim != t.dim || c.ttl <= 0 {
+		if !c.ownerDragon || c.dim != t.dim {
 			continue
 		}
-		if math.Abs(c.x-t.x) <= 2+c.radius && math.Abs(c.z-t.z) <= 2+c.radius &&
-			math.Abs(c.y-t.y) <= 2+playerEyeHeightStand {
+		r := float64(c.radius)
+		if math.Abs(c.x-t.x) < 2.3+r && math.Abs(c.z-t.z) < 2.3+r &&
+			c.y < t.y+1.8+2 && c.y+cloudHeight > t.y-2 {
 			return c
 		}
 	}
