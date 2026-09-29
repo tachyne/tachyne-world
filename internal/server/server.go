@@ -620,8 +620,9 @@ func (s *Server) Serve() error {
 		}
 		defer aln.Close()
 		spawn := attach.Config{
-			World: s.world,
-			Time:  func() int64 { return int64(s.hub.dayTime.Load()) },
+			World:     s.world,
+			Time:      func() int64 { return int64(s.hub.dayTime.Load()) },
+			TimeFrame: s.hub.joinTime, // atomics only: safe off the hub goroutine
 			LoginFlags: func() (bool, bool, bool) {
 				f := s.hub.loginFlags.Load()
 				return f&loginNoRespawnScreen != 0, f&loginLimitedCrafting != 0, f&loginReducedDebug != 0

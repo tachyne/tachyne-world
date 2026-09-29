@@ -420,7 +420,7 @@ func (h *hub) updateSleep(players map[int32]*tracked) {
 	if h.raining {                                            // vanilla: sleeping through the night resets the weather cycle
 		h.resetWeatherCycle()
 	}
-	body := timeEv(h.tick.Load(), h.dayTime.Load())
+	body := h.timeFrame()
 	morning := chatEv("Good morning — the night was slept away")
 	for _, t := range players {
 		slept := t.sleeping && now-t.sleepingAt >= catGiftMinSleep

@@ -16,6 +16,7 @@ const (
 	componentFishBaseColor    = 80 // tropical_fish/base_color (dye)
 	componentFishPatternColor = 81 // tropical_fish/pattern_color (dye)
 	componentAxolotlVariant   = 91 // axolotl/variant
+	componentBlockState       = 67 // block_state: property name -> value
 
 	rarityUncommon = 1 // Rarity.UNCOMMON
 )
@@ -66,6 +67,16 @@ func extraComponents(st invStack) (int32, []byte) {
 		c, cb := bucketComponents(etype, st.cube)
 		n += c
 		b = append(b, cb...)
+	}
+	if st.golemPose > 0 && int(st.golemPose) <= len(statuePoses) {
+		// block_state: the statue loot table's copy_state of
+		// copper_golem_pose. The tooltip and the client's placement
+		// prediction read the pose from it.
+		b = protocol.AppendVarInt(b, componentBlockState)
+		b = protocol.AppendVarInt(b, 1)
+		b = protocol.AppendString(b, "copper_golem_pose")
+		b = protocol.AppendString(b, statuePoses[st.golemPose-1])
+		n++
 	}
 	return n, b
 }

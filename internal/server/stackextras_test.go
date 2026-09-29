@@ -233,3 +233,32 @@ func TestSalmonAndAxolotlBucketsCarryTheirVariant(t *testing.T) {
 		}
 	}
 }
+
+// A posed copper golem statue reaches the client with block_state
+// {copper_golem_pose: <pose>} — 76 on 26.2, 78 on 26.3 — so its tooltip and
+// placement prediction show the pose rather than a standing golem.
+func TestPosedStatueSendsBlockState(t *testing.T) {
+	item := itemByName["weathered_copper_golem_statue"]
+	if item == 0 {
+		t.Fatal("no statue item")
+	}
+	for _, tc := range []struct{ version, cid int32 }{{776, 76}, {777, 78}} {
+		st := invStack{item: item, count: 1, golemPose: 3} // running
+		r, _, added := slotOnClient(t, st, tc.version)
+		if added != 1 {
+			t.Fatalf("v%d: %d components, want 1", tc.version, added)
+		}
+		cid, _ := protocol.ReadVarInt(r)
+		n, _ := protocol.ReadVarInt(r)
+		k, _ := protocol.ReadString(r)
+		v, _ := protocol.ReadString(r)
+		if cid != tc.cid || n != 1 || k != "copper_golem_pose" || v != "running" || r.Len() != 0 {
+			t.Errorf("v%d: component %d, %d pairs, %q=%q, %d left; want %d, 1, copper_golem_pose=running, 0",
+				tc.version, cid, n, k, v, r.Len(), tc.cid)
+		}
+	}
+	// No pose, no component.
+	if _, _, added := slotOnClient(t, invStack{item: item, count: 1}, 777); added != 0 {
+		t.Errorf("an unposed statue carries %d components", added)
+	}
+}

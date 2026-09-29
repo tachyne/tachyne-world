@@ -31,6 +31,9 @@ import (
 type Config struct {
 	World *world.World
 	Time  func() int64 // world day-time in ticks
+	// TimeFrame is the world clocks' full sync (game time and every clock's
+	// state), for the Welcome and the periodic Time frame; nil = Time alone.
+	TimeFrame func() proto.Time
 	// LoginFlags reads the gamerules the login packet carries
 	// (immediate_respawn, limited_crafting, reduced_debug_info); nil = the
 	// defaults.
@@ -231,6 +234,9 @@ func session(c net.Conn, cfg Config) {
 		sections = cfg.World.Sections() // tall worlds report their real height
 	}
 	welcome := proto.Welcome{Spawn: cfg.Spawn, Time: cfg.Time(), MinY: proto.MinY, Sections: sections}
+	if cfg.TimeFrame != nil {
+		welcome.Clocks = cfg.TimeFrame().Clocks
+	}
 	if cfg.LoginFlags != nil {
 		welcome.NoRespawnScreen, welcome.LimitedCrafting, welcome.ReducedDebug = cfg.LoginFlags()
 	}
@@ -286,21 +292,25 @@ func session(c net.Conn, cfg Config) {
 	welcomed = true
 	preMu.Unlock()
 
-	// Periodic world clock.
-	go func() {
-		t := time.NewTicker(timeInterval)
-		defer t.Stop()
-		for {
-			select {
-			case <-t.C:
-				if !send(frameJSON(proto.MsgTime, proto.Time{Time: cfg.Time()})) {
+	// Periodic world clock — for solo sessions. With TimeFrame the hub owns
+	// the clock sync (once a second, and at every change), and a second
+	// sender here would only step the clients back to a staler snapshot.
+	if cfg.TimeFrame == nil {
+		go func() {
+			t := time.NewTicker(timeInterval)
+			defer t.Stop()
+			for {
+				select {
+				case <-t.C:
+					if !send(frameJSON(proto.MsgTime, proto.Time{Time: cfg.Time()})) {
+						return
+					}
+				case <-done:
 					return
 				}
-			case <-done:
-				return
 			}
-		}
-	}()
+		}()
+	}
 
 	// Chunk streaming: Want requests queue coordinates; a small worker pool
 	// builds chunk frames (generation + lighting are the expensive bits) and

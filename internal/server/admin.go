@@ -501,6 +501,7 @@ func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {
 		h.rules.KeepInventory = e.on
 	case "advance_time":
 		h.rules.DoDaylight = e.on
+		h.broadcastTime(players) // the clocks' full sync: their rates stop or resume
 	case "spawn_mobs":
 		h.rules.DoMobSpawning = e.on
 	case "mob_griefing":

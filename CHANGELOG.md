@@ -11,6 +11,20 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-29
+
+### Fixed
+- **A posed copper golem statue looks posed in the hand.** The statue's
+  item now carries its pose as the `block_state` component (26.2 and 26.3
+  number it 76 and 78), so the tooltip and the client's placement preview
+  show a sitting, running or star statue, not a standing one.
+- **Paused and re-rated clocks stay put on the client.** Each time sync
+  now carries every world clock, the overworld's and the End's, with its
+  full total, partial tick and rate, which is 0 while a clock is paused or
+  `advance_time` is off. A `/time pause` or `/time rate` no longer drifts
+  back between the once-a-second resyncs, the moon keeps its phase, and a
+  change to either clock or to `advance_time` reaches everyone at once.
+
 ## 2026-09-27
 
 ### Added

@@ -5,6 +5,8 @@ import (
 	"math"
 	"strconv"
 	"strings"
+
+	attachproto "github.com/tachyne/tachyne-common/attach"
 )
 
 // /time (TimeCommand, 26.3): the world's clocks. Each clock (WorldClock:
@@ -147,15 +149,51 @@ func (h *hub) setClockTotal(players map[int32]*tracked, c int, v uint64) {
 		return
 	}
 	h.clocks[c].Total = v
+	h.broadcastTime(players)
 }
 
 // broadcastTime is modifyClock's ClientboundSetTimePacket: everyone is told
 // at once rather than at the next once-a-second send.
 func (h *hub) broadcastTime(players map[int32]*tracked) {
-	body := timeEv(h.tick.Load(), h.dayTime.Load())
+	body := h.timeFrame()
 	for _, t := range players {
 		t.p.trySendEv(body)
 	}
+}
+
+// timeFrame is ServerClockManager.createFullSyncPacket: the game time and
+// every clock's packNetworkState — its full total (the moon's phase is the
+// total over a 192000-tick period), partial tick and rate, which is 0 while
+// the clock is paused or the advance_time rule is off. It is also kept for
+// the sessions that join between syncs.
+func (h *hub) timeFrame() attachproto.Time {
+	day := h.dayTime.Load()
+	f := attachproto.Time{Age: int64(h.tick.Load()), Time: int64(day % dayLengthTicks)}
+	f.Clocks = make([]attachproto.Clock, numClocks)
+	for c := range h.clocks {
+		r := &h.clocks[c]
+		rate := r.rate()
+		if r.Paused || !h.rules.DoDaylight {
+			rate = 0
+		}
+		f.Clocks[c] = attachproto.Clock{ID: clockNetID[c], Total: int64(h.clockTotal(c)), Partial: r.Partial, Rate: rate}
+	}
+	snap := f
+	h.lastTime.Store(&snap)
+	return f
+}
+
+// clockNetID is each clock's id in the world_clock registry the gateways send.
+var clockNetID = [numClocks]int32{clockOverworld: attachproto.ClockOverworld, clockTheEnd: attachproto.ClockTheEnd}
+
+// joinTime is the clock sync a joining session starts from (PlayerList
+// sendLevelInfo's full sync): the last one the hub built, or the bare day
+// time before the first.
+func (h *hub) joinTime() attachproto.Time {
+	if f := h.lastTime.Load(); f != nil {
+		return *f
+	}
+	return attachproto.Time{Time: int64(h.dayTime.Load())}
 }
 
 // tickClocks is ServerClockManager.tick: while advance_time holds, every
@@ -357,9 +395,7 @@ func (h *hub) runTime(players map[int32]*tracked, p *player, args []string) {
 		}
 		run.Paused = paused
 		h.saveRules()
-		if clock == clockOverworld {
-			h.broadcastTime(players)
-		}
+		h.broadcastTime(players)
 		if paused {
 			okTell(fmt.Sprintf("Paused clock %s", key))
 		} else {
@@ -386,9 +422,7 @@ func (h *hub) runTime(players map[int32]*tracked, p *player, args []string) {
 		}
 		run.Rate = rate
 		h.saveRules()
-		if clock == clockOverworld {
-			h.broadcastTime(players)
-		}
+		h.broadcastTime(players)
 		okTell(fmt.Sprintf("Clock %s will now advance at %sx normal rate", key, jFloat(rate)))
 	case "query":
 		if rest[0] == "time" {
