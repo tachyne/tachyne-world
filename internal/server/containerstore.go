@@ -203,6 +203,8 @@ type savedStand struct {
 	NoBasePlate bool `json:"noBasePlate,omitempty"`
 	Marker      bool `json:"marker,omitempty"`
 	Invisible   bool `json:"invisible,omitempty"`
+	// The Pose tag's six rotations; absent for the default pose.
+	Pose *standPose `json:"pose,omitempty"`
 }
 
 // recordLecterns / loadLecterns persist lectern books + pages.
@@ -272,7 +274,7 @@ func (s *containerStore) recordStands(stands map[int32]*armorStand) {
 	s.m.Stands = s.m.Stands[:0]
 	for _, st := range stands {
 		sv := savedStand{Dim: st.dim, X: st.x, Y: st.y, Z: st.z, Yaw: st.yaw, Name: st.name, Hurt: st.hurt, Fire: st.fire,
-			Small: st.small, ShowArms: st.arms, NoBasePlate: st.noBasePlate, Marker: st.marker, Invisible: st.invisible}
+			Small: st.small, ShowArms: st.arms, NoBasePlate: st.noBasePlate, Marker: st.marker, Invisible: st.invisible, Pose: st.pose}
 		for i, e := range st.equip {
 			sv.Equip[i] = packStack(e)
 		}
@@ -288,7 +290,7 @@ func (s *containerStore) loadStands(alloc func() int32) map[int32]*armorStand {
 	for _, sv := range s.m.Stands {
 		st := &armorStand{eid: alloc(), dim: sv.Dim, x: sv.X, y: sv.Y, z: sv.Z, yaw: sv.Yaw, name: sv.Name,
 			hurt: sv.Hurt, fire: sv.Fire,
-			small: sv.Small, arms: sv.ShowArms, noBasePlate: sv.NoBasePlate, marker: sv.Marker, invisible: sv.Invisible}
+			small: sv.Small, arms: sv.ShowArms, noBasePlate: sv.NoBasePlate, marker: sv.Marker, invisible: sv.Invisible, pose: sv.Pose}
 		for i, r := range sv.Equip {
 			st.equip[i] = unpackStack(r)
 		}

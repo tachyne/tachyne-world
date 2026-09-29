@@ -176,6 +176,9 @@ func (h *hub) interactMob(players map[int32]*tracked, t *tracked, m *mob, sneak 
 // onInteractMob is Player.interactOn for a right-click on an entity, in the
 // hand t.useOffhand names.
 func (h *hub) onInteractMob(players map[int32]*tracked, t *tracked, e evInteractMob) {
+	if h.fixtureOutOfReach(t, e.target) {
+		return // handleInteract: beyond isWithinEntityInteractionRange(…, 3.0)
+	}
 	if st := h.armorStands[e.target]; st != nil {
 		h.interactStand(players, t, st)
 		return

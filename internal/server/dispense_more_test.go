@@ -7,7 +7,7 @@ import (
 )
 
 // The rest of the dispenser table: glowstone charges an anchor ahead, a
-// carved pumpkin is placed facing the dispenser, a shulker box is placed
+// carved pumpkin with no golem to finish stays put, a shulker box is placed
 // with its facing, an XP bottle and a rocket fly, a chest goes onto a tamed
 // llama, and a brush combs an armadillo for a scute.
 func TestDispenseRemainingBehaviors(t *testing.T) {
@@ -38,15 +38,14 @@ func TestDispenseRemainingBehaviors(t *testing.T) {
 			t.Errorf("the glowstone should be spent: %d left", s.count)
 		}
 
-		// A carved pumpkin lands facing back west at the dispenser.
+		// A carved pumpkin with no golem body below and nobody to wear it
+		// stays in the dispenser (dispense_leftovers_test.go has the rest).
 		w.SetBlock(front.x, front.y, front.z, worldgen.Air)
 		w.SetBlock(front.x, front.y-1, front.z, worldgen.Stone) // no golem body below
-		load(invStack{item: itemCarvedPumpkin, count: 1})
+		pk := load(invStack{item: itemCarvedPumpkin, count: 1})
 		h.ejectFromBin(h.playersRef, simPos{blockPos: pos}, state)
-		got := w.At(front.x, front.y, front.z)
-		info, _ := worldgen.InfoForState(carvedPumpkinBase)
-		if !isCarvedPumpkin(got) || worldgen.GetProperty(info, got, "facing") != "west" {
-			t.Errorf("carved pumpkin state %d facing %q, want west", got, worldgen.GetProperty(info, got, "facing"))
+		if got := w.At(front.x, front.y, front.z); got != worldgen.Air || pk.count != 1 {
+			t.Errorf("a pumpkin with no golem to finish is kept: cell %d, %d left", got, pk.count)
 		}
 
 		// A shulker box opens east with ground below, up without.
@@ -54,7 +53,7 @@ func TestDispenseRemainingBehaviors(t *testing.T) {
 		box := int32(itemByName["red_shulker_box"])
 		load(invStack{item: box, count: 1})
 		h.ejectFromBin(h.playersRef, simPos{blockPos: pos}, state)
-		got = w.At(front.x, front.y, front.z)
+		got := w.At(front.x, front.y, front.z)
 		binfo, _ := worldgen.InfoForState(got)
 		if !isShulkerBox(got) || worldgen.GetProperty(binfo, got, "facing") != "up" {
 			t.Errorf("shulker over ground: state %d facing %q, want up", got, worldgen.GetProperty(binfo, got, "facing"))

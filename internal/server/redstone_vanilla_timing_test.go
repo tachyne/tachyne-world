@@ -319,7 +319,7 @@ func TestVanillaTimingButtons(t *testing.T) {
 		w.SetBlock(x, y, z+1, worldgen.Stone)
 		w.SetBlock(x, y, z, withProps(t, worldgen.BlockBase(c.name), map[string]string{"face": "wall", "facing": "north", "powered": "false"}))
 		w.SetBlock(x+1, y, z, lampOff)
-		h.pressButton(players, blockPos{x, y, z}, w.At(x, y, z))
+		h.pressButton(players, blockPos{x, y, z}, w.At(x, y, z), nil)
 		wasLit := false
 		got := firstTicks(h, players, c.ticks+8,
 			func() bool { return w.At(x+1, y, z) == lampOn },

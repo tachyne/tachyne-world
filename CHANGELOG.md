@@ -55,6 +55,30 @@ the public history since the project was open-sourced on 2026-07-10.
   unemployed again. After a won raid, the cheering lasts its full
   thirty seconds even if the villager wanders under a roof. Only the
   fireworks need the open sky.
+- **Frames, paintings, leash knots and end crystals need to be in reach.**
+  A punch or a right-click on one now counts only within the player's entity
+  interaction range, as it already did for mobs, armor stands and vehicles.
+- **Armor stands take poses.** A summoned stand's `Pose` (head, body, arms
+  and legs) now shows and survives a restart, and an armor stand item given
+  with `entity_data` places a stand with its arms, pose and other tags. A
+  plain item still places a bare, armless stand, as in vanilla.
+- **Camels walk over fences.** A camel's 1.5-block step now carries it up
+  onto a single fence, wall or closed gate and across, and it plans its
+  walks over them; a fence two high still holds it, and every other mob
+  still goes round.
+- **Dispensers place pumpkins and wither skulls only to finish a build.** A
+  dispensed carved pumpkin is placed only where it completes a snow, iron or
+  copper golem, and a wither skeleton skull only onto a wither's soul-sand
+  base; anywhere else it goes on the head of whoever stands in front, and
+  with nobody there the dispenser clicks and keeps it.
+- **A button no longer clicks twice for the Java player pressing it.** The
+  server's click goes to everyone else, as in vanilla, since the presser's
+  own game already played it; Bedrock players still get it.
+- **Walls read the exact shape of what sits on them.** A wall's tall sides
+  and centre post now follow the bottom face of the block above, as in
+  vanilla: a bottom slab or a carpet raises the sides, a top slab does not,
+  a fence post raises only the post, and torches, signs, banners and
+  pressure plates keep the post up.
 
 ## 2026-09-27
 

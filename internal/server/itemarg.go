@@ -127,6 +127,20 @@ func applyItemComponent(st *invStack, key string, v any) string {
 			return bad()
 		}
 		st.color = int32(n)
+	case "minecraft:entity_data":
+		m, ok := v.(map[string]any)
+		if !ok {
+			return bad()
+		}
+		if _, ok := m["id"].(string); !ok {
+			return bad() // TypedEntityData needs its id
+		}
+		if st.item != itemArmorStand {
+			return fmt.Sprintf("The '%s' component is not supported here", key)
+		}
+		if tags, ok := standTagsFromEntityData(m); ok {
+			st.standTags = tags
+		}
 	default:
 		return fmt.Sprintf("The '%s' component is not supported here", key)
 	}

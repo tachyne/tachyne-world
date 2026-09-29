@@ -76,7 +76,7 @@ func TestButtonPulsesAndReleases(t *testing.T) {
 	w.SetBlock(x, y, z+1, worldgen.Stone)                         // the wall the button sits on
 	w.SetBlock(x, y, z, (worldgen.BlockBase("stone_button") + 9)) // stone button default
 	w.SetBlock(x+1, y, z, lampOff)
-	h.pressButton(players, blockPos{x, y, z}, w.At(x, y, z))
+	h.pressButton(players, blockPos{x, y, z}, w.At(x, y, z), nil)
 	stepTicks(h, players, 3)
 	if w.At(x+1, y, z) != lampOn {
 		t.Fatal("pressed button should light the lamp")

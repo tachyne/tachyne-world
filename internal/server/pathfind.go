@@ -53,6 +53,9 @@ func (h *hub) pathSteer(m *mob, gx, gz float64) (float64, float64) {
 			// vindicator's (setCanOpenDoors(level.isRaided(pos))).
 			pw = doorPather{h.worldFor(m.dim)}
 		}
+		if m.plansOverFences() {
+			pw = fencePather{pather: pw, bodyH: m.box().h}
+		}
 		m.path, m.pathReached = findPathLimits(pw, malusFor(m.etype), sxi, szi, gxi, gzi, pathMaxRange, pathMaxNodes, m.climb())
 		m.pathIdx = 0
 		m.pathGoal = [2]int{gxi, gzi}
@@ -249,6 +252,8 @@ func pathLoaded(w pather, x, z int) bool {
 		return p.Loaded(int32(x>>4), int32(z>>4))
 	case doorPather:
 		return p.w.Loaded(int32(x>>4), int32(z>>4))
+	case fencePather:
+		return pathLoaded(p.pather, x, z)
 	}
 	return true
 }

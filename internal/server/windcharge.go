@@ -152,7 +152,7 @@ func (h *hub) triggerBlock(players map[int32]*tracked, dim int, pos blockPos, st
 		// overworld-only guard here outlived its reason.
 		h.inDim(dim, func() { h.toggleLever(players, pos, st) })
 	case isButton(st):
-		h.inDim(dim, func() { h.pressButton(players, pos, st) })
+		h.inDim(dim, func() { h.pressButton(players, pos, st, nil) })
 	case info.HasProperty("hinge"): // a door: the lower half swings both
 		if isIronDoor(st) || boolProp(st, "powered") || worldgen.GetProperty(info, st, "half") != "lower" {
 			return

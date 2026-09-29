@@ -86,6 +86,9 @@ type invStack struct {
 	// A copper golem statue's block_state component (copy_state of
 	// copper_golem_pose): 1 + the pose's index in statuePoses, 0 = none.
 	golemPose int8
+	// An armor stand's entity_data: the stand tags it places with
+	// (armorstandpose.go), "" = none.
+	standTags string
 }
 
 // xbowLoad is a crossbow's charged_projectiles: the projectile it holds and

@@ -536,16 +536,29 @@ func (h *hub) wireConnectsTo(ns uint32, d rsDir) bool {
 	return h.isSignalSource(ns)
 }
 
-// pressButton / toggleLever are the right-click interactions.
-func (h *hub) pressButton(players map[int32]*tracked, pos blockPos, state uint32) {
+// pressButton / toggleLever are the right-click interactions. by is the
+// player who pressed the button, nil for an arrow or a wind charge.
+func (h *hub) pressButton(players map[int32]*tracked, pos blockPos, state uint32, by *tracked) {
 	if boolProp(state, "powered") {
 		return
 	}
 	ticks, on, _, _ := buttonKind(state)
 	h.pressedAt[simPos{dim: h.rsDim, blockPos: pos}] = h.tick.Load()
 	h.rsSet(players, pos, setBoolProp(state, "powered", true))
-	h.vib(h.rsDim, freqBlockActivate, pos.x, pos.y, pos.z, 0)
-	h.rsSound(players, on, sndBlock, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
+	var src int32
+	if by != nil {
+		src = by.p.eid
+	}
+	h.vib(h.rsDim, freqBlockActivate, pos.x, pos.y, pos.z, src) // gameEvent(player, BLOCK_ACTIVATE)
+	// ButtonBlock.playSound(player, …): the presser's own Java client
+	// played the click when it predicted the press, so the server's goes to
+	// everyone else. A Bedrock client predicts no click, and keeps it.
+	cx, cy, cz := float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5
+	if by != nil && !by.p.bedrock {
+		h.playSoundExcept(players, h.rsDim, by.p.eid, on, sndBlock, cx, cy, cz, 1, 1)
+	} else {
+		h.rsSound(players, on, sndBlock, cx, cy, cz, 1, 1)
+	}
 	h.scheduleSignalAround(players, pos)
 	h.rsSchedule(pos, uint64(ticks)) // the unpress timer
 }
