@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/tachyne/tachyne-world/internal/worldgen"
@@ -10,8 +11,8 @@ import (
 // /setblock and /fill (SetBlockCommand, FillCommand). Both are op commands:
 // the operator names a block state ("stone", "oak_stairs[facing=north]") and
 // a position or a box, and the hub writes it in with the usual neighbour
-// updates. A fill is capped at vanilla's command_modification_block_limit
-// (32768 blocks).
+// updates. A fill is capped at the max_block_modifications gamerule
+// (fillLimit is its default).
 
 const fillLimit = 32768
 
@@ -31,6 +32,7 @@ type evSetBlocks struct {
 	state      uint32
 	mode       string            // replace (default), destroy, keep; /fill also hollow, outline
 	filter     func(uint32) bool // /fill … replace <filter>: the BlockPredicate a cell must meet
+	filterNBT  map[string]any    // …and the block entity data it must carry
 	single     bool              // /setblock: its own feedback
 	fillWanted int
 	strict     bool           // strict: no neighbour or shape updates (UPDATE_SKIP_ALL_SIDEEFFECTS)
@@ -133,7 +135,7 @@ func (s *Server) cmdFill(p *player, args []string) {
 		p.tell("You don't have permission.")
 		return
 	}
-	usage := "Usage: /fill <from> <to> <block>[{<nbt>}] [destroy|hollow|keep|outline|strict|replace [<filter>] [strict]]"
+	usage := "Usage: /fill <from> <to> <block>[{<nbt>}] [keep|replace [<filter> [<mode>]]|<mode>] — a mode is outline, hollow, destroy or strict"
 	if len(args) < 7 {
 		p.tell(usage)
 		return
@@ -151,42 +153,46 @@ func (s *Server) cmdFill(p *player, args []string) {
 	e := evSetBlocks{eid: p.eid, dim: p.dim, state: st, mode: "replace", nbt: nbt,
 		from: blockPos{min(floorInt(x0), floorInt(x1)), min(floorInt(y0), floorInt(y1)), min(floorInt(z0), floorInt(z1))},
 		to:   blockPos{max(floorInt(x0), floorInt(x1)), max(floorInt(y0), floorInt(y1)), max(floorInt(z0), floorInt(z1))}}
-	if len(args) >= 8 {
-		switch e.mode = args[7]; e.mode {
-		case "destroy", "hollow", "keep", "outline":
+	// FillCommand: <block> [replace [<filter> [<mode>]] | keep | <mode>],
+	// where a mode is outline, hollow, destroy or strict.
+	rest := args[7:]
+	mode := func(m string) bool {
+		switch m {
+		case "outline", "hollow", "destroy":
+			e.mode = m
 		case "strict":
-			e.mode, e.strict = "replace", true
-		case "replace":
-			rest := args[8:]
-			if len(rest) > 0 && rest[len(rest)-1] == "strict" {
-				e.strict, rest = true, rest[:len(rest)-1]
-			}
-			if len(rest) == 1 {
-				arg := rest[0]
-				if i := strings.IndexByte(arg, '{'); i >= 0 {
-					arg = arg[:i] // block entity data in a predicate is not modelled; the block still has to match
-				}
-				f, ok := parseBlockPredicate(arg)
-				if !ok {
-					p.tell(blockPredicateError(rest[0]))
-					return
-				}
-				e.filter = f
-			} else if len(rest) > 1 {
-				p.tell(usage)
+			e.strict = true
+		default:
+			return false
+		}
+		return true
+	}
+	switch {
+	case len(rest) == 0:
+	case rest[0] == "keep" && len(rest) == 1:
+		e.mode = "keep"
+	case rest[0] == "replace" && len(rest) <= 3:
+		if len(rest) >= 2 {
+			pred, msg := parseBlockPredicateNBT(rest[1])
+			if msg != "" {
+				p.tell(msg)
 				return
 			}
-		default:
+			e.filter, e.filterNBT = pred.state, pred.nbt
+		}
+		if len(rest) == 3 && !mode(rest[2]) {
 			p.tell(usage)
 			return
 		}
-	}
-	n := (e.to.x - e.from.x + 1) * (e.to.y - e.from.y + 1) * (e.to.z - e.from.z + 1)
-	if limit := s.hub.blockLimit(); n > limit {
-		p.tell(fmt.Sprintf("Too many blocks in the specified area (maximum %d, specified %d)", limit, n))
+	case len(rest) == 1 && mode(rest[0]):
+	default:
+		p.tell(usage)
 		return
 	}
-	e.fillWanted = n
+	// The volume saturates rather than wrap: corners 30 million blocks apart
+	// overflow even an int64.
+	vol := float64(e.to.x-e.from.x+1) * float64(e.to.y-e.from.y+1) * float64(e.to.z-e.from.z+1)
+	e.fillWanted = int(min(vol, math.MaxInt32))
 	s.hub.post(e)
 }
 
@@ -202,7 +208,13 @@ func (h *hub) applySetBlocks(players map[int32]*tracked, e evSetBlocks) {
 	if w == nil {
 		return
 	}
-	changed := 0
+	// The cap is read on the hub, where a /gamerule just before it has
+	// already landed.
+	if limit := h.blockLimit(); !e.single && e.fillWanted > limit {
+		tell(fmt.Sprintf("Too many blocks in the specified area (maximum %d, but specified %d)", limit, e.fillWanted))
+		return
+	}
+	changed, nbtErr := 0, ""
 	for x := e.from.x; x <= e.to.x; x++ {
 		for y := e.from.y; y <= e.to.y; y++ {
 			for z := e.from.z; z <= e.to.z; z++ {
@@ -222,10 +234,13 @@ func (h *hub) applySetBlocks(players map[int32]*tracked, e evSetBlocks) {
 					}
 				}
 				old := w.At(x, y, z)
-				if e.mode == "keep" && old != worldgen.Air {
+				if e.mode == "keep" && !isAirState(old) { // level.isEmptyBlock
 					continue
 				}
 				if e.filter != nil && !e.filter(old) {
+					continue
+				}
+				if e.filterNBT != nil && !nbtMatches(e.filterNBT, h.blockEntityNBT(simPos{dim: e.dim, blockPos: blockPos{x, y, z}}, old), true) {
 					continue
 				}
 				if old == want && e.nbt == nil {
@@ -252,11 +267,16 @@ func (h *hub) applySetBlocks(players map[int32]*tracked, e evSetBlocks) {
 					h.dropSpawnerBE(simPos{dim: e.dim, blockPos: pos}) // a fresh block entity: an empty cage
 				}
 				if e.nbt != nil {
-					h.loadBlockEntityNBT(simPos{dim: e.dim, blockPos: pos}, want, e.nbt)
+					if msg := h.loadBlockEntityNBT(players, simPos{dim: e.dim, blockPos: pos}, want, e.nbt); msg != "" && nbtErr == "" {
+						nbtErr = msg
+					}
 				}
 				changed++
 			}
 		}
+	}
+	if nbtErr != "" {
+		tell(nbtErr)
 	}
 	switch {
 	case e.single && changed == 0:
@@ -270,40 +290,24 @@ func (h *hub) applySetBlocks(players map[int32]*tracked, e evSetBlocks) {
 	}
 }
 
-// loadBlockEntityNBT applies the block entity data a /setblock or /fill gave:
-// CustomName on a nameable block, and Items on a chest-like container
-// (each {Slot, id, count}).
-func (h *hub) loadBlockEntityNBT(pos simPos, state uint32, nbt map[string]any) {
+// loadBlockEntityNBT is BlockInput.place's loadWithComponents: the block
+// entity data a /setblock or /fill gave goes into the fresh block entity —
+// CustomName on a nameable block, a spawner's SpawnData and Delay, a
+// container's Items, a sign's two sides, a banner's patterns.
+func (h *hub) loadBlockEntityNBT(players map[int32]*tracked, pos simPos, state uint32, nbt map[string]any) string {
 	if name := nbtName(nbt); name != "" && nameableBlock(state) {
 		h.blockNames.set(pos, name)
 	}
 	if state == spawnerBlock {
 		h.loadSpawnerNBT(pos, nbt)
-		return
+		return ""
 	}
-	items, ok := nbt["Items"].([]any)
-	if !ok || !isChestLikeContainer(state) {
-		return
+	c, msg := h.carriedFromNBT(pos, state, nbt)
+	if msg != "" {
+		return msg
 	}
-	c := &chest{}
-	for _, raw := range items {
-		it, ok := raw.(map[string]any)
-		if !ok {
-			continue
-		}
-		slot, ok := snbtInt(it["Slot"])
-		id, _ := it["id"].(string)
-		item, known := itemByName[strings.TrimPrefix(id, "minecraft:")]
-		if !ok || !known || slot < 0 || int(slot) >= len(c.slots) {
-			continue
-		}
-		count := int64(1)
-		if n, ok := snbtInt(it["count"]); ok && n > 0 {
-			count = n
-		}
-		c.slots[slot] = invStack{item: item, count: int(count)}
-	}
-	h.chests[pos] = c
+	h.placeBlockEntity(players, pos, c, state)
+	return ""
 }
 
 // isChestLikeContainer is a 27-slot container kept in h.chests: a chest of

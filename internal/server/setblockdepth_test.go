@@ -62,3 +62,56 @@ func TestSetblockFillDepth(t *testing.T) {
 		}
 	})
 }
+
+// The rest of BlockInput's block entity data: a sign's two sides, a banner's
+// patterns and a hopper's Items; a /fill filter that asks for block entity
+// data (NbtUtils.compareNbt, partial lists) and a mode after it; and the cap
+// read from max_block_modifications, in vanilla's wording.
+func TestSetblockBlockEntityKinds(t *testing.T) {
+	s, h, ps, logs := feedbackServer(t)
+	alice := ps["alice"]
+	s.handleCommand(alice, `setblock 7 150 7 oak_sign{front_text:{messages:["Hello","big world","",""],color:"red",has_glowing_text:1b},is_waxed:1b}`)
+	s.handleCommand(alice, `setblock 8 150 8 white_banner{patterns:[{pattern:"minecraft:stripe_top",color:"red"}]}`)
+	s.handleCommand(alice, `setblock 9 150 9 hopper{Items:[{Slot:2b,id:"minecraft:iron_ingot",count:3}]}`)
+	s.handleCommand(alice, `setblock 0 155 0 chest{Items:[{Slot:0b,id:"minecraft:diamond",count:1},{Slot:1b,id:"minecraft:stick",count:1}]}`)
+	s.handleCommand(alice, `setblock 1 155 0 chest{Items:[{Slot:0b,id:"minecraft:dirt",count:1}]}`)
+	s.handleCommand(alice, `setblock 2 155 0 chest`)
+	settle(t, h, logs, "N0")
+	s.handleCommand(alice, `fill 0 155 0 2 155 0 gold_block replace chest{Items:[{id:"minecraft:diamond"}]} strict`)
+	s.handleCommand(alice, `fill 0 156 0 2 156 0 stone replace air outline`)
+	s.handleCommand(alice, "gamerule max_block_modifications 10")
+	s.handleCommand(alice, "fill 0 160 0 2 162 2 stone")
+	settle(t, h, logs, "N1")
+	a := linesBetween(logs["alice"], "N0", "N1")
+	if !hasLine(a, "Too many blocks in the specified area (maximum 10, but specified 27)") {
+		t.Errorf("no cap from max_block_modifications: %q", a)
+	}
+	onHub(t, h, func() {
+		sd, ok := h.signs.get(0, 7, 150, 7)
+		if !ok || sd.Front.Lines[0] != "Hello" || sd.Front.Lines[1] != "big world" || sd.Front.Color != "red" || !sd.Front.Glow || !sd.Waxed {
+			t.Errorf("sign %+v %v", sd, ok)
+		}
+		if l := h.banners.get(0, 8, 150, 8); len(l) != 1 || l[0].Color != "red" || bannerPatternQualified(l[0].Pattern) != "minecraft:stripe_top" {
+			t.Errorf("banner %+v", l)
+		}
+		if b := h.bins[simPos{blockPos: blockPos{9, 150, 9}}]; b == nil || b.slots[2].item != itemByName["iron_ingot"] || b.slots[2].count != 3 {
+			t.Errorf("hopper %+v", b)
+		}
+		if st := h.world.Block(0, 155, 0); st != worldgen.BlockBase("gold_block") {
+			t.Error("the chest holding a diamond was not replaced")
+		}
+		for x := 1; x <= 2; x++ {
+			if st := h.world.Block(x, 155, 0); st == worldgen.BlockBase("gold_block") {
+				t.Errorf("the chest at %d,155,0 matched a diamond it does not hold", x)
+			}
+		}
+		for x := 0; x <= 2; x++ {
+			if st := h.world.Block(x, 156, 0); st != worldgen.Stone {
+				t.Errorf("replace air outline left %d,156,0 as %d", x, st)
+			}
+		}
+		if st := h.world.Block(1, 161, 1); st == worldgen.Stone {
+			t.Error("a fill over the gamerule cap ran")
+		}
+	})
+}

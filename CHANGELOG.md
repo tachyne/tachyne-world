@@ -13,6 +13,18 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ## 2026-09-29
 
+### Added
+- **`/setblock` and `/fill` take the rest of vanilla's block entity data.**
+  Besides a chest's name and contents and a spawner's mob, the `{…}` after
+  a block now fills a sign's front and back text (colour, glow, wax), a
+  banner's patterns and the `Items` of a hopper, dispenser, dropper,
+  crafter, brewing stand or furnace. A `/fill … replace` filter may ask for
+  block entity data too (`chest{Items:[{id:"minecraft:diamond"}]}` matches a
+  chest holding a diamond anywhere, as vanilla's partial-list match does), a
+  mode may follow the filter (`replace air outline`), and the size cap is
+  read from `max_block_modifications` when the fill runs, so a
+  `/gamerule` just before it counts.
+
 ### Fixed
 - **A posed copper golem statue looks posed in the hand.** The statue's
   item now carries its pose as the `block_state` component (26.2 and 26.3

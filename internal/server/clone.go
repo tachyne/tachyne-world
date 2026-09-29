@@ -122,6 +122,33 @@ func parseBlockPredicate(arg string) (func(uint32) bool, bool) {
 	}, true
 }
 
+// blockPred is a parsed BlockPredicateArgument: the state test and the block
+// entity data a match must also carry (nil = none asked).
+type blockPred struct {
+	state func(uint32) bool
+	nbt   map[string]any
+}
+
+// parseBlockPredicateNBT is BlockPredicateArgument whole: a block or #tag,
+// [properties], and a {…} of block entity data matched as
+// NbtUtils.compareNbt does (partial lists).
+func parseBlockPredicateNBT(arg string) (blockPred, string) {
+	var nbt map[string]any
+	if i := strings.IndexByte(arg, '{'); i >= 0 {
+		v, err := parseSNBT(arg[i:])
+		m, ok := v.(map[string]any)
+		if err != nil || !ok {
+			return blockPred{}, "Invalid block entity data: " + arg[i:]
+		}
+		arg, nbt = arg[:i], m
+	}
+	f, ok := parseBlockPredicate(arg)
+	if !ok {
+		return blockPred{}, blockPredicateError(arg)
+	}
+	return blockPred{state: f, nbt: nbt}, ""
+}
+
 // blockPredicateError is BlockStateParser's refusal of a predicate
 // parseBlockPredicate did not take: an unknown tag or an unknown block.
 func blockPredicateError(arg string) string {
