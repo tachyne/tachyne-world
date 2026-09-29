@@ -420,7 +420,7 @@ func TestMaxBlockModificationsRule(t *testing.T) {
 	s.handleCommand(alice, "fill 0 100 0 2 102 2 stone")
 	settle(t, h, logs, "M2")
 	a := linesBetween(logs["alice"], "M1", "M2")
-	if !hasLine(a, "Too many blocks in the specified area (maximum 10, specified 27)") {
+	if !hasLine(a, "Too many blocks in the specified area (maximum 10, but specified 27)") {
 		t.Errorf("replies %q", a)
 	}
 	if v, _ := h.ruleValueText("max_block_modifications"); v != "10" {
