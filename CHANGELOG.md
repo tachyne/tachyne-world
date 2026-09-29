@@ -13,7 +13,37 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ## 2026-09-29
 
+### Added
+- **Cushions can be placed and sat on.** A cushion goes on the top of a
+  block, centred, at the height clicked and turned to the nearest quarter of
+  your facing; right-click to sit, sneak to get up. A blow breaks it and
+  drops it (not in creative, and not at all in adventure), it breaks when
+  its support goes or fire reaches it, and it is saved with the world.
+  26.2 clients see an armour stand in its place. Every cushion shows white
+  for now.
+- **Lingering clouds are real entities.** Lingering potions, creepers that
+  explode with effects, and the dragon's breath and fireballs leave an
+  area-effect cloud that every client sees and draws at its true radius. The
+  cloud waits, grows or shrinks, and doses whoever stands in it the way
+  vanilla's does, including losing half a block for each creature it doses.
+  The dragon's clouds are the ones a glass bottle fills from. The particles
+  are white until the gateways can carry the cloud's colour.
+
 ### Fixed
+- **Firework boosts keep your momentum.** A rocket fired while gliding now
+  lets your own client do the boosting, as vanilla does, instead of the
+  server resetting your speed every tick. It stays with you to the end of
+  its fuse. Loose rockets drift sideways at launch and strike creatures in
+  their path.
+- **Brushing is a held use.** Hold the brush on a block and it strokes every
+  half second, as vanilla's does, rather than taking one stroke per click.
+  Others hear the generic brushing sound on ordinary blocks.
+- **More of vanilla's level events.** Dispensers, crafters, composters,
+  brewing stands, end portal frames, lava quenches, dripstone dripping into
+  cauldrons, door-breaking zombies, the wither, phantoms, the mace's smash,
+  the dragon egg, shulker and chorus-fruit teleports, End gateways, trial
+  spawners, portal travel and every tick of a dig now fire vanilla's level
+  events, so clients play the right sounds and draw the right particles.
 - **A posed copper golem statue looks posed in the hand.** The statue's
   item now carries its pose as the `block_state` component (26.2 and 26.3
   number it 76 and 78), so the tooltip and the client's placement preview
