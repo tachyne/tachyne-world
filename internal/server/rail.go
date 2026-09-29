@@ -71,10 +71,11 @@ func specialBase(s uint32) uint32 {
 }
 
 // railWith rebuilds a rail state with a shape (and powered bit for specials),
-// preserving the family. Corners degrade to straight on special rails.
+// preserving the family and the water. Corners degrade to straight on
+// special rails.
 func railWith(s uint32, shape int, powered bool) uint32 {
 	if isPlainRail(s) {
-		return railMin + uint32(shape)*2 + 1 // waterlogged=false
+		return railMin + uint32(shape)*2 + (s-railMin)%2
 	}
 	if shape > shapeAscS {
 		switch shape {
@@ -89,81 +90,21 @@ func railWith(s uint32, shape int, powered bool) uint32 {
 	if powered {
 		p = 0
 	}
-	return base + p + uint32(shape)*2 + 1
+	return base + p + uint32(shape)*2 + (s-base)%2
 }
 
-// computeRailShape picks a rail's shape from its neighbours: prefer two-way
-// connections (straights, then corners for plain rails), then one-way
-// (ascending toward a rail one block up), defaulting to the placer's axis.
-// The world is passed in rather than taken from the hub: this runs both on
-// the hub goroutine (a scheduled update, in whichever dimension the rail is
-// in) and on a connection's goroutine (placing one), so there is no shared
-// dimension state to read.
-func (h *hub) computeRailShape(wld *world.World, x, y, z int, state uint32, defAxis int) int {
-	// Connectivity per cardinal: 0 none, 1 level, 2 one up.
-	conn := [4]int{} // E, W, N, S
-	dirs := [4][2]int{{1, 0}, {-1, 0}, {0, -1}, {0, 1}}
-	for i, d := range dirs {
-		switch {
-		case isAnyRail(wld.At(x+d[0], y, z+d[1])),
-			isAnyRail(wld.At(x+d[0], y-1, z+d[1])): // neighbour slopes down to us
-			conn[i] = 1
-		case isAnyRail(wld.At(x+d[0], y+1, z+d[1])):
-			conn[i] = 2
-		}
-	}
-	e, w, n, s := conn[0], conn[1], conn[2], conn[3]
-	switch {
-	case e == 2:
-		return shapeAscE
-	case w == 2:
-		return shapeAscW
-	case n == 2:
-		return shapeAscN
-	case s == 2:
-		return shapeAscS
-	case (e > 0 || w > 0) && n == 0 && s == 0:
-		return shapeEW
-	case (n > 0 || s > 0) && e == 0 && w == 0:
-		return shapeNS
-	// Corners (plain rails only; specials degrade in railWith).
-	case s > 0 && e > 0:
-		return shapeSE
-	case s > 0 && w > 0:
-		return shapeSW
-	case n > 0 && w > 0:
-		return shapeNW
-	case n > 0 && e > 0:
-		return shapeNE
-	case e > 0 || w > 0:
-		return shapeEW
-	case n > 0 || s > 0:
-		return shapeNS
-	}
-	return defAxis
-}
-
-// updateRail is the scheduled step: re-shape from neighbours, and sync the
-// powered bit (powered/activator rails; detector rails are cart-driven).
+// updateRail is the rail's neighborChanged (railstate.go does the work).
 func (h *hub) updateRail(players map[int32]*tracked, pos blockPos, state uint32) {
-	shape := h.computeRailShape(h.rsWorld(), pos.x, pos.y, pos.z, state, railShape(state))
-	powered := railPowered(state)
-	if isSpecialRail(state) && !isDetectorRail(state) {
-		powered = h.inputPower(pos.x, pos.y, pos.z, false) > 0
-	}
-	if ns := railWith(state, shape, powered); ns != state {
-		h.rsSet(players, pos, ns)
-		h.notifyAround(players, h.rsDim, pos)
-	}
+	h.railNeighborChanged(players, pos, state)
 }
 
-// placeRailShape orients a just-placed rail: connect to neighbours, else lie
-// along the player's look axis.
-func (h *hub) placeRailShape(wld *world.World, x, y, z int, state uint32, yaw float32) uint32 {
+// placeRailShape is BaseRailBlock.getStateForPlacement: the rail lies along
+// the placer's horizontal facing; onPlace (railOnPlace, on the hub) then
+// connects it to the rails around.
+func (h *hub) placeRailShape(_ *world.World, _, _, _ int, state uint32, yaw float32) uint32 {
 	axis := shapeNS
-	f := playerFacing(yaw)
-	if f == "east" || f == "west" {
+	if f := playerFacing(yaw); f == "east" || f == "west" {
 		axis = shapeEW
 	}
-	return railWith(state, h.computeRailShape(wld, x, y, z, state, axis), railPowered(state))
+	return railWith(state, axis, railPowered(state))
 }

@@ -197,15 +197,52 @@ func (h *hub) runBlockTicks(players map[int32]*tracked, age uint64) {
 // running are collected into a layer and run, in the order they were added,
 // before the rest of the cascade continues — a depth-first walk.
 type neighborUpdater struct {
-	stack   []simPos
-	layer   []simPos
+	stack   []nbUpdate
+	layer   []nbUpdate
 	running bool
 	warned  bool
+
+	// from is the block the updates being queued come from (vanilla's
+	// updateNeighborsAt(pos, block) argument), while fromSet holds; a
+	// relay that queues around another cell sets it to its own block.
+	from    uint32
+	fromSet bool
+	// cause is the block of the update being delivered, when causeSet.
+	cause    uint32
+	causeSet bool
 }
 
-// nbAdd queues a neighbour update at pos in the current simulation dimension.
+// nbUpdate is one queued neighbour update and the block that sent it
+// (known only when srcSet).
+type nbUpdate struct {
+	simPos
+	src    uint32
+	srcSet bool
+}
+
+// nbAdd queues a neighbour update at pos in the current simulation
+// dimension, from the block set by nbFrom if any.
 func (h *hub) nbAdd(pos blockPos) {
-	h.nb.layer = append(h.nb.layer, simPos{dim: h.rsDim, blockPos: pos})
+	h.nbAddFrom(pos, h.nb.from, h.nb.fromSet)
+}
+
+func (h *hub) nbAddFrom(pos blockPos, src uint32, known bool) {
+	h.nb.layer = append(h.nb.layer, nbUpdate{simPos{dim: h.rsDim, blockPos: pos}, src, known})
+}
+
+// nbFrom runs queue with every update it queues sent from the block src
+// (unless an outer caller already named one): the relays that update the
+// neighbours of a cell on another block's behalf — a lever's attached
+// block, a removed source's old cell — pass the source along, as vanilla's
+// updateNeighborsAt(pos, block) does.
+func (h *hub) nbFrom(src uint32, queue func()) {
+	if h.nb.fromSet {
+		queue()
+		return
+	}
+	h.nb.from, h.nb.fromSet = src, true
+	queue()
+	h.nb.fromSet = false
 }
 
 // updateOrder is NeighborUpdater.UPDATE_ORDER.
@@ -214,12 +251,16 @@ var updateOrder = [6]rsDir{dWest, dEast, dDown, dUp, dNorth, dSouth}
 // nbAround queues updates for the six neighbours of pos (updateNeighborsAt),
 // optionally skipping one direction (updateNeighborsAtExceptFromFacing).
 func (h *hub) nbAround(pos blockPos, skip rsDir, hasSkip bool) {
+	src, known := h.nb.from, h.nb.fromSet
+	if !known { // updateNeighborsAt(pos, this): the block there sends it
+		src, known = h.rsWorld().At(pos.x, pos.y, pos.z), true
+	}
 	for _, d := range updateOrder {
 		if hasSkip && d == skip {
 			continue
 		}
 		dx, dy, dz := d.delta()
-		h.nbAdd(blockPos{pos.x + dx, pos.y + dy, pos.z + dz})
+		h.nbAddFrom(blockPos{pos.x + dx, pos.y + dy, pos.z + dz}, src, known)
 	}
 }
 
@@ -232,13 +273,18 @@ func (h *hub) nbRun(players map[int32]*tracked) {
 		return
 	}
 	u.running = true
+	// Updates the cascade's own blocks queue come from those blocks, not
+	// from whoever started it.
+	from, fromSet := u.from, u.fromSet
+	u.fromSet = false
 	count := 0
 	for len(u.layer) > 0 || len(u.stack) > 0 {
 		for i := len(u.layer) - 1; i >= 0; i-- {
 			u.stack = append(u.stack, u.layer[i])
 		}
 		u.layer = u.layer[:0]
-		sp := u.stack[len(u.stack)-1]
+		up := u.stack[len(u.stack)-1]
+		sp := up.simPos
 		u.stack = u.stack[:len(u.stack)-1]
 		if count++; count > maxChainedNeighborUpdates {
 			if !u.warned {
@@ -249,9 +295,12 @@ func (h *hub) nbRun(players map[int32]*tracked) {
 			u.layer = u.layer[:0]
 			break
 		}
+		u.cause, u.causeSet = up.src, up.srcSet
 		h.neighborChanged(players, sp)
+		u.causeSet = false
 	}
 	u.running = false
+	u.from, u.fromSet = from, fromSet
 }
 
 // reactsToNeighbors reports whether a block's neighborChanged does anything
@@ -344,8 +393,10 @@ func (h *hub) updateNeighborsInFront(players map[int32]*tracked, pos blockPos, s
 	}
 	dx, dy, dz := f.opposite().delta()
 	front := blockPos{pos.x + dx, pos.y + dy, pos.z + dz}
-	h.nbAdd(front)
-	h.nbAround(front, f, true)
+	h.nbFrom(state, func() {
+		h.nbAdd(front)
+		h.nbAround(front, f, true)
+	})
 	h.nbRun(players)
 }
 

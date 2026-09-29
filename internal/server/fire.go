@@ -87,12 +87,34 @@ func (h *hub) fireInBox(dim int, x, y, z, hw, ht float64) float64 {
 // SoulFireBlock.canSurvive).
 func soulFireBase(s uint32) bool { return s == worldgen.SoulSand || s == soulSoilBase }
 
-// fireStateOver is BaseFireBlock.getState for a fire lit above `below`.
-func fireStateOver(below uint32) uint32 {
+// The fire block's state is age (16) × east × north × south × up × west,
+// each face "true" first. The age the engine keeps beside the world
+// (hub.fireAge), so a fire's state is always one of the age-0 block: its
+// faces are the bits of the offset from the first state, 0 meaning true
+// (31 = none, the default).
+const fireFacesNone = 31
+
+// fireStateAt is BaseFireBlock.getState then FireBlock.getStateWithAge's
+// getStateForPlacement: soul fire over soul sand or soul soil; otherwise a
+// fire that, with nothing burnable or sturdy under it, clings to the
+// burnable blocks at its sides and above.
+func fireStateAt(w interface{ At(x, y, z int) uint32 }, pos blockPos) uint32 {
+	below := w.At(pos.x, pos.y-1, pos.z)
 	if soulFireBase(below) {
 		return soulFire
 	}
-	return fireDefault
+	off := uint32(fireFacesNone)
+	if !isFlammable(below) && !worldgen.IsFaceSturdy(below, worldgen.FaceUp) {
+		for _, f := range []struct {
+			dx, dy, dz int
+			bit        uint32
+		}{{1, 0, 0, 16}, {0, 0, -1, 8}, {0, 0, 1, 4}, {0, 1, 0, 2}, {-1, 0, 0, 1}} { // east north south up west
+			if isFlammable(w.At(pos.x+f.dx, pos.y+f.dy, pos.z+f.dz)) {
+				off &^= f.bit
+			}
+		}
+	}
+	return fireStateMin + off
 }
 
 func isFire(state uint32) bool {
@@ -138,7 +160,7 @@ func (s *Server) useFlintSteel(p *player, off bool, x, y, z, dx, dy, dz int, seq
 		s.sendBlockChange(p, fx, fy, fz, s.worldFor(p).Block(fx, fy, fz), seq)
 		return true
 	}
-	s.putBlock(p, fx, fy, fz, fireStateOver(s.worldFor(p).At(fx, fy-1, fz)), true, seq)
+	s.putBlock(p, fx, fy, fz, fireStateAt(s.worldFor(p), blockPos{fx, fy, fz}), true, seq)
 	s.hub.post(evToolWear{eid: p.eid, slot: int(p.handSlot(off))})
 	return true
 }
@@ -164,7 +186,7 @@ func (s *Server) useFireCharge(p *player, off bool, x, y, z, dx, dy, dz int, seq
 		s.sendBlockChange(p, fx, fy, fz, s.worldFor(p).Block(fx, fy, fz), seq)
 		return
 	}
-	s.putBlock(p, fx, fy, fz, fireStateOver(s.worldFor(p).At(fx, fy-1, fz)), true, seq)
+	s.putBlock(p, fx, fy, fz, fireStateAt(s.worldFor(p), blockPos{fx, fy, fz}), true, seq)
 	s.itemUsed(p, itemFireCharge)
 	s.hub.post(evConsume{eid: p.eid, slot: p.handSlot(off)})
 }
@@ -479,9 +501,9 @@ func (h *hub) lightBlastFires(players map[int32]*tracked, dim int, cleared []blo
 		}
 		// Explosion.createFire: BaseFireBlock.getState — soul fire over soul
 		// sand or soul soil, which neither ages nor spreads.
-		fire := fireStateOver(w.At(pos.x, pos.y-1, pos.z))
+		fire := fireStateAt(w, pos)
 		h.setBlockAt(players, dim, pos, fire)
-		if fire == fireDefault {
+		if fire != soulFire {
 			h.fireAge[simPos{dim: dim, blockPos: pos}] = 0
 			h.inDim(dim, func() { h.armFire(pos) })
 		}
@@ -755,7 +777,7 @@ func (h *hub) igniteFire(players map[int32]*tracked, pos blockPos, age int) {
 		h.rsSet(players, pos, soulFire) // soul fire neither ages nor spreads
 		return
 	}
-	h.rsSet(players, pos, fireDefault)
+	h.rsSet(players, pos, fireStateAt(h.rsWorld(), pos)) // getStateWithAge: its faces
 	h.fireAge[h.rsKey(pos)] = age
 	h.armFire(pos)
 }
@@ -787,6 +809,12 @@ func (h *hub) fireUpdate(players map[int32]*tracked, pos blockPos) {
 		h.removeFire(players, pos, false) // FireBlock.canSurvive fails: updateShape gives air
 		delete(h.fireDue, key)
 		return
+	}
+	// updateShape: getStateWithAge — the sides follow what beside it burns.
+	if cur := h.rsWorld().At(pos.x, pos.y, pos.z); isFire(cur) && cur != soulFire {
+		if want := fireStateAt(h.rsWorld(), pos); want != cur {
+			h.rsSet(players, pos, want)
+		}
 	}
 	if !armed {
 		h.armFire(pos)

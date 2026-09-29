@@ -44,6 +44,7 @@ func TestStalactiteGrows(t *testing.T) {
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	x, y, z := 0, 190, 0
+	w.SetBlock(x, y+2, z, worldgen.WaterBase) // PointedDripstoneBlock.canGrow: a water source on the dripstone block
 	w.SetBlock(x, y+1, z, dripstoneBlock)
 	w.SetBlock(x, y, z, dripstoneState(dripTip, false, false))
 	w.SetBlock(x, y-6, z, worldgen.BlockBase("stone")) // a floor within reach
@@ -81,9 +82,13 @@ func TestStalactiteGrows(t *testing.T) {
 	}
 }
 
-// Water above a stalactite drips down and fills a cauldron under the tip.
+// Water above a stalactite's root drips down and fills a cauldron under the
+// tip (PointedDripstoneBlock.maybeTransferFluid on the random tick, the
+// cauldron filling when the drop lands, a tick scheduled 50 + the fall
+// out); lava gives a lava cauldron.
 func TestDripstoneFillsACauldron(t *testing.T) {
 	h := newTestHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	x, y, z := 0, 190, 0
@@ -91,29 +96,88 @@ func TestDripstoneFillsACauldron(t *testing.T) {
 	w.SetBlock(x, y+1, z, dripstoneBlock)
 	w.SetBlock(x, y, z, dripstoneState(dripTip, false, false))
 	w.SetBlock(x, y-4, z, cauldronState)
-
-	for i := 0; i < 500; i++ {
-		h.dripThroughStalactite(players, 0, x, y, z)
-		if _, _, ok := cauldronOf(w.At(x, y-4, z)); ok && w.At(x, y-4, z) != cauldronState {
-			break
+	run := func(done func() bool) bool {
+		for i := 0; i < 3000; i++ {
+			age := h.tick.Add(1)
+			h.randomTickBlock(players, 0, x, y, z)
+			h.runBlockTicks(players, age)
+			if done() {
+				return true
+			}
 		}
+		return false
 	}
-	kind, _, _ := cauldronOf(w.At(x, y-4, z))
-	if kind != cauldronWater {
-		t.Fatalf("the cauldron never filled with water (kind %d)", kind)
+	if !run(func() bool { k, _, _ := cauldronOf(w.At(x, y-4, z)); return k == cauldronWater }) {
+		t.Fatal("the cauldron never filled with water")
 	}
-
-	// Lava above gives a lava cauldron instead.
 	w.SetBlock(x, y+2, z, worldgen.LavaBase)
 	w.SetBlock(x, y-4, z, cauldronState)
-	for i := 0; i < 1000; i++ {
-		h.dripThroughStalactite(players, 0, x, y, z)
-		if w.At(x, y-4, z) == lavaCauldronState {
-			break
+	if !run(func() bool { return w.At(x, y-4, z) == lavaCauldronState }) {
+		t.Error("lava above a stalactite never filled the cauldron")
+	}
+	// Mud on the root dries into clay instead.
+	w.SetBlock(x, y+2, z, worldgen.Mud)
+	if !run(func() bool { return w.At(x, y+2, z) == worldgen.Clay }) {
+		t.Error("the stalactite never drew the water out of the mud above it")
+	}
+}
+
+// PointedDripstoneBlock.canGrow: a stalactite grows only with a water source
+// on top of the dripstone block it hangs from.
+func TestStalactiteNeedsWaterToGrow(t *testing.T) {
+	h := newTestHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	players := map[int32]*tracked{}
+	w := h.worldFor(0)
+	x, y, z := 0, 190, 0
+	w.SetBlock(x, y+1, z, dripstoneBlock)
+	w.SetBlock(x, y, z, dripstoneState(dripTip, false, false))
+	for i := 0; i < 20000; i++ {
+		h.randomTickBlock(players, 0, x, y, z)
+	}
+	if w.At(x, y-1, z) != worldgen.Air {
+		t.Fatal("a stalactite with no water above its dripstone grew")
+	}
+	w.SetBlock(x, y+2, z, worldgen.WaterBase)
+	for i := 0; i < 20000 && w.At(x, y-1, z) == worldgen.Air; i++ {
+		h.randomTickBlock(players, 0, x, y, z)
+		for cy := y - 10; cy < y-1; cy++ {
+			w.SetBlock(x, cy, z, worldgen.Air) // keep the grow-down branch the only one that shows
 		}
 	}
-	if w.At(x, y-4, z) != lavaCauldronState {
-		t.Error("lava above a stalactite never filled the cauldron")
+	if !isStalactite(w.At(x, y-1, z)) {
+		t.Fatal("with a water source above, the stalactite grew no longer")
+	}
+}
+
+// SulfurSpikeBlock: a spike hanging from sulfur grows (no water needed),
+// but its tip is looked for only one below the start (getMaxGrowthLength 2),
+// so it stops at three long.
+func TestSulfurSpikeGrowsThreeLong(t *testing.T) {
+	if !sulfurSpikeOK {
+		t.Skip("no sulfur spike in this block table")
+	}
+	h := newTestHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	players := map[int32]*tracked{}
+	w := h.worldFor(0)
+	x, y, z := 0, 190, 0
+	fam := &speleoFamilies[1]
+	w.SetBlock(x, y+1, z, sulfurBlockState)
+	w.SetBlock(x, y, z, fam.state(dripTip, false, false))
+	for i := 0; i < 60000; i++ {
+		h.randomTickBlock(players, 0, x, y, z)
+		for cy := y - 13; cy < y-3; cy++ {
+			w.SetBlock(x, cy, z, worldgen.Air)
+		}
+	}
+	for dy := 1; dy <= 2; dy++ {
+		if f, _, _, _, ok := speleoOf(w.At(x, y-dy, z)); !ok || f != fam {
+			t.Fatalf("the sulfur spike should have grown to three long (missing at y-%d)", dy)
+		}
+	}
+	if _, _, _, _, ok := speleoOf(w.At(x, y-3, z)); ok {
+		t.Fatal("a sulfur spike grows no longer than three")
 	}
 }
 

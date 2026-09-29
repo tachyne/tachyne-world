@@ -1519,6 +1519,9 @@ func (h *hub) run() {
 				h.turtleEggPlayerBroken(players, e)
 				h.fireBesideHives(players, e.dim, blockPos{e.x, e.y, e.z}, e.state)
 				h.potentSulfurChanged(players, e.dim, blockPos{e.x, e.y, e.z}, e.broken, e.state)
+				if e.broken == 0 && isAnyRail(e.state) {
+					h.railOnPlace(players, e.dim, blockPos{e.x, e.y, e.z}) // BaseRailBlock.onPlace
+				}
 				if e.broken == 0 && isWoodShelf(e.state) {
 					h.shelfPlaced(players, e.dim, blockPos{e.x, e.y, e.z}, e.state)
 				}
@@ -2905,7 +2908,8 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	if isTripwire(e.state) || isTripwire(e.broken) { // TripWireBlock.onPlace / affectNeighborsAfterRemoval
 		h.inDim(e.dim, func() { h.tripwireUpdateSource(players, pos) })
 	}
-	h.notifyAround(players, e.dim, pos)
+	// Level.setBlock's own neighbour update comes from the old block.
+	h.nbFrom(e.broken, func() { h.notifyAround(players, e.dim, pos) })
 	// A signal source that appears or disappears changes the STRONG power of
 	// the block it hangs on, and what that block drives can sit two cells away
 	// — dust on the far side of the block a lever is mounted to is the usual
@@ -2914,7 +2918,11 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	// LeverBlock.affectNeighborsAfterRemoval updates the neighbours of the
 	// attached block as well as its own).
 	if h.isSignalSource(e.state) || h.isSignalSource(e.broken) {
-		h.inDim(e.dim, func() { h.scheduleSignalAround(players, pos) })
+		from := e.state
+		if h.isSignalSource(e.broken) { // a source broken: its removal's updates come from it
+			from = e.broken
+		}
+		h.inDim(e.dim, func() { h.nbFrom(from, func() { h.scheduleSignalAround(players, pos) }) })
 	}
 }
 

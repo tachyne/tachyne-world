@@ -20,6 +20,28 @@ the public history since the project was open-sourced on 2026-07-10.
   lost. Every dimension is now saved each round even if another fails, and
   once one has gone two minutes without saving, every online operator is warned
   in chat once a minute, with the error, until it saves again.
+- **Rails connect the way vanilla's do.** A placed rail now turns the rails
+  beside it to meet it (and only those free to take another connection), a
+  junction of three switches when a redstone signal arrives, a sloped rail
+  breaks when the block it climbs onto is removed, and a powered or
+  activator rail passes its power along up to eight more rails of its kind
+  in a line. Rails no longer re-shape themselves at every change nearby, and
+  a waterlogged rail keeps its water when it changes shape.
+- **Fire climbs the walls it burns.** A fire with nothing solid or
+  burnable beneath it now clings to the flammable blocks beside and above
+  it, as vanilla draws it, and its sides follow as those blocks catch,
+  burn away or are placed.
+- **Shulker boxes check the room their lid needs exactly.** A box opens
+  unless something actually fills the half block its lid slides into: a
+  bottom slab, a fence post reaching up from below, a boat or a shulker
+  keeps it shut, while a top slab, a flower or a torch no longer does.
+- **Dripstone grows and drips as in vanilla.** A stalactite now only grows
+  with a water source on top of the dripstone block it hangs from, merges
+  with a stalagmite growing up to meet it, and starts stalagmites only
+  where a drop could fall. Water and lava drip through from above any root
+  block, the drop takes a moment to reach the cauldron (with its sound),
+  and a stalactite under mud slowly dries it into clay. Sulfur spikes
+  grow from sulfur too.
 - **A posed copper golem statue looks posed in the hand.** The statue's
   item now carries its pose as the `block_state` component (26.2 and 26.3
   number it 76 and 78), so the tooltip and the client's placement preview

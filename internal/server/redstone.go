@@ -47,6 +47,10 @@ func (h *hub) redstoneTick(players map[int32]*tracked, pos blockPos, state uint3
 		h.observerTick(players, pos, state)
 	case isCrafter(state):
 		h.crafterTick(players, simPos{dim: h.rsDim, blockPos: pos}, state)
+	default:
+		if _, _, ok := cauldronOf(state); ok { // AbstractCauldronBlock.tick: a stalactite's drop lands
+			h.cauldronDripTick(players, h.rsDim, pos, state)
+		}
 	}
 	h.nbRun(players)
 }

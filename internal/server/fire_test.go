@@ -308,3 +308,53 @@ func TestTNTBlastLeavesNoFire(t *testing.T) {
 		}
 	}
 }
+
+// FireBlock.getStateWithAge: a fire with nothing burnable or sturdy under
+// it takes the faces of the burnable blocks beside and above it (the
+// client draws it climbing them); on a sturdy floor it has none. The age
+// stays beside the world, and a neighbour's change re-reads the faces.
+func TestFireStateCarriesItsSides(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	pl := testTracked()
+	pl.x, pl.y, pl.z = 0.5, 181, 0.5
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	w := h.world
+	planks := worldgen.BlockBase("oak_planks")
+	for x := -2; x <= 2; x++ {
+		for z := -2; z <= 2; z++ {
+			for y := 178; y <= 183; y++ {
+				w.SetBlock(x, y, z, worldgen.Air)
+			}
+		}
+	}
+	w.SetBlock(1, 180, 0, planks) // east of the fire, with air under the fire
+	pos := blockPos{0, 180, 0}
+	h.inDim(0, func() { h.igniteFire(players, pos, 3) })
+	st := w.At(0, 180, 0)
+	info, _ := worldgen.InfoForState(st)
+	if worldgen.GetProperty(info, st, "east") != "true" || worldgen.GetProperty(info, st, "north") != "false" {
+		t.Fatalf("a fire on the planks' side burns on its east face only: %v", info.Props)
+	}
+	if age := h.fireAge[simPos{blockPos: pos}]; age != 3 {
+		t.Errorf("the fire keeps its age: %d", age)
+	}
+	// Planks above as well: a neighbour's change re-reads the faces.
+	w.SetBlock(0, 181, 0, planks)
+	h.inDim(0, func() { h.fireUpdate(players, pos) })
+	st = w.At(0, 180, 0)
+	info, _ = worldgen.InfoForState(st)
+	if worldgen.GetProperty(info, st, "up") != "true" || worldgen.GetProperty(info, st, "age") != "0" {
+		t.Fatalf("with planks above, the fire burns on its up face too: %v", info.Props)
+	}
+	if age := h.fireAge[simPos{blockPos: pos}]; age != 3 {
+		t.Errorf("re-reading the faces keeps the age: %d", age)
+	}
+	// On a sturdy floor, no faces.
+	w.SetBlock(2, 179, 2, worldgen.Stone)
+	h.inDim(0, func() { h.igniteFire(players, blockPos{2, 180, 2}, 0) })
+	if got := w.At(2, 180, 2); got != fireDefault {
+		t.Errorf("a fire on stone has no sides: %d, want %d", got, fireDefault)
+	}
+}
