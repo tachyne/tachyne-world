@@ -76,11 +76,12 @@ var cgInteraction = map[int8]struct {
 
 const (
 	metaIndexCopperGolemState = 17 // COPPER_GOLEM_STATE, after the weather state; 17 on 26.2 and 26.3 alike
-	// copperGolemStateSynced gates the COPPER_GOLEM_STATE metadata. The
-	// gateways restore only index 16's serializer (FixCopperGolemMeta); an
-	// INT at 17 would disconnect every client that sees the golem, so the
-	// state stays server-side until they restore 17 as well.
-	copperGolemStateSynced = false
+	// copperGolemStateSynced gates the COPPER_GOLEM_STATE metadata. It goes
+	// out as an INT placeholder that the gateways restore to its serializer
+	// (FixCopperGolemMeta, index 17 since common f19dc70); a gateway older
+	// than that would pass the INT through and disconnect the client, so the
+	// gateways roll before any world that sends it.
+	copperGolemStateSynced = true
 )
 
 // copperGolemStateMeta is the golem's interaction state as a plain INT at
