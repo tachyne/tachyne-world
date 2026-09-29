@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-29
 
 ### Fixed
+- **Dripstone grows and drips as in vanilla.** A stalactite now only grows
+  with a water source on top of the dripstone block it hangs from, merges
+  with a stalagmite growing up to meet it, and starts stalagmites only
+  where a drop could fall. Water and lava drip through from above any root
+  block, the drop takes a moment to reach the cauldron (with its sound),
+  and a stalactite under mud slowly dries it into clay. Sulfur spikes
+  grow from sulfur too.
 - **A posed copper golem statue looks posed in the hand.** The statue's
   item now carries its pose as the `block_state` component (26.2 and 26.3
   number it 76 and 78), so the tooltip and the client's placement preview
