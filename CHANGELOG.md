@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-29
 
 ### Fixed
+- **Shulker boxes check the room their lid needs exactly.** A box opens
+  unless something actually fills the half block its lid slides into: a
+  bottom slab, a fence post reaching up from below, a boat or a shulker
+  keeps it shut, while a top slab, a flower or a torch no longer does.
 - **Dripstone grows and drips as in vanilla.** A stalactite now only grows
   with a water source on top of the dripstone block it hangs from, merges
   with a stalagmite growing up to meet it, and starts stalagmites only

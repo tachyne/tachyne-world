@@ -86,3 +86,47 @@ func TestChestBlockedBySittingCat(t *testing.T) {
 		t.Fatal("a sitting cat blocks the chest it is sitting on")
 	}
 }
+
+// ShulkerBoxBlock.canOpen asks Level.noCollision of the half block the lid
+// moves into: a bottom slab above an upward box keeps it shut, a top slab
+// (in the far half of the cell) does not, and neither does a flower; a
+// fence beside a sideways box reaches into the lid's room from the cell
+// below it.
+func TestShulkerLidRoomUsesCollisionShapes(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	up := withProps(t, worldgen.BlockBase("shulker_box"), map[string]string{"facing": "up"})
+	pos := blockPos{0, 180, 0}
+	opens := func(state uint32) bool {
+		h.world.SetBlock(pos.x, pos.y, pos.z, state)
+		pl.winID = 0
+		h.openChest(pl, pos.x, pos.y, pos.z)
+		opened := pl.winID != 0
+		h.shulkerLids = map[simPos]*shulkerLid{}
+		return opened
+	}
+	slab := func(typ string) uint32 {
+		return withProps(t, worldgen.BlockBase("oak_slab"), map[string]string{"type": typ, "waterlogged": "false"})
+	}
+	h.world.SetBlock(0, 181, 0, slab("bottom"))
+	if opens(up) {
+		t.Error("a bottom slab over the box fills the lid's room")
+	}
+	h.world.SetBlock(0, 181, 0, slab("top"))
+	if !opens(up) {
+		t.Error("a top slab leaves the lower half free: the box opens")
+	}
+	h.world.SetBlock(0, 181, 0, worldgen.BlockBase("poppy"))
+	if !opens(up) {
+		t.Error("a flower has no collision: the box opens")
+	}
+	h.world.SetBlock(0, 181, 0, worldgen.Air)
+	east := withProps(t, worldgen.BlockBase("shulker_box"), map[string]string{"facing": "east"})
+	h.world.SetBlock(1, 179, 0, worldgen.BlockBase("oak_fence"))
+	if opens(east) {
+		t.Error("a fence below the lid's room stands into it")
+	}
+}
