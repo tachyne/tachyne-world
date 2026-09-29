@@ -44,6 +44,14 @@ the public history since the project was open-sourced on 2026-07-10.
   `sequence`. The same modifier may follow `/item … from`, and `/item …
   with` takes an item with components. `/loot … fish` and `/loot … mine`
   take a tool with components too.
+- **`/particle` follows vanilla's grammar.** `force` or `normal` and a
+  viewers selector may follow the count; a normal burst reaches players
+  within 32 blocks of it and a forced one 512, and a burst nobody could see
+  answers "The particle was not visible for anybody". The delta, speed and
+  count go together, as vanilla has them, and the reply is vanilla's
+  "Displaying particle …". Particles that take options (dust, block, item,
+  entity_effect …) are recognised and refused by name until the particle
+  frame can carry their options.
 
 ### Fixed
 - **A posed copper golem statue looks posed in the hand.** The statue's

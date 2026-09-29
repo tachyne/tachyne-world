@@ -340,7 +340,8 @@ func TestParticleCommandByName(t *testing.T) {
 	s.handleCommand(alice, "particle minecraft:dust")
 	settle(t, h, logs, "Q1")
 	a := linesBetween(logs["alice"], "", "Q1")
-	if !hasLine(a, "Displaying minecraft:flame") || !hasLine(a, "Unknown particle: minecraft:dust") {
+	if !hasLine(a, "Displaying particle minecraft:flame") ||
+		!hasLine(a, "The particle minecraft:dust can't be shown yet: particles with options (or new in 26.x) have no way to the client") {
 		t.Errorf("replies: %q", a)
 	}
 	if particleByName["flame"] != 31 || particleByName["crit"] != 5 {

@@ -2252,7 +2252,7 @@ func (h *hub) run() {
 			case evTellraw:
 				h.onTellraw(players, e)
 			case evParticleCmd:
-				h.spawnParticles(players, e.dim, e.pid, e.x, e.y, e.z, e.spread, e.speed, e.count)
+				h.onParticleCmd(players, e)
 			case evBoneMeal:
 				h.onBoneMeal(players, e)
 			case evUseShelf:

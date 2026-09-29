@@ -448,71 +448,179 @@ func (h *hub) onStopsound(players map[int32]*tracked, e evStopsound) {
 	h.cmdSuccess(players, e.by, msg, true)
 }
 
-// cmdParticle is ParticleCommand for the option-free particles:
-// /particle <name> [<x> <y> <z> [<dx> <dy> <dz> <speed> [<count>]]].
-// The particle frame carries one spread, so the largest delta stands for
-// all three.
 func (s *Server) cmdParticle(p *player, args []string) {
 	if !s.isOp(p.name) {
 		p.tell("You don't have permission.")
 		return
 	}
-	const usage = "Usage: /particle <name> [<x> <y> <z> [<dx> <dy> <dz> <speed> [<count>]]]"
-	if len(args) < 1 {
+	const usage = "Usage: /particle <name>[<options>] [<pos> [<delta> <speed> <count> [force|normal [<viewers>]]]]"
+	if len(args) < 1 || len(args) == 2 || len(args) == 3 || (len(args) > 4 && len(args) < 9) || len(args) > 11 {
 		p.tell(usage)
 		return
 	}
-	e := evParticleCmd{dim: p.dim, x: p.x, y: p.y, z: p.z, count: 1}
-	if pid, ok := particleByName[strings.TrimPrefix(args[0], "minecraft:")]; ok {
-		e.pid = pid
-	} else if n, err := strconv.Atoi(args[0]); err == nil {
-		e.pid = int32(n) // a canonical id, as this command once took
-	} else {
-		p.tell("Unknown particle: " + args[0])
+	e := evParticleCmd{by: p.eid, dim: p.dim, x: p.x, y: p.y, z: p.z}
+	pid, name, msg := parseParticleArg(args[0])
+	if msg != "" {
+		p.tell(msg)
 		return
 	}
-	rest := args[1:]
-	if len(rest) >= 3 {
-		x, y, z, ok := parsePosition(rest[:3], p.x, p.y, p.z, p.yaw, p.pitch)
+	e.pid, e.name = pid, name
+	if len(args) >= 4 {
+		x, y, z, ok := parsePosition(args[1:4], p.x, p.y, p.z, p.yaw, p.pitch)
 		if !ok {
 			p.tell(usage)
 			return
 		}
-		e.x, e.y, e.z, rest = x, y, z, rest[3:]
+		e.x, e.y, e.z = x, y, z
 	}
-	if len(rest) >= 4 {
-		var v [4]float64
-		for i := range v {
-			f, err := strconv.ParseFloat(rest[i], 64)
-			if err != nil || (i == 3 && f < 0) {
+	if len(args) >= 9 {
+		// Vec3Argument.vec3(false): the delta takes ~ (relative to zero) but
+		// not ^, and no centring.
+		for i := range e.delta {
+			v, ok := parseCoord(args[4+i], 0)
+			if !ok || strings.HasPrefix(args[4+i], "^") {
 				p.tell(usage)
 				return
 			}
-			v[i] = f
+			e.delta[i] = v
 		}
-		e.spread = float32(math.Max(math.Abs(v[0]), math.Max(math.Abs(v[1]), math.Abs(v[2]))))
-		e.speed = float32(v[3])
-		e.count = 0 // with a speed and no count, vanilla sends one directed particle
-		rest = rest[4:]
-	}
-	if len(rest) >= 1 {
-		c, err := strconv.Atoi(rest[0])
-		if err != nil || c < 0 {
+		speed, err := strconv.ParseFloat(args[7], 32)
+		if err != nil || speed < 0 {
 			p.tell(usage)
 			return
 		}
-		e.count = int32(c)
+		count, err := strconv.Atoi(args[8])
+		if err != nil || count < 0 {
+			p.tell(usage)
+			return
+		}
+		e.speed, e.count = float32(speed), int32(count)
+	}
+	if len(args) >= 10 {
+		switch args[9] {
+		case "force":
+			e.force = true
+		case "normal":
+		default:
+			p.tell(usage)
+			return
+		}
+	}
+	if len(args) == 11 {
+		e.viewers = args[10]
 	}
 	s.hub.post(e)
-	s.ok(p, "Displaying "+args[0])
 }
 
+// parseParticleArg is ParticleArgument: a particle type by id (26.3's
+// registry), with its options as SNBT when the type takes them. The
+// attach Particles frame carries a type id and nothing else, so a type
+// that needs options — or options given at all — cannot reach a client yet
+// and is refused by name, rather than sent bare (which a client cannot
+// parse). A bare canonical id is still taken, as this command once did.
+func parseParticleArg(arg string) (int32, string, string) {
+	name, opts, hasOpts := strings.Cut(arg, "{")
+	name = strings.TrimPrefix(name, "minecraft:")
+	if pid, ok := particleByName[name]; ok && !hasOpts {
+		return pid, "minecraft:" + name, ""
+	}
+	if n, err := strconv.Atoi(name); err == nil && !hasOpts {
+		return int32(n), "minecraft:" + name, ""
+	}
+	if !particleTypes263[name] {
+		return 0, "", "Unknown particle: minecraft:" + name
+	}
+	if hasOpts {
+		if _, err := parseSNBT("{" + opts); err != nil {
+			return 0, "", fmt.Sprintf("Can't parse particle options: %v", err)
+		}
+	}
+	return 0, "", fmt.Sprintf("The particle minecraft:%s can't be shown yet: particles with options (or new in 26.x) have no way to the client", name)
+}
+
+// particleTypes263 is 26.3's minecraft:particle_type registry.
+var particleTypes263 = func() map[string]bool {
+	m := map[string]bool{}
+	for _, n := range strings.Fields(`angry_villager block block_marker bubble sulfur_bubbles noxious_gas
+		noxious_gas_cloud geyser geyser_base geyser_poof geyser_plume cloud copper_fire_flame crit
+		damage_indicator dragon_breath dripping_lava falling_lava landing_lava dripping_water
+		falling_water dust dust_color_transition effect elder_guardian enchanted_hit enchant end_rod
+		entity_effect explosion_emitter explosion gust small_gust gust_emitter_large
+		gust_emitter_small sonic_boom falling_dust firework fishing flame infested cherry_leaves
+		pale_oak_leaves red_poplar_leaves orange_poplar_leaves yellow_poplar_leaves tinted_leaves
+		sculk_soul sculk_charge sculk_charge_pop soul_fire_flame soul flash happy_villager composter
+		heart instant_effect item vibration trail pause_mob_growth reset_mob_growth item_slime
+		item_cobweb item_snowball large_smoke lava mycelium note poof portal rain smoke white_smoke
+		sneeze spit squid_ink sweep_attack totem_of_undying underwater splash witch bubble_pop
+		current_down bubble_column_up nautilus dolphin campfire_cosy_smoke campfire_signal_smoke
+		dripping_honey falling_honey landing_honey falling_nectar falling_spore_blossom ash
+		crimson_spore warped_spore spore_blossom_air dripping_obsidian_tear falling_obsidian_tear
+		landing_obsidian_tear reverse_portal white_ash small_flame snowflake
+		dripping_dripstone_lava falling_dripstone_lava dripping_dripstone_water
+		falling_dripstone_water glow_squid_ink glow wax_on wax_off electric_spark scrape shriek
+		egg_crack dust_plume trial_spawner_detection trial_spawner_detection_ominous
+		vault_connection dust_pillar ominous_spawning raid_omen trial_omen block_crumble firefly
+		sulfur_cube_goo`) {
+		m[n] = true
+	}
+	return m
+}()
+
+// evParticleCmd is one /particle, run on the hub.
 type evParticleCmd struct {
-	dim           int // the operator's dimension
-	pid           int32
-	x, y, z       float64
-	spread, speed float32
-	count         int32
+	by      int32
+	dim     int // the operator's dimension
+	pid     int32
+	name    string // the particle's id, for the reply
+	x, y, z float64
+	delta   [3]float64
+	speed   float32
+	count   int32
+	force   bool   // force: seen from 512 blocks, not 32
+	viewers string // a player selector ("" = every player)
+}
+
+// onParticleCmd is ParticleCommand.sendParticles: to each viewer in the
+// operator's dimension whose block position is within 32 blocks of the
+// point (512 with force), counting who saw it. The attach frame has one
+// spread, not three, so the widest delta stands for all three axes.
+func (h *hub) onParticleCmd(players map[int32]*tracked, e evParticleCmd) {
+	var by *player
+	if t := players[e.by]; t != nil {
+		by = t.p
+	}
+	var viewers []*tracked
+	if e.viewers == "" {
+		for _, t := range players {
+			viewers = append(viewers, t)
+		}
+	} else {
+		viewers = h.commandTargets(players, e.by, e.viewers)
+	}
+	spread := float32(math.Max(math.Abs(e.delta[0]), math.Max(math.Abs(e.delta[1]), math.Abs(e.delta[2]))))
+	r := 32.0
+	if e.force {
+		r = 512
+	}
+	seen := 0
+	for _, t := range viewers {
+		if t.dim != e.dim {
+			continue
+		}
+		dx := float64(floorInt(t.x)) + 0.5 - e.x
+		dy := float64(floorInt(t.y)) + 0.5 - e.y
+		dz := float64(floorInt(t.z)) + 0.5 - e.z
+		if dx*dx+dy*dy+dz*dz >= r*r { // BlockPos.closerToCenterThan
+			continue
+		}
+		t.p.trySendEv(attachproto.Particles{PID: e.pid, X: e.x, Y: e.y, Z: e.z, Spread: spread, Speed: e.speed, Count: e.count})
+		seen++
+	}
+	if seen == 0 {
+		cmdFail(by, "The particle was not visible for anybody")
+		return
+	}
+	h.cmdSuccess(players, by, "Displaying particle "+e.name, true)
 }
 
 func (evParticleCmd) isHubEvent() {}
