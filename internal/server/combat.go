@@ -254,6 +254,9 @@ func (h *hub) onAttack(players map[int32]*tracked, e evAttack) {
 		h.spearStab(players, t)
 		return
 	}
+	if h.fixtureOutOfReach(players[e.attacker], e.target) {
+		return // handleAttack: beyond isWithinAttackRange(…, 3.0)
+	}
 	if h.hitCrystal(players, e.target, players[e.attacker]) {
 		return
 	}
