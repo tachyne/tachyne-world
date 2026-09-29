@@ -118,6 +118,22 @@ the public history since the project was open-sourced on 2026-07-10.
   the dragon egg, shulker and chorus-fruit teleports, End gateways, trial
   spawners, portal travel and every tick of a dig now fire vanilla's level
   events, so clients play the right sounds and draw the right particles.
+- **Bedrock players hear buttons, see an enderman's trail and see what a
+  vault, trial spawner or brushed block holds.** Button and pressure-plate
+  clicks play as Bedrock's own named sounds at Geyser's pitches, and so
+  does the enderman's teleport; the teleport draws Bedrock's particle trail
+  from where it left to where it landed; a vault shows its cycling display
+  item, a trial spawner the mob turning inside it, and suspicious sand or
+  gravel the item coming out as it is brushed, dust stage and all.
+- **Mobs can show on the locator bar.** A mob given a waypoint transmit
+  range (by `/attribute`, say) now appears on the locator bars of players
+  within range, follows as it moves, and drops off when it leaves the range,
+  turns invisible, dies or a receiver rides it, the way vanilla's waypoint
+  manager handles any living entity.
+- **Armor stand poses translate wherever they sit in an update.** Java
+  gateways now read the rotations serializer (three floats) in entity data,
+  so a pose that comes before another field no longer stops the rest of the
+  update being renumbered for 26.2 and 26.3 clients.
 - **A posed copper golem statue looks posed in the hand.** The statue's
   item now carries its pose as the `block_state` component (26.2 and 26.3
   number it 76 and 78), so the tooltip and the client's placement preview

@@ -199,6 +199,9 @@ func (h *hub) runWaypoint(players map[int32]*tracked, p *player, args []string) 
 		if e.t != nil {
 			h.waypointRestyle(players, e.t)
 		}
+		if e.m != nil {
+			h.mobWaypointRestyle(players, e.m)
+		}
 		info(msg)
 	default:
 		fail(waypointUsage)
@@ -210,9 +213,20 @@ func (h *hub) runWaypoint(players map[int32]*tracked, p *player, args []string) 
 func (h *hub) waypointRestyle(players map[int32]*tracked, t *tracked) {
 	gone := attachproto.Waypoint{Op: waypointUntrack, UUID: t.p.uuid}
 	for _, o := range players {
-		if o.wpTracked[t.p.eid] {
+		if _, ok := o.wpTracked[t.p.eid]; ok {
 			o.p.trySendEv(gone)
 			o.p.trySendEv(waypointFor(t, waypointTrack))
+		}
+	}
+}
+
+// mobWaypointRestyle is waypointRestyle for a transmitting mob.
+func (h *hub) mobWaypointRestyle(players map[int32]*tracked, m *mob) {
+	gone := attachproto.Waypoint{Op: waypointUntrack, UUID: m.uuid}
+	for _, o := range players {
+		if _, ok := o.wpTracked[m.eid]; ok {
+			o.p.trySendEv(gone)
+			o.p.trySendEv(mobWaypointFor(m))
 		}
 	}
 }

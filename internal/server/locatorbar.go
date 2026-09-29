@@ -73,13 +73,13 @@ func (h *hub) waypointSync(players map[int32]*tracked, t *tracked, moved bool) {
 		if o.p.eid == t.p.eid {
 			continue
 		}
-		had := o.wpTracked[t.p.eid]
+		_, had := o.wpTracked[t.p.eid]
 		switch want := shows && o.dim == t.dim && waypointReaches(t, o); {
 		case want && (moved || !had):
 			if o.wpTracked == nil {
-				o.wpTracked = map[int32]bool{}
+				o.wpTracked = map[int32][16]byte{}
 			}
-			o.wpTracked[t.p.eid] = true
+			o.wpTracked[t.p.eid] = t.p.uuid
 			o.p.trySendEv(waypointFor(t, waypointTrack))
 		case !want && had:
 			delete(o.wpTracked, t.p.eid)
@@ -107,9 +107,90 @@ func (h *hub) waypointOnMove(players map[int32]*tracked, t *tracked, moved bool)
 
 // waypointTick re-checks every transmitter once a second, catching what
 // changes without a move: an effect, a head put on, a game mode, the rule.
+// Mobs transmit too, once something gives them a range.
 func (h *hub) waypointTick(players map[int32]*tracked) {
 	for _, t := range players {
 		h.waypointSync(players, t, false)
+	}
+	h.mobWaypointTick(players)
+}
+
+// mobTransmits is LivingEntity.isTransmittingWaypoint for a mob. A mob's
+// WAYPOINT_TRANSMIT_RANGE defaults to zero (only Player.createAttributes
+// raises it), so one shows only once /attribute or a plugin gives it a
+// range; invisibility and a hiding head zero it as they do a player's.
+func mobTransmits(m *mob) bool {
+	return m.attrs != nil && m.dying == 0 && m.hasEffect(effInvisibility) == 0 &&
+		!waypointHideHeads[m.gear[0].item] && m.attrs.Value(attr.WaypointTransmitRange) > 0
+}
+
+// mobWaypointReaches is doesSourceIgnoreReceiver for a mob source: a
+// spectator sees it, a receiver riding it does not (hasIndirectPassenger),
+// else it shows nearer than the lesser of its transmit range and the
+// receiver's receive range.
+func mobWaypointReaches(m *mob, o *tracked) bool {
+	if o.gamemode == gmSpectator {
+		return true
+	}
+	if o.ridingEID == m.eid {
+		return false
+	}
+	recv := o.playerAttrs().Value(attr.WaypointReceiveRange)
+	if recv <= 0 {
+		return false
+	}
+	r := math.Min(m.attrs.Value(attr.WaypointTransmitRange), recv)
+	return dist3(m.x, m.y, m.z, o.x, o.y, o.z) < r
+}
+
+// mobWaypointFor is a mob's track frame at its block position.
+func mobWaypointFor(m *mob) attachproto.Waypoint {
+	return attachproto.Waypoint{Op: waypointTrack, UUID: m.uuid, Style: m.wpIcon.style,
+		Color: m.wpIcon.color, HasColor: m.wpIcon.hasColor,
+		X: int32(math.Floor(m.x)), Y: int32(math.Floor(m.y)), Z: int32(math.Floor(m.z))}
+}
+
+// mobWaypointTick is ServerWaypointManager for transmitting mobs: each
+// receiver in range tracks the mob (re-sent when its block changed), and one
+// that fell out of range, stopped transmitting, changed dimension or lost
+// the mob altogether untracks it.
+func (h *hub) mobWaypointTick(players map[int32]*tracked) {
+	var shows map[int32]*mob
+	if h.rules.LocatorBar {
+		for _, m := range h.mobs {
+			if mobTransmits(m) {
+				if shows == nil {
+					shows = map[int32]*mob{}
+				}
+				shows[m.eid] = m
+			}
+		}
+	}
+	for _, o := range players {
+		for eid, uuid := range o.wpTracked {
+			if players[eid] != nil {
+				continue // a player transmitter: waypointSync's
+			}
+			if m := shows[eid]; m == nil || m.dim != o.dim || !mobWaypointReaches(m, o) {
+				delete(o.wpTracked, eid)
+				o.p.trySendEv(attachproto.Waypoint{Op: waypointUntrack, UUID: uuid})
+			}
+		}
+	}
+	for _, m := range shows {
+		at := [3]int32{int32(math.Floor(m.x)), int32(math.Floor(m.y)), int32(math.Floor(m.z))}
+		moved := at != m.wpAt
+		m.wpAt = at
+		for _, o := range players {
+			if _, had := o.wpTracked[m.eid]; (had && !moved) || m.dim != o.dim || !mobWaypointReaches(m, o) {
+				continue
+			}
+			if o.wpTracked == nil {
+				o.wpTracked = map[int32][16]byte{}
+			}
+			o.wpTracked[m.eid] = m.uuid
+			o.p.trySendEv(mobWaypointFor(m))
+		}
 	}
 }
 

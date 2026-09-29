@@ -393,10 +393,10 @@ type tracked struct {
 	viewBin   *bin // a hopper cart's slots while its window is open
 	// The player's OWN ender-chest storage: the block is just a door onto it.
 	ender     *chest
-	winPos2   simPos         // the RIGHT half of an open double chest (winPos = LEFT)
-	frozen    int            // vanilla TICKS_FROZEN: powder snow counts it up, the open air thaws it
-	armor     [4]invStack    // window-0 armor slots — worn, applied, persisted
-	wpTracked map[int32]bool // the transmitters this player's locator bar is showing
+	winPos2   simPos             // the RIGHT half of an open double chest (winPos = LEFT)
+	frozen    int                // vanilla TICKS_FROZEN: powder snow counts it up, the open air thaws it
+	armor     [4]invStack        // window-0 armor slots — worn, applied, persisted
+	wpTracked map[int32][16]byte // the transmitters this player's locator bar is showing (eid → uuid)
 	// lastArmor is what the attribute pipeline last saw; refreshGearIfChanged
 	// compares against it so gear attributes recompute on change, not per tick.
 	lastArmor [4]invStack
