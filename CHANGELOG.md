@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-29
 
 ### Fixed
+- **Fire climbs the walls it burns.** A fire with nothing solid or
+  burnable beneath it now clings to the flammable blocks beside and above
+  it, as vanilla draws it, and its sides follow as those blocks catch,
+  burn away or are placed.
 - **Shulker boxes check the room their lid needs exactly.** A box opens
   unless something actually fills the half block its lid slides into: a
   bottom slab, a fence post reaching up from below, a boat or a shulker
