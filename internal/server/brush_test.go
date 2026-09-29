@@ -53,6 +53,9 @@ func TestDesertWellBuriesSuspiciousSand(t *testing.T) {
 	}
 }
 
+// up is the top face, the one a stroke from above strikes.
+var up = blockPos{0, 1, 0}
+
 // Ten strokes on the cooldown, then it gives up its contents and leaves plain
 // sand. Fewer than ten leaves it standing.
 func TestBrushingOpensTheCacheAfterTenStrokes(t *testing.T) {
@@ -62,11 +65,10 @@ func TestBrushingOpensTheCacheAfterTenStrokes(t *testing.T) {
 	pl.x, pl.y, pl.z = float64(pos.x), float64(pos.y), float64(pos.z)
 	pl.p.setHotbarSlot(0, itemBrush)
 	players := map[int32]*tracked{pl.p.eid: pl}
-	stroke := evBrush{eid: pl.p.eid, x: pos.x, y: pos.y, z: pos.z, dy: 1}
 
 	for i := 0; i < 9; i++ {
 		h.tick.Store(uint64(i) * brushCooldown)
-		h.brush(players, pl, stroke)
+		h.brushStroke(players, pl, pos, up)
 	}
 	if _, ok := suspiciousTurnsInto(h.world.At(pos.x, pos.y, pos.z)); !ok {
 		t.Fatal("nine strokes should not have opened it")
@@ -74,7 +76,7 @@ func TestBrushingOpensTheCacheAfterTenStrokes(t *testing.T) {
 	before := len(h.items)
 
 	h.tick.Store(uint64(9) * brushCooldown)
-	h.brush(players, pl, stroke)
+	h.brushStroke(players, pl, pos, up)
 	if _, ok := suspiciousTurnsInto(h.world.At(pos.x, pos.y, pos.z)); ok {
 		t.Error("the tenth stroke should have opened it")
 	}
@@ -86,22 +88,20 @@ func TestBrushingOpensTheCacheAfterTenStrokes(t *testing.T) {
 	}
 }
 
-// Strokes inside the cooldown do not count, which is what makes brushing take
-// a couple of seconds rather than one frantic click-storm.
+// Strokes inside the block's cooldown do not count.
 func TestBrushCooldownRateLimitsStrokes(t *testing.T) {
 	h, w := findWell(t)
 	pos := blockPos{w.Sus[0][0], w.Sus[0][1], w.Sus[0][2]}
 	pl := testTracked()
 	pl.p.setHotbarSlot(0, itemBrush)
 	players := map[int32]*tracked{pl.p.eid: pl}
-	stroke := evBrush{eid: pl.p.eid, x: pos.x, y: pos.y, z: pos.z, dy: 1}
 
 	h.tick.Store(100)
-	for i := 0; i < 30; i++ { // same tick, thirty clicks
-		h.brush(players, pl, stroke)
+	for i := 0; i < 30; i++ { // same tick, thirty strokes
+		h.brushStroke(players, pl, pos, up)
 	}
 	if _, ok := suspiciousTurnsInto(h.world.At(pos.x, pos.y, pos.z)); !ok {
-		t.Fatal("thirty clicks in one tick should not open a cache")
+		t.Fatal("thirty strokes in one tick should not open a cache")
 	}
 	if got := h.brushes[pos].count; got != 1 {
 		t.Errorf("only one stroke should have counted, got %d", got)
@@ -115,11 +115,10 @@ func TestBrushingDecaysWhenLeftAlone(t *testing.T) {
 	pl := testTracked()
 	pl.p.setHotbarSlot(0, itemBrush)
 	players := map[int32]*tracked{pl.p.eid: pl}
-	stroke := evBrush{eid: pl.p.eid, x: pos.x, y: pos.y, z: pos.z, dy: 1}
 
 	for i := 0; i < 5; i++ {
 		h.tick.Store(uint64(i) * brushCooldown)
-		h.brush(players, pl, stroke)
+		h.brushStroke(players, pl, pos, up)
 	}
 	if h.brushes[pos].count != 5 {
 		t.Fatalf("expected 5 strokes, got %d", h.brushes[pos].count)
@@ -146,12 +145,11 @@ func TestUnseededSuspiciousBlockDropsNothing(t *testing.T) {
 	pl := testTracked()
 	pl.p.setHotbarSlot(0, itemBrush)
 	players := map[int32]*tracked{pl.p.eid: pl}
-	stroke := evBrush{eid: pl.p.eid, x: pos.x, y: pos.y, z: pos.z, dy: 1}
 
 	before := len(h.items)
 	for i := 0; i < 10; i++ {
 		h.tick.Store(uint64(i) * brushCooldown)
-		h.brush(players, pl, stroke)
+		h.brushStroke(players, pl, pos, up)
 	}
 	if h.world.At(pos.x, pos.y, pos.z) != worldgen.Sand {
 		t.Error("it should still open into sand")
@@ -189,7 +187,7 @@ func TestBrushingGravelSoundsLikeGravel(t *testing.T) {
 	players := map[int32]*tracked{brusher.p.eid: brusher, onlooker.p.eid: onlooker}
 	drainEvents(brusher)
 	drainEvents(onlooker)
-	h.brush(players, brusher, evBrush{eid: brusher.p.eid, x: pos.x, y: pos.y, z: pos.z, dy: 1})
+	h.brushStroke(players, brusher, pos, up)
 	heard := func(pl *tracked) string {
 		for len(pl.p.out) > 0 {
 			if s, ok := (<-pl.p.out).ev.(attachproto.Sound); ok && strings.Contains(s.Name, "brush") {
@@ -203,5 +201,126 @@ func TestBrushingGravelSoundsLikeGravel(t *testing.T) {
 	}
 	if got := heard(brusher); got != "" {
 		t.Errorf("the brusher's client plays its own sound; the server sent %q", got)
+	}
+}
+
+// brushFixture is a brusher standing on the block below them and looking
+// straight down at it, with an onlooker beside them.
+func brushFixture(t *testing.T, state uint32) (*hub, map[int32]*tracked, *tracked, *tracked, blockPos) {
+	t.Helper()
+	h := newTestHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	pos := blockPos{2, 180, 2}
+	h.world.SetBlock(pos.x, pos.y, pos.z, state)
+	brusher, onlooker := testTracked(), testTracked()
+	onlooker.p = newPlayer(2, "onlooker", [16]byte{2})
+	brusher.x, brusher.y, brusher.z = 2.5, 181, 2.5
+	brusher.pitch = 90
+	onlooker.x, onlooker.y, onlooker.z = 4.5, 181, 4.5
+	brusher.p.setHotbarSlot(0, itemBrush)
+	brusher.inv.slots[0] = invStack{item: itemBrush, count: 1}
+	players := map[int32]*tracked{brusher.p.eid: brusher, onlooker.p.eid: onlooker}
+	h.playersRef = players
+	h.tick.Store(1000)
+	return h, players, brusher, onlooker, pos
+}
+
+// BrushItem is a held use: one click, then a stroke on the tick before each
+// backswing (the fifth of every ten), and the tenth stroke — on the
+// ninety-fifth tick — opens the block. Clicking again does not stroke.
+func TestBrushHeldUseStrokesEveryTenTicks(t *testing.T) {
+	h, players, pl, _, pos := brushFixture(t, suspiciousSandBase)
+	h.useOnEvent(players, evBrush{eid: pl.p.eid, x: pos.x, y: pos.y, z: pos.z, dy: 1})
+	if pl.brushFrom == 0 {
+		t.Fatal("a click with the brush should start the held use")
+	}
+	if b := h.brushes[pos]; b != nil && b.count != 0 {
+		t.Fatalf("the click itself stroked: count %d", b.count)
+	}
+	var strokes []int
+	for tick := 1; tick <= 95; tick++ {
+		h.tick.Add(1)
+		was := 0
+		if b := h.brushes[pos]; b != nil {
+			was = b.count
+		}
+		h.tickBrushing(players)
+		if b := h.brushes[pos]; (b != nil && b.count > was) || (b == nil && was > 0) {
+			strokes = append(strokes, tick)
+		}
+		if tick < 95 {
+			if _, ok := suspiciousTurnsInto(h.world.At(pos.x, pos.y, pos.z)); !ok {
+				t.Fatalf("the block opened early, on tick %d", tick)
+			}
+		}
+	}
+	want := []int{5, 15, 25, 35, 45, 55, 65, 75, 85, 95}
+	if len(strokes) != len(want) {
+		t.Fatalf("strokes on ticks %v, want %v", strokes, want)
+	}
+	for i := range want {
+		if strokes[i] != want[i] {
+			t.Fatalf("strokes on ticks %v, want %v", strokes, want)
+		}
+	}
+	if h.world.At(pos.x, pos.y, pos.z) != worldgen.Sand {
+		t.Fatalf("the tenth stroke should leave sand, got %d", h.world.At(pos.x, pos.y, pos.z))
+	}
+}
+
+// Letting go of the button (release_use_item) ends the use: no more strokes.
+func TestBrushReleaseStopsStrokes(t *testing.T) {
+	h, players, pl, _, pos := brushFixture(t, suspiciousSandBase)
+	h.useOnEvent(players, evBrush{eid: pl.p.eid, x: pos.x, y: pos.y, z: pos.z, dy: 1})
+	for i := 0; i < 6; i++ {
+		h.tick.Add(1)
+		h.tickBrushing(players)
+	}
+	if b := h.brushes[pos]; b == nil || b.count != 1 {
+		t.Fatalf("one stroke by the sixth tick, have %+v", b)
+	}
+	stopBrushing(pl) // what evStopEat does on release
+	for i := 0; i < 30; i++ {
+		h.tick.Add(1)
+		h.tickBrushing(players)
+	}
+	if b := h.brushes[pos]; b == nil || b.count != 1 {
+		t.Fatalf("a released brush kept stroking: %+v", b)
+	}
+}
+
+// Looking away from every block ends the use (releaseUsingItem).
+func TestBrushLookingAwayEndsTheUse(t *testing.T) {
+	h, players, pl, _, pos := brushFixture(t, suspiciousSandBase)
+	h.useOnEvent(players, evBrush{eid: pl.p.eid, x: pos.x, y: pos.y, z: pos.z, dy: 1})
+	pl.pitch = -90 // up at the open sky
+	h.tick.Add(1)
+	h.tickBrushing(players)
+	if pl.brushFrom != 0 {
+		t.Fatal("a brush looking at nothing should stop")
+	}
+}
+
+// Brushing a block that is not suspicious still strokes: the others hear the
+// generic brushing sound, and nothing about the block changes.
+func TestBrushingOrdinaryBlockSoundsGeneric(t *testing.T) {
+	h, players, pl, onlooker, pos := brushFixture(t, worldgen.BlockBase("stone"))
+	h.useOnEvent(players, evBrush{eid: pl.p.eid, x: pos.x, y: pos.y, z: pos.z, dy: 1})
+	drainEvents(onlooker)
+	heard := ""
+	for i := 0; i < 5; i++ {
+		h.tick.Add(1)
+		h.tickBrushing(players)
+	}
+	for len(onlooker.p.out) > 0 {
+		if s, ok := (<-onlooker.p.out).ev.(attachproto.Sound); ok && strings.Contains(s.Name, "brush") {
+			heard = s.Name
+		}
+	}
+	if heard != "minecraft:item.brush.brushing.generic" {
+		t.Fatalf("an onlooker hears %q, want the generic brushing", heard)
+	}
+	if h.world.At(pos.x, pos.y, pos.z) != worldgen.BlockBase("stone") {
+		t.Fatal("brushing stone changed it")
 	}
 }

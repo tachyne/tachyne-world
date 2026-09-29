@@ -265,6 +265,8 @@ type tracked struct {
 	graceUntil     uint64           // no environmental damage until this tick (portal arrival)
 	cooldowns      map[int32]uint64 // per-item use cooldown: item id → tick it frees up
 	scopeUntil     uint64           // tick a raised spyglass drops on its own (0 = not scoping)
+	brushFrom      uint64           // tick of a held brush use's first onUseTick (0 = not brushing)
+	brushOff       bool             // …and whether it is the offhand's brush
 	// Advancement bookkeeping (advancement_hooks.go): where a levitation began,
 	// the overworld spot a Nether trip started from, and what last launched us.
 	levStartY      float64
@@ -1205,6 +1207,7 @@ func (h *hub) run() {
 			h.tickGliding(players)         // elytra wear: a point a second, and the glide ends with the wing
 			h.tickBoosts(players)          // a food-on-a-stick sprint runs down while its mount is ridden
 			h.expireSpyglass(players)      // a scope held to its full duration drops
+			h.tickBrushing(players)        // held brushes stroke every ten ticks
 			h.updateEating(players)        // apply finished eat-holds (32-tick chew)
 			h.tickSpearCharges(players)    // lowered spears strike what they run into
 			h.borderDamage(players)        // outside the world border hurts (players only)
@@ -2015,6 +2018,7 @@ func (h *hub) run() {
 					h.stopEating(players, t)
 					h.lowerShield(t)            // release / hotbar switch also drops a shield
 					h.lowerSpyglass(players, t) // …and takes a spyglass from the eye
+					stopBrushing(t)             // …and lifts a brush
 					stopSpearCharge(t)          // …and raises a lowered spear
 					if e.fire {                 // release_use_item looses a drawn bow / finishes a crossbow load / throws a trident…
 						h.releaseDraw(players, t)
@@ -2566,7 +2570,7 @@ func (h *hub) useOnEvent(players map[int32]*tracked, ev hubEvent) bool {
 	case evBrush:
 		eid, off, run = e.eid, e.off, func() {
 			if t := players[e.eid]; t != nil {
-				h.brush(players, t, e)
+				h.startBrushing(t, e)
 			}
 		}
 	default:
