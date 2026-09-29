@@ -42,6 +42,7 @@ type player struct {
 	pendingDest   blockPos
 	pendingDestOK bool
 	pendingAt     bool
+	pendingPortal bool // a portal carried them: TeleportTransition.PLAY_PORTAL_SOUND on arrival
 	pendingPos    [3]float64
 	pendingYaw    float32
 	onGround      bool

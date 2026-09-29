@@ -624,6 +624,9 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	}
 	landed := h.hurtFrom(players, t, dmg, mobMeleeDamage(m.etype),
 		mobMeleeCause(m), fromMobWeapon(m.x, m.z, m.held))
+	if m.etype == entityPhantom && !m.silent { // PhantomSweepAttackGoal: the bite, heard
+		h.levelEvent(players, m.dim, worldEventPhantomBite, floorInt(m.x), floorInt(m.y), floorInt(m.z), 0)
+	}
 	// A caught bite still shoves them. Mob.getKnockback is ATTACK_KNOCKBACK
 	// plus the weapon's Knockback, halved, on top of the 0.4 the hurt itself
 	// gives — and 0.4 is what a scale of 1 means here, so each unit of the

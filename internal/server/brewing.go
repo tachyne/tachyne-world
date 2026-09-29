@@ -319,8 +319,7 @@ func (h *hub) finishBrew(players map[int32]*tracked, pos simPos, b *bin, outs [3
 		b.slots[3] = invStack{}
 	}
 	delete(h.brewIng, pos)
-	h.playSoundDim(players, pos.dim, "minecraft:block.brewing_stand.brew", sndBlock,
-		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.6, 1)
+	h.levelEvent(players, pos.dim, worldEventBrew, pos.x, pos.y, pos.z, 0) // BrewingStandBlockEntity.doBrew
 	h.containerChanged(players, pos)
 	for _, t := range players {
 		// vanilla fires brewed_potion on taking the potion; the taker is

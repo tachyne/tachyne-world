@@ -27,7 +27,7 @@ func (s *Server) handleDig(p *player, data []byte) {
 	if _, err := io.ReadFull(br, posb[:]); err != nil {
 		return
 	}
-	br.ReadByte()                     // face (unused)
+	face, _ := br.ReadByte()          // the face struck (Direction's 3D value)
 	seq, _ := protocol.ReadVarInt(br) // prediction sequence
 	p.noteAck(seq)                    // the hub acknowledges it at the end of the tick
 
@@ -123,7 +123,7 @@ func (s *Server) handleDig(p *player, data []byte) {
 			}
 		} else if status == digStartBreak {
 			p.digStartAt, p.digPos = s.hub.tick.Load(), blockPos{x, y, z} // arm the timer
-			s.hub.post(evDigStart{eid: p.eid, dim: p.dim, x: x, y: y, z: z})
+			s.hub.post(evDigStart{eid: p.eid, dim: p.dim, x: x, y: y, z: z, face: int32(face)})
 			return
 		} else if status != digFinishBreak {
 			return

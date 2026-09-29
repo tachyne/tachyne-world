@@ -72,13 +72,15 @@ func (h *hub) useComposter(players map[int32]*tracked, t *tracked, pos blockPos)
 	}
 	// Vanilla's roll: an empty composter always takes the first item, and
 	// after that the item's own chance decides.
+	// Level event 1500 either way: the fill sound (a success when the pile
+	// rose) and the compost particles.
 	if level != 0 && h.rng.Float64() >= chance {
-		h.playSoundDim(players, t.dim, "minecraft:block.composter.fill", sndBlock, cx, cy, cz, 1, 1)
+		h.levelEvent(players, t.dim, worldEventComposterFill, pos.x, pos.y, pos.z, 0)
 		return
 	}
 	h.setBlockAt(players, t.dim, pos, composterBase+uint32(level)+1)
 	h.vib(t.dim, freqBlockChange, pos.x, pos.y, pos.z, t.p.eid) // ComposterBlock.addItem, on a level that actually rose
-	h.playSoundDim(players, t.dim, "minecraft:block.composter.fill_success", sndBlock, cx, cy, cz, 1, 1)
+	h.levelEvent(players, t.dim, worldEventComposterFill, pos.x, pos.y, pos.z, 1)
 	if level+1 == composterFull {
 		h.armComposter(t.dim, pos) // it finishes composting a second later
 	}
@@ -138,11 +140,10 @@ func (h *hub) composterInsert(target simPos, level int, one invStack) bool {
 	if _, compostable := compostChance[one.item]; !compostable {
 		return false
 	}
-	cx, cy, cz := float64(target.x)+0.5, float64(target.y)+0.5, float64(target.z)+0.5
-	snd := "minecraft:block.composter.fill" // the item is spent either way, as it is from a hand
+	rose := int32(0) // the item is spent either way, as it is from a hand
 	if h.composterLayer(target.dim, target.blockPos, level, one.item, 0) != level {
-		snd = "minecraft:block.composter.fill_success"
+		rose = 1
 	}
-	h.playSoundDim(h.playersRef, target.dim, snd, sndBlock, cx, cy, cz, 1, 1)
+	h.levelEvent(h.playersRef, target.dim, worldEventComposterFill, target.x, target.y, target.z, rose)
 	return true
 }

@@ -2860,7 +2860,7 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 		}
 		t.p.trySendEv(body)
 		if e.broken != 0 { // break particles + sound, rendered from the old state
-			t.p.trySendEv(blockBreakEvent(e.x, e.y, e.z, e.broken))
+			t.p.trySendEv(playerBreakEvent(e.x, e.y, e.z, e.broken))
 		}
 	}
 	if e.placed {

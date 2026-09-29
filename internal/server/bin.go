@@ -316,8 +316,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		}
 	}
 	if st == nil { // DispenserBlock.dispenseFrom: levelEvent 1001 and BLOCK_ACTIVATE
-		h.playSoundDim(players, pos.dim, "minecraft:block.dispenser.fail", sndBlock,
-			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1.2)
+		h.levelEvent(players, pos.dim, worldEventDispenseFail, pos.x, pos.y, pos.z, 0)
 		h.vib(pos.dim, freqBlockActivate, pos.x, pos.y, pos.z, 0)
 		return
 	}
@@ -717,15 +716,22 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			*st = invStack{}
 		}
 	}
-	snd, vol, pitch := "minecraft:block.dispenser.dispense", float32(0.5), float32(1) // SOUND_DISPENSER_DISPENSE (1000)
+	// The behaviour's playSound is a level event: the dispense click, the
+	// fail click of an OptionalDispenseItemBehavior that did nothing, or a
+	// projectile's launch — which a rocket and a wind charge override with
+	// their own (DispenseConfig.overrideDispenseEvent).
+	ev := int32(worldEventDispense)
 	switch {
 	case failed:
-		snd, vol, pitch = "minecraft:block.dispenser.fail", 1, 1.2 // SOUND_DISPENSER_FAIL (1001), as an empty dispenser's
+		ev = worldEventDispenseFail
+	case dispense && item == itemFireworkRocket:
+		ev = worldEventFireworkShoot
+	case dispense && item == itemWindCharge:
+		ev = worldEventWindChargeShoot
 	case len(h.arrows) > arrowsBefore:
-		snd = "minecraft:block.dispenser.launch" // SOUND_DISPENSER_PROJECTILE_LAUNCH (1002)
+		ev = worldEventDispenseLaunch
 	}
-	h.rsSound(players, snd, sndBlock,
-		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, vol, pitch)
+	h.levelEvent(players, pos.dim, ev, pos.x, pos.y, pos.z, 0)
 	h.levelEvent(players, pos.dim, worldEventDispenserSmoke, pos.x, pos.y, pos.z, dir3D(dx, dy, dz)) // the puff out of the face
 	h.containerChanged(players, pos)
 }

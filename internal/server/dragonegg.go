@@ -6,7 +6,8 @@ import "github.com/tachyne/tachyne-world/internal/worldgen"
 // and useWithoutItem → teleport): up to a thousand tries at a cell within
 // ±15 blocks sideways and ±7 up or down (two dice each way, so near cells
 // are likelier), the first empty one inside the world border taking the
-// egg. The portal particles of the blink are the client's own.
+// egg. The portal particles of the blink are level event 2015, carrying
+// the jump.
 
 type evDragonEgg struct {
 	eid     int32
@@ -27,6 +28,7 @@ func (h *hub) onDragonEgg(players map[int32]*tracked, e evDragonEgg) {
 		return
 	}
 	if to, ok := h.dragonEggTarget(t.dim, pos); ok {
+		h.levelEvent(players, t.dim, worldEventDragonEggTeleport, pos.x, pos.y, pos.z, packDifference(pos, to, 16, 8, 16))
 		h.setBlockAt(players, t.dim, to, worldgen.DragonEgg)
 		h.setBlockAt(players, t.dim, pos, worldgen.Air)
 	}

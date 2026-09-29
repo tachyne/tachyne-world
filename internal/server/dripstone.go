@@ -180,6 +180,10 @@ func (h *hub) dripThroughStalactite(players map[int32]*tracked, dim, x, y, z int
 		if !isCauldron {
 			return // something solid in the way
 		}
+		// The drop leaves the tip (level event 1504) only toward a cauldron
+		// that can take it; the cauldron's receiveStalactiteDrip makes its
+		// own sound (1047 for water, 1046 for lava).
+		ev := int32(worldEventDripWaterCauldron)
 		switch {
 		case fill == cauldronWater && kind == cauldronEmpty:
 			h.setBlockAt(players, dim, blockPos{x, cy, z}, waterCauldronBase)
@@ -188,7 +192,12 @@ func (h *hub) dripThroughStalactite(players map[int32]*tracked, dim, x, y, z int
 		case fill == cauldronLava && kind == cauldronEmpty:
 			// Lava fills a cauldron in one go — there is no partial lava level.
 			h.setBlockAt(players, dim, blockPos{x, cy, z}, lavaCauldronState)
+			ev = worldEventDripLavaCauldron
+		default:
+			return
 		}
+		h.levelEvent(players, dim, worldEventDripstoneDrip, x, tipY, z, 0)
+		h.levelEvent(players, dim, ev, x, cy, z, 0)
 		return
 	}
 }

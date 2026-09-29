@@ -60,7 +60,7 @@ func (h *hub) zombieBeatsDoor(players map[int32]*tracked, m *mob, door blockPos)
 	m.vx, m.vz = 0, 0
 	m.doorTicks += mobMoveInterval
 	if h.rng.Intn(20/mobMoveInterval) == 0 { // levelEvent 1019 + the swing, 1/20 a tick
-		h.playSoundDim(players, m.dim, "minecraft:entity.zombie.attack_wooden_door", sndHostile, float64(door.x)+0.5, float64(door.y)+0.5, float64(door.z)+0.5, 2, 0.8+h.rng.Float32()*0.4)
+		h.levelEvent(players, m.dim, worldEventZombieDoorKnock, door.x, door.y, door.z, 0)
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
 	}
 	if stage := int8(m.doorTicks * 10 / doorBreakTicks); stage != m.doorStage {
@@ -77,7 +77,7 @@ func (h *hub) zombieBeatsDoor(players map[int32]*tracked, m *mob, door blockPos)
 	// raises no BLOCK_DESTROY vibration. It used to drop the door as an item.
 	h.setBlockLive(players, m.dim, door.x, door.y+1, door.z, worldgen.Air)
 	h.setBlockAt(players, m.dim, door, worldgen.Air)
-	h.playSoundDim(players, m.dim, "minecraft:entity.zombie.break_wooden_door", sndHostile, float64(door.x)+0.5, float64(door.y)+0.5, float64(door.z)+0.5, 2, 0.8+h.rng.Float32()*0.4)
+	h.levelEvent(players, m.dim, worldEventZombieDoorCrash, door.x, door.y, door.z, 0)
 	h.zombieStopDoor(players, m)
 	return false
 }

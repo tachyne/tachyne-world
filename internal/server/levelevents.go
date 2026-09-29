@@ -35,6 +35,40 @@ const (
 	worldEventCobweb           = 3018 // ANIMATION_SPAWN_COBWEB
 	worldEventSkelToStray      = 1048 // SOUND_SKELETON_TO_STRAY
 	worldEventEndermanTeleport = 2018 // PARTICLES_ENDERMAN_TELEPORT (26.3), data: clampedPackDifference to the landing
+
+	worldEventDispense         = 1000 // SOUND_DISPENSER_DISPENSE
+	worldEventDispenseFail     = 1001 // SOUND_DISPENSER_FAIL
+	worldEventDispenseLaunch   = 1002 // SOUND_DISPENSER_PROJECTILE_LAUNCH
+	worldEventFireworkShoot    = 1004 // SOUND_FIREWORK_SHOOT: a dispensed rocket
+	worldEventWindChargeShoot  = 1051 // SOUND_WIND_CHARGE_SHOOT: a dispensed wind charge
+	worldEventZombieDoorKnock  = 1019 // SOUND_ZOMBIE_WOODEN_DOOR: BreakDoorGoal's blows
+	worldEventZombieDoorCrash  = 1021 // SOUND_ZOMBIE_DOOR_CRASH: the door gives
+	worldEventWitherBreak      = 1022 // SOUND_WITHER_BLOCK_BREAK
+	worldEventWitherShoot      = 1024 // SOUND_WITHER_BOSS_SHOOT: each skull
+	worldEventPortalTravel     = 1032 // SOUND_PORTAL_TRAVEL: to the traveller, on arrival
+	worldEventBrew             = 1035 // SOUND_BREWING_STAND_BREW
+	worldEventPhantomBite      = 1039 // SOUND_PHANTOM_BITE
+	worldEventCrafterCraft     = 1049 // SOUND_CRAFTER_CRAFT: a crafted stack dropped out
+	worldEventCrafterFail      = 1050 // SOUND_CRAFTER_FAIL: nothing matches
+	worldEventWhiteSmoke       = 2010 // PARTICLES_SHOOT_WHITE_SMOKE, data: the facing's 3D index
+	worldEventComposterFill    = 1500 // COMPOSTER_FILL, data: 1 when the pile rose
+	worldEventLavaFizz         = 1501 // LAVA_FIZZ: the hiss and smoke of a quench
+	worldEventDripstoneDrip    = 1504 // DRIPSTONE_DRIP: a drop leaves the tip for a cauldron
+	worldEventEvaporate        = 2009 // PARTICLES_WATER_EVAPORATING: a wet sponge dries in the Nether
+	worldEventSmashAttack      = 2013 // PARTICLES_SMASH_ATTACK, data: the dust's size
+	worldEventDestroyParticles = 2014 // PARTICLES_DESTROY_BLOCK: a straw bed's break, silent
+	worldEventGatewaySpawn     = 3000 // ANIMATION_END_GATEWAY_SPAWN
+
+	worldEventDestroyProgress      = 2019 // PARTICLES_DESTROY_PROGRESS, data: the face struck
+	worldEventDestroyProgressSound = 2020 // PARTICLES_AND_SOUND_DESTROY_PROGRESS: every fourth tick of a dig
+	worldEventTrialDetect          = 3013 // PARTICLES_TRIAL_SPAWNER_DETECT_PLAYER, data: players detected
+	worldEventTrialDetectOmen      = 3019 // PARTICLES_TRIAL_SPAWNER_DETECT_PLAYER_OMINOUS
+	worldEventDragonEggTeleport    = 2015 // PARTICLES_DRAGON_EGG_TELEPORT, data: packDifference(16, 8, 16) to the landing
+	worldEventShulkerTeleport      = 2016 // PARTICLES_SHULKER_TELEPORT, data: packDifference(8, 8, 8) to the landing
+	worldEventConsumeTeleport      = 2017 // PARTICLES_CONSUME_EFFECT_TELEPORT (chorus fruit), data: clampedPackDifference
+	worldEventDripLavaCauldron     = 1046 // SOUND_DRIP_LAVA_INTO_CAULDRON
+	worldEventDripWaterCauldron    = 1047 // SOUND_DRIP_WATER_INTO_CAULDRON
+	worldEventFrameFill            = 1503 // END_PORTAL_FRAME_FILL: the sound and the smoke
 )
 
 // levelEvent fires one at a block position for everyone near it.
@@ -48,6 +82,12 @@ func (h *hub) levelEvent(players map[int32]*tracked, dim int, event int32, x, y,
 func clampedPackDifference(x0, y0, z0, x1, y1, z1 int) int32 {
 	axis := func(d int) int32 { return int32(max(-127, min(127, d))+127) & 0xFF }
 	return axis(x1-x0)<<16 | axis(y1-y0)<<8 | axis(z1-z0)
+}
+
+// packDifference is BlockUtil.packDifferenceInPosition: each axis of the
+// step from one cell to another, offset by that axis's radius, a byte each.
+func packDifference(from, to blockPos, rx, ry, rz int) int32 {
+	return int32((to.x-from.x+rx)&0xFF)<<16 | int32((to.y-from.y+ry)&0xFF)<<8 | int32((to.z-from.z+rz)&0xFF)
 }
 
 // dir3D is Direction.get3DDataValue for a unit offset: down, up, north,

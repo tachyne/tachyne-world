@@ -21,10 +21,14 @@ func (h *hub) chorusTeleport(players map[int32]*tracked, t *tracked) bool {
 		y := t.y + (h.rng.Float64()-0.5)*chorusTeleportDiameter
 		z := t.z + (h.rng.Float64()-0.5)*chorusTeleportDiameter
 		if ny, ok := h.randomTeleportY(t.dim, x, y, z); ok {
+			from := blockPos{floorInt(t.x), floorInt(t.y), floorInt(t.z)}
 			h.teleportPlayer(players, t, x, ny, z)
 			t.peakY = t.y // resetFallDistance
 			h.playSoundDim(players, t.dim, "minecraft:item.chorus_fruit.teleport", sndPlayer, t.x, t.y, t.z, 1, 1)
 			h.toNearbyEv(players, t.dim, t.x, t.z, entityStatus(t.p.eid, entityStatusTeleport))
+			// directionalParticles: the trail from where they stood (level event 2017).
+			h.levelEvent(players, t.dim, worldEventConsumeTeleport, from.x, from.y, from.z,
+				clampedPackDifference(from.x, from.y, from.z, floorInt(t.x), floorInt(t.y), floorInt(t.z)))
 			h.vibAt(t.dim, freqTeleport, t.x, t.y, t.z, t.p.eid)
 			h.setCooldown(t, itemChorusFruit, 20)
 			return true

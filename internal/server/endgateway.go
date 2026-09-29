@@ -64,6 +64,7 @@ func (h *hub) spawnNextEndGateway(players map[int32]*tracked) {
 	for k := len(order) - 1; k >= 0; k-- {
 		p := endGatewayRingPos(order[k])
 		if h.worldFor(dimEnd).At(p.x, p.y, p.z) != endGatewayState {
+			h.levelEvent(players, dimEnd, worldEventGatewaySpawn, p.x, p.y, p.z, 0) // the bang and the flash
 			h.buildEndGateway(players, p)
 			return
 		}

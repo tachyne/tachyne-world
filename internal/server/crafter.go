@@ -141,8 +141,6 @@ func (h *hub) crafterCraft(players map[int32]*tracked, pos simPos, state uint32)
 		h.ejectCrafted(players, pos, state, st)
 	}
 	h.containerChanged(players, pos)
-	h.playSoundDim(players, pos.dim, "minecraft:block.crafter.craft", sndBlock,
-		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 	return true
 }
 
@@ -373,12 +371,13 @@ func crafterComparator(c *bin) int {
 }
 
 func (h *hub) craftFail(players map[int32]*tracked, pos simPos) {
-	h.playSoundDim(players, pos.dim, "minecraft:block.crafter.fail", sndBlock,
-		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
+	h.levelEvent(players, pos.dim, worldEventCrafterFail, pos.x, pos.y, pos.z, 0)
 }
 
 // ejectCrafted pushes the result into the container the crafter faces, or drops
-// it into the world if none accepts it (CrafterBlockEntity output behaviour).
+// it into the world if none accepts it (CrafterBlock.dispenseItem). Only a
+// drop makes the craft's click and the white puff out of the face (levelEvent
+// 1049 and 2010): a stack that goes into a container goes quietly.
 func (h *hub) ejectCrafted(players map[int32]*tracked, pos simPos, state uint32, st invStack) {
 	dx, dy, dz := crafterFront(state)
 	target := blockPos{pos.x + dx, pos.y + dy, pos.z + dz}
@@ -404,4 +403,6 @@ func (h *hub) ejectCrafted(players map[int32]*tracked, pos simPos, state uint32,
 		it.setFrom(st) // the whole stack: a stew's flower, a map's id, a rocket's stars
 		h.refreshItemMeta(players, it)
 	}
+	h.levelEvent(players, pos.dim, worldEventCrafterCraft, pos.x, pos.y, pos.z, 0)
+	h.levelEvent(players, pos.dim, worldEventWhiteSmoke, pos.x, pos.y, pos.z, dir3D(dx, dy, dz))
 }

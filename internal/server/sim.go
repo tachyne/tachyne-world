@@ -534,10 +534,10 @@ func (h *hub) lavaSolidify(players map[int32]*tracked, dim int, pos blockPos, le
 	return false
 }
 
-// fizz plays the lava-quench sound where a fluid solidified (vanilla levelEvent 1501).
+// fizz is LiquidBlock/LavaFluid.fizz: level event 1501 where a fluid
+// solidified — the quench's hiss and its smoke.
 func (h *hub) fizz(players map[int32]*tracked, dim int, pos blockPos) {
-	h.playSoundDim(players, dim, "minecraft:block.lava.extinguish", sndBlock,
-		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 2.6)
+	h.levelEvent(players, dim, worldEventLavaFizz, pos.x, pos.y, pos.z, 0)
 }
 
 // flowDirections returns the horizontal directions a fluid should spread into:
