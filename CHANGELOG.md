@@ -52,6 +52,12 @@ the public history since the project was open-sourced on 2026-07-10.
   "Displaying particle …". Particles that take options (dust, block, item,
   entity_effect …) are recognised and refused by name until the particle
   frame can carry their options.
+- **`/fetchprofile name|id|entity`.** Resolves a game profile and answers
+  as vanilla does, with the bracketed Copy Component, Give Item, Summon
+  Mannequin and Copy actions. An online player resolves whole, skin
+  textures included; anyone who has joined resolves by name and UUID from
+  the name cache (the engine makes no session-service lookups of its own);
+  a mob has no profile.
 
 ### Fixed
 - **A posed copper golem statue looks posed in the hand.** The statue's
