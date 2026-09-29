@@ -57,11 +57,12 @@ func isCopperChest(s uint32) bool { return s >= copperChestMin && s <= copperChe
 func isTrappedChest(s uint32) bool { return s >= trappedChestMin && s <= trappedChestMax }
 
 // chestOpenCount is ChestBlockEntity.getOpenCount for the chest at pos: the
-// players viewing it, counting both halves of a double chest (opening a large
-// chest starts both block entities' opener counters).
+// players viewing it and the copper golems at it, counting both halves of a
+// double chest (opening a large chest starts both block entities' opener
+// counters).
 func (h *hub) chestOpenCount(dim int, pos blockPos) int {
-	n := 0
 	at := simPos{dim: dim, blockPos: pos}
+	n := h.golemOpeners(at)
 	for _, t := range h.playersRef {
 		switch t.winKind {
 		case winChest:

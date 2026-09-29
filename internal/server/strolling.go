@@ -91,3 +91,8 @@ func (h *hub) strollAngle(m *mob) float64 {
 		a = h.rng.Float64() * 2 * math.Pi
 	}
 }
+
+// striderStrollEvery is the strider's RandomStrollGoal(1.0, 60) interval,
+// where the other animals' strolls run on the default 120: it rests half as
+// long between strolls.
+const striderStrollEvery = 60

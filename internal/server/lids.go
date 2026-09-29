@@ -22,7 +22,7 @@ func (h *hub) lidEvent(players map[int32]*tracked, pos simPos) {
 	if !ok {
 		return
 	}
-	n := 0
+	n := h.golemOpeners(pos)
 	for _, t := range players {
 		if t.winKind == winChest && t.winPos == pos || t.winKind == winDoubleChest && (t.winPos == pos || t.winPos2 == pos) {
 			n++
@@ -78,12 +78,13 @@ func (h *hub) pairSoundAt(players map[int32]*tracked, a, b simPos, open bool) {
 		float64(a.x+b.x)/2+0.5, float64(a.y)+0.5, float64(a.z+b.z)/2+0.5, 0.5, 0.9+h.rng.Float32()*0.1)
 }
 
-// chestViewers counts the players other than except with the container at
-// pos open — ContainerOpenersCounter's count. Its 0→1 and 1→0 edges are
-// the only times the block plays its sound and sends CONTAINER_OPEN or
-// CONTAINER_CLOSE; openers in between change nothing but the lid event.
+// chestViewers counts the players other than except, and the copper golems,
+// with the container at pos open — ContainerOpenersCounter's count. Its 0→1
+// and 1→0 edges are the only times the block plays its sound and sends
+// CONTAINER_OPEN or CONTAINER_CLOSE; openers in between change nothing but
+// the lid event.
 func (h *hub) chestViewers(pos simPos, except *tracked) int {
-	n := 0
+	n := h.golemOpeners(pos)
 	for _, o := range h.playersRef {
 		if o == except {
 			continue

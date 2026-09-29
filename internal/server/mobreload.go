@@ -85,7 +85,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	}
 	m.anger, m.neutral, m.patrolCaptain = sm.Anger, sm.Neutral, sm.PatrolCaptain
 	m.carriedBlock = sm.CarriedBlk
-	m.oxidation, m.waxed, m.carrying = sm.Oxidation, sm.Waxed, unpackStack(sm.Carrying)
+	m.oxidation, m.waxed = sm.Oxidation, sm.Waxed
 	m.trident, m.canPickup = sm.Trident, sm.CanPickup
 	for i := range m.gear {
 		m.gear[i] = unpackStack(sm.Gear[i])
@@ -124,6 +124,12 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 		}
 	}
 	m.gearSure = sm.GearSure
+	if c := unpackStack(sm.Carrying); c.item != 0 && m.held == 0 {
+		// A copper golem saved while its load was kept apart from its
+		// hand: the load goes back into the hand, a sure drop.
+		m.setHeld(c)
+		m.gearSure[gearSlotHand] = true
+	}
 	if m.patrolCaptain && (m.gear[0].item == 0 || m.gear[0] == invStack{item: itemWhiteBanner, count: 1}) {
 		// A captain saved before the banner was worn as gear, or while it
 		// was a plain white one: the ominous banner goes back on its head,

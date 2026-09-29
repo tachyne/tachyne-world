@@ -221,6 +221,8 @@ type mob struct {
 	patrolCaptain                   bool        // pillager patrol leader (carries the ominous banner)
 	raidCenter                      blockPos    // raider: the raid this mob belongs to (zero = not a raider)
 	raidWave                        int         // raider: the wave it came with (Raider.wave)
+	bannerEID                       int32       // raider: the dropped ominous banner ObtainRaidLeaderBannerGoal pursues (0 = none)
+	bannerSkip                      tickSkips   // …banners it found no path to, and the tick each may be tried again
 	celebrating                     bool        // raider: cheering a lost raid (IS_CELEBRATING)
 	holdingGround                   bool        // pillager/vindicator: HoldGroundAttackGoal's stand-off
 	idleSecs                        int         // seconds spent >32 blocks from every player (despawn clock)
@@ -249,10 +251,17 @@ type mob struct {
 	oxidation                       int         // copper golem: weather stage 0 unaffected → 3 oxidized
 	oxidizeAt                       uint64      // copper golem: tick of the next oxidation step
 	waxed                           bool        // copper golem: honeycombed → never oxidizes
-	carrying                        invStack    // copper golem: items in transit between chests
-	sortGoal                        blockPos    // copper golem: the container it's walking to
-	sortHasGoal                     bool        // copper golem: sortGoal is valid
-	sortCD                          int         // copper golem: ticks until the next transport
+	cgTarget                        blockPos    // copper golem: TransportItemsBetweenContainers' target chest
+	cgHasTarget                     bool        // …set
+	cgPhase                         int8        // …TransportItemState: travelling, queuing or interacting
+	cgInteract                      int8        // …the ContainerInteractionState it met at the chest (0 = none)
+	cgTicks                         int         // …ticksSinceReachingTarget
+	cgVisited                       []blockPos  // …VISITED_BLOCK_POSITIONS
+	cgUnreach                       []blockPos  // …UNREACHABLE_TRANSPORT_BLOCK_POSITIONS
+	cgMemUntil                      uint64      // …the tick those two memories expire
+	cgPathOK                        bool        // …its path to the target was found good (hasValidTravellingPath)
+	cgState                         int8        // copper golem: CopperGolemState, its interaction animation
+	transportCD                     int         // copper golem: TRANSPORT_ITEMS_COOLDOWN_TICKS (0 = absent)
 	trident                         bool        // drowned: armed with a trident (throws it at range)
 	canPickup                       bool        // may pick up dropped gear (spawn-time roll)
 	gear                            [4]invStack // worn armor by slot (0 head,1 chest,2 legs,3 feet)
@@ -628,6 +637,13 @@ type mob struct {
 	lookEID     int32   // the player being watched (0 = a fixed direction)
 	lookDX      float64 // RandomLookAroundGoal's direction
 	lookDZ      float64
+	lookTicker  int32   // SetEntityLookTargetSometimes' Ticker: ticks to its next start (brain animals)
+	gazeCD      int32   // GAZE_COOLDOWN_TICKS: RandomLookAround's wait (brain animals)
+	fishSwimX   float64 // fish: FishSwimGoal's target (fishswim.go)
+	fishSwimY   float64
+	fishSwimZ   float64
+	fishSwimSet bool // …set
+	fishSwimLeg int  // …updates spent on it
 	vx, vz      float64
 	vy          float64  // vertical velocity (swimmers/fliers only)
 	geyserFly   bool     // lifted by a geyser's column (potentsulfur.go) until it comes down
@@ -705,6 +721,9 @@ func (h *hub) spawnMobCause(players map[int32]*tracked, etype, dim int, x, y, z 
 // cap, terrain collision) so every primitive moves consistently.
 func (h *hub) updateMobs(players map[int32]*tracked) {
 	h.updateHerdTargets()
+	if len(h.golemChests) > 0 {
+		h.golemChestSweep(players) // a golem gone with a chest open leaves it
+	}
 	h.pushMobs(players) // crowding: mobs standing in one another shove apart
 	for _, m := range h.mobs {
 		if m.invulnTicks > 0 {
@@ -974,6 +993,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A ravager stunned, roaring or mid-bite stands still.
 		case m.etype == entityBreeze && h.breezeStep(players, m):
 			// A breeze sliding, drawing breath, mid-jump or shooting.
+		case h.raidBannerStep(players, m):
+			// A raider of a leaderless wave going for a dropped ominous
+			// banner, to pick it up and lead (ObtainRaidLeaderBannerGoal).
 		case m.holdingGround && h.holdGroundStep(m):
 			// A patrolling pillager standing its ground, watching its target.
 		case m.celebrating && h.celebrateStep(players, m):
@@ -1021,6 +1043,12 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			} else {
 				m.vx, m.vz = 0, 0 // nowhere to run: it stands (the goal has no target)
 			}
+		case isAbstractFish(m.etype) && h.fishSwimStep(m):
+			// A fish on FishSwimGoal: off to a random water cell now and
+			// then, floating in between (below panic and the avoid goal).
+		case m.etype == entityCopperGolem && h.copperGolemStep(players, m):
+			// A copper golem carrying items between chests, or, on its
+			// transport cooldown, strolling a step or two and pausing.
 		case h.breedApproachStep(m):
 			// A courting animal walking to its mate (BreedGoal /
 			// AnimalMakeLove): behind panic, ahead of temptation.
@@ -1090,6 +1118,13 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A baby trailing the nearest adult of its kind (FollowParentGoal /
 			// BabyFollowAdult): steered straight at it, ahead of idling and
 			// strolling, behind panic and knockback.
+		case isCamelKind(m.etype) && h.camelIdleStep(players, m):
+			// A camel with nowhere to be: CamelAi's idle RunOne — a stroll,
+			// a walk to what it is looking at, sitting down or getting up,
+			// or a pause.
+		case m.etype == entityFrog && h.frogIdleStep(players, m):
+			// A frog ashore with nowhere to be: FrogAi's idle RunOne — a
+			// stroll, a walk to what it is looking at, a croak, or nothing.
 		case m.etype == entityFox && h.foxIdleStep(players, m):
 			// A fox walking in toward a village at night, after berries,
 			// after a dropped item, or sat looking about.
@@ -1138,8 +1173,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				if m.etype == entityTurtle {
 					m.rest = turtleRest(m.rest)
 				}
-				if m.etype == entityFrog {
-					h.frogIdleCroak(players, m) // the idle RunOne's pick: croak or just pause
+				if m.etype == entityStrider {
+					m.rest = m.rest * striderStrollEvery / 120
 				}
 				if m.hostile {
 					m.rest *= 2

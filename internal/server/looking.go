@@ -59,6 +59,18 @@ func (h *hub) idleLook(players map[int32]*tracked, m *mob) {
 		m.headYaw = m.yaw
 		return
 	}
+	switch {
+	case isCamelKind(m.etype):
+		// CamelAi: SetEntityLookTargetSometimes(PLAYER, 6, 30-60),
+		// LookAtTargetSink(45, 90), RandomLookAround(150-250, 30, 0, 0).
+		h.brainLook(players, m, 30, 60, true)
+		return
+	case m.etype == entityFrog:
+		// FrogAi: SetEntityLookTargetSometimes(PLAYER, 6, 30-60) and
+		// LookAtTargetSink(45, 90); no RandomLookAround.
+		h.brainLook(players, m, 30, 60, false)
+		return
+	}
 	if m.etype == entityFox && m.foxFlags&(foxFlagSleeping|foxFlagSitting) != 0 {
 		return // asleep (FoxLookControl does not tick), or perched with its own look
 	}

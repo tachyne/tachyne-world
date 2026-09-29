@@ -10,13 +10,13 @@ import "github.com/tachyne/tachyne-common/protocol"
 // while sitting, the world tick of the change either way — and the pose.
 
 const (
-	metaIndexCamelPoseTick = 19 // LAST_POSE_CHANGE_TICK (VarLong); the ageable shift applies on 26.2
-	metaTypeLong           = 2  // EntityDataSerializers.LONG
-	poseSitting            = 10 // Pose.SITTING
-	camelSitDownTicks      = 40 // isInPoseTransition while sitting
-	camelStandUpTicks      = 52 // isInPoseTransition while standing
-	camelMinPoseTicks      = 400
-	camelSitOdds           = 60 // RandomSitting is one of four idle picks every few seconds
+	metaIndexCamelPoseTick = 19  // LAST_POSE_CHANGE_TICK (VarLong); the ageable shift applies on 26.2
+	metaTypeLong           = 2   // EntityDataSerializers.LONG
+	poseSitting            = 10  // Pose.SITTING
+	camelSitDownTicks      = 40  // isInPoseTransition while sitting
+	camelStandUpTicks      = 52  // isInPoseTransition while standing
+	camelMinPoseTicks      = 400 // RandomSitting(20): twenty seconds in a pose
+	camelStrollSpeed       = 2.0 // RandomStroll.stroll(2.0F), SetWalkTargetFromLookTarget(2.0F, 3)
 )
 
 // camelSitting is isCamelSitting.
@@ -89,26 +89,75 @@ func (h *hub) camelStandUpInstantly(players map[int32]*tracked, m *mob) {
 }
 
 // camelSitStep runs each mob update. Returns whether the camel refuses to
-// move (the caller holds it).
+// move (the caller holds it). A camel that refuses to move still runs its
+// idle RunOne, where only RandomSitting and DoNothing can start.
 func (h *hub) camelSitStep(players map[int32]*tracked, m *mob) bool {
 	now := h.tick.Load()
 	if m.camelSitting() && (h.inWater(m.dim, m.x, m.y, m.z) || m.kb > 0) {
 		h.camelStandUpInstantly(players, m) // tick(): water; actuallyHurt: a hit
 	}
-	if m.rider == 0 && m.leash == 0 && m.grounded() && !h.inWater(m.dim, m.x, m.y, m.z) &&
-		m.camelPoseTime(now) >= camelMinPoseTicks && !m.tempted && m.loveTicks == 0 && m.kb == 0 &&
-		h.rng.Intn(camelSitOdds) == 0 { // RandomSitting(20)
-		if m.camelSitting() {
-			h.camelStandUp(players, m)
-		} else if m.panic == 0 {
-			h.camelSitDown(players, m)
-		}
+	if !m.camelRefusesToMove(now) {
+		return false
 	}
-	if m.camelRefusesToMove(now) {
-		m.vx, m.vz = 0, 0
+	m.vx, m.vz = 0, 0
+	if m.idleWalk != nil && !m.idleWalk.still {
+		m.idleWalk = nil // MoveToTargetSink goes nowhere while it refuses to move
+	}
+	if !h.idleWalkStep(m) && !m.tempted {
+		h.camelRunOne(players, m)
+	}
+	m.vx, m.vz = 0, 0
+	return true
+}
+
+// camelIdleStep is the IDLE activity's RunOne for a camel on its feet, run
+// whenever it has no walk target. It reports whether it took the move.
+func (h *hub) camelIdleStep(players map[int32]*tracked, m *mob) bool {
+	if m.dying > 0 || m.tempted {
+		return false
+	}
+	if h.idleWalkStep(m) {
 		return true
 	}
-	return false
+	h.camelRunOne(players, m)
+	if !h.idleWalkStep(m) {
+		m.vx, m.vz = 0, 0
+	}
+	return true
+}
+
+// camelRunOne is CamelAi's idle RunOne, one each of: RandomStroll.stroll(2),
+// SetWalkTargetFromLookTarget(2, 3) — neither while it refuses to move —
+// RandomSitting(20) and DoNothing(30, 60).
+func (h *hub) camelRunOne(players map[int32]*tracked, m *mob) {
+	now := h.tick.Load()
+	refuse := m.camelRefusesToMove(now)
+	h.runOne([]int{1, 1, 1, 1}, func(i int) bool {
+		switch i {
+		case 0:
+			if refuse {
+				return false
+			}
+			h.randomStroll(m, camelStrollSpeed, 10, 7)
+			return true
+		case 1:
+			return !refuse && h.walkFromLookTarget(players, m, camelStrollSpeed)
+		case 2: // RandomSitting.checkExtraStartConditions
+			if h.inWater(m.dim, m.x, m.y, m.z) || m.camelPoseTime(now) < camelMinPoseTicks ||
+				m.leash != 0 || !m.grounded() || m.rider != 0 {
+				return false
+			}
+			if m.camelSitting() {
+				h.camelStandUp(players, m)
+			} else if m.panic == 0 {
+				h.camelSitDown(players, m)
+			}
+			return true
+		default:
+			h.doNothing(m)
+			return true
+		}
+	})
 }
 
 // camelRiderForward is tickRidden: the rider pushing forward stands a sat
