@@ -129,43 +129,6 @@ func TestCopperGolemWaxAndScrape(t *testing.T) {
 	}
 }
 
-// TestCopperGolemSortsItems: a golem beside a copper chest (with items) and a
-// wooden chest moves the items from copper → wooden.
-func TestCopperGolemSortsItems(t *testing.T) {
-	h := newTestHub(world.New(1))
-	players := map[int32]*tracked{}
-	src := blockPos{10, 70, 10}
-	dst := blockPos{12, 70, 10}
-	h.world.SetBlock(src.x, src.y, src.z, worldgen.BlockID("copper_chest"))
-	h.world.SetBlock(dst.x, dst.y, dst.z, worldgen.BlockID("chest"))
-	sc := &chest{}
-	sc.slots[0] = invStack{item: itemByName["diamond"], count: 20}
-	h.chests[simPos{blockPos: src}] = sc
-	h.chests[simPos{blockPos: dst}] = &chest{}
-
-	m := spawnGolem(h, players, 11.0, 70, 10.5) // adjacent to both chests
-	for i := 0; i < 12; i++ {
-		m.sortCD = 0 // skip the transport cooldown in the test
-		h.copperGolemSort(players, m)
-	}
-
-	if left := h.chests[simPos{blockPos: src}].slots[0].count; left != 0 {
-		t.Errorf("copper chest should be emptied by the golem, %d left", left)
-	}
-	moved := 0
-	for _, st := range h.chests[simPos{blockPos: dst}].slots {
-		if st.item == itemByName["diamond"] {
-			moved += st.count
-		}
-	}
-	if moved != 20 {
-		t.Errorf("wooden chest should receive all 20 diamonds, got %d", moved)
-	}
-	if m.carrying.item != 0 {
-		t.Error("golem should not be left holding items")
-	}
-}
-
 // An axe taken to a statue that has not started to weather wakes the golem
 // back up, facing the way the statue faced, and costs the axe a point. A
 // statue that has oxidised keeps the axe's ordinary copper behaviour.

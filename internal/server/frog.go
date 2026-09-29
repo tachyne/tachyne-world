@@ -80,13 +80,46 @@ const (
 	poseCroaking   = 8  // Pose.CROAKING
 )
 
-// frogIdleCroak is the idle RunOne's choice when a frog's stroll ends and
-// it would stand: Croak (weight 3) against a plain pause (weight 2). A frog
-// in water or with somewhere to be does not croak.
-func (h *hub) frogIdleCroak(players map[int32]*tracked, m *mob) {
-	if m.baby || m.tempted || m.loveTicks > 0 || m.croakLeft > 0 || h.inWater(m.dim, m.x, m.y, m.z) || h.rng.Intn(5) >= 3 {
-		return
+// frogIdleStep is FrogAi's idle RunOne, run ashore whenever the frog has
+// no walk target: RandomStroll.stroll(1) (weight 1),
+// SetWalkTargetFromLookTarget(1, 3) (1), Croak (3) and a do-nothing that
+// needs the ground under it (2). The do-nothing finishes at once, so the
+// frog draws again on its next update. It reports whether it took the move.
+func (h *hub) frogIdleStep(players map[int32]*tracked, m *mob) bool {
+	if m.dying > 0 || m.tempted || m.croakLeft > 0 || h.inWater(m.dim, m.x, m.y, m.z) {
+		return false // SWIM runs in the water (IS_IN_WATER); a croak holds it
 	}
+	if h.idleWalkStep(m) {
+		return true
+	}
+	started := h.runOne([]int{1, 1, 3, 2}, func(i int) bool {
+		switch i {
+		case 0:
+			h.randomStroll(m, 1, 10, 7)
+			return true
+		case 1:
+			return h.walkFromLookTarget(players, m, 1)
+		case 2: // Croak: from the standing pose
+			if m.goatJumping {
+				return false
+			}
+			h.frogCroak(players, m)
+			return true
+		default:
+			return m.grounded()
+		}
+	})
+	if !started {
+		return false
+	}
+	if !h.idleWalkStep(m) {
+		m.vx, m.vz = m.vx*0.6, m.vz*0.6
+	}
+	return true
+}
+
+// frogCroak is Croak.start: the CROAKING pose for sixty ticks.
+func (h *hub) frogCroak(players map[int32]*tracked, m *mob) {
 	m.croakLeft = frogCroakTicks
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, poseCroaking)))
 }

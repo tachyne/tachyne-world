@@ -29,7 +29,8 @@ func TestCamelSits(t *testing.T) {
 	}
 	sat := false
 	for i := 0; i < 2000 && !sat; i++ {
-		h.camelSitStep(players, c)
+		c.idleWalk = nil // the RunOne picks afresh each time it is free to
+		h.camelRunOne(players, c)
 		sat = c.camelSitting()
 	}
 	if !sat || c.poseTick != -1000 {

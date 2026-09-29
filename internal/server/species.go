@@ -466,7 +466,11 @@ func (h *hub) applySpecies(players map[int32]*tracked, m *mob) {
 		m.hostile, m.statik = true, true
 	}
 	if m.etype == entityCopperGolem {
-		m.behavior = copperGolemBehavior{} // walks to containers to sort items
+		// CopperGolem(): its navigation opens doors (InteractWithDoor), and
+		// every golem made or loaded waits 60-100 ticks before it first
+		// looks for a chest (TRANSPORT_ITEMS_COOLDOWN_TICKS).
+		m.usesDoors = true
+		m.transportCD = 60 + h.rng.Intn(40)
 	}
 	if nautilusKind(m.etype) {
 		h.nautilusSpawned(m)

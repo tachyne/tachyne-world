@@ -60,7 +60,7 @@ func (h *hub) updateCopperGolems(players map[int32]*tracked) {
 		if m.etype != entityCopperGolem || m.dying > 0 {
 			continue
 		}
-		if !m.waxed { // waxing halts oxidation but not item sorting
+		if !m.waxed { // waxing halts oxidation (the item transport runs in coppertransport.go)
 			if m.oxidizeAt == 0 { // unset → schedule the first step
 				m.oxidizeAt = now + h.copperWeatherDelay()
 			}
@@ -79,7 +79,6 @@ func (h *hub) updateCopperGolems(players map[int32]*tracked) {
 				}
 			}
 		}
-		h.copperGolemSort(players, m) // sort items between chests
 	}
 }
 
@@ -93,6 +92,10 @@ func (h *hub) copperGolemToStatue(players map[int32]*tracked, m *mob, x, y, z in
 		state = worldgen.SetProperty(info, state, "facing", yawFacing(m.yaw))
 	}
 	h.setBlockAt(players, m.dim, blockPos{x, y, z}, state)
+	if st := m.heldStack(); st.item != 0 && m.gearSure[gearSlotHand] {
+		h.dropGearStack(players, m, st) // dropPreservedEquipment: what it was carrying
+		m.setHeld(invStack{})
+	}
 	h.despawnMob(players, m)
 	h.playSoundDim(players, m.dim, "minecraft:entity.copper_golem_become_statue", sndNeutral, m.x, m.y, m.z, 1, 1)
 }
@@ -190,173 +193,6 @@ func (h *hub) checkCopperGolemBuild(players map[int32]*tracked, dim, x, y, z int
 	}
 	m.yaw, m.syaw = 0, 0 // vanilla snapTo yaw 0
 	h.playSoundDim(players, dim, "minecraft:block.copper.place", sndNeutral, float64(x), float64(y), float64(z), 1, 1)
-}
-
-// Item sorting (vanilla TransportItemsBetweenContainers). The golem carries
-// items OUT of copper chests and into wooden/trapped chests within a 65×17×65
-// box (its block inflated 32 sideways and 8 up and down), up to 16 at a
-// time, on a 60–100 tick cooldown between transports.
-const (
-	copperSortRangeH = 32   // TRANSPORT_ITEM_HORIZONTAL_SEARCH_RADIUS
-	copperSortRangeV = 8    // TRANSPORT_ITEM_VERTICAL_SEARCH_RADIUS
-	copperSortMax    = 16   // items moved per transport
-	copperSortCDMin  = 60   // transport cooldown (nextInt(60,100))
-	copperSortCDMax  = 100  //
-	copperSortReach  = 2.5  // close enough to interact with a container
-	copperSortSpeed  = 0.22 // steer factor toward the goal
-)
-
-// copperGolemBehavior steers the golem toward the container it's transporting
-// to/from; it idles (wanders) when it has no goal.
-type copperGolemBehavior struct{}
-
-func (copperGolemBehavior) name() string { return "copper_golem" }
-func (copperGolemBehavior) steer(h *hub, m *mob) (float64, float64) {
-	if m.sortHasGoal {
-		dx := float64(m.sortGoal.x) + 0.5 - m.x
-		dz := float64(m.sortGoal.z) + 0.5 - m.z
-		if math.Hypot(dx, dz) > copperSortReach {
-			return dx * copperSortSpeed, dz * copperSortSpeed
-		}
-		return 0, 0
-	}
-	return wanderBehavior{}.steer(h, m)
-}
-
-func (h *hub) golemNear(m *mob, p blockPos) bool {
-	return math.Hypot(float64(p.x)+0.5-m.x, float64(p.z)+0.5-m.z) <= copperSortReach &&
-		math.Abs(float64(p.y)-m.y) <= 2
-}
-
-func (h *hub) inSortRange(m *mob, p blockPos) bool {
-	return math.Abs(float64(p.x)+0.5-m.x) <= copperSortRangeH &&
-		math.Abs(float64(p.z)+0.5-m.z) <= copperSortRangeH &&
-		math.Abs(float64(p.y)-m.y) <= copperSortRangeV
-}
-
-// copperGolemSort runs the golem's transport state machine (1 Hz): empty-handed
-// it takes a stack from a copper chest; carrying, it deposits into a wooden or
-// trapped chest.
-func (h *hub) copperGolemSort(players map[int32]*tracked, m *mob) {
-	if m.dying > 0 {
-		return
-	}
-	if m.sortCD > 0 {
-		m.sortCD--
-		return
-	}
-	if m.carrying.item == 0 {
-		pos, slot := h.findCopperSource(m)
-		if slot < 0 {
-			m.sortHasGoal = false
-			return
-		}
-		m.sortGoal, m.sortHasGoal = pos.blockPos, true
-		if h.golemNear(m, pos.blockPos) {
-			st := &h.chests[pos].slots[slot]
-			n := st.count
-			if n > copperSortMax {
-				n = copperSortMax
-			}
-			m.carrying = *st // the whole stack: what it carries is what it took
-			m.carrying.count = n
-			if st.count -= n; st.count == 0 {
-				*st = invStack{}
-			}
-			m.sortCD = copperSortCDMin + h.rng.Intn(copperSortCDMax-copperSortCDMin+1)
-			m.sortHasGoal = false
-		}
-		return
-	}
-	pos, ok := h.findSortTarget(m)
-	if !ok {
-		m.sortHasGoal = false // nowhere to put it — keep carrying
-		return
-	}
-	m.sortGoal, m.sortHasGoal = pos.blockPos, true
-	if h.golemNear(m, pos.blockPos) {
-		m.carrying = depositIntoChest(h.chests[pos], m.carrying)
-		m.sortCD = copperSortCDMin + h.rng.Intn(copperSortCDMax-copperSortCDMin+1)
-		m.sortHasGoal = false
-	}
-}
-
-// findCopperSource returns the position + slot of the nearest copper chest in
-// range holding items (slot -1 = none).
-func (h *hub) findCopperSource(m *mob) (simPos, int) {
-	best, bestPos, bestSlot := math.MaxFloat64, simPos{}, -1
-	w := h.worldFor(m.dim)
-	for pos, c := range h.chests {
-		// A golem only sorts the chests standing in its OWN dimension.
-		if pos.dim != m.dim || w == nil ||
-			!isCopperChest(w.At(pos.x, pos.y, pos.z)) || !h.inSortRange(m, pos.blockPos) {
-			continue
-		}
-		for i, st := range c.slots {
-			if st.item != 0 && st.count > 0 {
-				if d := math.Hypot(float64(pos.x)-m.x, float64(pos.z)-m.z); d < best {
-					best, bestPos, bestSlot = d, pos, i
-				}
-				break
-			}
-		}
-	}
-	return bestPos, bestSlot
-}
-
-// findSortTarget returns the nearest wooden/trapped chest in range with room for
-// the golem's carried stack.
-func (h *hub) findSortTarget(m *mob) (simPos, bool) {
-	best, bestPos, found := math.MaxFloat64, simPos{}, false
-	w := h.worldFor(m.dim)
-	for pos := range h.chests {
-		if pos.dim != m.dim || w == nil {
-			continue
-		}
-		s := w.At(pos.x, pos.y, pos.z)
-		if isCopperChest(s) || !isChestBlock(s) || !h.inSortRange(m, pos.blockPos) {
-			continue
-		}
-		if !chestHasRoom(h.chests[pos], m.carrying) {
-			continue
-		}
-		if d := math.Hypot(float64(pos.x)-m.x, float64(pos.z)-m.z); d < best {
-			best, bestPos, found = d, pos, true
-		}
-	}
-	return bestPos, found
-}
-
-// chestHasRoom reports whether a stack can be (partly) placed in a chest.
-func chestHasRoom(c *chest, s invStack) bool {
-	for _, slot := range c.slots {
-		if slot.item == 0 || (sameItemComponents(slot, s) && slot.count < stackCap(s.item)) {
-			return true
-		}
-	}
-	return false
-}
-
-// depositIntoChest stacks a carried stack into a chest, returning the leftover.
-func depositIntoChest(c *chest, s invStack) invStack {
-	for i := range c.slots { // top up matching stacks first
-		d := &c.slots[i]
-		if d.count > 0 && sameItemComponents(*d, s) && d.count < stackCap(s.item) {
-			room := stackCap(s.item) - d.count
-			n := min(room, s.count)
-			d.count += n
-			if s.count -= n; s.count == 0 {
-				return invStack{}
-			}
-		}
-	}
-	for i := range c.slots { // then empty slots
-		if c.slots[i].item == 0 {
-			c.slots[i] = s
-			return invStack{}
-		}
-	}
-	return s // no room — keep carrying
 }
 
 // statuePoses is CopperGolemStatueBlock.Pose in declaration order.

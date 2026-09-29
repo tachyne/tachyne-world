@@ -160,7 +160,7 @@ func (h *hub) interactMob(players map[int32]*tracked, t *tracked, m *mob, sneak 
 	}
 	if h.tryEggOffspring(players, t, m) || h.cureZombieVillager(players, t, m) || h.feedTadpole(players, t, m) || h.trySulfurCube(players, t, m) || h.tryBucketMob(players, t, m) || h.tryLeash(players, t, m) || h.tryShearEquipment(players, t, m, sneak) || h.tryNameTag(players, t, m) || h.tryDyeSheep(players, t, m) ||
 		h.tryHorseScreen(players, t, m, sneak) || h.tryHappyGhast(players, t, m) ||
-		h.tryCopperGolem(players, t, m) || h.tryMilk(players, t, m) ||
+		h.copperGolemTakeItem(players, t, m) || h.tryCopperGolem(players, t, m) || h.tryMilk(players, t, m) ||
 		h.tryFlowerMooshroom(players, t, m) || h.tryMilkStew(players, t, m) || h.tryMount(players, t, m) ||
 		h.tryBrush(players, t, m) || h.tryWolfArmor(players, t, m) || h.tryAllay(players, t, m) || h.tryBarter(players, t, m) || h.tryFeedDolphin(players, t, m) || h.tryIgniteCreeper(players, t, m) || h.tryRepairGolem(players, t, m) || h.tryPoisonParrot(players, t, m) || h.tryShearOther(players, t, m) || h.tryTame(players, t, m) || h.shearSheep(players, t, m) || h.feedAnimal(players, t, m) {
 		im := advMatch{entity: advEntityName[m.etype], baby: m.baby, item: held, variant: advVariantName(m)}

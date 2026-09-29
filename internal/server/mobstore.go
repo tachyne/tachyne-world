@@ -124,7 +124,7 @@ type savedMob struct {
 
 	Oxidation     int         `json:"ox,omitempty"`
 	Waxed         bool        `json:"wax,omitempty"`
-	Carrying      stackRow    `json:"carry,omitempty"`
+	Carrying      stackRow    `json:"carry,omitempty"` // read only: a copper golem's load from before it rode in the hand
 	Trident       bool        `json:"tri,omitempty"`
 	CanPickup     bool        `json:"pick,omitempty"`
 	Gear          [4]stackRow `json:"gear,omitempty"`
@@ -806,7 +806,7 @@ func toSavedMob(m *mob) savedMob {
 		Persistent: m.persistent, NameHidden: m.nameHidden, NoAI: m.noAI, Silent: m.silent, Invulner: m.invulnerable,
 		Hostile: m.hostile, Anger: m.anger, Neutral: m.neutral, PatrolCaptain: m.patrolCaptain,
 		CarriedBlk: m.carriedBlock,
-		Oxidation:  m.oxidation, Waxed: m.waxed, Carrying: packStack(m.carrying),
+		Oxidation:  m.oxidation, Waxed: m.waxed,
 		Trident: m.trident, CanPickup: m.canPickup,
 		Saddled: m.saddled, SaddleSt: packStack(m.saddleSt), ArmorSt: packStack(m.armorSt),
 		Chested: m.chested, Strength: m.strength, Held: m.held, Harness: m.harness,

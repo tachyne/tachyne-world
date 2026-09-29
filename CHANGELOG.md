@@ -11,6 +11,29 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-29
+
+### Fixed
+- **Copper golems work the way vanilla's do.** A golem now walks to the
+  nearest copper chest, opens it — lid, sound and all — and takes up to
+  sixteen of the first stack into its hand, then carries them to the nearest
+  plain or trapped chest that is empty or already holds that item. It waits
+  its turn while anyone else has a chest open, goes on to the next chest when
+  one will not take its load, opens wooden doors on the way, and only after
+  finding nothing to do (or trying ten chests) rests for seven seconds,
+  strolling a step or two. It no longer pauses three to five seconds after
+  every trip, its load shows in its hand and drops when it dies, and an empty
+  hand takes the load off it.
+- **A raid wave whose captain has fallen gets a new one.** A raider that
+  could lead walks to the dropped ominous banner, puts it on and captains
+  the wave.
+- **Idle animals keep vanilla's rhythm.** Camels choose between strolling,
+  walking to what they are looking at, sitting down or getting up, and
+  pausing, as vanilla's camels do, and glance about every 150 to 250
+  ticks; frogs croak and stroll on vanilla's odds; striders stroll twice as
+  often as other animals; and fish swim off to a random spot now and then
+  and float in between, instead of drifting about without a break.
+
 ## 2026-09-27
 
 ### Added

@@ -740,6 +740,7 @@ type hub struct {
 	gatewayCool map[simPos]uint64
 	bossSeen    map[[2]int32]bool   // {playerEID, bossEID} pairs currently shown a boss bar
 	openDoors   map[simPos]uint64   // wooden doors a villager opened (by dimension) → tick opened (auto-close)
+	golemChests map[int32][2]simPos // copper golem eid → the chest (both halves of a pair) it has open
 	digs        map[int32]*digCrack // players' digs in progress, for the cracks others see (digcracks.go)
 
 	dragon        *mob               // the ender dragon (nil = none / defeated)
@@ -931,6 +932,7 @@ func newHub(w *world.World) *hub {
 		gatewayCool:    map[simPos]uint64{},
 		bossSeen:       map[[2]int32]bool{},
 		openDoors:      map[simPos]uint64{},
+		golemChests:    map[int32][2]simPos{},
 		digs:           map[int32]*digCrack{},
 		crystals:       map[int32]*crystal{},
 		villageDone:    map[blockPos]bool{},

@@ -223,7 +223,8 @@ func TestFrogCroaks(t *testing.T) {
 	players := map[int32]*tracked{}
 	f := h.spawnMob(players, entityFrog, 0.5, 200, 0.5)
 	for i := 0; i < 100 && f.croakLeft == 0; i++ {
-		h.frogIdleCroak(players, f)
+		f.idleWalk = nil
+		h.frogIdleStep(players, f)
 	}
 	if f.croakLeft != frogCroakTicks {
 		t.Fatal("an idle frog never croaked")
