@@ -234,6 +234,9 @@ func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, stat
 			h.scheduleCoralDeath(dim, pos)
 		}
 		h.fireOnPlace(players, dim, pos, old, state) // a fire inside an obsidian frame lights it
+		if isAnyRail(state) && blockKind(old) != blockKind(state) {
+			h.railOnPlace(players, dim, pos) // BaseRailBlock.onPlace: it connects to the rails around
+		}
 		// A string laid or taken away: the hooks along its line re-check.
 		if isTripwire(old) != isTripwire(state) {
 			h.inDim(dim, func() { h.tripwireUpdateSource(players, pos) })

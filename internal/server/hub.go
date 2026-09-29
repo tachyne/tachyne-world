@@ -1519,6 +1519,9 @@ func (h *hub) run() {
 				h.turtleEggPlayerBroken(players, e)
 				h.fireBesideHives(players, e.dim, blockPos{e.x, e.y, e.z}, e.state)
 				h.potentSulfurChanged(players, e.dim, blockPos{e.x, e.y, e.z}, e.broken, e.state)
+				if e.broken == 0 && isAnyRail(e.state) {
+					h.railOnPlace(players, e.dim, blockPos{e.x, e.y, e.z}) // BaseRailBlock.onPlace
+				}
 				if e.broken == 0 && isWoodShelf(e.state) {
 					h.shelfPlaced(players, e.dim, blockPos{e.x, e.y, e.z}, e.state)
 				}

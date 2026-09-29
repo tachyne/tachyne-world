@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-29
 
 ### Fixed
+- **Rails connect the way vanilla's do.** A placed rail now turns the rails
+  beside it to meet it (and only those free to take another connection), a
+  junction of three switches when a redstone signal arrives, a sloped rail
+  breaks when the block it climbs onto is removed, and a powered or
+  activator rail passes its power along up to eight more rails of its kind
+  in a line. Rails no longer re-shape themselves at every change nearby, and
+  a waterlogged rail keeps its water when it changes shape.
 - **Fire climbs the walls it burns.** A fire with nothing solid or
   burnable beneath it now clings to the flammable blocks beside and above
   it, as vanilla draws it, and its sides follow as those blocks catch,
