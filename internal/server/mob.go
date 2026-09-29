@@ -635,6 +635,7 @@ type mob struct {
 	ovrSpeed    float64 // >0: plugin speed override — survives behavior-driven speed resets
 	ovrDamage   float64 // >0: plugin melee-damage override (hostileMelee honors it)
 	uuid        [16]byte
+	wpAt        [3]int32 // the block its locator-bar waypoint was last sent at (locatorbar.go)
 	x, y, z     float64
 	yaw         float32
 	syaw        float32 // last broadcast head yaw (only resend on change)

@@ -29,3 +29,31 @@ func TestBlockDisplays(t *testing.T) {
 		}
 	}
 }
+
+// A stroke that moves the dust on shows the item with the block's dusted
+// stage and which suspicious block it is (Bedrock draws both from the tag).
+func TestBrushDisplayCarriesTheDust(t *testing.T) {
+	h, w := findWell(t)
+	pos := blockPos{w.Sus[0][0], w.Sus[0][1], w.Sus[0][2]}
+	pl := testTracked()
+	pl.x, pl.y, pl.z = float64(pos.x), float64(pos.y), float64(pos.z)
+	pl.p.setHotbarSlot(0, itemBrush)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	stroke := evBrush{eid: pl.p.eid, x: pos.x, y: pos.y, z: pos.z, dy: 1}
+	for i := 0; i < 3; i++ { // dust stages 1 then 2
+		h.tick.Store(uint64(i) * brushCooldown)
+		h.brush(players, pl, stroke)
+	}
+	var last *attachproto.BlockDisplay
+	for _, ev := range drainEvs(pl.p) {
+		if d, ok := ev.(attachproto.BlockDisplay); ok && d.Kind == attachproto.DisplayBrushable {
+			last = &d
+		}
+	}
+	if last == nil {
+		t.Skip("this well's cell buried nothing")
+	}
+	if last.Dusted != 2 || last.Block != "minecraft:suspicious_sand" || last.HitDir != 2 {
+		t.Errorf("display %+v, want dusted 2 of suspicious_sand out of the top (hit_dir 1+1)", *last)
+	}
+}

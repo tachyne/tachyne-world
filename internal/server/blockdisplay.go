@@ -69,6 +69,19 @@ func (h *hub) brushDisplay(players map[int32]*tracked, dim int, pos blockPos, b 
 		if s.item != 0 && s.count > 0 {
 			ev := blockDisplayEv(pos, attachproto.DisplayBrushable, "minecraft:"+itemNameOf[s.item], int32(s.count))
 			ev.HitDir = int32(b.face) + 1
+			// The dust Bedrock draws from the tag: the block's dusted stage
+			// and which suspicious block it is.
+			if w := h.worldFor(dim); w != nil {
+				state := w.At(pos.x, pos.y, pos.z)
+				base := suspiciousBase(state)
+				if state >= base && state <= base+3 {
+					ev.Dusted = int32(state - base)
+				}
+				ev.Block = "minecraft:suspicious_sand"
+				if base == suspiciousGravelBase {
+					ev.Block = "minecraft:suspicious_gravel"
+				}
+			}
 			h.toNearbyEv(players, dim, float64(pos.x), float64(pos.z), ev)
 			return
 		}

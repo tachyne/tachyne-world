@@ -51,3 +51,48 @@ func TestWaypointRanges(t *testing.T) {
 		t.Fatalf("b within both ranges should show: %v", ops)
 	}
 }
+
+// A mob transmits once something gives it a WAYPOINT_TRANSMIT_RANGE (its
+// default is zero): a receiver in range tracks it, re-sent when it moves a
+// block, and untracks it out of range or when it dies.
+func TestMobWaypointTransmits(t *testing.T) {
+	h := newTestHub(world.New(1))
+	h.rules.LocatorBar = true
+	a := survPlayer(h)
+	a.p.eid = 1 << 30 // clear of the test hub's mob eids (a live player mints in its own lane)
+	players := map[int32]*tracked{a.p.eid: a}
+	m := h.spawnMob(players, entityCow, a.x+10, a.y, a.z)
+	drainWaypoints(a)
+
+	h.waypointTick(players)
+	if ops := drainWaypoints(a); len(ops) != 0 {
+		t.Fatalf("a mob with no transmit range must not show: %v", ops)
+	}
+	m.mobAttrs().SetBase(attr.WaypointTransmitRange, 20)
+	h.waypointTick(players)
+	if ops := drainWaypoints(a); len(ops) != 1 || ops[0] != waypointTrack {
+		t.Fatalf("a mob given a range should show: %v", ops)
+	}
+	h.waypointTick(players)
+	if ops := drainWaypoints(a); len(ops) != 0 {
+		t.Fatalf("a still mob is not re-sent: %v", ops)
+	}
+	m.x += 2
+	h.waypointTick(players)
+	if ops := drainWaypoints(a); len(ops) != 1 || ops[0] != waypointTrack {
+		t.Fatalf("a moved mob is re-tracked: %v", ops)
+	}
+	m.mobAttrs().SetBase(attr.WaypointTransmitRange, 5) // a is 12 away
+	h.waypointTick(players)
+	if ops := drainWaypoints(a); len(ops) != 1 || ops[0] != waypointUntrack {
+		t.Fatalf("a mob out of its range leaves the bar: %v", ops)
+	}
+	m.mobAttrs().SetBase(attr.WaypointTransmitRange, 20)
+	h.waypointTick(players)
+	drainWaypoints(a)
+	delete(h.mobs, m.eid)
+	h.waypointTick(players)
+	if ops := drainWaypoints(a); len(ops) != 1 || ops[0] != waypointUntrack {
+		t.Fatalf("a mob gone leaves the bar: %v", ops)
+	}
+}
