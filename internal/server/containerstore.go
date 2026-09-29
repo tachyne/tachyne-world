@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -75,6 +76,7 @@ type containerFile struct {
 	Brews       map[string]savedBrew      `json:"brews,omitempty"`   // brewing stands mid-brew
 	Beacons     map[string][2]int32       `json:"beacons,omitempty"` // chosen powers (mob_effect id+1; 0 = none)
 	Stands      []savedStand              `json:"stands,omitempty"`  // placed armor stands
+	Cushions    []savedCushion            `json:"cushions,omitempty"`
 	Lecterns    map[string]savedLectern   `json:"lecterns,omitempty"`
 	Shelves     map[string][6]stackRow    `json:"shelves,omitempty"`      // chiseled bookshelves
 	ShelfLast   map[string]int            `json:"shelf_last,omitempty"`   // …and each one's last-touched slot (comparator)
@@ -280,6 +282,45 @@ func (s *containerStore) recordStands(stands map[int32]*armorStand) {
 		}
 		s.m.Stands = append(s.m.Stands, sv)
 	}
+}
+
+// savedCushion is one placed cushion: Cushion's block_pos is its position
+// here (the cell it rests in follows from it), and its colour is its item.
+type savedCushion struct {
+	Dim  int     `json:"dim,omitempty"`
+	X    float64 `json:"x"`
+	Y    float64 `json:"y"`
+	Z    float64 `json:"z"`
+	Yaw  float32 `json:"yaw,omitempty"`
+	Item int32   `json:"item" mig:"item"`
+	Name string  `json:"name,omitempty"` // custom_name
+}
+
+// recordCushions snapshots placed cushions for the next flush. A sitter is
+// not saved: whoever sat on one is standing when the world comes back.
+func (s *containerStore) recordCushions(cushions map[int32]*cushion) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.m.Cushions = s.m.Cushions[:0]
+	for _, c := range cushions {
+		s.m.Cushions = append(s.m.Cushions, savedCushion{Dim: c.dim, X: c.x, Y: c.y, Z: c.z, Yaw: c.yaw, Item: c.item, Name: c.name})
+	}
+}
+
+// loadCushions rebuilds placed cushions (fresh eids).
+func (s *containerStore) loadCushions(alloc func() int32) map[int32]*cushion {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := map[int32]*cushion{}
+	for _, sv := range s.m.Cushions {
+		if !isCushionItem(sv.Item) {
+			continue
+		}
+		c := &cushion{eid: alloc(), dim: sv.Dim, x: sv.X, y: sv.Y, z: sv.Z, yaw: sv.Yaw, item: sv.Item, name: sv.Name}
+		binary.BigEndian.PutUint32(c.uuid[12:], uint32(c.eid))
+		out[c.eid] = c
+	}
+	return out
 }
 
 // loadStands rebuilds placed armor stands (fresh eids).

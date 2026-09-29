@@ -268,6 +268,10 @@ func (h *hub) onAttack(players map[int32]*tracked, e evAttack) {
 		h.hitStand(players, players[e.attacker], st)
 		return
 	}
+	if c := h.cushions[e.target]; c != nil {
+		h.hitCushion(players, players[e.attacker], c)
+		return
+	}
 	if f := h.itemFrames[e.target]; f != nil {
 		h.hitFrame(players, players[e.attacker], f)
 		return

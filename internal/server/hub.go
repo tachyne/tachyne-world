@@ -693,6 +693,7 @@ type hub struct {
 	paintings           map[int32]*painting       // placed hanging paintings (persisted with containers)
 	itemFrames          map[int32]*itemFrame      // placed item frames (persisted with containers)
 	armorStands         map[int32]*armorStand     // placed armor stands (persisted with containers)
+	cushions            map[int32]*cushion        // placed cushions (persisted with containers)
 	knots               map[int32]*leashKnot      // fence leash knots (the far end of a lead)
 	jukeboxes           map[simPos]*jukebox       // discs + playback clocks (persisted with containers)
 	beacons             map[simPos]*beacon        // placed beacons (chosen powers persisted with containers)
@@ -910,6 +911,7 @@ func newHub(w *world.World) *hub {
 		paintings:     map[int32]*painting{},
 		itemFrames:    map[int32]*itemFrame{},
 		armorStands:   map[int32]*armorStand{},
+		cushions:      map[int32]*cushion{},
 		knots:         map[int32]*leashKnot{},
 		bundles:       newBundleStore(),
 		lecterns:      map[simPos]*lectern{},
@@ -1047,6 +1049,7 @@ func (h *hub) run() {
 		h.paintings = h.containers.loadPaintings(h.allocEID)
 		h.itemFrames = h.containers.loadFrames(h.allocEID)
 		h.armorStands = h.containers.loadStands(h.allocEID)
+		h.cushions = h.containers.loadCushions(h.allocEID)
 		h.dropUnrunFurniture()
 		h.jukeboxes = h.containers.loadJukeboxes()
 		h.pots = h.containers.loadPots()
@@ -1204,6 +1207,7 @@ func (h *hub) run() {
 			h.updateEyes(players)          // eyes of ender drift toward their stronghold
 			h.hangingSurvivalTick(players) // frames, paintings, knots: survives() every hundred ticks
 			h.tickStands(players)          // armor stands: lava, fire and burning
+			h.tickCushions(players)        // cushions: survives() and fire every hundred ticks
 			h.tickGliding(players)         // elytra wear: a point a second, and the glide ends with the wing
 			h.tickBoosts(players)          // a food-on-a-stick sprint runs down while its mount is ridden
 			h.expireSpyglass(players)      // a scope held to its full duration drops
@@ -1416,6 +1420,7 @@ func (h *hub) run() {
 					h.containers.recordBrews(h.brewProg, h.brewFuel, h.brewIng)
 					h.containers.recordBeacons(h.beacons)
 					h.containers.recordStands(h.armorStands)
+					h.containers.recordCushions(h.cushions)
 					h.containers.recordLecterns(h.lecterns)
 					h.containers.recordShelves(h.bookshelves, h.shelfLast)
 					h.containers.recordWoodShelves(h.woodShelves)
@@ -2414,6 +2419,7 @@ func (h *hub) run() {
 					h.containers.recordBrews(h.brewProg, h.brewFuel, h.brewIng)
 					h.containers.recordBeacons(h.beacons)
 					h.containers.recordStands(h.armorStands)
+					h.containers.recordCushions(h.cushions)
 					h.containers.recordLecterns(h.lecterns)
 					h.containers.recordShelves(h.bookshelves, h.shelfLast)
 					h.containers.recordWoodShelves(h.woodShelves)
@@ -2567,6 +2573,8 @@ func (h *hub) useOnEvent(players map[int32]*tracked, ev hubEvent) bool {
 		eid, off, run = e.eid, e.off, func() { h.onUseHoneycomb(players, e) }
 	case evPlaceStand:
 		eid, off, run = e.eid, e.off, func() { h.onPlaceStand(players, e) }
+	case evPlaceCushion:
+		eid, off, run = e.eid, e.off, func() { h.onPlaceCushion(players, e) }
 	case evBrush:
 		eid, off, run = e.eid, e.off, func() {
 			if t := players[e.eid]; t != nil {
@@ -2791,7 +2799,8 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 	if h.rbstore != nil {
 		h.rbstore.save(p.key(), t)
 	}
-	for _, v := range h.vehicles { // a leaver stands up first
+	h.leaveCushion(players, t, false) // a leaver stands up first
+	for _, v := range h.vehicles {
 		if v.rider == p.eid || v.rider2 == p.eid {
 			v.leaveSeat(p.eid) // a mob left aboard keeps its seat; the back seat moves up
 			h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid, v.passengers()...))

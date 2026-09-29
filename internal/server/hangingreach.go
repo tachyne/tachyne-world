@@ -122,5 +122,8 @@ func (h *hub) fixtureOutOfReach(t *tracked, eid int32) bool {
 	if c := h.crystals[eid]; c != nil {
 		return far(c.dim, c.crystalBox())
 	}
+	if c := h.cushions[eid]; c != nil {
+		return far(c.dim, c.box())
+	}
 	return false
 }

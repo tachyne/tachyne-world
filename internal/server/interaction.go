@@ -311,6 +311,12 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		replacingClicked = true
 	}
 
+	if isCushionItem(held) { // CushionItem.useOn: on a top face only
+		s.hub.post(evPlaceCushion{eid: p.eid, x: x, y: y, z: z, up: dy == 1, replacing: replacingClicked,
+			hitY: float64(y) + float64(cursorY), off: off})
+		s.sendBlockChange(p, x, y, z, s.worldFor(p).Block(x, y, z), seq)
+		return
+	}
 	if held == itemArmorStand { // spawn the stand at the target cell
 		s.hub.post(evPlaceStand{eid: p.eid, x: tx, y: ty, z: tz, yaw: p.yaw, off: off})
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)

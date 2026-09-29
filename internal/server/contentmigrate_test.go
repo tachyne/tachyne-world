@@ -137,6 +137,7 @@ var notIDs = map[string]string{
 	"server.containerFile.Paintings[].Z":                       whyPos,
 	"server.containerFile.ShelfLast{}":                         whyCount,
 	"server.containerFile.SpawnerDelays{}":                     whyCount,
+	"server.containerFile.Cushions[].Dim":                      whyPos,
 	"server.containerFile.Stands[].Dim":                        whyPos,
 	"server.containerFile.Stands[].Fire":                       whyCount,
 	"server.containerFile.Stars{}[].Colors[]":                  whyRgb,
