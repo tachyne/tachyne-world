@@ -33,6 +33,11 @@ the public history since the project was open-sourced on 2026-07-10.
 - **A button no longer clicks twice for the Java player pressing it.** The
   server's click goes to everyone else, as in vanilla, since the presser's
   own game already played it; Bedrock players still get it.
+- **Walls read the exact shape of what sits on them.** A wall's tall sides
+  and centre post now follow the bottom face of the block above, as in
+  vanilla: a bottom slab or a carpet raises the sides, a top slab does not,
+  a fence post raises only the post, and torches, signs, banners and
+  pressure plates keep the post up.
 
 ## 2026-09-27
 

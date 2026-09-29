@@ -12,11 +12,10 @@ package server
 //     form an end/corner/T (asymmetric N/S or E/W, or none at all), and on
 //     covered straight runs; a straight run of matching TALL sides drops it
 //     (shouldRaisePost).
-// Simplifications vs vanilla's voxel-shape cover tests: "covered" for sides
-// means a full solid cube or a matching wall side above; for the post, any
-// non-air non-water block above (vanilla intersects the exact face shape,
-// and WALL_POST_OVERRIDE covers torches/signs — our proxy treats every
-// occupant above as covering).
+// "Covered" is vanilla's isCovered: the bottom face of the collision shape
+// above covers a test square — the 2×2 centre for the post, a 2-wide strip
+// from the centre out to the side for a side — and #wall_post_override
+// (torches, signs, banners, pressure plates) raises the post too.
 
 import (
 	"strings"
@@ -131,19 +130,32 @@ func wallUpdated(w *world.World, n blockPos, info worldgen.BlockInfo, state uint
 	return wallShape(w, n.x, n.y, n.z, info, state, conn)
 }
 
+// Wall cover tests on the face of the block above (x, z in sixteenths):
+// TEST_SHAPE_POST, a 2×2 column at the centre, and TEST_SHAPES_WALL, a
+// 2-wide strip from the centre (9/16 through it) out to each side's edge.
+var (
+	wallPostTest  = [4]float64{7.0 / 16, 7.0 / 16, 9.0 / 16, 9.0 / 16}
+	wallSideTests = map[string][4]float64{
+		"north": {7.0 / 16, 0, 9.0 / 16, 9.0 / 16},
+		"south": {7.0 / 16, 7.0 / 16, 9.0 / 16, 1},
+		"west":  {0, 7.0 / 16, 9.0 / 16, 9.0 / 16},
+		"east":  {7.0 / 16, 7.0 / 16, 1, 9.0 / 16},
+	}
+	wallPostOverride = worldgen.BlockTag("wall_post_override")
+)
+
 // wallShape is WallBlock.updateShape(…, north, east, south, west): each
 // joined side is TALL under cover and LOW otherwise (updateSides), then the
 // post (shouldRaisePost).
 func wallShape(w *world.World, x, y, z int, info worldgen.BlockInfo, state uint32, conn map[string]bool) uint32 {
 	above := w.Block(x, y+1, z)
 	aboveInfo, aboveWall := wallInfo(above)
-	aboveSolid := worldgen.IsSolidFull(above)
 	side := map[string]string{}
 	for _, d := range hConnectDirs {
 		v := "none"
 		if conn[d.name] {
 			v = "low"
-			if aboveSolid || (aboveWall && worldgen.GetProperty(aboveInfo, above, d.name) != "none") {
+			if worldgen.FaceCovers(above, worldgen.FaceDown, wallSideTests[d.name]) {
 				v = "tall"
 			}
 		}
@@ -161,8 +173,8 @@ func wallShape(w *world.World, x, y, z int, info worldgen.BlockInfo, state uint3
 	case (side["north"] == "tall" && side["south"] == "tall") ||
 		(side["east"] == "tall" && side["west"] == "tall"):
 		up = "false" // a straight tall run stays flush
-	case above != worldgen.Air && !worldgen.IsWater(above):
-		up = "true" // something rests on the wall (torch, slab, …)
+	case inRanges2(above, wallPostOverride) || worldgen.FaceCovers(above, worldgen.FaceDown, wallPostTest):
+		up = "true" // something rests on the wall's centre (a slab, a torch, a sign, …)
 	}
 	return worldgen.SetProperty(info, state, "up", up)
 }
