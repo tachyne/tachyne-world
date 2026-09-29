@@ -58,7 +58,9 @@ func (villagerBehavior) steer(h *hub, m *mob) (float64, float64) {
 	if h.tick.Load() < m.hideUntil && m.bed != (blockPos{}) { // a rung bell: hide at the bed
 		return h.pathSteerTo(m, m.bed, poiValidRange[poiHome])
 	}
-	switch villagerSegment(h.dayTime.Load()) {
+	switch h.villagerActivity(m) {
+	case vsPlay:
+		return 0, 0 // a child at play with others about: tag moves it, or nothing
 	case vsWork:
 		if m.work != (blockPos{}) {
 			// Standing there is WorkAtPoi's business (villagerwork.go): the

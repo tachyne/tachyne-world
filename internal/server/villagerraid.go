@@ -114,18 +114,21 @@ func (h *hub) villagerHidingPlace(m *mob) (blockPos, bool) {
 func (h *hub) villagerRaidVictory(players map[int32]*tracked, m *mob, now uint64) bool {
 	m.vRaidHideSet = false
 	under := h.skyExposedAt(floorInt(m.x), floorInt(m.y), floorInt(m.z))
+	if under && m.vCelebrate == 0 {
+		m.vCelebrate = now + villagerCelebrateTk // CelebrateVillagersSurvivedRaid(600, 600) starts under the sky
+	}
+	if m.vCelebrate != 0 && now < m.vCelebrate {
+		// Once started it runs its six hundred ticks wherever the villager
+		// goes (canStillUse: the raid is not stopped); only the rocket
+		// needs the open sky.
+		if h.rng.Intn(100/mobMoveInterval) == 0 {
+			h.playSoundDim(players, m.dim, "minecraft:entity.villager.celebrate", sndNeutral, m.x, m.y, m.z, 1, 1)
+		}
+		if h.rng.Intn(200/mobMoveInterval) == 0 && under {
+			h.villagerFirework(players, m)
+		}
+	}
 	if under {
-		if m.vCelebrate == 0 {
-			m.vCelebrate = now + villagerCelebrateTk // CelebrateVillagersSurvivedRaid(600, 600)
-		}
-		if now < m.vCelebrate {
-			if h.rng.Intn(100/mobMoveInterval) == 0 {
-				h.playSoundDim(players, m.dim, "minecraft:entity.villager.celebrate", sndNeutral, m.x, m.y, m.z, 1, 1)
-			}
-			if h.rng.Intn(200/mobMoveInterval) == 0 {
-				h.villagerFirework(players, m)
-			}
-		}
 		return false // it strolls about the village as it cheers
 	}
 	// MoveToSkySeeingSpot: ten tries within ten across and three up or down.
