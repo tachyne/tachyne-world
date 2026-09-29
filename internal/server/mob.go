@@ -158,20 +158,28 @@ type mob struct {
 	piglinFlee      int           // piglin: ticks left avoiding a zombified piglin, a nemesis or hoglins
 	piglinFleeX     float64       // …and what it is backing away from
 	piglinFleeZ     float64
-	piglinFleeFrom  int32      // …the mob it is avoiding, followed as it moves (0 = a fixed spot)
-	noHunt          bool       // piglin: CannotHunt; hoglin: CannotBeHunted (a bastion's own; persisted)
-	huntedUntil     uint64     // piglin: HUNTED_RECENTLY, the tick it lapses (a reload rolls it afresh)
-	piglinFoe       int32      // piglin: the ATTACK_TARGET it last had (0 = none), for the dead-target rules
-	celebrateUntil  uint64     // piglin: CELEBRATE_LOCATION, the tick it lapses (0 = not celebrating)
-	rideTarget      int32      // baby piglin: RIDE_TARGET, the baby hoglin it means to ride
-	raidPoi         blockPos   // raider: the home RaiderMoveThroughVillageGoal is walking to
-	raidPoiSet      bool       // …set
-	raidVisited     []blockPos // …the last homes it reached
-	vRaidHide       blockPos   // villager: the HIDING_PLACE of a raid
-	vRaidHideSet    bool       // …set
-	vCelebrate      uint64     // villager: the tick its raid celebration ends
-	rideUntil       uint64     // …the tick that memory lapses
-	rideTicker      int        // …babySometimesRideBabyHoglin's ticker (ticks left)
+	piglinFleeFrom  int32        // …the mob it is avoiding, followed as it moves (0 = a fixed spot)
+	noHunt          bool         // piglin: CannotHunt; hoglin: CannotBeHunted (a bastion's own; persisted)
+	huntedUntil     uint64       // piglin: HUNTED_RECENTLY, the tick it lapses (a reload rolls it afresh)
+	piglinFoe       int32        // piglin: the ATTACK_TARGET it last had (0 = none), for the dead-target rules
+	celebrateUntil  uint64       // piglin: CELEBRATE_LOCATION, the tick it lapses (0 = not celebrating)
+	rideTarget      int32        // baby piglin: RIDE_TARGET, the baby hoglin it means to ride
+	raidPoi         blockPos     // raider: the home RaiderMoveThroughVillageGoal is walking to
+	raidPoiSet      bool         // …set
+	raidVisited     []blockPos   // …the last homes it reached
+	vRaidHide       blockPos     // villager: the HIDING_PLACE of a raid
+	vRaidHideSet    bool         // …set
+	vCelebrate      uint64       // villager: the tick its raid celebration ends
+	vWalk           villagerWalk // villager: its WALK_TARGET from the brain's errands (villagerbrain.go)
+	vIdleUntil      uint64       // villager: a running DoNothing ends at this tick
+	vJump           bedJump      // baby villager: a running JumpOnBed
+	vBed            blockPos     // baby villager: NEAREST_BED
+	vBedSet         bool         // …set
+	vSecondary      []blockPos   // villager: SECONDARY_JOB_SITE (a farmer's farmland about it)
+	vSecondaryAt    uint64       // …the tick of the next scan
+	vStrollNext     [4]uint64    // villager: each POI stroll's nextOkStartTime
+	rideUntil       uint64       // …the tick that memory lapses
+	rideTicker      int          // …babySometimesRideBabyHoglin's ticker (ticks left)
 	celebratePos    blockPos
 	fightBack       int32     // hoglin: the piglin that hit it and it now fights (ATTACK_TARGET from wasHurtBy)
 	idleWalk        *idleWalk // piglin brute: the walk its idle RunOne picked; piglin: its celebration's (nil = none)
@@ -969,6 +977,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// An unemployed villager walking to a free workstation, and claiming it.
 		case m.etype == entityVillager && h.villagerBreedStep(players, m):
 			// Two fed villagers courting, and a child if a bed is free.
+		case m.etype == entityVillager && h.villagerBrainStep(players, m):
+			// A villager on an errand of its activity: walking up to a
+			// neighbour or a cat, strolling, a child bouncing on a bed, a
+			// pause; at work or the bell, the strolls about the place.
 		case m.etype == entityWolf && h.wolfHuntStep(players, m):
 			// A wolf after a sheep, a skeleton, or whatever hurt its owner.
 		case m.etype == entityPolarBear && h.bearFoxStep(players, m):

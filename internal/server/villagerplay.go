@@ -30,8 +30,9 @@ func (h *hub) villagerPlayStep(players map[int32]*tracked, m *mob) bool {
 	if m.etype != entityVillager || !m.baby || m.sleeping {
 		return false
 	}
-	if villagerSegment(h.dayTime.Load()) == vsSleep {
-		return false // Schedule.VILLAGER_BABY rests at night like everyone else
+	if h.villagerActivity(m) != vsPlay {
+		m.playMate, m.playFlee = 0, false
+		return false // the baby timeline's PLAY: 3000-6000 and 10000-12000
 	}
 	kids := h.visibleBabies(m)
 	if len(kids) == 0 {

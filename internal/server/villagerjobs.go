@@ -91,6 +91,7 @@ func (h *hub) villagerJobTick(players map[int32]*tracked, m *mob) {
 		return
 	}
 	w := h.worldFor(m.dim)
+	h.poiCompetitorScan(players, m) // two holding one workstation: the more experienced keeps it
 	// A held workstation that is gone, or the wrong block, is lost; a
 	// villager that never traded is unemployed again.
 	if m.work != (blockPos{}) {

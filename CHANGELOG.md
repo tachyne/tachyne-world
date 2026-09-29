@@ -43,6 +43,18 @@ the public history since the project was open-sourced on 2026-07-10.
   ticks; frogs croak and stroll on vanilla's odds; striders stroll twice as
   often as other animals; and fish swim off to a random spot now and then
   and float in between, instead of drifting about without a break.
+- **Villagers keep busy the way vanilla's do.** An idle villager now
+  picks its next errand as vanilla's brain does: it walks up to a
+  neighbour or a cat it can see, strolls about the village, or stands
+  for a moment. At work it strolls around its workstation and back to
+  it, and a farmer walks out to its farmland. At the bell it strolls
+  about and now and then goes over to chat. Children bounce on a
+  nearby bed three to six times, and play tag only in the baby
+  schedule's play hours. When two villagers hold one workstation, the
+  more experienced keeps it, and a loser that never traded becomes
+  unemployed again. After a won raid, the cheering lasts its full
+  thirty seconds even if the villager wanders under a roof. Only the
+  fireworks need the open sky.
 
 ## 2026-09-27
 

@@ -210,6 +210,7 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 			h.villagerJobTick(players, m)  // workstations: validate the held one, look for a free one
 			h.villagerBedTick(players, m)  // …and a bed for whoever has none
 			h.villagerMeetTick(players, m) // …and a meeting bell
+			h.senseNearestBed(m)           // a child's NEAREST_BED, for JumpOnBed
 			// Villager.customServerAiStep: one tick in a hundred inside an active
 			// raid, the sweat particles (VILLAGER_SWEAT) — this step is 20 ticks.
 			if h.rng.Intn(5) == 0 && h.raidNear(m.dim, m.x, m.z) {
