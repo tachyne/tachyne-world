@@ -39,10 +39,9 @@ func TestBrushDisplayCarriesTheDust(t *testing.T) {
 	pl.x, pl.y, pl.z = float64(pos.x), float64(pos.y), float64(pos.z)
 	pl.p.setHotbarSlot(0, itemBrush)
 	players := map[int32]*tracked{pl.p.eid: pl}
-	stroke := evBrush{eid: pl.p.eid, x: pos.x, y: pos.y, z: pos.z, dy: 1}
-	for i := 0; i < 3; i++ { // dust stages 1 then 2
+	for i := 0; i < 3; i++ { // dust stages 1 then 2, stroked from the top
 		h.tick.Store(uint64(i) * brushCooldown)
-		h.brush(players, pl, stroke)
+		h.brushStroke(players, pl, pos, up)
 	}
 	var last *attachproto.BlockDisplay
 	for _, ev := range drainEvs(pl.p) {
