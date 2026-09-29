@@ -17,6 +17,10 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Frames, paintings, leash knots and end crystals need to be in reach.**
   A punch or a right-click on one now counts only within the player's entity
   interaction range, as it already did for mobs, armor stands and vehicles.
+- **Armor stands take poses.** A summoned stand's `Pose` (head, body, arms
+  and legs) now shows and survives a restart, and an armor stand item given
+  with `entity_data` places a stand with its arms, pose and other tags. A
+  plain item still places a bare, armless stand, as in vanilla.
 
 ## 2026-09-27
 

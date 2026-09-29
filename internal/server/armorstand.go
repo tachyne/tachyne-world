@@ -13,8 +13,8 @@ import (
 // (swap when occupied), clicked empty-handed to undress (head first), broken
 // by a quick double punch — the stand and its gear pop. Metadata indices and
 // the entity type are identical on every served version, so no gateway
-// surgery. A summoned stand may be small, armed, plate-less, a marker or
-// invisible; there are no pose controls.
+// surgery. A summoned stand, or one placed from an item with entity_data,
+// may be small, armed, plate-less, a marker or invisible, and posed.
 
 const (
 	entityStatusStandWobble = 32 // vanilla entity event: armor-stand hit wobble
@@ -39,6 +39,7 @@ type armorStand struct {
 	// DATA_CLIENT_FLAGS) and its Invisible tag. A placed stand has none of
 	// them; /summon's NBT sets them.
 	small, arms, noBasePlate, marker, invisible bool
+	pose                                        *standPose // the Pose tag; nil = ArmorStandPose.DEFAULT
 }
 
 // Armor stand metadata: DATA_CLIENT_FLAGS follows LivingEntity's fields.
@@ -65,7 +66,7 @@ func (st *armorStand) clientFlags() byte {
 }
 
 // standMeta is the stand's synced flags: the shared entity flags (alight,
-// invisible) and its own client flags.
+// invisible), its own client flags and, when posed, the six rotations.
 func standMeta(st *armorStand) []byte {
 	var shared byte
 	if st.fire > 0 {
@@ -81,6 +82,9 @@ func standMeta(st *armorStand) []byte {
 	b = protocol.AppendU8(b, standMetaClientFlags)
 	b = protocol.AppendVarInt(b, 0)
 	b = protocol.AppendU8(b, st.clientFlags())
+	if st.pose != nil { // last: a reader that stops at an unknown serializer still has the flags
+		b = appendStandPoseMeta(b, *st.pose)
+	}
 	return protocol.AppendU8(b, itemMetaEnd)
 }
 
@@ -92,14 +96,20 @@ func standInReach(t *tracked, st *armorStand) bool {
 }
 
 // flagged reports a stand whose synced flags are off their defaults.
-func (st *armorStand) flagged() bool { return st.fire > 0 || st.invisible || st.clientFlags() != 0 }
+func (st *armorStand) flagged() bool {
+	return st.fire > 0 || st.invisible || st.clientFlags() != 0 || st.pose != nil
+}
 
 // setStandFlagsFrom reads the summon NBT's Small, ShowArms, NoBasePlate,
-// Marker and Invisible tags (ArmorStand.readAdditionalSaveData).
+// Marker and Invisible tags and its Pose (ArmorStand.readAdditionalSaveData;
+// a Pose that does not parse leaves the pose as it was).
 func (st *armorStand) setStandFlagsFrom(nbt map[string]any) {
 	on := func(k string) bool { n, ok := snbtInt(nbt[k]); return ok && n != 0 }
 	st.small, st.arms, st.noBasePlate, st.marker, st.invisible =
 		on("Small"), on("ShowArms"), on("NoBasePlate"), on("Marker"), on("Invisible")
+	if p, ok := parseStandPose(nbt["Pose"]); ok {
+		st.setPose(p)
+	}
 }
 
 // standBox is the stand's box: 0.5 by 1.975, halved when small; a marker
@@ -158,6 +168,7 @@ func (h *hub) onPlaceStand(players map[int32]*tracked, e evPlaceStand) {
 	st := &armorStand{eid: h.allocEID(), dim: t.dim,
 		x: float64(e.x) + 0.5, y: float64(e.y), z: float64(e.z) + 0.5, yaw: yaw,
 		name: usedStack(t).name} // createDefaultStackConfig: the item's custom_name
+	st.applyItemTags(usedStack(t).standTags) // …and its entity_data
 	h.armorStands[st.eid] = st
 	h.usedItem(t, itemArmorStand) // ArmorStandItem.useOn
 	if isSurvival(t.gamemode) {
@@ -166,6 +177,9 @@ func (h *hub) onPlaceStand(players map[int32]*tracked, e evPlaceStand) {
 	h.toNearbyEv(players, st.dim, st.x, st.z, h.standAddEv(st))
 	if st.name != "" {
 		h.toNearbyEv(players, st.dim, st.x, st.z, metaEv(nameMeta(st.eid, st.name)))
+	}
+	if st.flagged() {
+		h.toNearbyEv(players, st.dim, st.x, st.z, metaEv(standMeta(st)))
 	}
 	h.vibAt(st.dim, freqEntityPlace, st.x, st.y, st.z, t.p.eid)
 	h.playSoundDim(players, st.dim, "minecraft:entity.armor_stand.place", sndBlock, st.x, st.y, st.z, 0.75, 0.8)

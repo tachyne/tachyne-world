@@ -556,10 +556,14 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			}
 			sd := &armorStand{eid: h.allocEID(), dim: pos.dim,
 				x: float64(front.x) + 0.5, y: float64(front.y), z: float64(front.z) + 0.5, yaw: yaw, name: st.name}
+			sd.applyItemTags(st.standTags) // createDefaultStackConfig: the item's entity_data
 			h.armorStands[sd.eid] = sd
 			h.toNearbyEv(players, sd.dim, sd.x, sd.z, h.standAddEv(sd))
 			if sd.name != "" {
 				h.toNearbyEv(players, sd.dim, sd.x, sd.z, metaEv(nameMeta(sd.eid, sd.name)))
+			}
+			if sd.flagged() {
+				h.toNearbyEv(players, sd.dim, sd.x, sd.z, metaEv(standMeta(sd)))
 			}
 			h.rsSound(players, "minecraft:entity.armor_stand.place", sndBlock, sd.x, sd.y, sd.z, 0.75, 0.8)
 		} else {
