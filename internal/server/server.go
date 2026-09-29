@@ -748,36 +748,90 @@ func (s *Server) connectBusWithRetry(url string) {
 const busRetry = 30 * time.Second
 
 // autosave periodically flushes world edits to disk (a no-op when unchanged).
+//
+// Every dimension is saved each round, and a failure in one never skips the
+// others. A save that keeps failing is never quiet: once a dimension has gone
+// saveAlarmAfter without a good save, every online operator is told in chat
+// once a minute, with the error, until it saves again. The overworld once
+// failed every save for two days with only a log line to show for it, and a
+// restart then loaded the two-day-old file.
 func (s *Server) autosave() {
 	t := time.NewTicker(autosaveInterval)
 	defer t.Stop()
-	last := s.world.EditCount()
-	lastEdits := map[int]int{} // every other dimension's, for the same chatter
+	lastEdits := map[int]int{} // per dimension, for the "autosaved" chatter
+	alarm := newSaveAlarm(time.Now)
 	for range t.C {
 		if s.hub != nil && s.hub.saveOff.Load() {
 			continue // /save-off
 		}
-		if err := s.world.Save(); err != nil {
-			log.Printf("world autosave failed: %v", err)
-			continue
-		}
 		for id, w := range s.allDims() {
+			name := dimType(id).Name
 			if id == dimOverworld {
+				name = "world"
+			}
+			err := w.Save()
+			if msg := alarm.observe(name, err); msg != "" && s.hub != nil {
+				s.hub.postTimeout(evAnnounce{name: "save", text: msg}, foreignPostTimeout)
+			}
+			if err != nil {
+				log.Printf("%s autosave failed: %v", name, err)
 				continue
 			}
-			name := dimType(id).Name
-			if err := w.Save(); err != nil {
-				log.Printf("%s autosave failed: %v", name, err)
-			} else if n := w.EditCount(); n != lastEdits[id] {
+			if n := w.EditCount(); n != lastEdits[id] { // only chatter when something changed
 				log.Printf("%s autosaved (%d block edits)", name, n)
 				lastEdits[id] = n
 			}
 		}
-		if n := s.world.EditCount(); n != last { // only chatter when something changed
-			log.Printf("world autosaved (%d block edits)", n)
-			last = n
-		}
 	}
+}
+
+// saveAlarmAfter is how long a dimension may go without a good save before
+// the operators hear about it; saveAlarmEvery is how often they hear again.
+const (
+	saveAlarmAfter = 2 * time.Minute
+	saveAlarmEvery = time.Minute
+)
+
+// saveAlarm tracks each dimension's failing saves and decides when to raise
+// (and clear) the alarm.
+type saveAlarm struct {
+	now       func() time.Time
+	failSince map[string]time.Time
+	lastAlert map[string]time.Time
+}
+
+func newSaveAlarm(now func() time.Time) *saveAlarm {
+	return &saveAlarm{now: now, failSince: map[string]time.Time{}, lastAlert: map[string]time.Time{}}
+}
+
+// observe records one save's outcome and returns the message to send the
+// operators, or "" for none.
+func (a *saveAlarm) observe(name string, err error) string {
+	now := a.now()
+	if err == nil {
+		since, failing := a.failSince[name]
+		delete(a.failSince, name)
+		alerted := !a.lastAlert[name].IsZero()
+		delete(a.lastAlert, name)
+		if failing && alerted {
+			log.Printf("SAVE RECOVERED: %s saved again after failing since %s", name, since.Format(time.RFC3339))
+			return fmt.Sprintf("%s is saving again (it had been failing since %s UTC).", name, since.UTC().Format("15:04"))
+		}
+		return ""
+	}
+	since, failing := a.failSince[name]
+	if !failing {
+		a.failSince[name] = now
+		return ""
+	}
+	if now.Sub(since) < saveAlarmAfter || now.Sub(a.lastAlert[name]) < saveAlarmEvery {
+		return ""
+	}
+	a.lastAlert[name] = now
+	msg := fmt.Sprintf("WARNING: %s has not saved for %s: %v. Builds since then exist only in memory; do not restart the server until this is fixed.",
+		name, now.Sub(since).Round(time.Second), err)
+	log.Printf("SAVE ALARM: %s", msg)
+	return msg
 }
 
 // Save flushes world edits + hub-owned state (inventories, containers) to disk

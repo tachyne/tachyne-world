@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-29
 
 ### Fixed
+- **A failing world save is never quiet any more.** The overworld's saves
+  failed for two days with only a log line to show for it, and a restart then
+  loaded the two-day-old file: everything built in the overworld in between was
+  lost. Every dimension is now saved each round even if another fails, and
+  once one has gone two minutes without saving, every online operator is warned
+  in chat once a minute, with the error, until it saves again.
 - **A posed copper golem statue looks posed in the hand.** The statue's
   item now carries its pose as the `block_state` component (26.2 and 26.3
   number it 76 and 78), so the tooltip and the client's placement preview
