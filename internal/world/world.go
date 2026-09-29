@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 	"runtime/debug"
+	"slices"
 	"sync"
 	"sync/atomic"
 
@@ -918,10 +919,20 @@ func (w *World) GeneratedAt(x, y, z int) uint32 {
 // Chunk returns a fresh chunk: a copy of the cached generated base with any
 // persistent edits applied on top. The copy keeps the shared cached chunk
 // immutable.
+//
+// The copy is a deep one. Sections is a slice (the world's height is set at
+// run time), so copying the struct shared its storage with the cache, and
+// every chunk sent to a player wrote that chunk's edits into "generation".
+// SetBlock drops an edit that matches generation, so a block that went back
+// to the state it had when the chunk was sent — a button released, a piston
+// retracted, a torch relit — lost its edit, and the next load of the chunk
+// put terrain where it stood (a player's lift lost 760 blocks this way).
 func (w *World) Chunk(cx, cz int32) *worldgen.Chunk {
 	base := w.generated(cx, cz)
 	ch := new(worldgen.Chunk)
-	*ch = *base // copy the generated terrain so edits don't touch the cache
+	*ch = *base
+	ch.Sections = slices.Clone(base.Sections) // [4096]uint32 elements: copied by value
+	ch.Biomes = slices.Clone(base.Biomes)
 
 	w.mu.RLock()
 	var touched [256]bool

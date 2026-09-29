@@ -57,3 +57,30 @@ func TestRevertEditCounts(t *testing.T) {
 		t.Fatalf("EditCount %d after revert, want 0", w.EditCount())
 	}
 }
+
+// The chunk handed out for a player's view is a copy: applying the edits to
+// it must not write them into the cached generated chunk. When it did, a
+// block that went back to the state it had when the chunk was sent matched
+// "generation", lost its edit, and turned back into terrain on the next load.
+func TestChunkLeavesGenerationAlone(t *testing.T) {
+	w := New(1)
+	x, z := 10, 10
+	y := 200 // open air, high above the terrain
+	if w.At(x, y, z) != worldgen.Air {
+		t.Fatalf("expected air at y=%d", y)
+	}
+	w.SetBlock(x, y, z, worldgen.Stone) // a build
+	ch := w.Chunk(0, 0)                 // sent to a player
+	sec, ly := (y-worldgen.MinY)/16, (y-worldgen.MinY)%16
+	if ch.Sections[sec][(ly*16+z)*16+x] != worldgen.Stone {
+		t.Fatal("the chunk sent does not carry the edit")
+	}
+	if w.GeneratedAt(x, y, z) != worldgen.Air {
+		t.Fatal("sending the chunk wrote the edit into the generated chunk")
+	}
+	w.SetBlock(x, y, z, worldgen.Air)   // taken away…
+	w.SetBlock(x, y, z, worldgen.Stone) // …and put back
+	if _, ok := w.EditAt(x, y, z); !ok {
+		t.Fatal("the build lost its edit: a restart would leave air where it stands")
+	}
+}

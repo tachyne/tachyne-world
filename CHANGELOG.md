@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-29
 
 ### Fixed
+- **Redstone builds no longer fall apart after a restart.** Since
+  2026-09-26 a block that went back to the state it had when its chunk was
+  last sent to a player — a button released, a piston retracted, a torch
+  relit, a wall that reshaped and reshaped back — quietly stopped being
+  saved, and the next restart (or the chunk leaving memory) put terrain
+  where it stood. A nine-floor bubble lift lost some 760 of its blocks this
+  way, and the water in its shaft came through the gaps. Sending a chunk no
+  longer writes its blocks into the world's record of what generation made,
+  so every block a player built is saved again.
 - **A posed copper golem statue looks posed in the hand.** The statue's
   item now carries its pose as the `block_state` component (26.2 and 26.3
   number it 76 and 78), so the tooltip and the client's placement preview
