@@ -330,9 +330,10 @@ func (h *hub) railNeighborChanged(players map[int32]*tracked, pos blockPos, stat
 	}
 	switch {
 	case isPlainRail(state):
-		// RailBlock.updateState: a junction of three follows a signal that
-		// arrives from a signal source beside it.
-		if h.signalSourceBeside(pos) && h.countPotentialConnections(newRailState(pos, state)) == 3 {
+		// RailBlock.updateState: a junction of three re-places itself when
+		// the update came from a signal source (a lever, dust, a torch —
+		// also one on the block beside it, or one just removed).
+		if h.railUpdateFromSource(pos) && h.countPotentialConnections(newRailState(pos, state)) == 3 {
 			h.railUpdateDir(players, pos, state, false)
 		}
 	case isDetectorRail(state):
@@ -350,9 +351,14 @@ func fluidLeftBy(state uint32) uint32 {
 	return worldgen.Air
 }
 
-// signalSourceBeside stands in for RailBlock.updateState's "the block that
-// changed is a signal source": is one of the six neighbours one.
-func (h *hub) signalSourceBeside(pos blockPos) bool {
+// railUpdateFromSource is RailBlock.updateState's test of the block that
+// sent the update: block.defaultBlockState().isSignalSource(). An update
+// whose sender the engine does not know (the simulation queue's re-check)
+// asks whether a signal source stands beside the rail instead.
+func (h *hub) railUpdateFromSource(pos blockPos) bool {
+	if h.nb.causeSet {
+		return h.isSignalSource(h.nb.cause)
+	}
 	w := h.rsWorld()
 	for _, d := range allNeighbors {
 		if h.isSignalSource(w.At(pos.x+d.x, pos.y+d.y, pos.z+d.z)) {

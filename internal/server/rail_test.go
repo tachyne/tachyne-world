@@ -102,3 +102,42 @@ func TestCornerDegradesOnSpecialRail(t *testing.T) {
 		t.Fatalf("special rails cannot corner: %d (shape %d)", got, railShape(got))
 	}
 }
+
+// RailBlock.updateState: a three-way junction re-places itself when the
+// update comes from a signal source, even one that powers it through the
+// block beside it — the lever on a block is the classic switch. Unpowered
+// the junction takes vanilla's south-east corner; powered, the south-west.
+func TestRailJunctionSwitchesFromLeverOnBlock(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	plain := uint32(railMin + 1)
+	j := blockPos{x + 1, y, z}
+	w.SetBlock(x, y, z, railWith(plain, shapeEW, false))
+	w.SetBlock(x+2, y, z, railWith(plain, shapeEW, false))
+	w.SetBlock(x+1, y, z+1, railWith(plain, shapeNS, false))
+	w.SetBlock(j.x, j.y, j.z, railWith(plain, shapeSE, false))
+	w.SetBlock(x+1, y, z-1, worldgen.Stone) // the block the lever hangs on
+	w.SetBlock(x+1, y-1, z-2, worldgen.Stone)
+	lever := withProps(t, worldgen.BlockBase("lever"), map[string]string{"face": "wall", "facing": "north", "powered": "false"})
+	w.SetBlock(x+1, y, z-2, lever)
+	w.SetBlock(x+1, y+1, z-2, worldgen.Air)
+
+	h.toggleLever(players, blockPos{x + 1, y, z - 2}, w.At(x+1, y, z-2))
+	stepTicks(h, players, 2)
+	if got := railShape(w.At(j.x, j.y, j.z)); got != shapeSW {
+		t.Fatalf("powered through the block, the junction switches south-west: shape %d", got)
+	}
+	h.toggleLever(players, blockPos{x + 1, y, z - 2}, w.At(x+1, y, z-2))
+	stepTicks(h, players, 2)
+	if got := railShape(w.At(j.x, j.y, j.z)); got != shapeSE {
+		t.Fatalf("unpowered, the junction goes back south-east: shape %d", got)
+	}
+	// An update from a block that is no signal source (a player's block set
+	// on top of it) leaves a junction's shape alone.
+	w.SetBlock(j.x, j.y, j.z, railWith(plain, shapeSW, false)) // as if left switched
+	w.SetBlock(j.x, j.y+1, j.z, worldgen.Stone)                // a player's block set on top of it
+	h.onBlock(players, evBlock{dim: 0, x: j.x, y: j.y + 1, z: j.z, state: worldgen.Stone, placed: true})
+	stepTicks(h, players, 2)
+	if got := railShape(w.At(j.x, j.y, j.z)); got != shapeSW {
+		t.Fatalf("an update from a plain block leaves the junction alone: shape %d", got)
+	}
+}
