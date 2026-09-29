@@ -35,6 +35,15 @@ the public history since the project was open-sourced on 2026-07-10.
   and `can_place_on` let its holder break and build on exactly the blocks
   they name (Java clients still need the components on their side to try,
   which lands with the gateways).
+- **`/item modify`.** An item modifier — an inline function or a list of
+  them — runs over every filled slot of the range, on players or a block
+  container: `set_count`, `set_damage`, `enchant_randomly`,
+  `enchant_with_levels`, `set_enchantments`, `set_potion`, `set_name`,
+  `set_lore`, `set_item`, `set_components`, `limit_count`, `furnace_smelt`,
+  `set_ominous_bottle_amplifier`, `set_instrument`, `set_stew_effect` and
+  `sequence`. The same modifier may follow `/item … from`, and `/item …
+  with` takes an item with components. `/loot … fish` and `/loot … mine`
+  take a tool with components too.
 
 ### Fixed
 - **A posed copper golem statue looks posed in the hand.** The statue's

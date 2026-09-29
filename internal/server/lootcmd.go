@@ -25,7 +25,7 @@ import (
 // What was used is counted as vanilla's CommandResponseTracker counts it —
 // one per stack that went somewhere — and answered only to the caller.
 
-const lootUsage = "Usage: /loot give <players>|insert <pos>|spawn <pos>|replace block <pos> <slot> [count]|replace entity <targets> <slot> [count] loot <table>|kill <target>|mine <pos> [tool|mainhand|offhand]"
+const lootUsage = "Usage: /loot give <players>|insert <pos>|spawn <pos>|replace block <pos> <slot> [count]|replace entity <targets> <slot> [count] loot <table>|kill <target>|mine <pos> [tool|mainhand|offhand]|fish <table> <pos> [tool|mainhand|offhand]"
 
 var lootSources = map[string]bool{"loot": true, "kill": true, "mine": true, "fish": true}
 
@@ -152,6 +152,14 @@ func (h *hub) lootSource(players map[int32]*tracked, t *tracked, src []string) (
 		if !ok {
 			return lootRoll{}, lootUsage
 		}
+		// The tool is the table's TOOL parameter; the fishing tables read
+		// none of it (the Luck of the Sea luck comes from a hook, and there
+		// is none), but it must still name an item.
+		if len(src) == 6 {
+			if _, msg := lootTool(t, src[5]); msg != "" {
+				return lootRoll{}, msg
+			}
+		}
 		name := strings.TrimPrefix(src[1], "minecraft:")
 		b := &bobberEntity{dim: t.dim, x: float64(floorInt(x)) + 0.5, y: float64(floorInt(y)) + 0.5, z: float64(floorInt(z)) + 0.5}
 		var st invStack
@@ -237,17 +245,9 @@ func (h *hub) lootSource(players map[int32]*tracked, t *tracked, src []string) (
 		}
 		var tool invStack
 		if len(src) == 5 {
-			switch src[4] {
-			case "mainhand":
-				tool = heldStack(t)
-			case "offhand":
-				tool = t.offhand
-			default:
-				item, ok := itemByName[strings.TrimPrefix(src[4], "minecraft:")]
-				if !ok {
-					return lootRoll{}, fmt.Sprintf("Unknown item '%s'", src[4])
-				}
-				tool = invStack{item: item, count: 1}
+			var msg string
+			if tool, msg = lootTool(t, src[4]); msg != "" {
+				return lootRoll{}, msg
 			}
 		}
 		st := h.worldFor(t.dim).At(pos.x, pos.y, pos.z)
@@ -455,4 +455,21 @@ func (h *hub) distributeInto(it itemTarget, d invStack) bool {
 		}
 	}
 	return changed
+}
+
+// lootTool is LootCommand's tool argument: mainhand, offhand, or an item
+// (with its components).
+func lootTool(t *tracked, arg string) (invStack, string) {
+	switch arg {
+	case "mainhand":
+		return heldStack(t), ""
+	case "offhand":
+		return t.offhand, ""
+	}
+	st, msg := parseItemArg(arg)
+	if msg != "" {
+		return invStack{}, msg
+	}
+	st.count = 1
+	return st, ""
 }
