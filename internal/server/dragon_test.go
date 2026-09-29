@@ -254,12 +254,17 @@ func TestDragonHurtWhenItsHealingCrystalBreaks(t *testing.T) {
 		t.Fatalf("the dragon beside a crystal heals from %d, want %d", h.dragonCrystal, near.eid)
 	}
 	m.health = 100
-	h.onAttack(players, evAttack{attacker: pl.p.eid, target: far.eid})
+	punch := func(c *crystal) { // handleAttack wants the crystal in reach
+		pl.x, pl.y, pl.z = c.x+2.5, c.y, c.z
+		h.onAttack(players, evAttack{attacker: pl.p.eid, target: c.eid})
+		pl.x, pl.y, pl.z = 300, 60, 300
+	}
+	punch(far)
 	if m.health != 100 {
 		t.Fatalf("breaking a crystal the dragon is not healing from cost it %d", 100-m.health)
 	}
 	h.tick.Add(40) // past the hurt cooldown
-	h.onAttack(players, evAttack{attacker: pl.p.eid, target: near.eid})
+	punch(near)
 	if m.health != 100-dragonCrystalLoss {
 		t.Fatalf("breaking its healing crystal left the dragon at %d, want %d", m.health, 100-dragonCrystalLoss)
 	}
