@@ -341,6 +341,8 @@ func (h *hub) placeRocket(players map[int32]*tracked, e evPlaceRocket) {
 	if isSurvival(t.gamemode) {
 		h.consumeUsed(t)
 	}
-	h.spawnRocket(players, t.dim, x, y, z, 0, st)
+	if r := h.spawnRocket(players, t.dim, x, y, z, 0, st); r != nil {
+		r.shooter = t.p.eid // its owner, whom it will not strike
+	}
 	h.usedItem(t, itemFireworkRocket) // FireworkRocketItem.useOn, through ItemStack.useOn
 }
