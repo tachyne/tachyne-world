@@ -16,8 +16,9 @@ import (
 // chatLog records every chat line a player is sent, draining its queue as a
 // session writer would so nothing is dropped on a full channel.
 type chatLog struct {
-	mu    sync.Mutex
-	lines []string
+	mu        sync.Mutex
+	lines     []string
+	particles []attachproto.Particles // …and every particle burst (/particle)
 }
 
 func (c *chatLog) all() []string {
@@ -34,6 +35,11 @@ func recordChat(t *testing.T, p *player) *chatLog {
 		for {
 			select {
 			case pkt := <-p.out:
+				if pa, ok := pkt.ev.(attachproto.Particles); ok {
+					c.mu.Lock()
+					c.particles = append(c.particles, pa)
+					c.mu.Unlock()
+				}
 				// The HUD's once-a-second action bar is not a reply; on a slow
 				// runner it lands between a command and its marker.
 				if ch, ok := pkt.ev.(attachproto.Chat); ok && !ch.ActionBar {

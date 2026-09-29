@@ -2145,6 +2145,7 @@ func (h *hub) run() {
 						*ptr = e.st
 						if hot >= 0 {
 							t.p.setHotbarSlot(hot, e.st.item)
+							t.p.setHandTags(hot, e.st.tags)
 						}
 						h.broadcastEquipment(players, t)
 					}
@@ -2254,7 +2255,7 @@ func (h *hub) run() {
 			case evTellraw:
 				h.onTellraw(players, e)
 			case evParticleCmd:
-				h.spawnParticles(players, e.dim, e.pid, e.x, e.y, e.z, e.spread, e.speed, e.count)
+				h.onParticleCmd(players, e)
 			case evBoneMeal:
 				h.onBoneMeal(players, e)
 			case evUseShelf:

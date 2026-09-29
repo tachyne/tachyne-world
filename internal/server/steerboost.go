@@ -141,7 +141,7 @@ func (h *hub) wearSteerStick(players map[int32]*tracked, t *tracked, slot int, m
 	if lvl := s.enchLvl(enchUnbreaking); lvl > 0 && h.rng.Intn(lvl+1) > 0 {
 		return
 	}
-	max, ok := itemMaxDurability[s.item]
+	max, ok := wearMax(*s)
 	if !ok {
 		return
 	}

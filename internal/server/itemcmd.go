@@ -19,10 +19,11 @@ import (
 // until they run out; fill cycles them over every slot; override is replace
 // with every slot past the last item emptied.
 //
-// Not here yet: /item modify and the "modifier" tail (loot item
-// functions), slot sources other than a plain range, item components in
-// the item argument, and mobs as targets or sources (the command refuses
-// rather than skip them). Block targets are the storage blocks: chests,
+// /item modify runs an item modifier (itemmodify.go) over every non-empty
+// slot of the range, and the same modifier may follow a from source.
+//
+// Not here yet: slot sources other than a plain range, and mobs as targets
+// or sources (the command refuses rather than skip them). Block targets are the storage blocks: chests,
 // barrels, shulker boxes, furnaces, dispensers, droppers, hoppers, brewing
 // stands and crafters.
 
@@ -275,6 +276,7 @@ func (h *hub) playerItemTarget(t *tracked) itemTarget {
 		changed: func(players map[int32]*tracked) {
 			h.sendInventory(t) // the whole of window 0, cursor and crafting included
 			t.p.setOffhand(t.offhand.item)
+			t.p.setHandTags(offhandSlot, t.offhand.tags)
 			t.refreshArmorAttrs()
 			h.broadcastEquipment(players, t)
 			if t.winKind == winChest && t.viewChest != nil && t.viewChest == t.ender {
@@ -284,7 +286,7 @@ func (h *hub) playerItemTarget(t *tracked) itemTarget {
 	}
 }
 
-const itemUsage = "Usage: /item replace|fill|override block <pos>|entity <targets> <slots> with <item> [count] | from block <pos>|entity <source> <slots>"
+const itemUsage = "Usage: /item replace|fill|override block <pos>|entity <targets> <slots> with <item> [count] | from block <pos>|entity <source> <slots> [<modifier>] | /item modify block <pos>|entity <targets> <slots> <modifier>"
 
 func (s *Server) cmdItem(p *player, args []string) {
 	if !s.isOp(p.name) { // ItemCommands: LEVEL_GAMEMASTERS
@@ -370,7 +372,7 @@ func (h *hub) itemCommand(players map[int32]*tracked, t *tracked, args []string)
 	switch mode {
 	case "replace", "fill", "override":
 	case "modify":
-		return "/item modify is not supported yet"
+		return h.itemModify(players, t, args[1:])
 	default:
 		return itemUsage
 	}
@@ -393,14 +395,11 @@ func (h *hub) itemCommand(players map[int32]*tracked, t *tracked, args []string)
 		if len(rest) < 3 || len(rest) > 4 {
 			return itemUsage
 		}
-		name := rest[2]
-		if strings.ContainsAny(name, "[{") {
-			return "Item components are not supported by /item yet"
+		st, msg := parseItemArg(rest[2])
+		if msg != "" {
+			return msg
 		}
-		item, found := itemByName[strings.TrimPrefix(name, "minecraft:")]
-		if !found {
-			return fmt.Sprintf("Unknown item '%s'", name)
-		}
+		item := st.item
 		count := 1
 		if len(rest) == 4 {
 			n, err := strconv.Atoi(rest[3])
@@ -409,16 +408,22 @@ func (h *hub) itemCommand(players map[int32]*tracked, t *tracked, args []string)
 			}
 			count = n
 		}
-		items, known = []invStack{{item: item, count: count}}, item
+		st.count = count
+		items, known = []invStack{st}, item
 	case "from":
 		srcs, tail, msg := h.itemHolder(players, t, rest[2:], true)
 		if msg != "" {
 			return msg
 		}
-		if len(tail) != 1 {
-			if len(tail) > 1 {
-				return "Item modifiers are not supported by /item yet"
+		var mod itemModifier
+		switch len(tail) {
+		case 1:
+		case 2: // … <sourceSlots> <modifier>
+			var msg string
+			if mod, msg = parseItemModifier(tail[1]); msg != "" {
+				return msg
 			}
+		default:
 			return itemUsage
 		}
 		srcIDs, ok := slotRanges[tail[0]]
@@ -427,7 +432,11 @@ func (h *hub) itemCommand(players map[int32]*tracked, t *tracked, args []string)
 		}
 		for _, src := range srcs {
 			for _, sl := range src.slots(srcIDs) {
-				items = append(items, sl.get())
+				st := sl.get()
+				if mod != nil {
+					st = h.applyItemModifier(t, mod, st)
+				}
+				items = append(items, st)
 			}
 		}
 		if len(items) == 0 {
@@ -481,6 +490,78 @@ func (h *hub) itemCommand(players map[int32]*tracked, t *tracked, args []string)
 		line = fmt.Sprintf("Replaced %d slot(s) on %s%s", total, r.tg.name, with)
 	default:
 		line = fmt.Sprintf("Replaced slot(s) on %d entities%s", len(nonZero), with)
+	}
+	h.cmdSuccess(players, t.p, line, true)
+	return ""
+}
+
+// applyItemModifier is ItemCommands.applyModifier: the function runs in a
+// command context at the source, and the result is cut to its stack size.
+func (h *hub) applyItemModifier(t *tracked, mod itemModifier, st invStack) invStack {
+	c := &lootCtx{rng: h.rng.Intn, randf: h.rng.Float64, located: true,
+		pos: blockPos{floorInt(t.x), floorInt(t.y), floorInt(t.z)}}
+	st = mod(h, c, st)
+	if st.item == 0 || st.count <= 0 {
+		return invStack{}
+	}
+	st.count = min(st.count, stackCap(st.item)) // ItemStack.limitSize
+	return st
+}
+
+// itemModify is ItemCommands.modifyItems: the modifier over every non-empty
+// slot of the range on each target (SlotSelector.NON_EMPTY_SLOTS), counting
+// the slots whose write was taken.
+func (h *hub) itemModify(players map[int32]*tracked, t *tracked, args []string) string {
+	targets, rest, msg := h.itemHolder(players, t, args, false)
+	if msg != "" {
+		return msg
+	}
+	if len(rest) != 2 {
+		return itemUsage
+	}
+	slotName := rest[0]
+	ids, ok := slotRanges[slotName]
+	if !ok {
+		return fmt.Sprintf("Unknown slot '%s'", slotName)
+	}
+	mod, msg := parseItemModifier(rest[1])
+	if msg != "" {
+		return msg
+	}
+	selected, total := 0, 0
+	var nonZero []itemTarget
+	for _, tg := range targets {
+		n := 0
+		for _, sl := range tg.slots(ids) {
+			cur := sl.get()
+			if cur.item == 0 || cur.count <= 0 {
+				continue
+			}
+			selected++
+			if sl.set(h.applyItemModifier(t, mod, cur)) {
+				n++
+			}
+		}
+		total += n
+		if n > 0 {
+			nonZero = append(nonZero, tg)
+			tg.changed(players)
+		}
+	}
+	if selected == 0 {
+		return fmt.Sprintf("The target does not have slot %s", slotName)
+	}
+	if len(nonZero) == 0 {
+		return "No targets accepted items into specified slots"
+	}
+	var line string
+	switch r := nonZero[0]; {
+	case r.pos != nil:
+		line = fmt.Sprintf("Modified %d slot(s) at %d, %d, %d", total, r.pos.x, r.pos.y, r.pos.z)
+	case len(nonZero) == 1:
+		line = fmt.Sprintf("Modified %d slot(s) on %s", total, r.name)
+	default:
+		line = fmt.Sprintf("Modified slot(s) on %d entities", len(nonZero))
 	}
 	h.cmdSuccess(players, t.p, line, true)
 	return ""

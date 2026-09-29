@@ -178,7 +178,7 @@ func (h *hub) dispenseOnto(players map[int32]*tracked, m *mob, one invStack, wea
 // wearDispensed is ItemStack.hurtAndBreak with no player: Unbreaking spares
 // each point with chance lvl/(lvl+1), and a worn-out tool is simply gone.
 func (h *hub) wearDispensed(st *invStack, n int) {
-	max, ok := itemMaxDurability[st.item]
+	max, ok := wearMax(*st)
 	if !ok || max <= 0 {
 		return
 	}

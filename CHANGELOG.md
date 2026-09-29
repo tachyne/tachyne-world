@@ -13,6 +13,52 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ## 2026-09-29
 
+### Added
+- **`/setblock` and `/fill` take the rest of vanilla's block entity data.**
+  Besides a chest's name and contents and a spawner's mob, the `{…}` after
+  a block now fills a sign's front and back text (colour, glow, wax), a
+  banner's patterns and the `Items` of a hopper, dispenser, dropper,
+  crafter, brewing stand or furnace. A `/fill … replace` filter may ask for
+  block entity data too (`chest{Items:[{id:"minecraft:diamond"}]}` matches a
+  chest holding a diamond anywhere, as vanilla's partial-list match does), a
+  mode may follow the filter (`replace air outline`), and the size cap is
+  read from `max_block_modifications` when the fill runs, so a
+  `/gamerule` just before it counts.
+- **`/give` takes the rest of the item components the engine models.**
+  `lore`, `unbreakable`, `can_break`, `can_place_on`, `trim`,
+  `banner_patterns`, `fireworks`, `firework_explosion`,
+  `written_book_content`, `writable_book_content`, `charged_projectiles` and
+  `bucket_entity_data` now go onto the given stack, and `!component` takes
+  one off. An unknown component, one named twice, or one the engine does not
+  model is refused in vanilla's words. Lore shows in the tooltip, an
+  unbreakable item never wears, and in adventure mode an item's `can_break`
+  and `can_place_on` let its holder break and build on exactly the blocks
+  they name (Java clients still need the components on their side to try,
+  which lands with the gateways).
+- **`/item modify`.** An item modifier — an inline function or a list of
+  them — runs over every filled slot of the range, on players or a block
+  container: `set_count`, `set_damage`, `enchant_randomly`,
+  `enchant_with_levels`, `set_enchantments`, `set_potion`, `set_name`,
+  `set_lore`, `set_item`, `set_components`, `limit_count`, `furnace_smelt`,
+  `set_ominous_bottle_amplifier`, `set_instrument`, `set_stew_effect` and
+  `sequence`. The same modifier may follow `/item … from`, and `/item …
+  with` takes an item with components. `/loot … fish` and `/loot … mine`
+  take a tool with components too.
+- **`/particle` follows vanilla's grammar.** `force` or `normal` and a
+  viewers selector may follow the count; a normal burst reaches players
+  within 32 blocks of it and a forced one 512, and a burst nobody could see
+  answers "The particle was not visible for anybody". The delta, speed and
+  count go together, as vanilla has them, and the reply is vanilla's
+  "Displaying particle …". Particles that take options (dust, block, item,
+  entity_effect …) are recognised and refused by name until the particle
+  frame can carry their options.
+- **`/fetchprofile name|id|entity`.** Resolves a game profile and answers
+  as vanilla does, with the bracketed Copy Component, Give Item, Summon
+  Mannequin and Copy actions. An online player resolves whole, skin
+  textures included; anyone who has joined resolves by name and UUID from
+  the name cache (the engine makes no session-service lookups of its own);
+  a mob has no profile.
+
 ### Fixed
 - **A failing world save is never quiet any more.** The overworld's saves
   failed for two days with only a log line to show for it, and a restart then

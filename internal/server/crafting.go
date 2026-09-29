@@ -578,6 +578,7 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		*ptr = placed[i]
 		if hot >= 0 {
 			t.p.setHotbarSlot(hot, ch.st.item)
+			t.p.setHandTags(hot, ch.st.tags)
 		}
 		w := int16(gridSize(t))
 		if (t.winKind == winPlayer || t.winKind == winCraft) && ch.slot >= 1 && ch.slot <= w*w {

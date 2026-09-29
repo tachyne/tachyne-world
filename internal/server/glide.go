@@ -22,7 +22,7 @@ const chestArmorSlot = 1
 // elytraSpent is ItemStack.nextDamageWillBreak: one more point of wear would
 // destroy this wing, which is exactly when vanilla stops gliding on it.
 func elytraSpent(s invStack) bool {
-	max, ok := itemMaxDurability[s.item]
+	max, ok := wearMax(s)
 	return ok && s.dmg >= max-1
 }
 
@@ -60,6 +60,9 @@ func (h *hub) wearElytra(players map[int32]*tracked, t *tracked) {
 	a := &t.armor[chestArmorSlot]
 	h.advance(players, t, "item_durability_changed", advMatch{item: a.item})
 	if lvl := a.enchLvl(enchUnbreaking); lvl > 0 && h.rng.Intn(lvl+1) > 0 {
+		return
+	}
+	if _, wears := wearMax(*a); !wears {
 		return
 	}
 	a.dmg++
