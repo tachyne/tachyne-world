@@ -1274,6 +1274,11 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			oldY := m.y
 			fx, fz := int(math.Floor(m.x)), int(math.Floor(m.z))
 			floor := float64(h.mobFeetAt(m, fx, fz, int(math.Floor(m.y)))) // a snow walker stops on powder snow
+			if m.stepsOverFences() {
+				if top, ok := h.fenceTopAt(m, fx, int(floor), fz); ok {
+					floor = top // a camel stands on the fence it stepped onto
+				}
+			}
 			if lvl := m.hasEffect(effLevitation); lvl > 0 {
 				// LivingEntity.travel under Levitation: each tick dy eases
 				// toward 0.05 × level (dy += (target − dy) × 0.2) and nothing
@@ -1527,6 +1532,11 @@ func (h *hub) mobStepOK(m *mob, nx, nz float64) bool {
 	// step, straight into a tall wall, where the client draws it black. A
 	// mob already wedged somewhere may still leave.
 	fy := int(math.Floor(m.y))
+	if m.stepsOverFences() {
+		if top, ok := h.fenceTopAt(m, fnx, fy+step, fnz); ok { // up onto a fence top (fencestep.go)
+			return destOK && hazardOK && m.fenceRiseOK(top)
+		}
+	}
 	roomOK := h.bodyFits(m, fnx, fy+step, fnz) || !h.bodyFits(m, cx, fy, cz)
 	return destOK && hazardOK && roomOK && step <= m.climb() && step >= -pathMaxFall && !w.TallObstacle(fnx, fnz)
 }

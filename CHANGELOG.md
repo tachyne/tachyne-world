@@ -21,6 +21,10 @@ the public history since the project was open-sourced on 2026-07-10.
   and legs) now shows and survives a restart, and an armor stand item given
   with `entity_data` places a stand with its arms, pose and other tags. A
   plain item still places a bare, armless stand, as in vanilla.
+- **Camels walk over fences.** A camel's 1.5-block step now carries it up
+  onto a single fence, wall or closed gate and across, and it plans its
+  walks over them; a fence two high still holds it, and every other mob
+  still goes round.
 
 ## 2026-09-27
 
