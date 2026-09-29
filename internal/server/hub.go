@@ -431,6 +431,8 @@ type hub struct {
 	dims         dimensions   // every other dimension's world, by id (dimtable.go)
 	events       chan hubEvent
 	stop         chan struct{}                    // closed to end run(); production never closes it, tests do (t.Cleanup)
+	console      *tracked                         // the console source while a console command is in flight (console.go)
+	runConsole   func(string) ([]string, error)   // runs a line as the console (Server.runAsConsole); nil = none
 	eidCounter   int64                            // per-pod eid mint counter, fed through shard.MintEID when sharded
 	tick         atomic.Uint64                    // world age (ticks); atomic so connections can read it
 	lastTick     atomic.Int64                     // unix nanos of the last COMPLETED tick — the liveness heartbeat (health.go)
@@ -1500,7 +1502,7 @@ func (h *hub) run() {
 			case evRunOnHub:
 				e.fn() // a barrier/query from another goroutine, in event order
 			case evHubCmd:
-				e.fn(players) // a command's hub half (cmdhub.go)
+				h.runHubCmd(players, e.fn) // a command's hub half (cmdhub.go)
 			case evMove:
 				if t := players[e.eid]; t != nil {
 					h.onMove(players, t, e)

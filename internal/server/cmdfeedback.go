@@ -31,13 +31,14 @@ func (h *hub) cmdSuccess(players map[int32]*tracked, caller *player, text string
 	if caller == nil {
 		return
 	}
-	if h.rules.SendCommandFeedback {
+	// The console always hears its answer; a player only while the rule is on.
+	if h.rules.SendCommandFeedback || caller.name == consoleName {
 		caller.trySendEv(chatEv(text))
 	}
 	if !broadcast {
 		return
 	}
-	line := adminLine(caller.name, text)
+	line := adminLine(sourceName(caller), text)
 	if h.rules.SendCommandFeedback && h.isOp != nil {
 		for _, t := range players {
 			if t.p != caller && h.isOp(t.p.name) {
@@ -46,7 +47,7 @@ func (h *hub) cmdSuccess(players map[int32]*tracked, caller *player, text string
 		}
 	}
 	if h.rules.LogAdminCommands {
-		log.Printf("[%s: %s]", caller.name, text)
+		log.Printf("[%s: %s]", sourceName(caller), text)
 	}
 }
 

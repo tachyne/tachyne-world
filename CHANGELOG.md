@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-29
 
 ### Added
+- **A server console on the bus.** `mc.cmd.run` with `{"command": "…"}`
+  runs any command as vanilla's server console does: at the highest
+  permission level, from the world spawn, with online operators told
+  `[Server: …]`. The request's reply carries the lines the command
+  answered with. Plugins and operators' tools can now do anything a
+  command can, such as filling a dropper with `/item replace block`.
 - **`/setblock` and `/fill` take the rest of vanilla's block entity data.**
   Besides a chest's name and contents and a spawner's mob, the `{…}` after
   a block now fills a sign's front and back text (colour, glow, wax), a

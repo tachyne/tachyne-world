@@ -200,7 +200,8 @@ type Server struct {
 	SpawnPointFile  string         // persists bed respawn points (empty = in-memory only)
 	Access          *access.Client // tachyne-access admin API (nil = none): /op, /ban, /ban-ip, /banlist
 	Ops             map[string]bool
-	roleOps         sync.Map // names of players online now whose access roles include op
+	roleOps         sync.Map   // names of players online now whose access roles include op
+	consoleMu       sync.Mutex // console commands (console.go) run one at a time
 
 	// PluginDataDir is where compiled-in plugins keep per-plugin config +
 	// data folders (default "plugins", cwd-relative like settings.json).
@@ -292,7 +293,7 @@ func (s *Server) commandTreeBytes() []byte {
 
 // isOp reports whether a player name may run privileged commands.
 func (s *Server) isOp(name string) bool {
-	if s.Ops[name] {
+	if name == consoleName || s.Ops[name] { // the console is the highest level
 		return true
 	}
 	_, ok := s.roleOps.Load(name)
@@ -534,7 +535,8 @@ func (s *Server) Serve() error {
 		s.hub.postFX = newPostEffectStore(postEffectsPathFor(s.SpawnPointFile))
 		s.hub.hivesLoad()
 		s.hub.rulesPath = "settings.json"
-		s.hub.isOp = s.isOp // announce targeting: the -ops list and the op role
+		s.hub.isOp = s.isOp               // announce targeting: the -ops list and the op role
+		s.hub.runConsole = s.runAsConsole // the bus "run" command (console.go)
 		s.hub.loadRules()
 		if s.restoreWorldSpawn() { // a /setworldspawn outranks -spawn
 			log.Printf("world spawn from settings: (%.1f, %.0f, %.1f)", s.SpawnX, s.SpawnY, s.SpawnZ)

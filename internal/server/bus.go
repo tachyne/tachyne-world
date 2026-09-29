@@ -63,6 +63,24 @@ func executeCommand(h *hub, cmd string, args json.RawMessage) (any, string) {
 			return nil, "announce requires name,text"
 		}
 		h.postTimeout(evAnnounce{name: a.Name, text: a.Text}, foreignPostTimeout)
+	case "run":
+		// The server console: any command, at the highest permission level,
+		// from the world spawn (console.go). Replies with what it said.
+		var a struct {
+			Command string `json:"command"`
+		}
+		json.Unmarshal(args, &a)
+		if h.runConsole == nil {
+			return nil, "run needs the server"
+		}
+		lines, err := h.runConsole(a.Command)
+		if err != nil {
+			return nil, err.Error()
+		}
+		if lines == nil {
+			lines = []string{}
+		}
+		return map[string]any{"lines": lines}, ""
 	case "settime":
 		var a struct {
 			Time uint64 `json:"time"`
