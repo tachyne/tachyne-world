@@ -61,6 +61,9 @@ type geodePlan struct {
 
 var geodeCache = map[roomKey]*geodePlan{}
 
+// geodeCacheCap bounds the cached plans (a geode's is a few thousand cells).
+const geodeCacheCap = 4096
+
 // geodeIn is origin chunk (cx, cz)'s geode, or nil; cached like the rooms.
 func (g *Generator) geodeIn(cx, cz int32) *geodePlan {
 	k := roomKey{g: g, cx: cx, cz: cz}
@@ -72,7 +75,7 @@ func (g *Generator) geodeIn(cx, cz int32) *geodePlan {
 	}
 	p = g.planGeode(cx, cz)
 	roomMu.Lock()
-	if len(geodeCache) >= roomCacheCap {
+	if len(geodeCache) >= geodeCacheCap {
 		geodeCache = map[roomKey]*geodePlan{}
 	}
 	geodeCache[k] = p

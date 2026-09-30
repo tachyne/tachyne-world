@@ -700,6 +700,10 @@ type sculkPlan struct {
 
 var sculkCache = map[roomKey]*sculkPlan{}
 
+// sculkCacheCap bounds the cached plans: a deep-dark chunk's runs to
+// thousands of cells, and the world pod has 2 GiB.
+const sculkCacheCap = 1024
+
 // sculkIn is origin chunk (cx, cz)'s sculk plan (nil: none), cached.
 func (g *Generator) sculkIn(cx, cz int32) *sculkPlan {
 	k := roomKey{g: g, cx: cx, cz: cz}
@@ -711,7 +715,7 @@ func (g *Generator) sculkIn(cx, cz int32) *sculkPlan {
 	}
 	p = g.planSculk(cx, cz)
 	roomMu.Lock()
-	if len(sculkCache) >= roomCacheCap {
+	if len(sculkCache) >= sculkCacheCap {
 		sculkCache = map[roomKey]*sculkPlan{}
 	}
 	sculkCache[k] = p
