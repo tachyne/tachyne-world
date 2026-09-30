@@ -55,12 +55,11 @@ const (
 	metaTypeParticle       = 17 // EntityDataSerializers.PARTICLE (canonical 770; 16 from 1.21.6)
 
 	// cloudParticleSynced gates DATA_PARTICLE. The gateways' metadata
-	// translation knows the PARTICLES list (effect swirls) but not the single
-	// PARTICLE serializer, and a type it does not know passes the whole frame
-	// through untranslated — serializer 17 is PARTICLES on 26.x, which would
-	// disconnect the client. Until it does, the clients draw the default
-	// white ENTITY_EFFECT and the radius and waiting fields go out alone.
-	cloudParticleSynced = false
+	// translation must know the single PARTICLE serializer before this goes
+	// out: an older gateway passes a type it does not know through
+	// untranslated, and serializer 17 is PARTICLES on 26.x, which would
+	// disconnect the client. Roll the gateways first.
+	cloudParticleSynced = true
 
 	particleDragonBreath = 7 // canonical 770 id (PowerParticleOption on 26.x: the gateway adds the power)
 )
