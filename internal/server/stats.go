@@ -57,6 +57,7 @@ func (h *hub) incStat(t *tracked, typ, key, n int32) {
 		t.stats = map[statKey]int32{}
 	}
 	t.stats[statKey{typ, key}] += n
+	h.sbStat(t, statKey{typ, key}, n) // awardStat: the stat's objectives add the same
 }
 
 // usedItem counts one use of an item: minecraft:used, vanilla's
@@ -82,6 +83,7 @@ func (h *hub) resetCustom(t *tracked, name string) {
 	}
 	if id, ok := customStatID[name]; ok {
 		delete(t.stats, statKey{attachproto.StatCustom, id})
+		h.sbStatReset(t, statKey{attachproto.StatCustom, id}) // resetStat: its objectives go to 0
 	}
 }
 

@@ -23,6 +23,7 @@ func (h *hub) awardKillScore(players map[int32]*tracked, t *tracked, m *mob) {
 	h.playerKilledEntity(players, t, m)
 	h.incCustom(t, "mob_kills", 1)
 	h.sbCriteria(players, "totalKillCount", t.p.name, 1, false)
+	h.sbTeamKill(players, t.p.name, uuidString(m.uuid)) // handleTeamKill: a mob's scoreboard name is its UUID
 }
 
 // hurtByPlayerMemory is how long a mob remembers the player who hurt it
@@ -107,6 +108,7 @@ func (h *hub) creditPlayerDeath(players map[int32]*tracked, v *tracked) {
 	h.incCustom(k, "player_kills", 1)
 	h.sbCriteria(players, "playerKillCount", k.p.name, 1, false)
 	h.sbCriteria(players, "totalKillCount", k.p.name, 1, false)
+	h.sbTeamKill(players, k.p.name, v.p.name)
 	km := advMatch{entity: "player", dim: int32(v.dim), distH: math.Hypot(v.x-k.x, v.z-k.z),
 		damageTags: map[string]bool{}}
 	for name, tag := range dmgTagByName {
