@@ -68,7 +68,7 @@ func (h *hub) fillStructureChestIn(dim int, pos blockPos, c *chest) string {
 // (empty/false when pos is not a known structure chest cell).
 func (h *hub) structureChestTable(pos blockPos) (string, bool) {
 	g := h.world.Gen()
-	if d := g.DungeonIn(pos.x, pos.z); d.Exists && pos.x == d.ChestX && pos.y == d.Y && pos.z == d.ChestZ {
+	if g.DungeonChestAt(pos.x, pos.y, pos.z) {
 		return "chests/simple_dungeon", true
 	}
 	for _, c := range g.AbandonedCampChests(pos.x, pos.z) {

@@ -71,11 +71,15 @@ func (g *Generator) SetCeiling(maxY int) {
 }
 
 // SetEditLookup gives generation the world's edit overlay (see editAt).
-func (g *Generator) SetEditLookup(f func(x, y, z int) (uint32, bool)) { g.editAt = f }
+func (g *Generator) SetEditLookup(f func(x, y, z int) (uint32, bool)) {
+	g.editAt = f
+	forgetRooms(g)
+}
 
 // SetEditRegion gives generation the per-chunk edit walk (see editsIn).
 func (g *Generator) SetEditRegion(f func(cx, cz int32, fn func(x, y, z int, state uint32))) {
 	g.editsIn = f
+	forgetRooms(g) // the dungeons' build guard read the old overlay
 }
 
 // SectionCount is the world's column height in 16-block sections.
@@ -581,11 +585,12 @@ func (g *Generator) GenerateChunk(cx, cz int32) *Chunk {
 			}
 		}
 	}
-	g.supportSurface(ch, cx, cz) // fill undercut surface crusts (no floating dirt/grass)
-	g.carveCanyons(ch, cx, cz)   // ravines (the canyon carver)
-	g.placeLavaLakes(ch, cx, cz) // lake_lava_surface / lake_lava_underground
-	g.placeOres(ch, cx, cz)      // after carving: veins only in surviving stone
-	g.placeGeodes(ch, cx, cz)    // amethyst geodes (may straddle chunk borders)
+	g.supportSurface(ch, cx, cz)    // fill undercut surface crusts (no floating dirt/grass)
+	g.carveCanyons(ch, cx, cz)      // ravines (the canyon carver)
+	g.placeLavaLakes(ch, cx, cz)    // lake_lava_surface / lake_lava_underground
+	g.placeMonsterRooms(ch, cx, cz) // monster_room / _deep: the dungeons (UNDERGROUND_STRUCTURES)
+	g.placeOres(ch, cx, cz)         // after carving: veins only in surviving stone
+	g.placeGeodes(ch, cx, cz)       // amethyst geodes (may straddle chunk borders)
 	// Forest rocks, ice spikes and ice patches, before the plants.
 	g.decorateSurface(ch, cx, cz)
 	g.decorate(ch, cx, cz)

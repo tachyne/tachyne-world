@@ -120,4 +120,10 @@ package worldgen
 //     ellipsoid across chunk borders with its discard on air exposure, a
 //     blob with a player's build in its box left out. Every underground
 //     changes.
+//   - dungeons as vanilla's monster_room (ten a chunk, y 0 to the top) and
+//     monster_room_deep (four, below 0): MonsterRoomFeature's validity check
+//     (solid floor and ceiling, one to five openings), floor gaps, mossy
+//     floors and 0-2 chests; one with a build or dig in its box is left
+//     out. The old 48-block-grid dungeons go, except one a player touched,
+//     which stays as it was.
 const GenVersion = 26

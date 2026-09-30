@@ -7,12 +7,14 @@ import (
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
-// findDungeon locates a generated dungeon near the origin.
+// findDungeon locates a generated dungeon with a chest near the origin.
 func findDungeon(w *world.World) (worldgen.Dungeon, bool) {
-	for x := -500; x <= 500; x += 48 {
-		for z := -500; z <= 500; z += 48 {
-			if d := w.Gen().DungeonIn(x, z); d.Exists {
-				return d, true
+	for x := -256; x <= 256; x += 32 {
+		for z := -256; z <= 256; z += 32 {
+			for _, d := range w.Gen().DungeonsNear(x, z, 16) {
+				if len(d.Chests) > 0 {
+					return d, true
+				}
 			}
 		}
 	}
@@ -96,8 +98,9 @@ func TestDungeonChestLoot(t *testing.T) {
 	if !ok {
 		t.Skip("no dungeon near origin for this seed")
 	}
+	at := d.Chests[0]
 	c := &chest{}
-	h.fillStructureChest(blockPos{d.ChestX, d.Y, d.ChestZ}, c)
+	h.fillStructureChest(blockPos{at[0], at[1], at[2]}, c)
 	items := 0
 	for _, st := range c.slots {
 		if st.item != 0 {
@@ -109,13 +112,13 @@ func TestDungeonChestLoot(t *testing.T) {
 	}
 	// Deterministic: same chest fills the same way.
 	c2 := &chest{}
-	h.fillStructureChest(blockPos{d.ChestX, d.Y, d.ChestZ}, c2)
+	h.fillStructureChest(blockPos{at[0], at[1], at[2]}, c2)
 	if c.slots != c2.slots {
 		t.Fatal("loot must be deterministic per chest")
 	}
 	// A non-dungeon position stays empty.
 	c3 := &chest{}
-	h.fillStructureChest(blockPos{d.ChestX + 1, d.Y, d.ChestZ}, c3)
+	h.fillStructureChest(blockPos{d.X, d.Y + 1, d.Z}, c3) // over the cage: no chest
 	for _, st := range c3.slots {
 		if st.item != 0 {
 			t.Fatal("ordinary chests must not get dungeon loot")
