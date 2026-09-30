@@ -1189,13 +1189,15 @@ func (p *player) handleHeldItem(data []byte) {
 }
 
 // handleCreativeSlot records the item a creative client put in a slot, so we
-// know what its hotbar holds. We only need the item id, not its components.
+// know what its hotbar holds; the hub keeps the whole stack, components and
+// all (creativestack.go).
 // AUTHORITY: gated by the player's actual game mode — a hacked survival
 // client sending set_creative_slot must not poison the held-item mirror
 
 // applyCreativeSlot records a creative-set slot — shared by the TCP parse
-// above and the typed CreativeSlot action from gateways.
-func (s *Server) applyCreativeSlot(p *player, slot int16, itemID int32, count int, paintVariant string) {
+// above and the typed CreativeSlot action from gateways. comps is the
+// stack's canonical component patch (nil for a bare item).
+func (s *Server) applyCreativeSlot(p *player, slot int16, itemID int32, count int, paintVariant string, comps []byte) {
 	if slot >= 36 && slot <= 44 { // hotbar window slots
 		p.setHotbarSlot(int(slot-36), itemID)
 		p.setHotbarPaint(int(slot-36), paintVariant)
@@ -1204,7 +1206,7 @@ func (s *Server) applyCreativeSlot(p *player, slot int16, itemID int32, count in
 	// inventory (vanilla), so a block picked in creative must survive server
 	// inventory pushes (e.g. the refresh on closing a window) and a later
 	// switch back to survival.
-	s.hub.post(evCreativeSlot{eid: p.eid, slot: slot, st: invStack{item: itemID, count: count}})
+	s.hub.post(evCreativeSlot{eid: p.eid, slot: slot, st: invStack{item: itemID, count: count}, comps: comps})
 }
 
 // sendBlockChange sends the editor a Block Update setting (x,y,z). The

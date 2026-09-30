@@ -2155,10 +2155,16 @@ func (h *hub) run() {
 				// a hacked survival client sending set_creative_slot is ignored.
 				if t := players[e.eid]; t != nil && t.gamemode == gmCreative && t.inv != nil && t.winID == 0 {
 					if ptr, hot := h.winSlotPtr(t, e.slot); ptr != nil {
-						*ptr = e.st
+						st := e.st
+						if len(e.comps) > 0 && st.item != 0 && st.count > 0 {
+							// The whole stack, components and all
+							// (handleSetCreativeModeSlot keeps them).
+							st = h.creativeStack(st.item, st.count, e.comps)
+						}
+						*ptr = st
 						if hot >= 0 {
-							t.p.setHotbarSlot(hot, e.st.item)
-							t.p.setHandTags(hot, e.st.tags)
+							t.p.setHotbarSlot(hot, st.item)
+							t.p.setHandTags(hot, st.tags)
 						}
 						h.broadcastEquipment(players, t)
 					}
