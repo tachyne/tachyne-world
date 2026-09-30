@@ -78,13 +78,15 @@ func TestCushionPlacesOnATopFace(t *testing.T) {
 }
 
 // The tracker spawns it as a cushion (the 26.2 stand-in is the gateway's
-// business) and holds back DATA_COLOR, which the gateways cannot carry yet.
+// business) and sends DATA_COLOR for a dyed one — as an INT the gateway
+// restores to DYE_COLOR — and nothing for a white one, whose colour is the
+// default.
 func TestCushionIsTrackedAsAnEntity(t *testing.T) {
 	h, players, pl := cushionFixture(t)
 	c := placeOnStone(h, players, pl)
 	drainEvs(pl.p)
 	h.syncTracking(players)
-	added := false
+	added, colour := false, false
 	for _, ev := range drainEvs(pl.p) {
 		switch e := ev.(type) {
 		case attachproto.EntityAdd:
@@ -93,9 +95,12 @@ func TestCushionIsTrackedAsAnEntity(t *testing.T) {
 			}
 		case attachproto.EntityMeta:
 			if e.EID == c.eid && len(e.Meta) > 0 && e.Meta[0] == metaIndexCushionColor {
-				t.Fatal("DATA_COLOR went out while it is gated")
+				colour = true
 			}
 		}
+	}
+	if want := cushionColor[c.item] != 0; colour != want {
+		t.Errorf("DATA_COLOR sent %v for item %d, want %v", colour, c.item, want)
 	}
 	if !added {
 		t.Fatal("the cushion was never spawned for the viewer")
