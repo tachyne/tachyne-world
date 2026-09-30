@@ -200,8 +200,13 @@ type Server struct {
 	SpawnPointFile  string         // persists bed respawn points (empty = in-memory only)
 	Access          *access.Client // tachyne-access admin API (nil = none): /op, /ban, /ban-ip, /banlist
 	Ops             map[string]bool
-	roleOps         sync.Map   // names of players online now whose access roles include op
-	consoleMu       sync.Mutex // console commands (console.go) run one at a time
+	// OpLevels gives an -ops entry a level other than 4 (-ops name:3);
+	// OpPermissionLevel is the level /op grants (op-permission-level,
+	// 1-4; 0 = 4). See permissions.go.
+	OpLevels          map[string]int
+	OpPermissionLevel int
+	roleOps           sync.Map   // online players' op roles from tachyne-access: name → opEntry
+	consoleMu         sync.Mutex // console commands (console.go) run one at a time
 
 	// PluginDataDir is where compiled-in plugins keep per-plugin config +
 	// data folders (default "plugins", cwd-relative like settings.json).
@@ -289,15 +294,6 @@ func (s *Server) commandTreeBytes() []byte {
 		return s.commandTree
 	}
 	return commandTreeBody
-}
-
-// isOp reports whether a player name may run privileged commands.
-func (s *Server) isOp(name string) bool {
-	if name == consoleName || s.Ops[name] { // the console is the highest level
-		return true
-	}
-	_, ok := s.roleOps.Load(name)
-	return ok
 }
 
 // roleOp is the tachyne-access role that makes a player an operator.
@@ -535,7 +531,7 @@ func (s *Server) Serve() error {
 		s.hub.postFX = newPostEffectStore(postEffectsPathFor(s.SpawnPointFile))
 		s.hub.hivesLoad()
 		s.hub.rulesPath = "settings.json"
-		s.hub.isOp = s.isOp               // announce targeting: the -ops list and the op role
+		s.hub.isOp = s.isAnyOp            // announce targeting: every operator, at any level
 		s.hub.runConsole = s.runAsConsole // the bus "run" command (console.go)
 		s.hub.loadRules()
 		if s.restoreWorldSpawn() { // a /setworldspawn outranks -spawn

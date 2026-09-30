@@ -91,6 +91,12 @@ func (s *Server) handleCommand(p *player, cmd string) {
 			return
 		}
 	}
+	// The command's root requires(): below its level the command is not
+	// there for this player (permissions.go).
+	if !s.commandPermitted(p, fields[0]) {
+		p.tell("You don't have permission.")
+		return
+	}
 	switch fields[0] {
 	case "help":
 		help := "Commands: /help /say /msg /teammsg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /enchant /setblock /fill /seed /me /spawnpoint /setworldspawn /playsound /stopsound /tellraw /difficulty /gamerule /gamemode /defaultgamemode /hud /worldborder /locate /title /advancement /attribute /recipe /tag /ride /damage /spreadplayers /forceload /random /compute /swing /clone /bossbar /save-all /save-off /save-on /version /stop /item /loot /fetchprofile /bug" +

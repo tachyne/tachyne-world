@@ -26,7 +26,8 @@ func Main() {
 	spawn := flag.String("spawn", "", "spawn override as x,z (Y resolved to the surface) or x,y,z (literal Y); default: surface at 0,0")
 	worldFile := flag.String("world", "world.gob", "file to persist block edits to (empty = in-memory only)")
 	gamemode := flag.String("gamemode", "survival", "default game mode for new players (survival|creative|adventure|spectator)")
-	ops := flag.String("ops", "", "comma-separated player names allowed to change game modes")
+	ops := flag.String("ops", "", "comma-separated operators, each name or name:level (level 1-4; a bare name is 4)")
+	opLevel := flag.Int("op-permission-level", 4, "the permission level /op grants (vanilla op-permission-level, 1-4)")
 	hud := flag.Bool("hud", true, "show the action-bar HUD (time/coords/facing/online)")
 	natsURL := flag.String("nats", "", "OPTIONAL standalone NATS server URL for the plugin bus, e.g. nats://localhost:4222 (empty = off)")
 	chunkDir := flag.String("chunkdir", "chunks", "directory for the generated-chunk cache (empty = off)")
@@ -122,11 +123,25 @@ func Main() {
 		log.Fatalf("invalid -gamemode %q", *gamemode)
 	}
 	srv.Ops = map[string]bool{}
+	srv.OpLevels = map[string]int{}
 	for _, name := range strings.Split(*ops, ",") {
-		if name = strings.TrimSpace(name); name != "" {
+		name = strings.TrimSpace(name)
+		if n, lvl, ok := strings.Cut(name, ":"); ok {
+			l, err := strconv.Atoi(lvl)
+			if err != nil || l < 1 || l > 4 {
+				log.Fatalf("invalid -ops entry %q: the level must be 1-4", name)
+			}
+			name = n
+			srv.OpLevels[name] = l
+		}
+		if name != "" {
 			srv.Ops[name] = true
 		}
 	}
+	if *opLevel < 1 || *opLevel > 4 {
+		log.Fatalf("invalid -op-permission-level %d: must be 1-4", *opLevel)
+	}
+	srv.OpPermissionLevel = *opLevel
 	if *spawn != "" {
 		if n, _ := fmt.Sscanf(*spawn, "%f,%f,%f", &srv.SpawnX, &srv.SpawnY, &srv.SpawnZ); n == 3 {
 			srv.SpawnSet = true

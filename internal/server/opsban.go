@@ -37,9 +37,13 @@ func (s *Server) accessCtx() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), 5*time.Second)
 }
 
-// cmdOp is /op <player>: the op role in tachyne-access (OpCommand).
+// cmdOp is /op <player> and /deop <player> (OpCommand, DeOpCommands):
+// the op role in tachyne-access. /op grants the role for the server's
+// op-permission-level ("op" for 4, "op1"…"op3" below it); /deop revokes
+// every op role the player holds. The player's client learns its new
+// level at once (PlayerList.sendPlayerPermissionLevel).
 func (s *Server) cmdOp(p *player, args []string, grant bool) {
-	if !s.isOp(p.name) {
+	if !s.hasPermission(p.name, permAdmins) {
 		p.tell("You don't have permission.")
 		return
 	}
@@ -47,30 +51,57 @@ func (s *Server) cmdOp(p *player, args []string, grant bool) {
 		p.tell("Usage: /op <player>  (needs the access service)")
 		return
 	}
-	uuid, _, ok := s.onlineByName(args[0])
+	name := args[0]
+	uuid, _, ok := s.onlineByName(name)
 	if !ok {
 		cmdFail(p, "That player does not exist") // the profile lookup needs them online here
 		return
 	}
-	ctx, cancel := s.accessCtx()
-	defer cancel()
-	var err error
-	if grant {
-		err = s.Access.Grant(ctx, p.name, uuid, roleOp)
-	} else {
-		err = s.Access.Revoke(ctx, p.name, uuid, roleOp)
+	var held opEntry
+	if v, ok := s.roleOps.Load(name); ok {
+		held, _ = v.(opEntry)
 	}
-	if err != nil {
-		cmdFail(p, "The access service did not take it: "+err.Error())
+	if grant && s.opLevel(name) > permAll {
+		cmdFail(p, "Nothing changed. The player is already an operator")
 		return
 	}
-	if grant {
-		s.roleOps.Store(args[0], true)
-		p.tell("Made " + args[0] + " a server operator")
-	} else {
-		s.roleOps.Delete(args[0])
-		p.tell("Made " + args[0] + " no longer a server operator")
+	if !grant && len(held.roles) == 0 {
+		if s.Ops[name] {
+			cmdFail(p, "Nothing changed. "+name+" is an operator by the server's -ops setting")
+		} else {
+			cmdFail(p, "Nothing changed. The player is not an operator")
+		}
+		return
 	}
+	ctx, cancel := s.accessCtx()
+	defer cancel()
+	if grant {
+		lvl := s.opPermissionLevel()
+		role := roleForLevel(lvl)
+		if err := s.Access.Grant(ctx, p.name, uuid, role); err != nil {
+			cmdFail(p, "The access service did not take it: "+err.Error())
+			return
+		}
+		s.roleOps.Store(name, opEntry{level: lvl, roles: []string{role}})
+		s.ok(p, "Made "+name+" a server operator")
+	} else {
+		for _, role := range held.roles {
+			if err := s.Access.Revoke(ctx, p.name, uuid, role); err != nil {
+				cmdFail(p, "The access service did not take it: "+err.Error())
+				return
+			}
+		}
+		s.roleOps.Delete(name)
+		s.ok(p, "Made "+name+" no longer a server operator")
+	}
+	lvl := s.opLevel(name)
+	s.onHub(func(players map[int32]*tracked) {
+		for _, t := range players {
+			if strings.EqualFold(t.p.name, name) {
+				t.p.trySendEv(opLevelEvent(t.p.eid, lvl))
+			}
+		}
+	})
 }
 
 // cmdBanAccess is /ban <player> [reason] against tachyne-access (BanPlayerCommands).
