@@ -66,12 +66,12 @@ the public history since the project was open-sourced on 2026-07-10.
   a mob has no profile.
 
 ### Fixed
-- **A failing world save is never quiet any more.** The overworld's saves
-  failed for two days with only a log line to show for it, and a restart then
-  loaded the two-day-old file: everything built in the overworld in between was
-  lost. Every dimension is now saved each round even if another fails, and
-  once one has gone two minutes without saving, every online operator is warned
-  in chat once a minute, with the error, until it saves again.
+- **A failing world save is never quiet any more.** A failed save used to
+  leave only a log line, and a failed overworld save also skipped the Nether
+  and End that round. Every dimension is now saved each round even if another
+  fails, and once one has gone two minutes without saving, every online
+  operator is warned in chat once a minute, with the error, until it saves
+  again.
 - **Rails connect the way vanilla's do.** A placed rail now turns the rails
   beside it to meet it (and only those free to take another connection), a
   junction of three switches when a redstone signal arrives, a sloped rail

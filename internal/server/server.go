@@ -754,9 +754,8 @@ const busRetry = 30 * time.Second
 // Every dimension is saved each round, and a failure in one never skips the
 // others. A save that keeps failing is never quiet: once a dimension has gone
 // saveAlarmAfter without a good save, every online operator is told in chat
-// once a minute, with the error, until it saves again. The overworld once
-// failed every save for two days with only a log line to show for it, and a
-// restart then loaded the two-day-old file.
+// once a minute, with the error, until it saves again. A failure used to
+// leave only a log line (and a failed overworld save skipped the others).
 func (s *Server) autosave() {
 	t := time.NewTicker(autosaveInterval)
 	defer t.Stop()
