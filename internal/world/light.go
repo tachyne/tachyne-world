@@ -139,33 +139,37 @@ func (w *World) lightCacheCap() int {
 	return n
 }
 
-// invalidateLight drops cached light for the chunk containing (x,z) and its
-// neighbours (light floods across chunk borders from a 3×3 read).
-func (w *World) invalidateLight(x, z int) {
-	cx, cz, _, _ := chunkOf(x, z)
-	w.lightMu.Lock()
+// dropLightLocked drops cached light for chunk (cx, cz) and its neighbours
+// (light floods across chunk borders from a 3×3 read). The caller holds
+// lightMu. It is the fallback when an edit cannot be relit in place
+// (lightinc.go): the next read recomputes those chunks with the full fill.
+func (w *World) dropLightLocked(cx, cz int32) {
 	for dz := int32(-1); dz <= 1; dz++ {
 		for dx := int32(-1); dx <= 1; dx++ {
-			key := chunkPos{int32(cx) + dx, int32(cz) + dz}
+			key := chunkPos{cx + dx, cz + dz}
 			if e, ok := w.lightCache[key]; ok {
 				w.lightLRU.Remove(e.elem)
 				delete(w.lightCache, key)
 			}
 		}
 	}
-	w.lightMu.Unlock()
 }
 
-// Light returns the chunk's computed light, cached until an edit invalidates
-// it (light is a pure function of terrain + edits).
+// Light returns the chunk's light. The first read computes it with the full
+// flood fill and caches it; after that, every edit relights the cached copy
+// in place, cell by cell (lightinc.go), so it stays what the full fill would
+// give for the current blocks. A returned LightData is never written again:
+// an edit publishes a fresh copy, so a caller may read it without locks.
 func (w *World) Light(cx, cz int32) *LightData {
 	key := chunkPos{cx, cz}
+	slot := lightVerSlot(cx, cz)
 	w.lightMu.Lock()
 	if e, ok := w.lightCache[key]; ok {
 		w.lightLRU.MoveToFront(e.elem)
 		w.lightMu.Unlock()
 		return e.ld
 	}
+	ver := w.lightVer[slot]
 	w.lightMu.Unlock()
 
 	ld := w.computeLight(cx, cz) // flood outside the lock (concurrent builders)
@@ -174,6 +178,12 @@ func (w *World) Light(cx, cz int32) *LightData {
 	defer w.lightMu.Unlock()
 	if e, ok := w.lightCache[key]; ok { // lost a race; keep the existing entry
 		return e.ld
+	}
+	if w.lightVer[slot] != ver {
+		// An edit in this chunk's 3×3 landed while the flood ran: the result
+		// may predate it, and cached it would never be relit. Hand it out
+		// uncached; the next read computes afresh.
+		return ld
 	}
 	w.lightCache[key] = lightCacheEntry{ld: ld, elem: w.lightLRU.PushFront(key)}
 	for len(w.lightCache) > w.lightCacheCap() {
@@ -230,7 +240,12 @@ func (w *World) computeLight(cx, cz int32) *LightData {
 			}
 		}
 	}
-	effTop := maxY - worldgen.MinY + 2 // one open-air layer above the tallest block
+	// Open air above the tallest block: sky light there is plain daylight,
+	// but a torch on the top block still lights the 14 layers over it, so the
+	// fill runs 15 layers higher. Capping it one layer up (as it once did)
+	// left those cells at block light 0, a value no per-block relight could
+	// agree with once a build raised the neighbourhood's top.
+	effTop := maxY - worldgen.MinY + 16
 	if h := w.Ceiling() - worldgen.MinY; effTop > h {
 		effTop = h
 	}
@@ -281,7 +296,8 @@ func (w *World) computeLight(cx, cz int32) *LightData {
 	propagate(op, blk, blkQueue, effTop)
 
 	// Extract the centre chunk (region columns 16..31) into section arrays. Cells
-	// at or above effTop weren't computed: open sky (sky 15, block 0).
+	// at or above effTop weren't computed: open sky (sky 15, block 0 — no
+	// emitter is within 15 blocks of them).
 	sections := w.Sections()
 	out := &LightData{
 		Sky:   make([][4096]uint8, sections),

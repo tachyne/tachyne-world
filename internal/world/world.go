@@ -83,13 +83,20 @@ type World struct {
 	// block reads a tick — is a lookup with no list write.
 	epoch atomic.Uint64
 
-	// Computed chunk light, LRU'd like the generator output but INVALIDATED
-	// by edits (light is a pure function of terrain + edits). Natural mob
-	// spawning reads light on every attempt; without this cache each read
-	// was a fresh 3×3 flood fill.
+	// Computed chunk light, LRU'd like the generator output and RELIT in
+	// place by every edit (lightinc.go). Natural mob spawning reads light on
+	// every attempt; without this cache each read was a fresh 3×3 flood fill.
+	// lightMu also serialises edits (SetBlock/RevertEdit hold it across the
+	// overlay write and the relight), and it is taken BEFORE mu, never after.
 	lightMu    sync.Mutex
 	lightCache map[chunkPos]lightCacheEntry
 	lightLRU   *list.List
+	// lightVer counts edits per hashed chunk slot (lightVerSlot): a flood fill
+	// that raced an edit in its 3×3 sees the count move and is not cached.
+	lightVer [lightVerSlots]uint64
+	// lightRelit / lightDropped count edits relit in place vs. edits that
+	// fell back to dropping the cached 3×3 (a chunk in reach was uncached).
+	lightRelit, lightDropped uint64
 
 	nEdits atomic.Int64 // len of all edit overlays, maintained by SetBlock (EditCount used to walk them all)
 	store  Store        // nil = in-memory only (no persistence)
@@ -271,6 +278,7 @@ func (w *World) MigrateEdits(remap func(state uint32) uint32) (int, error) {
 	if n == 0 {
 		return 0, nil
 	}
+	w.dropAllLight() // every cached chunk may hold a remapped block
 	w.dirty.Store(true)
 	return n, w.Save()
 }
@@ -800,16 +808,22 @@ func (w *World) RevertEdit(x, y, z int) {
 	cx, cz, lx, lz := chunkOf(x, z)
 	key := chunkPos{int32(cx), int32(cz)}
 	idx := localIndex(lx, y, lz)
+	w.lightMu.Lock()
 	w.mu.Lock()
+	var old uint32
+	had := false
 	if m := w.edits[key]; m != nil {
-		if _, had := m[idx]; had {
+		if old, had = m[idx]; had {
 			delete(m, idx)
 			w.nEdits.Add(-1)
 		}
 	}
 	w.mu.Unlock()
+	if had { // the cell now reads as generated: relight from the edit it was
+		w.relightLocked(x, y, z, old, true)
+	}
+	w.lightMu.Unlock()
 	w.dirty.Store(true)
-	w.invalidateLight(x, z)
 	w.poiInvalidate(key[0], key[1])
 }
 
@@ -839,19 +853,24 @@ func (w *World) SetBlock(x, y, z int, state uint32) {
 		}
 	}
 
+	w.lightMu.Lock()
 	w.mu.Lock()
 	m := w.edits[key]
 	if m == nil {
 		m = make(map[int]uint32)
 		w.edits[key] = m
 	}
-	if _, had := m[idx]; !had {
+	old, had := m[idx]
+	if !had {
 		w.nEdits.Add(1)
 	}
 	m[idx] = state
 	w.mu.Unlock()
+	// Relight the cached light from what the cell held (the generated block
+	// when it carried no edit) to what it holds now.
+	w.relightLocked(x, y, z, old, had)
+	w.lightMu.Unlock()
 	w.dirty.Store(true)
-	w.invalidateLight(x, z) // cached chunk light is stale for this 3×3
 	w.poiInvalidate(key[0], key[1])
 }
 
