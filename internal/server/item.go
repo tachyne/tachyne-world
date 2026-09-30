@@ -132,6 +132,21 @@ func (h *hub) spawnItemIn(players map[int32]*tracked, dim int, item int32, count
 	return h.spawnItemAt(players, dim, item, count, x, y, z, 0, 0, 0)
 }
 
+// spawnAtLocation is Entity.spawnAtLocation: the drop appears at (x, y, z)
+// itself — a mob's feet — and leaves with the ItemEntity constructor's
+// random push of up to 0.1 either way sideways and a 0.2 hop, for the
+// physics tick to land. spawnItemIn instead sets the drop down on the floor
+// under the point, which is right for a restored or a placed-down stack but
+// not for loot, which in vanilla pops out of a dying mob and can fall a long
+// way from one that dies in the air.
+func (h *hub) spawnAtLocation(players map[int32]*tracked, dim int, item int32, count int, x, y, z float64) *itemEntity {
+	if h.worldFor(dim) == nil {
+		return nil
+	}
+	r := h.motionRand()
+	return h.spawnItemAt(players, dim, item, count, x, y, z, r.Float64()*0.2-0.1, 0.2, r.Float64()*0.2-0.1)
+}
+
 // spawnItemAt drops an item exactly where asked, with an initial velocity,
 // and leaves the physics tick to land it (a block's popped drop, a toss).
 func (h *hub) spawnItemAt(players map[int32]*tracked, dim int, item int32, count int, x, y, z, vx, vy, vz float64) *itemEntity {

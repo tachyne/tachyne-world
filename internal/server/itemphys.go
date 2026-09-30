@@ -413,6 +413,12 @@ const itemHalfHeight = 0.125
 // the other axes keep three quarters of theirs. Up wins when nothing is
 // open, as in vanilla.
 func (h *hub) itemTowardsClosestSpace(w *world.World, it *itemEntity, x, y, z float64) {
+	it.vx, it.vy, it.vz = h.towardsClosestSpace(w, x, y, z, it.vx, it.vy, it.vz)
+}
+
+// towardsClosestSpace is moveTowardsClosestSpace for any body: the velocity
+// it leaves a body at (x, y, z) moving at (vx, vy, vz) with.
+func (h *hub) towardsClosestSpace(w *world.World, x, y, z, vx, vy, vz float64) (float64, float64, float64) {
 	px, py, pz := int(math.Floor(x)), int(math.Floor(y)), int(math.Floor(z))
 	dx, dy, dz := x-float64(px), y-float64(py), z-float64(pz)
 	type side struct {
@@ -430,7 +436,7 @@ func (h *hub) itemTowardsClosestSpace(w *world.World, it *itemEntity, x, y, z fl
 		}
 	}
 	speed := h.rng.Float64()*0.2 + 0.1
-	vx, vy, vz := it.vx*0.75, it.vy*0.75, it.vz*0.75
+	vx, vy, vz = vx*0.75, vy*0.75, vz*0.75
 	switch {
 	case best.off[0] != 0:
 		vx = float64(best.off[0]) * speed
@@ -439,5 +445,5 @@ func (h *hub) itemTowardsClosestSpace(w *world.World, it *itemEntity, x, y, z fl
 	default:
 		vz = float64(best.off[2]) * speed
 	}
-	it.vx, it.vy, it.vz = vx, vy, vz
+	return vx, vy, vz
 }

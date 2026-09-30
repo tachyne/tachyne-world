@@ -735,11 +735,11 @@ func (h *hub) onArmSwing(players map[int32]*tracked, e evArmSwing) {
 	h.toOthersNear(players, e.eid, t.dim, t.x, t.z, attachproto.Swing{EID: e.eid, Hand: e.hand})
 }
 
-// mobKnockVelocity animates a mob's knockback impulse client-side: vanilla
-// sends set_entity_velocity on every hit so the client plays the shove (and
-// hit-hop) between our relative moves. The moves stay authoritative — the
-// client tracks the server position from deltas regardless of the velocity
-// animation — so this is pure feel, no drift.
+// mobKnockVelocity turns a knockback impulse into motion: a walker on land
+// is launched on the server (knockflight.go) with the hop and the per-tick
+// speed vanilla's LivingEntity.knockback gives it, and every viewer gets
+// the same velocity (set_entity_velocity) so the client plays the flight
+// between our moves — which now follow the same arc.
 func (h *hub) mobKnockVelocity(players map[int32]*tracked, m *mob) {
 	// The hop is vanilla's min(0.4, vy/2 + strength) on a grounded victim.
 	// Any real hit already clears 0.4, so in practice it is the ceiling — the
@@ -748,8 +748,18 @@ func (h *hub) mobKnockVelocity(players map[int32]*tracked, m *mob) {
 	// 0.36 before, just under vanilla's ceiling for every hit. The strength is
 	// read back off the impulse, so every knockback source gets it for free.
 	vx, vz := m.vx/mobMoveInterval, m.vz/mobMoveInterval
+	vy := math.Min(0.4, math.Hypot(vx, vz))
+	if h.knockLaunches(m) {
+		if m.airborne {
+			vy = m.vy // off the ground already: the blow leaves its rise or fall alone
+		} else {
+			m.airborne, m.vy, m.airFall = true, vy, 0
+		}
+		m.kbFlight, m.kb = true, knockFlightMax
+		m.kvx, m.kvz = vx, vz
+	}
 	h.toNearbyEv(players, m.dim, m.x, m.z, attachproto.Velocity{
-		EID: m.eid, VX: vx, VY: math.Min(0.4, math.Hypot(vx, vz)), VZ: vz})
+		EID: m.eid, VX: vx, VY: vy, VZ: vz})
 }
 
 // knockback shoves a player away from (fromX,fromZ) via Set Entity Velocity, the

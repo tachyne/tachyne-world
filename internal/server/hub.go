@@ -622,6 +622,7 @@ type hub struct {
 
 	bobbers map[int32]*bobberEntity // live fishing bobbers, keyed by OWNER eid (one per player)
 	rng     *rand.Rand              // hub-goroutine-only randomness (mob behaviour, drops)
+	physRng *rand.Rand              // the random hops of fresh orbs and drops (motionRand)
 
 	nextWin  int32               // last container window id handed out (cycles 1..100)
 	furnaces map[simPos]*furnace // active furnace states (hub-goroutine-only)
