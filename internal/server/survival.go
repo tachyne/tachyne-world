@@ -524,6 +524,14 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 	if dt.has(tagBurnFromStepping) && !dt.has(tagBypassesInvulnerability) && t.armor[3].enchLvl(enchFrostWalker) > 0 {
 		return false
 	}
+	// Player.hurtServer: a blow a player struck — or a projectile they shot —
+	// does nothing when both are on one team with friendly fire off
+	// (canHarmPlayer). That holds for their own arrow too, as in vanilla.
+	if cause.byEID != 0 {
+		if by := players[cause.byEID]; by != nil && !h.canHarmPlayer(t, by) {
+			return false
+		}
+	}
 	h.dropShoulderParrots(players, t) // hurtServer: any blow that gets this far shakes them off
 	// Player.hurtServer scales the blow by the difficulty BEFORE anything
 	// mitigates it, and only for the damage types whose `scaling` field says

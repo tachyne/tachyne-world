@@ -70,12 +70,43 @@ type sbTeam struct {
 	Prefix       string          `json:"prefix,omitempty"`
 	Suffix       string          `json:"suffix,omitempty"`
 	Color        int32           `json:"color"` // -1 = none
-	FriendlyFire bool            `json:"ff,omitempty"`
-	SeeInvisible bool            `json:"seeinvis,omitempty"`
+	FriendlyFire bool            `json:"-"`     // saved inverted as noff: see MarshalJSON
+	SeeInvisible bool            `json:"-"`     // saved inverted as noseeinvis
 	Visibility   int32           `json:"vis,omitempty"`
 	Collision    int32           `json:"coll,omitempty"`
 	DeathVis     int32           `json:"deathvis,omitempty"` // deathMessageVisibility: 0 always, 1 never, 2 hide for other teams, 3 hide for own team
 	Members      map[string]bool `json:"members,omitempty"`
+}
+
+// A team saves its two vanilla-true options inverted, so an absent key
+// reads as vanilla's default (PlayerTeam: allowFriendlyFire and
+// seeFriendlyInvisibles both start true). Saves written before this kept
+// them as "ff"/"seeinvis" with the engine's old default of false; those
+// keys are no longer read, so every such team comes back with vanilla's
+// defaults — and friendly fire was not enforced then, so teammates who
+// could hurt each other still can.
+func (t sbTeam) MarshalJSON() ([]byte, error) {
+	type plain sbTeam
+	return json.Marshal(struct {
+		plain
+		NoFF       bool `json:"noff,omitempty"`
+		NoSeeInvis bool `json:"noseeinvis,omitempty"`
+	}{plain(t), !t.FriendlyFire, !t.SeeInvisible})
+}
+
+func (t *sbTeam) UnmarshalJSON(b []byte) error {
+	type plain sbTeam
+	var v struct {
+		plain
+		NoFF       bool `json:"noff"`
+		NoSeeInvis bool `json:"noseeinvis"`
+	}
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	*t = sbTeam(v.plain)
+	t.FriendlyFire, t.SeeInvisible = !v.NoFF, !v.NoSeeInvis
+	return nil
 }
 
 type scoreboardState struct {

@@ -162,6 +162,17 @@ func (h *hub) teamOf(name string) string {
 	return ""
 }
 
+// canHarmPlayer is Player.canHarmPlayer: false only when both players are
+// on the same team and it does not allow friendly fire.
+func (h *hub) canHarmPlayer(t, by *tracked) bool {
+	tn := h.teamOf(t.p.name)
+	if tn == "" || tn != h.teamOf(by.p.name) {
+		return true
+	}
+	team := h.sb.Teams[tn]
+	return team == nil || team.FriendlyFire
+}
+
 // applySpreadCommand runs /spreadplayers on the hub.
 func (h *hub) applySpreadCommand(players map[int32]*tracked, e evSpreadCmd) {
 	tell := cmdTeller(players, e.by)
