@@ -27,6 +27,12 @@ func TestCreativeStackRoundTrip(t *testing.T) {
 	boxed.slots[13] = invStack{item: itemEnchantedBook, count: 1, ench: enchList{{id: enchMending, lvl: 1}}}
 	h.boxes.set(box, boxed)
 
+	canBreak, _ := parseAdvPredicate("minecraft:can_break", []any{
+		map[string]any{"blocks": []any{"stone", "dirt"}},
+		map[string]any{"blocks": "#minecraft:logs", "state": map[string]any{"axis": "y", "age": map[string]any{"max": int64(3)}}},
+	})
+	canPlace, _ := parseAdvPredicate("minecraft:can_place_on", map[string]any{"state": map[string]any{"lit": true}})
+
 	cases := []struct {
 		name  string
 		st    invStack
@@ -62,6 +68,10 @@ func TestCreativeStackRoundTrip(t *testing.T) {
 			cube: cubeContent{variant: (1 | 3<<16 | 2<<24) + 1, health: 3}}, true},
 		{"axolotl bucket", invStack{item: itemByName["axolotl_bucket"], count: 1, cube: cubeContent{variant: 3, health: 15, age: -100}}, true},
 		{"statue pose", invStack{item: itemByName["copper_golem_statue"], count: 1, golemPose: 2}, true},
+		{"player head", invStack{item: itemPlayerHead, count: 1, profile: profileString(testProfile())}, true},
+		{"name-only head", invStack{item: itemPlayerHead, count: 1, profile: profileString(gameProfile{name: "jeb_"})}, true},
+		{"adventure pickaxe", invStack{item: itemByName["diamond_pickaxe"], count: 1,
+			tags: itemTags{unbreakable: true, canBreak: canBreak, canPlace: canPlace}}, true},
 		{"written book", invStack{item: itemWrittenBook, count: 1, bookID: book}, false},
 		{"book and quill", invStack{item: itemWritableBook, count: 1, bookID: quill}, false},
 		{"bundle", invStack{item: itemByName["bundle"], count: 1, bundleID: bundle}, false},

@@ -20,7 +20,7 @@ import (
 // banner, stew or named item keeps what it is. Components the engine does
 // not model are skipped.
 
-// Canonical component ids the engine reads but does not send.
+// Canonical component ids not declared with the rest (item.go).
 const (
 	componentUnbreakable = 4  // unbreakable: a Unit
 	componentEntityData  = 49 // entity_data: the entity's tag (an armor stand's pose and flags)
@@ -176,6 +176,16 @@ func (d *stackDecode) component(id int32, r *bytes.Reader) bool {
 		st.tags.lore = strings.Join(lines, "\n")
 	case componentUnbreakable:
 		st.tags.unbreakable = true // a Unit: no payload
+	case componentCanBreak, componentCanPlaceOn:
+		js, ok := readAdvPredicate(r)
+		if !ok {
+			return false
+		}
+		if id == componentCanBreak {
+			st.tags.canBreak = js
+		} else {
+			st.tags.canPlace = js
+		}
 	case componentMapID:
 		v, err := protocol.ReadVarInt(r)
 		if err != nil {
