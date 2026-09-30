@@ -418,7 +418,8 @@ func stackComponents(st invStack) []byte {
 		// component for its NBT (maps, books, and now the dye), and a dyed
 		// piece is never a map or a book.
 		b = protocol.AppendVarInt(b, componentDyedColor)
-		b = protocol.AppendVarInt(b, st.color)
+		b = protocol.AppendI32(b, st.color) // DyedItemColor.STREAM_CODEC: ByteBufCodecs.INT, four bytes
+
 	}
 	if st.dmg > 0 {
 		b = protocol.AppendVarInt(b, componentDamage)
@@ -491,7 +492,7 @@ func stackComponents(st invStack) []byte {
 		// but it is a synced component, so it belongs on the wire.
 		b = protocol.AppendVarInt(b, componentStewEffects)
 		b = protocol.AppendVarInt(b, 1)
-		b = protocol.AppendVarInt(b, e.effect+1) // holder ref = id + 1
+		b = protocol.AppendVarInt(b, e.effect) // MobEffect.STREAM_CODEC: holderRegistry, the plain registry id
 		b = protocol.AppendVarInt(b, int32(e.secs*20))
 	}
 	if st.repairCost > 0 {

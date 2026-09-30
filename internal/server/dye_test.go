@@ -1,6 +1,11 @@
 package server
 
-import "testing"
+import (
+	"bytes"
+	"testing"
+
+	"github.com/tachyne/tachyne-common/protocol"
+)
 
 // A leather chestplate and a red dye craft a red chestplate; adding blue
 // blends toward purple by vanilla's averaging; a cauldron washes it off.
@@ -40,5 +45,17 @@ func TestLeatherDyeing(t *testing.T) {
 	// so the brightest channel equals the average of the two brightest (176+170)/2=173.
 	if want != 0xAD2A7B && want>>16 != 173 {
 		t.Errorf("blend brightest channel = %d, want 173", want>>16)
+	}
+}
+
+// dyed_color goes out as DyedItemColor.STREAM_CODEC writes it: the
+// component id, then the rgb as a four-byte int (ByteBufCodecs.INT), not a
+// VarInt the client would misread.
+func TestDyedColorIsAFourByteInt(t *testing.T) {
+	b := stackComponents(invStack{item: int32(itemByName["leather_boots"]), count: 1, color: 0x336699})
+	want := protocol.AppendVarInt(nil, componentDyedColor)
+	want = append(want, 0x00, 0x33, 0x66, 0x99)
+	if !bytes.Contains(b, want) {
+		t.Fatalf("components % x carry no four-byte dyed_color % x", b, want)
 	}
 }

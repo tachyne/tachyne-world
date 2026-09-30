@@ -68,7 +68,7 @@ func potionComponentBytes(kind int8) []byte {
 		if ticks == 0 {
 			ticks = 1 // vanilla never sends a zero duration
 		}
-		b = protocol.AppendVarInt(b, e.id+1) // holder ref = registry id + 1
+		b = protocol.AppendVarInt(b, e.id) // MobEffect.STREAM_CODEC: holderRegistry, the plain registry id
 		b = protocol.AppendVarInt(b, int32(e.amp))
 		b = protocol.AppendVarInt(b, ticks)
 		b = append(b, 0, 1, 1, 0) // ambient, showParticles, showIcon, no hidden
