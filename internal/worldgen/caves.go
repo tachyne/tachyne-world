@@ -69,8 +69,18 @@ func (g *Generator) CaveBiomeAt(x, y, z int) string {
 	return g.caveBiomeAt(x, y, z)
 }
 
+// groundCoverOff keeps the old scatter and skips 26.3's ground cover — for
+// the tests that check the cover moves nothing else.
+var groundCoverOff bool
+
 // decorateCaves stamps the 3×3 chunks' cave features into this chunk.
-func (g *Generator) decorateCaves(ch *Chunk, cx, cz int32) {
+//
+// cover is the old ground-cover scatter decorate laid. Every draw above
+// ran over it as it always has (the cane patch's draws read the surface),
+// so nothing they place moves; then it is taken back up — each cell that
+// still holds what the scatter put there — and 26.3's ground cover
+// (groundcover.go) is laid from its own stream in its place.
+func (g *Generator) decorateCaves(ch *Chunk, cx, cz int32, cover []coverCell) {
 	reg := &owRegion{g: g, ch: ch, baseX: int(cx) * 16, baseZ: int(cz) * 16, cols: map[[2]int]column{}}
 	bg := g.newBuildGuard(cx, cz)
 	for dcx := int32(-1); dcx <= 1; dcx++ {
@@ -78,6 +88,19 @@ func (g *Generator) decorateCaves(ch *Chunk, cx, cz int32) {
 			g.caveChunkFeatures(reg, bg, cx+dcx, cz+dcz)
 			g.overworldVegetation(reg, bg, cx+dcx, cz+dcz) // the surface patches (vegetation.go)
 			g.biomePatches(reg, bg, cx+dcx, cz+dcz)        // the single-biome cane and melon patches (patches.go)
+		}
+	}
+	if groundCoverOff {
+		return
+	}
+	for _, c := range cover {
+		if sectionBlockAt(ch, c.lx, c.y, c.lz) == c.s {
+			setSectionBlock(ch, c.lx, c.y, c.lz, Air, true)
+		}
+	}
+	for dcx := int32(-1); dcx <= 1; dcx++ {
+		for dcz := int32(-1); dcz <= 1; dcz++ {
+			g.groundCover(reg, bg, cx+dcx, cz+dcz) // 26.3's flowers, grass, bushes, cacti and bamboo
 		}
 	}
 }

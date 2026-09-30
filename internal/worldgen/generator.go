@@ -603,14 +603,14 @@ func (g *Generator) GenerateChunk(cx, cz int32) *Chunk {
 	g.placeOres(ch, cx, cz)         // after carving: veins only in surviving stone
 	// Forest rocks, ice spikes and ice patches, before the plants.
 	g.decorateSurface(ch, cx, cz)
-	g.decorate(ch, cx, cz)
-	removeFloatingFragments(ch) // delete terrain a cave severed from the ground —
+	cover := g.decorate(ch, cx, cz) // trees, and the old ground cover decorateCaves takes back up
+	removeFloatingFragments(ch)     // delete terrain a cave severed from the ground —
 	//                               BEFORE structures, so it never culls a structure's
 	//                               legitimately-floating parts (monument arches/lanterns,
 	//                               ruined-portal fragments, ship masts).
-	g.decorateCaves(ch, cx, cz)   // the lush caves' vegetation and every cave's glow lichen
-	g.stampStructures(ch, cx, cz) // lakes/dungeons/mineshafts/ruins overwrite
-	g.freezeTopLayer(ch, cx, cz)  // TOP_LAYER_MODIFICATION: ice on cold water, snow on cold ground
+	g.decorateCaves(ch, cx, cz, cover) // the lush caves' vegetation, every cave's glow lichen, the surface patches
+	g.stampStructures(ch, cx, cz)      // lakes/dungeons/mineshafts/ruins overwrite
+	g.freezeTopLayer(ch, cx, cz)       // TOP_LAYER_MODIFICATION: ice on cold water, snow on cold ground
 
 	// One biome per section, sampled at the section's centre column. Sections
 	// well below the surface take an underground biome (dripstone/lush/

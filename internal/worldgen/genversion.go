@@ -148,4 +148,14 @@ package worldgen
 //     desert cacti or taiga grass and berry bushes (or to nothing), and the
 //     trees pools grow their trees; village layouts, beds and job sites
 //     are unchanged.
+//   - ground cover as 26.3's placements, in place of the per-column hash
+//     scatter: each biome's flower set with its providers (the plains'
+//     threshold tulips, the flower forest's noise bands, the meadow's dual
+//     noise, pink petals, forest lilacs/peonies/rose bushes/lilies of the
+//     valley, blue orchids, closed eyeblossoms), the patch_grass_* counts,
+//     dead bushes, cactus columns with flowers, berry bushes, the bamboo
+//     jungle's noise-counted bamboo with podzol discs, red shrubs and the
+//     mushroom fields' mushrooms — its own stream, every plant guarded; the
+//     old scatter is still drawn and laid first so no other feature moves,
+//     then taken back up.
 const GenVersion = 26
