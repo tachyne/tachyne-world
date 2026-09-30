@@ -99,7 +99,7 @@ func (h *hub) applyForceLoadCommand(players map[int32]*tracked, e evForceLoadCmd
 		}
 		switch len(cs) {
 		case 0:
-			infoTell("No force loaded chunks were found in " + dimName)
+			tell("No force loaded chunks were found in " + dimName) // sendFailure
 		case 1:
 			infoTell(fmt.Sprintf("A force loaded chunk was found in %s at: %s", dimName, names[0]))
 		default:
@@ -111,7 +111,7 @@ func (h *hub) applyForceLoadCommand(players map[int32]*tracked, e evForceLoadCmd
 		if w.Forced(int32(cx), int32(cz)) {
 			infoTell(fmt.Sprintf("Chunk at %s in %s is marked for force loading", chunkPosString(cx, cz), dimName))
 		} else {
-			infoTell(fmt.Sprintf("Chunk at %s in %s is not marked for force loading", chunkPosString(cx, cz), dimName))
+			tell(fmt.Sprintf("Chunk at %s in %s is not marked for force loading", chunkPosString(cx, cz), dimName)) // ERROR_NOT_TICKING
 		}
 		return
 	case "remove all":

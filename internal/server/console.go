@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"math"
+	"reflect"
 	"strings"
 	"time"
 
@@ -18,8 +19,9 @@ import (
 // Commands here are written for a player caller: their hub half looks the
 // caller up in the players map. The console therefore has a tracked entry
 // of its own, but it sits in that map ONLY while a command closure runs
-// (runHubCmd) — never across a tick, so nothing simulates, streams chunks
-// to, saves, lists or targets it.
+// (runHubCmd) or one of its command's own events is handled (consoleEnter)
+// — never across a tick, so nothing simulates, streams chunks to, saves,
+// lists or targets it.
 
 // consoleName is the console source's name. It carries a character no
 // Minecraft or Floodgate username can, so no player can share it — and
@@ -60,6 +62,62 @@ func (h *hub) runHubCmd(players map[int32]*tracked, fn func(map[int32]*tracked))
 		}
 	}()
 	fn(players)
+}
+
+// consoleEnter puts the console in the players map when ev is one of its
+// command's own hub events — a command whose hub half is an event type of
+// its own (evForceLoadCmd …) rather than an evHubCmd closure looks its
+// caller up in the map just the same, and without this it answered nobody.
+// It returns the entry for consoleLeave (nil: nothing was entered).
+func (h *hub) consoleEnter(players map[int32]*tracked, ev hubEvent) *tracked {
+	c := h.console
+	if c == nil || !fromConsole(ev, c.p) {
+		return nil
+	}
+	if _, in := players[c.p.eid]; in {
+		return nil // already there (a closure's runHubCmd put it)
+	}
+	players[c.p.eid] = c
+	return c
+}
+
+// consoleLeave takes the console back out after its event.
+func (h *hub) consoleLeave(players map[int32]*tracked, c *tracked) {
+	if c != nil && players[c.p.eid] == c {
+		delete(players, c.p.eid)
+	}
+}
+
+var playerPtrType = reflect.TypeOf((*player)(nil))
+
+// fromConsole reports whether an event names the console as its source:
+// an integer field holding the console's entity id (by, eid, …) or a
+// *player field holding its player. No entity is ever minted with that id.
+func fromConsole(ev hubEvent, p *player) bool {
+	v := reflect.ValueOf(ev)
+	if v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			return false
+		}
+		v = v.Elem()
+	}
+	if v.Kind() != reflect.Struct {
+		return false
+	}
+	for i := 0; i < v.NumField(); i++ {
+		f := v.Field(i)
+		switch f.Kind() {
+		case reflect.Int, reflect.Int32, reflect.Int64:
+			if f.Int() == consoleEID {
+				return true
+			}
+		case reflect.Pointer:
+			if f.Type() == playerPtrType && !f.IsNil() && f.Pointer() == reflect.ValueOf(p).Pointer() {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // consoleSource builds the console's tracked entry at the world spawn.

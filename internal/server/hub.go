@@ -1493,7 +1493,11 @@ func (h *hub) run() {
 			return // test teardown closes h.stop so run() goroutines don't leak (production never does)
 
 		case ev := <-h.events:
+			// A console command's own event finds its caller in the map
+			// for exactly the length of the event (console.go).
+			console := h.consoleEnter(players, ev)
 			if h.useItemEvent(players, ev) || h.useOnEvent(players, ev) {
+				h.consoleLeave(players, console)
 				continue
 			}
 			switch e := ev.(type) {
@@ -2465,6 +2469,7 @@ func (h *hub) run() {
 				}
 				close(e.done)
 			}
+			h.consoleLeave(players, console)
 		}
 	}
 }
