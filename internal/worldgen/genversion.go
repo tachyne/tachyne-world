@@ -158,4 +158,11 @@ package worldgen
 //     mushroom fields' mushrooms — its own stream, every plant guarded; the
 //     old scatter is still drawn and laid first so no other feature moves,
 //     then taken back up.
+//   - the ocean monument's interior as OceanMonumentPieces lays it out: the
+//     room graph (openings closed where every room stays reachable), the
+//     fitted double and simple rooms, the core with its gold, the wing
+//     rooms, the penthouse and the sponge rooms, the building facing one
+//     of four ways, and the elder guardians at the rooms' cells — except a
+//     monument a player has built in or dug into, which keeps its old
+//     layout.
 const GenVersion = 26
