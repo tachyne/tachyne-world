@@ -864,8 +864,16 @@ func (s *Server) tryUseBlock(p *player, off bool, x, y, z int, seq int32, face i
 	// be added to the storage side and forgotten on the interaction side —
 	// which is exactly how placed shulker boxes shipped unopenable.
 	if isWoodShelf(state) { // a slot on its face: swap the held stack in or out (or the hotbar, powered)
-		if woodShelfHitSlot(state, face, cx, cz) < 0 {
+		hit := woodShelfHitSlot(state, face, cx, cz)
+		if hit < 0 {
 			return false // ShelfBlock.useItemOn: no slot hit (a side or the top) → PASS
+		}
+		// An unpowered shelf swaps nothing for an empty hand on an empty
+		// slot, and PASSes (the shelf read view mirrors its slots).
+		if held == 0 && !boolProp(state, "powered") {
+			if v, _ := s.hub.shelfView.get(p.dim, x, y, z); v.Items[hit].Count == 0 {
+				return false
+			}
 		}
 		s.hub.post(evUseWoodShelf{eid: p.eid, x: x, y: y, z: z, face: face, cx: cx, cy: cy, cz: cz})
 		s.sendBlockChange(p, x, y, z, state, seq)
