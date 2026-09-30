@@ -533,6 +533,8 @@ func session(c net.Conn, cfg Config) {
 			actTo(remote, payload, proto.Latency{})
 		case proto.MsgSuggestReq:
 			actTo(remote, payload, proto.SuggestReq{})
+		case proto.MsgCustomClickAction:
+			actTo(remote, payload, proto.CustomClickAction{})
 		case proto.MsgTeleportToEntity:
 			actTo(remote, payload, proto.TeleportToEntity{})
 		case proto.MsgPlayerAbilities:

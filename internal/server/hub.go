@@ -1794,6 +1794,10 @@ func (h *hub) run() {
 				}
 			case evTitle:
 				h.onTitle(players, e)
+			case evDialog:
+				h.onDialog(players, e)
+			case evCustomClick:
+				h.onCustomClick(players, e)
 			case evBugList:
 				if t := players[e.eid]; t != nil {
 					h.showBugList(t)

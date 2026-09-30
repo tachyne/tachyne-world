@@ -35,6 +35,8 @@ type player struct {
 	// chatSession is the validated secure-chat session (RemoteChatSession),
 	// set by the hub; nil until the gateway forwarded one.
 	chatSession atomic.Pointer[attachproto.ChatSession]
+	// dialogs: the session's gateway renders dialogs (FeatureDialog).
+	dialogs bool
 
 	x, y, z    float64        // current position (this goroutine's copy, for streaming)
 	yaw, pitch float32        // current look angles
@@ -181,6 +183,9 @@ func isLifecycleFrame(ev any) bool {
 	switch e := ev.(type) {
 	case attachproto.EntityAdd, attachproto.EntityRemove,
 		attachproto.PlayerInfo, attachproto.PlayerInfoMode, attachproto.PlayerGone:
+		return true
+	case attachproto.ShowDialog, attachproto.ClearDialog:
+		// A dialog opens or closes once; nothing re-sends it.
 		return true
 	case attachproto.PlayerChat, attachproto.PlayerInfoChat, attachproto.DeleteChat:
 		// Signed chat is a chain: a lost message — or one overtaken by the

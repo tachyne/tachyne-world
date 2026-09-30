@@ -140,6 +140,8 @@ func (r *remotePlayer) Action(v any) {
 		h.post(evPickItem{eid: p.eid, e: e})
 	case attachproto.SwingAction:
 		h.post(evArmSwing{eid: p.eid, hand: e.Hand}) // handleAnimate → LivingEntity.swing
+	case attachproto.CustomClickAction:
+		h.post(evCustomClick{eid: p.eid, e: e}) // MinecraftServer.handleCustomClickAction
 	case attachproto.UseItem:
 		p.noteAck(e.Seq) // vanilla acks use_item's prediction sequence too
 		// The client says which hand it used; the offhand is where a shield
@@ -484,6 +486,10 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgPlayerInfoChat, ev)
 	case attachproto.DeleteChat:
 		send(attachproto.MsgDeleteChat, ev)
+	case attachproto.ShowDialog:
+		send(attachproto.MsgShowDialog, ev)
+	case attachproto.ClearDialog:
+		send(attachproto.MsgClearDialog, ev)
 	case attachproto.AdvTree:
 		send(attachproto.MsgAdvTree, ev)
 	case attachproto.AdvProgress:
@@ -635,6 +641,7 @@ func (s *Server) adoptIdentity(p *player, id attach.Identity) {
 	p.bedrock = id.Edition == "bedrock"
 	p.ip = id.IP
 	p.playerChat = id.HasFeature(attachproto.FeaturePlayerChat)
+	p.dialogs = id.HasFeature(attachproto.FeatureDialog)
 	for _, pr := range id.Props {
 		p.props = append(p.props, skinProperty{Name: pr.Name, Value: pr.Value, Signature: pr.Signature})
 	}

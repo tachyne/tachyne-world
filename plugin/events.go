@@ -107,6 +107,21 @@ type PlayerCommandEvent struct {
 
 func (*PlayerCommandEvent) EventName() string { return "player_command" }
 
+// PlayerCustomClickEvent fires when a player's client runs a custom click
+// action — a dialog button of type minecraft:custom or dynamic/custom, or a
+// text component's custom click event (MinecraftServer.handleCustomClickAction).
+// ID is the action's identifier; Payload is its tag as JSON (absent when the
+// action carries none; a dynamic/custom action sends the dialog's inputs).
+// Informational: the client has already acted.
+type PlayerCustomClickEvent struct {
+	EID     int32           `json:"eid"`
+	Name    string          `json:"name"`
+	ID      string          `json:"id"`
+	Payload json.RawMessage `json:"payload,omitempty"`
+}
+
+func (*PlayerCustomClickEvent) EventName() string { return "player_custom_click" }
+
 // PlayerMoveEvent fires after a player movement is applied. Observe-only
 // in this milestone. This event is hot — fires for every movement packet.
 type PlayerMoveEvent struct {
