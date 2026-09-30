@@ -59,3 +59,48 @@ func TestConsoleRunsCommands(t *testing.T) {
 		t.Error("an empty command ran")
 	}
 }
+
+// /forceload's hub half is an event of its own (evForceLoadCmd), not an
+// evHubCmd closure, and it used to answer nobody from the console. Every
+// ForceLoadCommand reply now reaches it: added single and multiple, the
+// query both ways, the list, removed, the failures and the too-big area
+// (the first line is the one that came back empty from the bus).
+func TestConsoleForceloadAnswers(t *testing.T) {
+	s, h, _, logs := feedbackServer(t)
+	h.runConsole = s.runAsConsole
+	settle(t, h, logs, "F1")
+	run := func(cmd string) []string {
+		t.Helper()
+		args, _ := json.Marshal(map[string]string{"command": cmd})
+		data, errStr := executeCommand(h, "run", args)
+		if errStr != "" {
+			t.Fatalf("run %s: %s", cmd, errStr)
+		}
+		return data.(map[string]any)["lines"].([]string)
+	}
+	for _, c := range []struct{ cmd, want string }{
+		{"/forceload add 94 -93 94 -84", "Marked chunk [5, -6] in minecraft:overworld to be force loaded"},
+		{"forceload add 0 0", "Marked chunk [0, 0] in minecraft:overworld to be force loaded"},
+		{"forceload add 0 0", "No chunks were marked for force loading"},
+		{"forceload add 0 16 16 16", "Marked 2 chunks in minecraft:overworld from [0, 1] to [1, 1] to be force loaded"},
+		{"forceload query 5 5", "Chunk at [0, 0] in minecraft:overworld is marked for force loading"},
+		{"forceload query 100 100", "Chunk at [6, 6] in minecraft:overworld is not marked for force loading"},
+		{"forceload query", "4 force loaded chunks were found in minecraft:overworld at: [5, -6], [0, 0], [0, 1], [1, 1]"},
+		{"forceload remove 0 0", "Unmarked chunk [0, 0] in minecraft:overworld for force loading"},
+		{"forceload remove 0 0", "No chunks were removed from force loading"},
+		{"forceload add 0 0 1000 1000", "Too many chunks in the specified area (maximum 256, but specified 3969)"},
+		{"forceload remove all", "Unmarked all force loaded chunks in minecraft:overworld"},
+		{"forceload query", "No force loaded chunks were found in minecraft:overworld"},
+	} {
+		if got := run(c.cmd); len(got) != 1 || got[0] != c.want {
+			t.Errorf("/%s: console heard %q, want %q", strings.TrimPrefix(c.cmd, "/"), got, c.want)
+		}
+	}
+	onHub(t, h, func() {
+		for _, tr := range h.playersRef {
+			if tr.p.name == consoleName {
+				t.Errorf("the console stayed in the players map")
+			}
+		}
+	})
+}

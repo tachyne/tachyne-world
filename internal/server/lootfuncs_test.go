@@ -119,3 +119,80 @@ func TestExplorerMapsAreMaps(t *testing.T) {
 		t.Error("an explorer map must not extend")
 	}
 }
+
+// Every explorer map a chest table draws marks its structure with the
+// decoration the table names — the camp's ancient city, mineshaft, pyramid,
+// temple and ruin maps, and the mansion map that names none (the function's
+// default is the mansion, not the treasure cross). Camp maps keep the name
+// their set_name gives them. 26.3's own types (35-39) are stored as they
+// are and sent as the cross until the gateways substitute them for 26.2.
+func TestExplorerMapDecorations(t *testing.T) {
+	var walk func(tbl *lootTable, name string)
+	named, maps := 0, 0
+	walk = func(tbl *lootTable, name string) {
+		for _, p := range tbl.Pools {
+			for _, e := range p.Entries {
+				for i, f := range e.Functions {
+					if f.F != "exploration_map" {
+						continue
+					}
+					maps++
+					if _, ok := mapDecorationByName[f.Decoration]; !ok {
+						t.Errorf("%s: decoration %q is not a map_decoration_type", name, f.Decoration)
+					}
+					if f.Dest == "mansion" && f.Decoration != "mansion" {
+						t.Errorf("%s: the mansion map is marked %q, want the default mansion", name, f.Decoration)
+					}
+					if name == "chests/abandoned_camp_common_chest" {
+						if i == 0 || e.Functions[i-1].F != "set_name" || e.Functions[i-1].Name == "" {
+							t.Errorf("%s: a camp map to %s lost its set_name", name, f.Dest)
+						} else {
+							named++
+						}
+					}
+				}
+			}
+		}
+	}
+	for name := range chestLoot {
+		tbl, _ := lootForChest(name)
+		walk(tbl, name)
+	}
+	if maps < 10 || named < 8 {
+		t.Fatalf("expected the camp and shipwreck explorer maps: %d maps, %d named camp maps", maps, named)
+	}
+
+	h := newTestHub(world.New(1))
+	h.maps = newMapStore("")
+	tx, tz, ok := h.world.Gen().LocateStructure("buried_treasure", 0, 0, 20000)
+	if !ok {
+		t.Skip("no buried treasure within reach of the origin on this seed")
+	}
+	r := rand.New(rand.NewSource(3))
+	ctx := &lootCtx{rng: r.Intn, randf: r.Float64, pos: blockPos{tx + 40, 40, tz - 40}, located: true}
+	for _, c := range []struct {
+		decoration string
+		stored     int32
+		wire       int32
+	}{
+		{"jungle_temple", 32, 32},
+		{"trial_chambers", 34, 34},
+		{"", 8, 8}, // ExplorationMapFunction.DEFAULT_DECORATION
+		{"abandoned_camp", 35, decorRedX},
+		{"ancient_city", 36, decorRedX},
+		{"desert_pyramid", 37, decorRedX},
+		{"mineshaft", 38, decorRedX},
+		{"ocean_ruin_warm", 39, decorRedX},
+	} {
+		st := ctx.applyChestFn(h, &lootFn{F: "exploration_map", Dest: "buried_treasure", Zoom: 2, Decoration: c.decoration},
+			invStack{item: int32(itemByName["abandoned_camp_map"]), count: 1})
+		md := h.maps.get(st.mapID)
+		if md == nil || len(md.Marks) != 1 || md.Marks[0].Type != c.stored {
+			t.Errorf("%q: the map should store decoration %d: %+v", c.decoration, c.stored, md)
+			continue
+		}
+		if decs := mapMarkDecorations(md); len(decs) != 1 || decs[0].Type != c.wire {
+			t.Errorf("%q: the mark should be sent as %d: %v", c.decoration, c.wire, decs)
+		}
+	}
+}

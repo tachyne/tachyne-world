@@ -144,7 +144,8 @@ def func(f):
             dest = vals[0]
         dest = dest.removeprefix("minecraft:")
         return {"f": "exploration_map", "dest": dest, "zoom": int(f.get("zoom", 2)),
-                "decoration": f.get("decoration", "minecraft:red_x").removeprefix("minecraft:")}
+                # ExplorationMapFunction.DEFAULT_DECORATION is the mansion.
+                "decoration": f.get("decoration", "minecraft:mansion").removeprefix("minecraft:")}
     if t == "filtered":
         # 26.x follows exploration_map with "keep it only if it now has a map
         # id": a map that found nothing is discarded, not handed out blank.

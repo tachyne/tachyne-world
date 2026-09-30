@@ -802,10 +802,13 @@ func (s *Server) tryUseBlock(p *player, off bool, x, y, z int, seq int32, face i
 			ev = evMapBanner{eid: p.eid, x: x, y: y, z: z, off: off}
 		}
 		// ItemStack.useOn: a player who may not build (adventure) gets no
-		// item use on a block — only the shears' trim, which is the plant's
-		// own useItemOn, still goes through.
-		if _, trim := ev.(evTrimPlant); ev != nil && !trim && !mayBuild(s.modes.get(p.key())) {
-			ev = nil
+		// item use on a block unless the stack's can_place_on names the
+		// clicked block — only the shears' trim, which is the plant's own
+		// useItemOn, goes through regardless.
+		if _, trim := ev.(evTrimPlant); ev != nil && !trim {
+			if mode := s.modes.get(p.key()); !mayBuild(mode) && !adventureMayPlaceOn(p, mode, off, state) {
+				ev = nil
+			}
 		}
 		if ev != nil {
 			s.hub.post(ev)
