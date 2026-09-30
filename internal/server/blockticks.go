@@ -125,11 +125,12 @@ func (h *hub) willTickThisTick(pos blockPos) bool {
 // runBlockTicks runs the scheduled ticks due at age (LevelTicks.tick): all of
 // them are collected first — from then on they no longer count as pending,
 // but as "will tick this tick" until each one runs — then run by priority and
-// scheduling order.
-func (h *hub) runBlockTicks(players map[int32]*tracked, age uint64) {
+// scheduling order. It returns how many it collected to run, against the
+// block tick list's cap (the simulation queue's block ticks share it).
+func (h *hub) runBlockTicks(players map[int32]*tracked, age uint64) int {
 	q := &h.bticks
 	if len(q.due) == 0 {
-		return
+		return 0
 	}
 	// Everything due by now: normally just this tick's bucket, but a tick
 	// the clock jumped past (tests set it directly) is still owed.
@@ -142,7 +143,7 @@ func (h *hub) runBlockTicks(players map[int32]*tracked, age uint64) {
 	}
 	if len(run) == 0 {
 		q.run = run
-		return
+		return 0
 	}
 	sort.SliceStable(run, func(i, j int) bool {
 		if run[i].at != run[j].at {
@@ -189,6 +190,7 @@ func (h *hub) runBlockTicks(players map[int32]*tracked, age uint64) {
 	}
 	clear(q.running)
 	q.run = run[:0]
+	return len(run)
 }
 
 // ---- neighbour updates ----------------------------------------------------
