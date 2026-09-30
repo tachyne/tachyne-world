@@ -656,7 +656,7 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 				drops = append(drops, plugin.ItemStack{Item: st.item, Count: max(st.count, 1)})
 				return
 			}
-			if it := h.spawnItemIn(players, m.dim, st.item, max(st.count, 1), m.x, m.y, m.z); it != nil {
+			if it := h.spawnAtLocation(players, m.dim, st.item, max(st.count, 1), m.x, m.y, m.z); it != nil {
 				it.setFrom(st)
 				h.refreshItemMeta(players, it)
 			}
@@ -714,7 +714,7 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 				}
 				for _, d := range ds {
 					if d.potion != 0 { // a tipped arrow keeps its potion (the drop list carries bare ids)
-						if it := h.spawnItemIn(players, m.dim, d.item, d.count, m.x, m.y, m.z); it != nil {
+						if it := h.spawnAtLocation(players, m.dim, d.item, d.count, m.x, m.y, m.z); it != nil {
 							it.potion = d.potion
 							h.refreshItemMeta(players, it)
 						}
@@ -753,7 +753,7 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 		drops, xp = dev.Drops, dev.XP
 	}
 	for _, d := range drops {
-		h.spawnItemIn(players, m.dim, d.Item, d.Count, m.x, m.y, m.z) // no-ops on count 0
+		h.spawnAtLocation(players, m.dim, d.Item, d.Count, m.x, m.y, m.z) // no-ops on count 0; pops out and falls
 	}
 	// A death is a frequency-15 vibration; a nearby sculk catalyst takes the
 	// death — blooming, and turning its XP into charge instead of orbs.

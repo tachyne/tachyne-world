@@ -38,6 +38,6 @@ func (h *hub) chargedHeadDrop(players map[int32]*tracked, m *mob) {
 	if item == 0 || h.blastSkullDropped || !h.rules.DoMobLoot {
 		return
 	}
-	h.spawnItemIn(players, m.dim, item, 1, m.x, m.y, m.z) // spawnAtLocation, no offset
+	h.spawnAtLocation(players, m.dim, item, 1, m.x, m.y, m.z) // no offset
 	h.blastSkullDropped = true
 }

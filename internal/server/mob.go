@@ -54,6 +54,8 @@ type mob struct {
 	dying           int      // ticks left in the death animation (0 = alive); despawns at 0
 	panic           int      // ticks left fleeing after being hit
 	kb              int      // knockback updates left (velocity decays, no steering/clamp)
+	kbFlight        bool     // …and the knock launched it: it flies its arc on travel's physics (knockflight.go)
+	kvx, kvz        float64  // …that flight's horizontal deltaMovement, per TICK
 	rest            int      // grazing pause: updates left standing still (passive idling)
 	fleeX, fleeZ    float64  // the threat that set it panicking
 	panicTX         float64  // the random spot it is running to (PanicGoal), when panicHasT
@@ -912,10 +914,16 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		switch {
 		case m.kb > 0:
 			// Airborne from a hit: ride the impulse out (no steering, no speed
-			// clamp — knockback is meant to exceed walking speed), decaying fast.
+			// clamp — knockback is meant to exceed walking speed). A launched
+			// walker flies it tick by tick under travel's friction
+			// (knockFlightStep); any other shove decays fast.
 			m.kb--
-			m.vx *= 0.6
-			m.vz *= 0.6
+			if m.kbFlight {
+				h.knockFlightStep(m)
+			} else {
+				m.vx *= 0.6
+				m.vz *= 0.6
+			}
 		case m.etype == entityEnderman && m.enderHeld:
 			// EndermanFreezeWhenLookedAt.start: the navigation stops.
 			m.vx, m.vz = 0, 0
@@ -1274,10 +1282,14 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// collision does, not read the wall as "my route is blocked" and pick
 			// a random new heading. Dropping the shove and retrying the mob's own
 			// step keeps a herd against a fence from twitching.
-			stepOK := h.mobStepOK(m, nx, nz)
+			stepFn := h.mobStepOK
+			if m.kbFlight {
+				stepFn = h.knockStepOK // a knocked body goes where the blow sends it, not where it would walk
+			}
+			stepOK := stepFn(m, nx, nz)
 			if !stepOK && (m.pushX != 0 || m.pushZ != 0) {
 				nx, nz = m.x+m.vx, m.z+m.vz
-				stepOK = h.mobStepOK(m, nx, nz)
+				stepOK = stepFn(m, nx, nz)
 			}
 			switch {
 			case stepOK && h.ownedAt(nx, nz):
@@ -1290,6 +1302,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				// UP rather than looking for a way round.
 				h.setClimbing(players, m, true)
 				m.y++
+			case m.kbFlight:
+				h.knockHitsWall(m, nx, nz) // Entity.collide: the blocked axis stops, the other slides on
 			default:
 				// A hunting zombie stopped by a closed wooden door beats on it
 				// (BreakDoorGoal) instead of picking a new heading.
@@ -1378,7 +1392,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				}
 			}
 		}
-		if m.vx != 0 || m.vz != 0 {
+		if (m.vx != 0 || m.vz != 0) && !m.kbFlight { // a knocked body does not turn to face its flight
 			m.yaw = float32(math.Atan2(-m.vx, m.vz) * 180 / math.Pi)
 		}
 		// A standing NPC turns to face the nearest player (it's listening to you).

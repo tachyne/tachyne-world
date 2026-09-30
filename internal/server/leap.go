@@ -48,7 +48,7 @@ func (h *hub) leapTarget(m *mob) (x, y, z float64, ok bool) {
 // leapCheck is canUse + start, run each mob update.
 func (h *hub) leapCheck(players map[int32]*tracked, m *mob) {
 	yd := leapKick(m.etype)
-	if yd == 0 || m.leaping || m.dying > 0 || m.mount != 0 {
+	if yd == 0 || m.leaping || m.kbFlight || m.dying > 0 || m.mount != 0 { // not while a blow carries it
 		return
 	}
 	tx, ty, tz, ok := h.leapTarget(m)

@@ -9,16 +9,24 @@ import (
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
-// Experience: orbs drop from player-killed mobs and mined ore, drift into a
+// Experience: orbs drop from player-killed mobs and mined ore, fly into a
 // nearby player's total, and drive the client's XP bar via set_experience.
 // Levels follow the vanilla curve; dying scatters 7×level (capped) as one orb
 // at the death spot and zeroes the bar. XP persists with the inventory.
 
 const (
 	orbDespawnTicks = 6000 // 5 minutes, like dropped items
-	orbPickupDist   = 1.5
-	orbDriftRange   = 8.0 // orbs fly toward a player inside this range…
-	orbDriftSpeed   = 0.3 // …at this many blocks/tick
+
+	// ExperienceOrb's motion (tickOrb).
+	orbGravity     = 0.03  // getDefaultGravity
+	orbDrag        = 0.98  // getAirDrag
+	orbHeight      = 0.5   // the 0.5 × 0.5 box
+	orbHalfWidth   = 0.25  //
+	orbEyeHeight   = 0.425 // EntityDimensions' default eye: 0.85 of the height
+	orbFollowRange = 8.0   // MAX_FOLLOW_DIST: the nearest player inside it pulls
+	orbFollowPull  = 0.1   // …by (1 − distance/8)² × 0.1 a tick
+	orbBounce      = 0.4   // a landing faster than gravity comes back up at 0.4 of it
+	orbSleepSpeed  = 1e-4  // below this a resting orb's slide is spent
 
 	hostileXP    = 5   // vanilla: zombie/skeleton/spider/creeper all yield 5
 	deathXPCap   = 100 // vanilla: a dying player drops 7×level, at most 100
@@ -35,6 +43,8 @@ type xpOrb struct {
 	uuid       [16]byte
 	x, y, z    float64
 	sx, sy, sz float64 // last broadcast position (relative-move baseline)
+	vx, vy, vz float64 // deltaMovement, per tick
+	follow     int32   // followingPlayer: the players-map key it is flying to (0 = none)
 	value      int
 	count      int // how many orbs of that value this one entity stands for
 	born       uint64
@@ -115,7 +125,9 @@ func (h *hub) spawnXPOrbIn(players map[int32]*tracked, dim, value int, x, y, z f
 	if value <= 0 {
 		return
 	}
-	y = float64(h.worldFor(dim).DropY(int(x), int(math.Ceil(y)), int(z)))
+	if h.worldFor(dim) == nil {
+		return
+	}
 	for value > 0 {
 		piece := orbDenomination(value)
 		value -= piece
@@ -123,7 +135,11 @@ func (h *hub) spawnXPOrbIn(players map[int32]*tracked, dim, value int, x, y, z f
 			continue
 		}
 		eid := h.allocEID()
+		// The ExperienceOrb constructor: it leaves the spot with a random
+		// hop, up to 0.2 sideways and 0.4 up, and falls from there.
+		r := h.motionRand()
 		o := &xpOrb{eid: eid, dim: dim, x: x, y: y, z: z, sx: x, sy: y, sz: z,
+			vx: (r.Float64()*0.2 - 0.1) * 2, vy: r.Float64() * 0.2 * 2, vz: (r.Float64()*0.2 - 0.1) * 2,
 			value: piece, count: 1, born: h.tick.Load()}
 		binary.BigEndian.PutUint32(o.uuid[12:], uint32(eid))
 		h.orbs[eid] = o // syncTracking shows it to whoever is near enough
@@ -191,25 +207,21 @@ func (h *hub) updateOrbs(players map[int32]*tracked) {
 		if (now-o.born)%20 == 1 {
 			h.scanForOrbMerges(players, o)
 		}
-		// Orbs drift toward the nearest living survival player (vanilla magnetism).
-		if near := h.nearestHuntable(players, o.dim, o.x, o.z, orbDriftRange); near != nil {
-			dx, dy, dz := near.x-o.x, (near.y+0.5)-o.y, near.z-o.z
-			if d := math.Sqrt(dx*dx + dy*dy + dz*dz); d > 1e-6 {
-				step := math.Min(orbDriftSpeed, d)
-				o.x += dx / d * step
-				o.y += dy / d * step
-				o.z += dz / d * step
-				if o.x != o.sx || o.y != o.sy || o.z != o.sz {
-					o.sx, o.sy, o.sz = o.x, o.y, o.z
-					h.toNearbyEv(players, o.dim, o.x, o.z, entMove(eid, o.x, o.y, o.z, 0, 0, false))
-				}
-			}
+		h.tickOrb(players, o)
+		if o.y < float64(worldgen.MinY-64) {
+			delete(h.orbs, eid) // Entity.onBelowWorld: fell out of the world
+			h.entityGone(players, o.dim, eid)
+			continue
+		}
+		if o.x != o.sx || o.y != o.sy || o.z != o.sz {
+			o.sx, o.sy, o.sz = o.x, o.y, o.z
+			h.toTracking(players, eid, o.dim, o.x, o.z, entMove(eid, o.x, o.y, o.z, 0, 0, orbGrounded(h.worldFor(o.dim), o)))
 		}
 		for _, t := range players {
 			if !isSurvival(t.gamemode) || t.dead || t.dim != o.dim || t.xpTakeDelay > 0 {
 				continue
 			}
-			if math.Abs(o.x-t.x) > orbPickupDist || math.Abs(o.z-t.z) > orbPickupDist || math.Abs(o.y-t.y) > orbPickupDist {
+			if !orbTouches(t, o) {
 				continue
 			}
 			lvl := t.xpLevel
