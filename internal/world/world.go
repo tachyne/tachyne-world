@@ -97,6 +97,8 @@ type World struct {
 	dimTag string       // chunk-cache key prefix for non-overworld dims
 	dirty  atomic.Bool  // edits changed since the last successful Save
 
+	bio biomeOverlay // /fillbiome's per-quart biome overrides (biomes.go)
+
 	chunkCache ChunkCache    // persistent generated-chunk cache (nil = off)
 	cachePuts  chan cachePut // async write queue for the cache (drop when full)
 }
@@ -599,6 +601,15 @@ func (w *World) BiomeAt3D(x, y, z int) string {
 	if !w.inBounds(y) {
 		return w.BiomeAt(x, z)
 	}
+	if b, ok := w.bio.get(x, y, z); ok {
+		return b // a /fillbiome override
+	}
+	return w.generatedBiome3D(x, y, z)
+}
+
+// generatedBiome3D is BiomeAt3D without the overrides: what generation put
+// in the position's section.
+func (w *World) generatedBiome3D(x, y, z int) string {
 	cx, cz, _, _ := chunkOf(x, z)
 	ch := w.generated(int32(cx), int32(cz))
 	sec := (y - worldgen.MinY) / 16
@@ -946,6 +957,7 @@ func (w *World) Chunk(cx, cz int32) *worldgen.Chunk {
 		edited = true
 	}
 	w.mu.RUnlock()
+	w.bio.applyTo(ch, cx, cz) // /fillbiome: each overridden section shows its biome
 	if edited {
 		// keep the client-facing heightmap honest about player builds — the
 		// client gates precipitation rendering on it, so without this rain
