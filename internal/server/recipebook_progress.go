@@ -4,9 +4,12 @@ package server
 // per-player KNOWN set (the client only ever learns known recipes — the whole
 // book at join, increments as unlocks happen), a HIGHLIGHT set (the "new"
 // badge, cleared when the client views the entry), and the per-book-type
-// open/filter settings the client round-trips. Unlocks are derived the way
-// vanilla's recipe-unlock advancements work: obtaining any ingredient of a
-// recipe reveals it.
+// open/filter settings the client round-trips. Unlocks follow vanilla's
+// recipe-unlock advancements (advancement/recipes/**, recipeunlocks_gen.go):
+// each recipe comes with its own advancement, done when any one of its
+// criteria is — holding one of the items it names, ten inventory slots in
+// use (the chest), being in water (the boats), or from the first tick (the
+// crafting table).
 
 import (
 	"encoding/json"
@@ -61,39 +64,63 @@ var cookBookRecipes = func() []attachproto.CookingRecipe {
 // cookBookFirstID is the display id the cooking block starts at.
 var cookBookFirstID = int32(len(shapedRecipes) + len(shapelessRecipes))
 
-// rbIngredientIndex maps an item id to the display ids of every recipe using
-// it as an ingredient (the unlock rule's lookup).
-var rbIngredientIndex = func() map[int32][]int32 {
-	idx := map[int32][]int32{}
-	add := func(id int32, items []int32) {
-		seen := map[int32]bool{}
-		for _, it := range items {
-			if it != 0 && !seen[it] {
-				seen[it] = true
-				idx[it] = append(idx[it], id)
+// recipeUnlockRule is one recipe-unlock advancement (recipeunlocks_gen.go):
+// the book keys its reward stands for, and its criteria, any one of which
+// unlocks it — an inventory_changed item predicate each in items, the tick
+// trigger, entering water, or a number of occupied inventory slots.
+type recipeUnlockRule struct {
+	adv      string
+	keys     []string
+	items    [][]int32
+	tick     bool
+	water    bool
+	occupied int
+}
+
+// rbRuleIDs[i] are the display ids rule i unlocks: the keys of its reward
+// that this build's book has.
+var rbRuleIDs = func() [][]int32 {
+	out := make([][]int32, len(recipeUnlockTable))
+	for i := range recipeUnlockTable {
+		for _, k := range recipeUnlockTable[i].keys {
+			if id, ok := recipeIDByName[k]; ok {
+				out[i] = append(out[i], id)
 			}
 		}
 	}
-	// Every item an ingredient accepts unlocks the recipe: holding spruce
-	// planks reveals the crafting table as much as oak does.
-	accepted := func(sets []uint16) []int32 {
-		var items []int32
-		for _, set := range sets {
-			items = append(items, ingredientSets[set]...)
+	return out
+}()
+
+// rbItemRules maps an item id to the rules one of whose item criteria it
+// meets; rbTickRules, rbWaterRules and rbSlotRules list the others.
+var rbItemRules, rbTickRules, rbWaterRules, rbSlotRules = func() (map[int32][]int, []int, []int, []int) {
+	items := map[int32][]int{}
+	var tick, water, slots []int
+	for i := range recipeUnlockTable {
+		r := &recipeUnlockTable[i]
+		if len(rbRuleIDs[i]) == 0 {
+			continue // nothing this book shows (stonecutting, smithing, special recipes)
 		}
-		return items
+		seen := map[int32]bool{}
+		for _, set := range r.items {
+			for _, it := range set {
+				if !seen[it] {
+					seen[it] = true
+					items[it] = append(items[it], i)
+				}
+			}
+		}
+		if r.tick {
+			tick = append(tick, i)
+		}
+		if r.water {
+			water = append(water, i)
+		}
+		if r.occupied > 0 {
+			slots = append(slots, i)
+		}
 	}
-	for i := range shapedRecipes {
-		add(int32(i), accepted(shapedRecipes[i].Cells))
-	}
-	for i := range shapelessRecipes {
-		add(int32(len(shapedRecipes)+i), accepted(shapelessRecipes[i].Ingredients))
-	}
-	// A cooker recipe unlocks on its single input, the same rule.
-	for i := range cookBookRecipes {
-		add(cookBookRecipes[i].ID, []int32{cookBookRecipes[i].Ingredient})
-	}
-	return idx
+	return items, tick, water, slots
 }()
 
 // representatives turns ingredient sets into the one item per slot the book
@@ -149,24 +176,61 @@ func (h *hub) recipeSendInitial(t *tracked) {
 	t.p.sendEv(rbBuildEntries(ids, true, false, t.rbHighlight))
 }
 
-// recipeUnlocks reveals recipes whose ingredients the player now holds
-// (called from the 1 Hz poll with the already-collected inventory item ids).
-// New entries arrive with the notification toast + highlight badge, exactly
-// like vanilla's addRecipes.
+// recipeUnlocks runs the recipe-unlock advancements' polled criteria
+// (called from the 1 Hz poll with the item ids of the occupied inventory
+// slots, one per slot): an item one of them names, the occupied-slot count,
+// and the tick trigger. New entries arrive with the notification toast +
+// highlight badge, exactly like vanilla's addRecipes.
 func (h *hub) recipeUnlocks(t *tracked, invItems []int32) {
 	if t.rbKnown == nil {
 		return
 	}
 	var fresh []int32
-	for _, item := range invItems {
-		for _, id := range rbIngredientIndex[item] {
-			if !t.rbKnown[id] && !t.rbTaken[id] {
-				t.rbKnown[id] = true
-				t.rbHighlight[id] = true
-				fresh = append(fresh, id)
-			}
+	for _, r := range rbTickRules {
+		fresh = h.rbGrant(t, r, fresh)
+	}
+	for _, r := range rbSlotRules {
+		if len(invItems) >= recipeUnlockTable[r].occupied {
+			fresh = h.rbGrant(t, r, fresh)
 		}
 	}
+	for _, item := range invItems {
+		for _, r := range rbItemRules[item] {
+			fresh = h.rbGrant(t, r, fresh)
+		}
+	}
+	h.rbSendFresh(t, fresh)
+}
+
+// recipeUnlocksInWater is EnterBlockTrigger for minecraft:water: the boats'
+// recipe advancements.
+func (h *hub) recipeUnlocksInWater(t *tracked) {
+	if t.rbKnown == nil {
+		return
+	}
+	var fresh []int32
+	for _, r := range rbWaterRules {
+		fresh = h.rbGrant(t, r, fresh)
+	}
+	h.rbSendFresh(t, fresh)
+}
+
+// rbGrant is a done advancement's reward: its recipes join the book, but not
+// one /recipe take removed (the advancement stays done, so only /recipe
+// give brings it back).
+func (h *hub) rbGrant(t *tracked, rule int, fresh []int32) []int32 {
+	for _, id := range rbRuleIDs[rule] {
+		if !t.rbKnown[id] && !t.rbTaken[id] {
+			t.rbKnown[id] = true
+			t.rbHighlight[id] = true
+			fresh = append(fresh, id)
+		}
+	}
+	return fresh
+}
+
+// rbSendFresh sends newly unlocked entries (notify + highlight).
+func (h *hub) rbSendFresh(t *tracked, fresh []int32) {
 	if len(fresh) == 0 {
 		return
 	}
