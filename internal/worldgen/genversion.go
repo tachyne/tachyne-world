@@ -94,4 +94,82 @@ package worldgen
 // build left its ring hanging over the ground they had dug and built in. A
 // spring or pool with a build or a dug-out cell in its box is now left out
 // whole (every draw still made); only chunks near such a build change.
-const GenVersion = 25
+//
+// v26: four of vanilla's 26.3 placements, the new ones behind the build guard:
+//   - spring_lava_frozen: lava out of the snow, powder snow and packed ice
+//     of the frozen peaks, groves, jagged peaks and snowy slopes (its own
+//     draws); and no spring in the deep dark, asked at the spring's cell;
+//   - the desert's (every chunk), the badlands' (one in five) and the
+//     swamp's (one in three) own sugar cane patches, and the sparse
+//     jungle's melons (one in sixty-four), from their own stream — the plain
+//     cane patch leaves those biomes, and the dappled forest, to them, and
+//     pumpkins leave the dappled forest; the plain patches keep their draws,
+//     so no other feature in the chunk moves;
+//   - disk_grass on the mangrove swamp's mud, and no sand or gravel disks
+//     in either swamp;
+//   - igloos face one of four rotations — except an igloo a player has
+//     touched, which keeps its old layout.
+//   - seagrass as 26.3's eight placements: each a patch of attempts about
+//     one column of the chunk, its own tall odds, only in biomes listing the
+//     same placement, and none under a player's build (own streams; kelp
+//     and pickles keep their draws).
+//   - the ore step as 26.3's thirty placements (the upper coal, the iron
+//     upper/middle/small split, large copper in the dripstone caves, the
+//     badlands' extra gold, lower gold, the diamond medium/large/buried
+//     split), every blob — ores, soil and the stone variants — OreFeature's
+//     ellipsoid across chunk borders with its discard on air exposure, a
+//     blob with a player's build in its box left out. Every underground
+//     changes.
+//   - dungeons as vanilla's monster_room (ten a chunk, y 0 to the top) and
+//     monster_room_deep (four, below 0): MonsterRoomFeature's validity check
+//     (solid floor and ceiling, one to five openings), floor gaps, mossy
+//     floors and 0-2 chests; one with a build or dig in its box is left
+//     out. The old 48-block-grid dungeons go, except one a player touched,
+//     which stays as it was.
+//   - amethyst geodes as GeodeFeature: three or four points' distance
+//     field with noise, vanilla's layer thresholds, a crack (95%), no geode
+//     where its points meet air or fluid, budding amethyst one in twelve
+//     and buds of every tier; planned once and left out whole where a
+//     player built or dug. Geodes now go in before the dungeons and ores.
+//   - the deep dark's sculk as vanilla grows it: sculk_patch_deep_dark
+//     (SculkSpreader's world-generation charge cursors: veins, sculk,
+//     sensors, can-summon shriekers, a catalyst on half) and sculk_vein on
+//     floors, walls and ceilings, in place of the 85% floor carpet; planned
+//     per origin chunk, laid only on cells as the plan found them, a patch
+//     with a player's build or dig in its box rolled back.
+//   - the End's spikes as EndSpikeFeature lays them out from the seed
+//     (radius 2-5, height 76-103, two caged in iron bars, bedrock and fire
+//     under each crystal, obsidian to the floor), a spike a player touched
+//     keeping the old pillar; and the exit podium pre-placed, inactive, at
+//     the island's top unless someone built or dug round 0,0.
+//   - village decor: the pools' feature and empty elements re-rolled after
+//     assembly with vanilla's weights, so some lamps give way to the
+//     biome's trees, hay/melon/pumpkin/snow/ice piles, plains flowers,
+//     desert cacti or taiga grass and berry bushes (or to nothing), and the
+//     trees pools grow their trees; village layouts, beds and job sites
+//     are unchanged.
+//   - ground cover as 26.3's placements, in place of the per-column hash
+//     scatter: each biome's flower set with its providers (the plains'
+//     threshold tulips, the flower forest's noise bands, the meadow's dual
+//     noise, pink petals, forest lilacs/peonies/rose bushes/lilies of the
+//     valley, blue orchids, closed eyeblossoms), the patch_grass_* counts,
+//     dead bushes, cactus columns with flowers, berry bushes, the bamboo
+//     jungle's noise-counted bamboo with podzol discs, red shrubs and the
+//     mushroom fields' mushrooms — its own stream, every plant guarded; the
+//     old scatter is still drawn and laid first so no other feature moves,
+//     then taken back up.
+//   - the ocean monument's interior as OceanMonumentPieces lays it out: the
+//     room graph (openings closed where every room stays reachable), the
+//     fitted double and simple rooms, the core with its gold, the wing
+//     rooms, the penthouse and the sponge rooms, the building facing one
+//     of four ways, and the elder guardians at the rooms' cells — except a
+//     monument a player has built in or dug into, which keeps its old
+//     layout.
+//   - terrain adaptation as the Beardifier works it (beard_thin for
+//     pillager outposts, beard_box for ancient cities, encapsulate for
+//     trial chambers, bury for trail ruins and strongholds): the ground
+//     rises under a piece and is shaved back over its floor, and the caves
+//     round a buried structure close — a post-pass over the heightfield,
+//     before the pieces stamp, left out whole for any structure a player
+//     has built near or dug into.
+const GenVersion = 26

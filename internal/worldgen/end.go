@@ -1,7 +1,7 @@
 package worldgen
 
 // The End: a floating end-stone island around the origin with the obsidian
-// pillar ring, void everywhere else. Same -64..384 canvas as every dimension
+// spikes (endspikes.go) and the exit podium, void everywhere else. Same -64..384 canvas as every dimension
 // (one chunk pipeline), no sky light. The dragon and crystals are entities —
 // the generator only builds the stage.
 
@@ -25,23 +25,6 @@ func NewEndGenerator(seed int64) *Generator {
 	return g
 }
 
-// endPillar returns the pillar index at (x,z), or -1. Pillars sit on a ring,
-// radius 3 each, heights varying with the index.
-func endPillarAt(x, z int) int {
-	for i := 0; i < EndPillars; i++ {
-		px := int(EndPillarRing * cos01(float64(i)/EndPillars))
-		pz := int(EndPillarRing * sin01(float64(i)/EndPillars))
-		dx, dz := x-px, z-pz
-		if dx*dx+dz*dz <= 9 {
-			return i
-		}
-	}
-	return -1
-}
-
-// EndPillarTop is the crystal height for a pillar (varies per pillar).
-func EndPillarTop(i int) int { return 76 + (i*7)%28 }
-
 // endBlock assembles one End cell (a point read: the outer islands'
 // column is worked out per call; the chunk loop hoists it).
 func (g *Generator) endBlock(x, y, z int) uint32 {
@@ -54,8 +37,10 @@ func (g *Generator) endBlock(x, y, z int) uint32 {
 
 // endBlockCol is endBlock given the column's outer-island plate.
 func (g *Generator) endBlockCol(x, y, z, top, bottom int, ok bool) uint32 {
-	if p := endPillarAt(x, z); p >= 0 && y >= EndSurfaceY-8 && y < EndPillarTop(p) {
-		return Obsidian
+	if x*x+z*z <= endSpikeReach*endSpikeReach {
+		if s, ok := endSpikeCell(g.EndSpikes(), x, y, z); ok {
+			return s // the obsidian spikes (endspikes.go)
+		}
 	}
 	r := float64(x*x + z*z)
 	if r > EndIslandR*EndIslandR {
@@ -83,7 +68,9 @@ func (g *Generator) endBlockCol(x, y, z, top, bottom int, ok bool) uint32 {
 // generateEndChunk fills a chunk in End mode.
 func (g *Generator) generateEndChunk(cx, cz int32) *Chunk {
 	ch := g.generateEndTerrain(cx, cz)
-	g.decorateEnd(ch, cx, cz) // chorus forests, small islands, return gateways
+	g.endSpikeTops(ch, cx, cz)   // the spikes' cages, bedrock caps and fire
+	g.stampEndPodium(ch, cx, cz) // the exit podium, inactive, as a new world has it
+	g.decorateEnd(ch, cx, cz)    // chorus forests, small islands, return gateways
 	g.stampEndCities(ch, cx, cz)
 	ch.computeHeightmap()
 	return ch

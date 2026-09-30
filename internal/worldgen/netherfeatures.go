@@ -52,7 +52,8 @@ func netherOreSpecs() []netherOreSpec {
 	}
 }
 
-// placeNetherOres stamps a chunk's nether veins, chunk-local like placeOres.
+// placeNetherOres stamps a chunk's nether veins, chunk-local (the overworld
+// ores are vanilla's OreFeature ellipsoids now; these are still walks).
 func (g *Generator) placeNetherOres(ch *Chunk, cx, cz int32) {
 	rng := rand.New(rand.NewSource(oreSeed(g.seed^0x4E7A, cx, cz)))
 	biome := g.netherBiome(int(cx)*16+8, int(cz)*16+8)

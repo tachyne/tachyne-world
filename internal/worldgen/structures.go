@@ -1,6 +1,6 @@
 package worldgen
 
-// Structures: surface lakes and buried dungeons, and the entry point that
+// Structures: surface lakes and the old buried dungeons, and the entry point that
 // stamps every structure (mineshafts live in mineshaft.go, strongholds in
 // stronghold.go). Same philosophy as features.go — every structure is a pure
 // function of (seed, world coordinates), and each chunk stamps only its own
@@ -126,19 +126,22 @@ func (g *Generator) lakeSiteFlat(l lake, rim int) bool {
 
 // ---- dungeons ----------------------------------------------------------------
 
-// Dungeon describes one buried spawner room.
+// Dungeon describes one spawner room: a placed monster room (monsterroom.go)
+// or an old grid room kept because a player touched it.
 type Dungeon struct {
-	X, Y, Z int // room centre (spawner position)
-	W, D    int // half-extents (room spans X±W, Z±D), height 4
-	Mob     int // 0 zombie, 1 skeleton, 2 spider
-	ChestX  int
-	ChestZ  int
+	X, Y, Z int      // the spawner
+	W, D    int      // half-extents of the inside (the room spans X±W, Z±D), height 4
+	Mob     int      // 0 zombie, 1 skeleton, 2 spider
+	Chests  [][3]int // 0–2 chests, on the floor
+	Legacy  bool     // an old grid room (legacyDungeonIn)
 	Exists  bool
+	cells   map[[3]int]uint32 // a monster room's writes
 }
 
-// DungeonIn rolls the dungeon for the cell containing (wx,wz). Exported: the
-// server uses it to run spawners and fill loot chests.
-func (g *Generator) DungeonIn(wx, wz int) Dungeon {
+// legacyDungeonIn rolls the engine's old dungeon for the cell containing
+// (wx,wz): one room per 48-block cell at 28%, a fixed depth under the
+// surface, one chest on the north wall.
+func (g *Generator) legacyDungeonIn(wx, wz int) Dungeon {
 	ox, oz := cellOrigin(wx, dungeonCell), cellOrigin(wz, dungeonCell)
 	if hash01(g.seed, ox, oz, 0xD00) >= dungeonOdds {
 		return Dungeon{}
@@ -156,20 +159,45 @@ func (g *Generator) DungeonIn(wx, wz int) Dungeon {
 		W:      2 + int(hash01(g.seed, ox, oz, 0xD04)*2), // 2..3 → rooms 5x5..7x7
 		D:      2 + int(hash01(g.seed, ox, oz, 0xD05)*2),
 		Mob:    int(hash01(g.seed, ox, oz, 0xD06) * 3),
+		Legacy: true,
 		Exists: true,
 	}
-	d.ChestX = d.X - d.W + int(hash01(g.seed, ox, oz, 0xD07)*float64(2*d.W))
-	d.ChestZ = d.Z - d.D // chest against the north wall
+	chestX := d.X - d.W + int(hash01(g.seed, ox, oz, 0xD07)*float64(2*d.W))
+	d.Chests = [][3]int{{chestX, d.Y, d.Z - d.D}} // against the north wall
 	return d
 }
 
-// stampDungeons writes the parts of nearby dungeon rooms inside this chunk.
-func (g *Generator) stampDungeons(ch *Chunk, cx, cz int32) {
+// keptLegacyDungeon is the old dungeon of the cell containing (wx, wz) if
+// a player has touched it — a build block or a dug-out cell in its shell
+// or inside — and so it stays; otherwise none. Cached per cell.
+func (g *Generator) keptLegacyDungeon(wx, wz int) Dungeon {
+	ox, oz := cellOrigin(wx, dungeonCell), cellOrigin(wz, dungeonCell)
+	k := roomKey{g: g, cx: int32(ox / dungeonCell), cz: int32(oz / dungeonCell), legacy: true}
+	if ds, ok := roomCacheGet(k); ok {
+		if len(ds) == 0 {
+			return Dungeon{}
+		}
+		return ds[0]
+	}
+	d := g.legacyDungeonIn(ox, oz)
+	var keep []Dungeon
+	if d.Exists && g.touchedIn(d.X-d.W-1, d.Y-1, d.Z-d.D-1, d.X+d.W+1, d.Y+4, d.Z+d.D+1) {
+		keep = []Dungeon{d}
+	} else {
+		d = Dungeon{}
+	}
+	roomCachePut(k, keep)
+	return d
+}
+
+// stampLegacyDungeons writes the parts of the kept old dungeon rooms inside
+// this chunk, exactly as they always stood.
+func (g *Generator) stampLegacyDungeons(ch *Chunk, cx, cz int32) {
 	baseX, baseZ := int(cx)*16, int(cz)*16
 	for _, off := range [][2]int{{0, 0}, {dungeonCell, 0}, {-dungeonCell, 0}, {0, dungeonCell},
 		{0, -dungeonCell}, {dungeonCell, dungeonCell}, {dungeonCell, -dungeonCell},
 		{-dungeonCell, dungeonCell}, {-dungeonCell, -dungeonCell}} {
-		d := g.DungeonIn(baseX+8+off[0], baseZ+8+off[1])
+		d := g.keptLegacyDungeon(baseX+8+off[0], baseZ+8+off[1])
 		if !d.Exists {
 			continue
 		}
@@ -196,7 +224,7 @@ func (g *Generator) stampDungeons(ch *Chunk, cx, cz int32) {
 				if dx == 0 && dz == 0 {
 					setSectionBlock(ch, lx, d.Y, lz, Spawner, true)
 				}
-				if wx == d.ChestX && wz == d.ChestZ {
+				if c := d.Chests[0]; wx == c[0] && wz == c[2] {
 					setSectionBlock(ch, lx, d.Y, lz, ChestNorth, true)
 				}
 			}
@@ -206,9 +234,10 @@ func (g *Generator) stampDungeons(ch *Chunk, cx, cz int32) {
 
 // stampStructures is the decoration entry point for all of the above.
 func (g *Generator) stampStructures(ch *Chunk, cx, cz int32) {
+	g.adaptTerrain(ch, cx, cz) // the Beardifier's terrain adaptation, before any piece stamps (terrainadapt.go)
 	g.stampLakes(ch, cx, cz)
 	g.stampMineshafts(ch, cx, cz)
-	g.stampDungeons(ch, cx, cz)
+	g.stampLegacyDungeons(ch, cx, cz) // old dungeons players touched (monster rooms: placeMonsterRooms)
 	g.stampVillages(ch, cx, cz)
 	g.stampStrongholds(ch, cx, cz)
 	g.stampDesertTemples(ch, cx, cz)

@@ -77,7 +77,7 @@ func (h *hub) spawnerEntityAt(pos simPos) string {
 	gen := w.Gen()
 	switch pos.dim {
 	case dimOverworld:
-		if d := gen.DungeonIn(pos.x, pos.z); d.Exists && d.X == pos.x && d.Y == pos.y && d.Z == pos.z {
+		if d, ok := gen.DungeonAt(pos.x, pos.y, pos.z); ok {
 			return entityRegistryName(dungeonMobs[d.Mob%3])
 		}
 		for _, s := range h.structureSpawnersNear(pos.x, pos.z) {

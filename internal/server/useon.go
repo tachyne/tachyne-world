@@ -3,7 +3,6 @@ package server
 import (
 	"encoding/binary"
 	"fmt"
-	"math"
 
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -303,15 +302,16 @@ func (h *hub) tryRespawnDragon(players map[int32]*tracked) {
 	if !h.rules.DragonDefeated || h.dragon != nil {
 		return
 	}
-	cy := worldgen.EndSurfaceY
-	for h.worldFor(dimEnd).At(0, cy, 0) != worldgen.Bedrock && h.worldFor(dimEnd).At(0, cy, 0) != worldgen.Air && cy < worldgen.EndSurfaceY+8 {
-		cy++
-	}
+	// EnderDragonFight.tryRespawn: a crystal touching the cell two out from
+	// the portal's top on each side (an end crystal's box is 2×2×2 from its
+	// feet), so they stand on the podium's rim.
+	ex, cy, ez := h.worldFor(dimEnd).Gen().EndExitPortal()
 	var found []*crystal
 	for _, d := range [4][2]int{{2, 0}, {-2, 0}, {0, 2}, {0, -2}} {
+		bx, by, bz := float64(ex+d[0]), float64(cy+1), float64(ez+d[1])
 		var hit *crystal
 		for _, c := range h.crystals {
-			if c.dim == dimEnd && int(math.Floor(c.x)) == d[0] && int(math.Floor(c.z)) == d[1] && c.y >= float64(cy-1) && c.y <= float64(cy+2) {
+			if c.dim == dimEnd && c.x-1 < bx+1 && c.x+1 > bx && c.y < by+1 && c.y+2 > by && c.z-1 < bz+1 && c.z+1 > bz {
 				hit = c
 			}
 		}

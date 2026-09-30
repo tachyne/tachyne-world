@@ -239,9 +239,16 @@ func (h *hub) populateMonuments(players map[int32]*tracked) {
 			continue // already populated
 		}
 		cy := float64(mn.Y + 7) // inside the hall
-		for i, off := range [][2]float64{{0, 0}, {6, 6}, {-6, -6}} {
-			_ = i
-			h.spawnHostileYIn(players, entityElderGuardian, dimOverworld, float64(mn.X)+off[0], cy, float64(mn.Z)+off[1])
+		if spots := g.MonumentElders(mn); len(spots) > 0 {
+			// The penthouse's and the wing rooms' spawnElder cells.
+			for _, p := range spots {
+				h.spawnHostileYIn(players, entityElderGuardian, dimOverworld, float64(p[0])+0.5, float64(p[1]), float64(p[2])+0.5)
+			}
+		} else {
+			// A monument that keeps the old open hall.
+			for _, off := range [][2]float64{{0, 0}, {6, 6}, {-6, -6}} {
+				h.spawnHostileYIn(players, entityElderGuardian, dimOverworld, float64(mn.X)+off[0], cy, float64(mn.Z)+off[1])
+			}
 		}
 		for i := 0; i < 8; i++ {
 			ox := float64((i%4)*3 - 4)

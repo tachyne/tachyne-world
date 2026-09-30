@@ -3,7 +3,7 @@ package server
 import "github.com/tachyne/tachyne-world/internal/worldgen"
 
 // Live dungeon spawners + loot chests. Dungeons are pure functions of the
-// seed (worldgen.DungeonIn), so the hub needs no block scan: every second it
+// seed (worldgen.DungeonsNear), so the hub needs no block scan: every second it
 // checks the dungeon cells around each player, and any spawner block still
 // standing within activation range rolls mob spawns into its room. The
 // dungeon chest fills with deterministic loot the first time it's opened.
@@ -34,33 +34,27 @@ func (h *hub) updateSpawners(players map[int32]*tracked) {
 			continue // BaseSpawner.isNearPlayer asks the spawner's own level: dungeons are overworld
 		}
 		px, pz := int(t.x), int(t.z)
-		for dx := -1; dx <= 1; dx++ {
-			for dz := -1; dz <= 1; dz++ {
-				d := gen.DungeonIn(px+dx*48, pz+dz*48)
-				if !d.Exists {
-					continue
-				}
-				pos := blockPos{d.X, d.Y, d.Z}
-				if done[pos] {
-					continue
-				}
-				done[pos] = true
-				if !h.ownedBlock(d.X, d.Z) || !h.cellWithinBorder(dimOverworld, d.X, d.Z) {
-					continue // outside this pod's region, or past the world border (LevelChunk.isTicking)
-				}
-				if dist3(t.x, t.y, t.z, float64(d.X), float64(d.Y), float64(d.Z)) > spawnerRange {
-					continue
-				}
-				if h.world.At(d.X, d.Y, d.Z) != worldgen.BlockBase("spawner") { // mined out → dead spawner
-					continue
-				}
-				if h.placedSpawner(dimOverworld, pos) {
-					continue // a spawn egg made it a block entity of its own (updatePlacedSpawners)
-				}
-				etype := dungeonMobs[d.Mob%3]
-				h.showSpawner(players, 0, pos, etype) // the mob turning in the cage
-				h.seedSpawnerTick(players, dimOverworld, pos, etype, now)
+		for _, d := range gen.DungeonsNear(px, pz, spawnerRange+1) {
+			pos := blockPos{d.X, d.Y, d.Z}
+			if done[pos] {
+				continue
 			}
+			done[pos] = true
+			if !h.ownedBlock(d.X, d.Z) || !h.cellWithinBorder(dimOverworld, d.X, d.Z) {
+				continue // outside this pod's region, or past the world border (LevelChunk.isTicking)
+			}
+			if dist3(t.x, t.y, t.z, float64(d.X), float64(d.Y), float64(d.Z)) > spawnerRange {
+				continue
+			}
+			if h.world.At(d.X, d.Y, d.Z) != worldgen.BlockBase("spawner") { // mined out → dead spawner
+				continue
+			}
+			if h.placedSpawner(dimOverworld, pos) {
+				continue // a spawn egg made it a block entity of its own (updatePlacedSpawners)
+			}
+			etype := dungeonMobs[d.Mob%3]
+			h.showSpawner(players, 0, pos, etype) // the mob turning in the cage
+			h.seedSpawnerTick(players, dimOverworld, pos, etype, now)
 		}
 	}
 }

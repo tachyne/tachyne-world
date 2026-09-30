@@ -1,6 +1,9 @@
 package worldgen
 
-import "math"
+import (
+	"math"
+	"sync"
+)
 
 const (
 	MinY         = -64
@@ -54,6 +57,11 @@ type Generator struct {
 	// editsIn walks one chunk's edits (world coordinates): the region form of
 	// editAt, for the build guard's area checks (buildguard.go).
 	editsIn func(cx, cz int32, fn func(x, y, z int, state uint32))
+
+	// spikes is the End's pillar layout (EndSpikes), worked out on first use
+	// from the seed and the build guard; spikeMu guards it.
+	spikeMu sync.Mutex
+	spikes  []EndSpike
 }
 
 // SetCeiling raises the world ceiling to maxY (exclusive top build limit,
@@ -71,11 +79,17 @@ func (g *Generator) SetCeiling(maxY int) {
 }
 
 // SetEditLookup gives generation the world's edit overlay (see editAt).
-func (g *Generator) SetEditLookup(f func(x, y, z int) (uint32, bool)) { g.editAt = f }
+func (g *Generator) SetEditLookup(f func(x, y, z int) (uint32, bool)) {
+	g.editAt = f
+	forgetRooms(g)
+	g.forgetEndSpikes()
+}
 
 // SetEditRegion gives generation the per-chunk edit walk (see editsIn).
 func (g *Generator) SetEditRegion(f func(cx, cz int32, fn func(x, y, z int, state uint32))) {
 	g.editsIn = f
+	forgetRooms(g) // the dungeons' build guard read the old overlay
+	g.forgetEndSpikes()
 }
 
 // SectionCount is the world's column height in 16-block sections.
@@ -581,21 +595,22 @@ func (g *Generator) GenerateChunk(cx, cz int32) *Chunk {
 			}
 		}
 	}
-	g.supportSurface(ch, cx, cz) // fill undercut surface crusts (no floating dirt/grass)
-	g.carveCanyons(ch, cx, cz)   // ravines (the canyon carver)
-	g.placeLavaLakes(ch, cx, cz) // lake_lava_surface / lake_lava_underground
-	g.placeOres(ch, cx, cz)      // after carving: veins only in surviving stone
-	g.placeGeodes(ch, cx, cz)    // amethyst geodes (may straddle chunk borders)
+	g.supportSurface(ch, cx, cz)    // fill undercut surface crusts (no floating dirt/grass)
+	g.carveCanyons(ch, cx, cz)      // ravines (the canyon carver)
+	g.placeLavaLakes(ch, cx, cz)    // lake_lava_surface / lake_lava_underground
+	g.placeGeodes(ch, cx, cz)       // amethyst geodes (LOCAL_MODIFICATIONS; may straddle chunk borders)
+	g.placeMonsterRooms(ch, cx, cz) // monster_room / _deep: the dungeons (UNDERGROUND_STRUCTURES)
+	g.placeOres(ch, cx, cz)         // after carving: veins only in surviving stone
 	// Forest rocks, ice spikes and ice patches, before the plants.
 	g.decorateSurface(ch, cx, cz)
-	g.decorate(ch, cx, cz)
-	removeFloatingFragments(ch) // delete terrain a cave severed from the ground —
+	cover := g.decorate(ch, cx, cz) // trees, and the old ground cover decorateCaves takes back up
+	removeFloatingFragments(ch)     // delete terrain a cave severed from the ground —
 	//                               BEFORE structures, so it never culls a structure's
 	//                               legitimately-floating parts (monument arches/lanterns,
 	//                               ruined-portal fragments, ship masts).
-	g.decorateCaves(ch, cx, cz)   // the lush caves' vegetation and every cave's glow lichen
-	g.stampStructures(ch, cx, cz) // lakes/dungeons/mineshafts/ruins overwrite
-	g.freezeTopLayer(ch, cx, cz)  // TOP_LAYER_MODIFICATION: ice on cold water, snow on cold ground
+	g.decorateCaves(ch, cx, cz, cover) // the lush caves' vegetation, every cave's glow lichen, the surface patches
+	g.stampStructures(ch, cx, cz)      // lakes/dungeons/mineshafts/ruins overwrite
+	g.freezeTopLayer(ch, cx, cz)       // TOP_LAYER_MODIFICATION: ice on cold water, snow on cold ground
 
 	// One biome per section, sampled at the section's centre column. Sections
 	// well below the surface take an underground biome (dripstone/lush/

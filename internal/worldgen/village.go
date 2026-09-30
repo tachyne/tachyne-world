@@ -111,13 +111,25 @@ func absF(v float64) float64 {
 // stampVillages stamps the real vanilla village pieces overlapping this chunk.
 func (g *Generator) stampVillages(ch *Chunk, cx, cz int32) {
 	baseX, baseZ := int(cx)*16, int(cz)*16
+	var bg *buildGuard
 	for ddx := -1; ddx <= 1; ddx++ {
 		for ddz := -1; ddz <= 1; ddz++ {
 			v := g.VillageIn(baseX+8+ddx*villageCell, baseZ+8+ddz*villageCell)
 			if !v.Exists {
 				continue
 			}
-			g.StampPieces(ch, cx, cz, g.AssembleVillage(v))
+			// The decor re-roll (villagedecor.go): some lamps give way to
+			// vanilla's feature elements or to nothing.
+			plan := g.villageDecor(v)
+			g.stampPiecesExcept(ch, cx, cz, g.AssembleVillage(v), plan.suppress)
+			if len(plan.features) > 0 {
+				if bg == nil {
+					bg = g.newBuildGuard(cx, cz)
+				}
+				for _, f := range plan.features {
+					g.stampVillageFeature(ch, cx, cz, f, bg)
+				}
+			}
 		}
 	}
 }

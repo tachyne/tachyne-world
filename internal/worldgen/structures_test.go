@@ -71,8 +71,7 @@ func TestDungeonQueryMatchesStamp(t *testing.T) {
 	if !ok {
 		t.Skip("no dungeon in range")
 	}
-	d := g.DungeonIn(x, z)
-	if !d.Exists || d.X != x || d.Y != y || d.Z != z {
-		t.Fatalf("DungeonIn(%d,%d) = %+v; want spawner at (%d,%d,%d)", x, z, d, x, y, z)
+	if _, found := g.DungeonAt(x, y, z); !found {
+		t.Fatalf("DungeonAt(%d,%d,%d) found no dungeon at a generated spawner", x, y, z)
 	}
 }

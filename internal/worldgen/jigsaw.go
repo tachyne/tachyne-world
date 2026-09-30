@@ -19,7 +19,17 @@ type PlacedPiece struct {
 	Proc            string    // processor list the pool applies to this piece ("" = none)
 	SkipAir         bool      // the template's air keeps the world's blocks (vanilla's STRUCTURE_AND_AIR ignore)
 	Sus             []SusCell // the capped rules' picks (cappedPicks), world coordinates
+	Pool            string    // the pool it was drawn from ("" for a start piece)
+	ax, ay, az      int       // where its connecting jigsaw landed (the source's target cell)
 	x1, y1, z1      int       // exclusive max corner (world)
+}
+
+// jigsawSpot is a jigsaw whose target pool placed nothing — every template
+// clashed, or the pool holds only features the assembler does not grow —
+// at the cell a feature element would have grown from.
+type jigsawSpot struct {
+	Pool    string
+	X, Y, Z int
 }
 
 var dirDelta = map[string][3]int{
@@ -147,6 +157,14 @@ func (g *Generator) assembleJigsaw(startPool string, sx, sy, sz int, prng *jigsa
 }
 
 func (g *Generator) assembleJigsawAliased(startPool string, sx, sy, sz int, prng *jigsawRNG, maxDepth int, terrain bool, alias map[string]string) []PlacedPiece {
+	return g.assembleJigsawSpots(startPool, sx, sy, sz, prng, maxDepth, terrain, alias, nil)
+}
+
+// assembleJigsawSpots is the assembler; with spots it also records every
+// upward-facing jigsaw (one a feature element could answer) whose pool
+// placed nothing. Recording draws nothing and adds no piece, so the layout
+// is the same with or without it.
+func (g *Generator) assembleJigsawSpots(startPool string, sx, sy, sz int, prng *jigsawRNG, maxDepth int, terrain bool, alias map[string]string, spots *[]jigsawSpot) []PlacedPiece {
 	sp := pools[startPool]
 	if sp == nil || len(sp.Elements) == 0 {
 		return nil
@@ -190,13 +208,24 @@ func (g *Generator) growJigsaw(first *PlacedPiece, prng *jigsawRNG, maxDepth int
 			aliased = true
 		}
 		pool := pools[name]
-		if pool == nil || len(pool.Elements) == 0 {
-			continue
-		}
 		sxp, syp, szp, sFront, sTop := cur.piece.worldJigsaw(cur.jig)
 		// The connecting piece's matching jigsaw must sit one block along sFront.
 		tx, ty, tz := sxp+dirDelta[sFront][0], syp+dirDelta[sFront][1], szp+dirDelta[sFront][2]
 		want := oppDir(sFront)
+		spot := func() {
+			if spots == nil || want != "down" {
+				return
+			}
+			y := ty
+			if terrain && cur.piece.TerrainMatch {
+				y = g.SurfaceWG(sxp, szp) // a rigid element on a draped street stands on the surface
+			}
+			*spots = append(*spots, jigsawSpot{Pool: name, X: tx, Y: y, Z: tz})
+		}
+		if pool == nil || len(pool.Elements) == 0 {
+			spot()
+			continue
+		}
 
 		placed := false
 		for _, loc := range weightedOrder(pool, prng) {
@@ -277,7 +306,8 @@ func (g *Generator) growJigsaw(first *PlacedPiece, prng *jigsawRNG, maxDepth int
 						continue
 					}
 					np := &PlacedPiece{Tmpl: cand, OX: ox, OY: oy, OZ: oz, Rot: rot, Proc: pool.procFor(loc),
-						TerrainMatch: terrain && pool.terrainMatching(loc), x1: nx1, y1: ny1, z1: nz1}
+						TerrainMatch: terrain && pool.terrainMatching(loc), Pool: name,
+						ax: tx, ay: oy + cry, az: tz, x1: nx1, y1: ny1, z1: nz1}
 					pieces = append(pieces, np)
 					for _, nj := range cand.Jigsaws {
 						if nj.Pos == cj.Pos {
@@ -295,6 +325,9 @@ func (g *Generator) growJigsaw(first *PlacedPiece, prng *jigsawRNG, maxDepth int
 				break
 			}
 		}
+		if !placed {
+			spot()
+		}
 	}
 
 	out := make([]PlacedPiece, len(pieces))
@@ -307,8 +340,17 @@ func (g *Generator) growJigsaw(first *PlacedPiece, prng *jigsawRNG, maxDepth int
 // StampPieces stamps every piece's template into the chunk (per-chunk clipped)
 // and returns the world positions of all chests.
 func (g *Generator) StampPieces(ch *Chunk, cx, cz int32, pieces []PlacedPiece) [][3]int {
+	return g.stampPiecesExcept(ch, cx, cz, pieces, nil)
+}
+
+// stampPiecesExcept is StampPieces leaving out the pieces skip names (by
+// index): the village lamps that gave way to decor features.
+func (g *Generator) stampPiecesExcept(ch *Chunk, cx, cz int32, pieces []PlacedPiece, skip map[int]bool) [][3]int {
 	var chests [][3]int
 	for i := range pieces {
+		if skip[i] {
+			continue
+		}
 		p := &pieces[i]
 		if p.Feature != "" {
 			g.stampFeaturePiece(ch, cx, cz, p)

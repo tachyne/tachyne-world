@@ -4,14 +4,17 @@ package worldgen
 // (the 58×58×23 prismarine temple). The shell — the two wings, entrance archways,
 // entrance wall, roof, and the lower/middle/upper interior walls — is transcribed
 // block-for-block from the vanilla coordinates, as is the 7×7 foundation grid
-// (rooted to the seafloor) and the surrounding water moat. The interior room
-// detail-maze (RoomDefinition graph) is not reproduced; instead the gold-block
-// treasure is placed hidden in the core, and the elder guardians + patrolling
-// guardians are seeded by the server when a player approaches (guardian.go).
+// (rooted to the seafloor) and the surrounding water moat. The interior —
+// the RoomDefinition graph and its rooms, the core with its gold, the wing
+// rooms, the penthouse and the sponge rooms — and the building's random
+// orientation are in monument_rooms.go. The elder guardians go on the
+// pieces' spawnElder cells and the patrolling guardians near the centre,
+// seeded by the server when a player approaches (guardian.go).
 //
-// Orientation is fixed (north): the monument is four-fold near-symmetric, so the
-// only visible effect is which way the entrance faces. Local coordinates 0..58
-// map to world via (ox+lx, oy+ly, oz+lz); setSectionBlock clips to the chunk.
+// A monument a player has built in or dug into keeps the layout it had
+// before the interior came (GenVersion 26): the shell facing one way
+// (local 0..58 → (ox+lx, oy+ly, oz+lz)), an open hall, and the gold hidden
+// in a pillar. setSectionBlock clips everything to the chunk.
 
 const (
 	monumentCell = 448
@@ -49,11 +52,22 @@ type monStamp struct {
 	ox, oy, oz         int // monument min corner (world)
 	gray, light, black uint32
 	lamp, gold, deco   uint32
+	bld                *monPiece // the oriented building; nil for the old layout
+}
+
+// world maps a local cell to the world: through the building's orientation,
+// or straight off the min corner for the old layout.
+func (s *monStamp) world(lx, ly, lz int) (int, int, int) {
+	if s.bld != nil {
+		w := s.bld.worldPos(lx, ly, lz)
+		return w[0], w[1], w[2]
+	}
+	return s.ox + lx, s.oy + ly, s.oz + lz
 }
 
 // place sets a block at local (lx,ly,lz); setSectionBlock clips to the chunk.
 func (s *monStamp) place(lx, ly, lz int, b uint32) {
-	wx, wy, wz := s.ox+lx, s.oy+ly, s.oz+lz
+	wx, wy, wz := s.world(lx, ly, lz)
 	setSectionBlock(s.ch, wx-s.baseX, wy, wz-s.baseZ, b, true)
 }
 
@@ -97,8 +111,8 @@ func (s *monStamp) waterBox(x0, y0, z0, x1, y1, z1 int) {
 // fillColumnDown roots a foundation pillar: from local y downward, replace
 // water/air with `b` until solid ground (or the world floor).
 func (s *monStamp) fillColumnDown(b uint32, x, y, z int) {
-	wx, wz := s.ox+x, s.oz+z
-	for wy := s.oy + y; wy > MinY; wy-- {
+	wx, wy0, wz := s.world(x, y, z)
+	for wy := wy0; wy > MinY; wy-- {
 		cur := s.getW(wx, wy, wz)
 		if cur != Air && cur != Water {
 			break
@@ -124,6 +138,48 @@ func (g *Generator) stampMonument(ch *Chunk, cx, cz int32) {
 	}
 	s.deco = s.light // DOT_DECO_DATA == BASE_LIGHT
 
+	if g.monumentTouched(m) {
+		s.shell()
+		// The old layout's gold: a 2×2×2 hidden in a dark-prismarine pillar
+		// rooted on the central floor (so removeFloatingFragments keeps it).
+		s.genBox(27, 1, 27, 30, 6, 30, s.black)
+		s.genBox(28, 4, 28, 29, 5, 29, s.gold)
+		return
+	}
+	pl := g.monumentPlan(m)
+	s.bld = &pl.bld
+	// The building's water box, up to the sea's surface, then the shell and
+	// the rooms in MonumentBuilding.postProcess's order.
+	s.waterBox(0, 0, 0, 58, max(SeaLevel, 64)-m.Y, 58)
+	s.shell()
+	for i, p := range pl.pieces {
+		p.s, p.rng = s, pl.pieceRNG(g, m, i)
+		p.postProcess()
+		p.s = nil
+	}
+}
+
+// monumentTouched reports whether a player built or dug anywhere in a
+// monument's footprint, its moat or the water over it: such a monument
+// keeps the old layout.
+func (g *Generator) monumentTouched(m Monument) bool {
+	x0, z0 := m.X-monumentHalf-6, m.Z-monumentHalf-6
+	return g.touchedIn(x0, m.Y-1, z0, x0+58+12, max(m.Y+23, SeaLevel), z0+58+12)
+}
+
+// MonumentElders is where the monument's three elder guardians belong —
+// the penthouse's and the two wing rooms' spawnElder cells — or nil for a
+// monument that keeps the old layout.
+func (g *Generator) MonumentElders(m Monument) [][3]int {
+	if !m.Exists || g.monumentTouched(m) {
+		return nil
+	}
+	return g.monumentPlan(m).elders
+}
+
+// shell is the building's own blocks: the wings, entrance, roof and walls,
+// the foundation pillars and the moat.
+func (s *monStamp) shell() {
 	// Shell (MonumentBuilding.postProcess order).
 	s.wing(false, 0)
 	s.wing(true, 33)
@@ -164,11 +220,6 @@ func (g *Generator) stampMonument(ch *Chunk, cx, cz int32) {
 		s.waterBox(0-n, 0+n*2, 58+n, 57+n, 23, 58+n)
 	}
 
-	// The gold-block treasure (vanilla hides a 2×2×2 in the core room). A dark-
-	// prismarine pillar rooted on the central floor (so removeFloatingFragments
-	// keeps it) hides the gold in its heart.
-	s.genBox(27, 1, 27, 30, 6, 30, s.black)
-	s.genBox(28, 4, 28, 29, 5, 29, s.gold)
 }
 
 // ---- shell pieces (block-for-block from OceanMonumentPieces) -----------------

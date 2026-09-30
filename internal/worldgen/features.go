@@ -13,7 +13,14 @@ const treeMargin = 12
 
 // decorate adds trees and ground cover to a freshly generated chunk, choosing
 // the tree species and ground flora from each column's biome.
-func (g *Generator) decorate(ch *Chunk, cx, cz int32) {
+//
+// The ground cover it draws is the old per-column scatter, which 26.3's
+// placements (groundcover.go) replace. It is still laid here, and its cells
+// returned, because the cave pass's draws read the surface it leaves (a
+// cane patch that meets a flower draws differently); decorateCaves takes
+// it back up after those draws and lays the vanilla cover in its place.
+func (g *Generator) decorate(ch *Chunk, cx, cz int32) []coverCell {
+	var cover []coverCell
 	baseX, baseZ := int(cx)*16, int(cz)*16
 	ravine := g.ravineCut(baseX-treeMargin, baseZ-treeMargin, baseX+15+treeMargin, baseZ+15+treeMargin)
 	// Scan origins in the chunk plus a margin so trees rooted in neighbouring
@@ -35,12 +42,19 @@ func (g *Generator) decorate(ch *Chunk, cx, cz int32) {
 			}
 			// Ground cover is a single block — only when its origin is in-chunk.
 			if ox >= 0 && ox < 16 && oz >= 0 && oz < 16 {
-				g.stampGroundCover(ch, ox, oz, col.h, wx, wz, b.Flora)
+				cover = g.stampGroundCover(ch, ox, oz, col.h, wx, wz, b.Flora, cover)
 			}
 		}
 	}
 	g.decorateDisks(ch, cx, cz)    // sand, clay and gravel in the beds under water
 	g.decorateSeafloor(ch, cx, cz) // seagrass, kelp and sea pickles under the water
+	return cover
+}
+
+// coverCell is one cell the old ground-cover scatter filled, and with what.
+type coverCell struct {
+	lx, y, lz int
+	s         uint32
 }
 
 // plantable reports whether a surface block can root a tree or ground cover.
@@ -506,16 +520,28 @@ func (r *hashRNG) Intn(n int) int {
 
 func (r *hashRNG) Float64() float64 { return float64(r.next()>>11) / (1 << 53) }
 
-// stampGroundCover scatters biome-appropriate flora on a column's surface.
-func (g *Generator) stampGroundCover(ch *Chunk, lx, lz, surfaceH, wx, wz int, flora floraKind) {
+// stampGroundCover scatters biome-appropriate flora on a column's surface,
+// appending every cell it fills to cover.
+func (g *Generator) stampGroundCover(ch *Chunk, lx, lz, surfaceH, wx, wz int, flora floraKind, cover []coverCell) []coverCell {
 	r := hash01(g.seed, wx, wz, 0x2222)
-	put := func(b uint32) { setSectionBlock(ch, lx, surfaceH, lz, b, false) }
+	fill := func(y int, b uint32) {
+		if y >= MinY && y < MinY+len(ch.Sections)*16 && sectionBlockAt(ch, lx, y, lz) == Air {
+			setSectionBlock(ch, lx, y, lz, b, false)
+			cover = append(cover, coverCell{lx, y, lz, b})
+		}
+	}
+	put := func(b uint32) { fill(surfaceH, b) }
+	column := func(n int, b uint32) { // cactus, bamboo: n blocks up from the surface
+		for i := 0; i < n; i++ {
+			fill(surfaceH+i, b)
+		}
+	}
 	pick := func(salt uint64, opts ...uint32) uint32 {
 		return opts[int(hash01(g.seed, wx, wz, salt)*float64(len(opts)))%len(opts)]
 	}
 	switch flora {
 	case floraNone:
-		return
+		return cover
 	case floraPlains:
 		switch {
 		case r < 0.18:
@@ -533,7 +559,7 @@ func (g *Generator) stampGroundCover(ch *Chunk, lx, lz, surfaceH, wx, wz int, fl
 	case floraDesert:
 		switch {
 		case r < 0.006:
-			g.stampColumn(ch, lx, lz, surfaceH, 1+int(hash01(g.seed, wx, wz, 0x44)*3), Cactus)
+			column(1+int(hash01(g.seed, wx, wz, 0x44)*3), Cactus)
 		case r < 0.012:
 			put(DeadBush)
 		}
@@ -553,7 +579,7 @@ func (g *Generator) stampGroundCover(ch *Chunk, lx, lz, surfaceH, wx, wz int, fl
 		case r < 0.25:
 			put(pick(0x3333, Fern, ShortGrass))
 		case r < 0.27:
-			g.stampColumn(ch, lx, lz, surfaceH, 2+int(hash01(g.seed, wx, wz, 0x44)*3), Bamboo)
+			column(2+int(hash01(g.seed, wx, wz, 0x44)*3), Bamboo)
 		}
 	case floraSwamp:
 		switch {
@@ -605,13 +631,7 @@ func (g *Generator) stampGroundCover(ch *Chunk, lx, lz, surfaceH, wx, wz int, fl
 			put(Fern)
 		}
 	}
-}
-
-// stampColumn stacks n blocks upward from the surface (cactus, bamboo).
-func (g *Generator) stampColumn(ch *Chunk, lx, lz, surfaceH, n int, block uint32) {
-	for i := 0; i < n; i++ {
-		setSectionBlock(ch, lx, surfaceH+i, lz, block, false)
-	}
+	return cover
 }
 
 // setSectionBlock writes a block at in-chunk (lx,y,lz) if it lies inside the
