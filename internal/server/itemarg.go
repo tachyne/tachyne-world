@@ -147,6 +147,8 @@ func removeItemComponent(st *invStack, key string) string {
 		st.cube = cubeContent{}
 	case "minecraft:entity_data":
 		st.standTags = ""
+	case "minecraft:profile":
+		st.profile = ""
 	case "minecraft:written_book_content", "minecraft:writable_book_content":
 		st.bookID = 0
 	default:
@@ -239,6 +241,16 @@ func applyItemComponent(st *invStack, key string, v any) string {
 		if tags, ok := standTagsFromEntityData(m); ok {
 			st.standTags = tags
 		}
+	case "minecraft:profile":
+		// ResolvableProfile.CODEC: a name, or {name, id, properties}.
+		if st.item != itemPlayerHead {
+			return fmt.Sprintf("The '%s' component is not supported here", key)
+		}
+		p, ok := profileFromSNBT(v)
+		if !ok {
+			return bad()
+		}
+		st.profile = profileString(p)
 	default:
 		return applyItemTagComponent(st, key, v)
 	}

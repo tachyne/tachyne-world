@@ -530,6 +530,14 @@ func (d *stackDecode) component(id int32, r *bytes.Reader) bool {
 		if _, err := protocol.ReadVarInt(r); err != nil {
 			return false
 		}
+	case componentProfile:
+		p, ok := readProfile(r)
+		if !ok {
+			return false
+		}
+		if st.item == itemPlayerHead {
+			st.profile = profileString(p)
+		}
 	default:
 		return false
 	}

@@ -18,7 +18,7 @@ func TestBedDropsItem(t *testing.T) {
 func TestChunkListsBlockEntities(t *testing.T) {
 	w := world.New(1)
 	w.SetBlock(0, 70, 0, worldgen.BlockID("chest")) // a chest edit in chunk (0,0)
-	b := appendBlockEntities(nil, w, 0, 0, 0, nil, nil, nil, nil, nil)
+	b := appendBlockEntities(nil, w, 0, 0, 0, nil, nil, nil, nil, nil, nil)
 	if len(b) == 0 || b[0] == 0 {
 		t.Fatalf("chunk with a chest should list >=1 block entity, count byte=%v", b)
 	}

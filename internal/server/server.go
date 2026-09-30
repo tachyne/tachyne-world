@@ -648,7 +648,7 @@ func (s *Server) Serve() error {
 						dim = id
 					}
 				}
-				return appendBlockEntities(nil, w, cx, cz, dim, s.hub.signs, s.hub.cfStore, s.hub.banners, s.hub.shelfView, s.hub.potSherds)
+				return appendBlockEntities(nil, w, cx, cz, dim, s.hub.signs, s.hub.cfStore, s.hub.banners, s.hub.shelfView, s.hub.potSherds, s.hub.skulls)
 			},
 			Worlds: func(dim int32) *world.World { return s.dimWorld(int(dim)) },
 		}

@@ -95,6 +95,7 @@ type containerFile struct {
 	// A decorated pot's four faces, keyed like the other block entities.
 	PotSherds  map[string]potSherds       `json:"pot_sherds,omitempty"`
 	BlockNames map[string]string          `json:"block_names,omitempty"` // custom names of placed containers, banners, heads
+	Skulls     map[string]string          `json:"skulls,omitempty"`      // placed player heads' owners (base64 profile stream form)
 	Stars      map[string][]fireworkBurst `json:"stars,omitempty"`
 	NextStarID int32                      `json:"next_star_id,omitempty"`
 	// Custom item names by id (names.go). Loaded before any other store
@@ -1146,6 +1147,23 @@ func (s *containerStore) loadBlockNames() map[string]string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.m.BlockNames
+}
+
+// recordSkulls / loadSkulls persist placed player heads' owners.
+func (s *containerStore) recordSkulls(sk *skullStore) {
+	if sk == nil {
+		return
+	}
+	snap := sk.snapshot()
+	s.mu.Lock()
+	s.m.Skulls = snap
+	s.mu.Unlock()
+}
+
+func (s *containerStore) loadSkulls() map[string]string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.m.Skulls
 }
 
 // recordPotSherds / loadPotSherds persist the decorated pots' faces.

@@ -33,7 +33,7 @@ const (
 // whose text rides the chunk as their vanilla update tag. Called from the attach
 // layer's parallel chunk builders — the sign store is mutex-guarded for exactly
 // this reader.
-func appendBlockEntities(b []byte, w *world.World, cx, cz int32, dim int, signs *signStore, campfires *campfireStore, banners *bannerStore, shelves *shelfStore, pots *potSherdStore) []byte {
+func appendBlockEntities(b []byte, w *world.World, cx, cz int32, dim int, signs *signStore, campfires *campfireStore, banners *bannerStore, shelves *shelfStore, pots *potSherdStore, skulls *skullStore) []byte {
 	edits := w.EditedBlocks(cx, cz)
 	var buf []byte
 	n := int32(0)
@@ -64,6 +64,11 @@ func appendBlockEntities(b []byte, w *world.World, cx, cz int32, dim int, signs 
 				nb[i] = protocol.BannerLayerNBT{Pattern: bannerPatternQualified(l.Pattern), Color: l.Color}
 			}
 			buf = protocol.AppendBannerNBT(buf, nb)
+		} else if skulls != nil && isPlayerHeadState(e.State) {
+			// A player head's update tag: its owner, whose face the client
+			// draws (a plain head has none).
+			pos := simPos{dim: dim, blockPos: blockPos{int(cx)*16 + int(e.LX), int(e.Y), int(cz)*16 + int(e.LZ)}}
+			buf = skullUpdateTagNBT(buf, skulls.get(pos))
 		} else {
 			buf = append(buf, 0x00) // NBT: TAG_End — no data (renderer needs only type+pos)
 		}
