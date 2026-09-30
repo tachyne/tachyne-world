@@ -42,7 +42,9 @@ func TestBanAndOpGoToAccess(t *testing.T) {
 			}
 		}
 	}()
-	s.handleCommand(pl.p, "op tester")
+	cmdSecondPlayer(players, 2, "mate")
+	s.handleCommand(pl.p, "op tester") // already an operator (-ops): nothing changes, nothing is granted
+	s.handleCommand(pl.p, "op mate")
 	s.handleCommand(pl.p, "ban tester griefing")
 	mu.Lock()
 	defer mu.Unlock()

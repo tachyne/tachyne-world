@@ -341,7 +341,7 @@ func TestParticleCommandByName(t *testing.T) {
 	settle(t, h, logs, "Q1")
 	a := linesBetween(logs["alice"], "", "Q1")
 	if !hasLine(a, "Displaying particle minecraft:flame") ||
-		!hasLine(a, "The particle minecraft:dust can't be shown yet: particles with options (or new in 26.x) have no way to the client") {
+		!hasLine(a, "Can't parse particle options: No key color in MapLike") { // dust needs its colour and scale
 		t.Errorf("replies: %q", a)
 	}
 	if particleByName["flame"] != 31 || particleByName["crit"] != 5 {
