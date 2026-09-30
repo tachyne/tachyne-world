@@ -55,7 +55,11 @@ const (
 // seafloorCol is a water column's floor: the first water cell and whether the
 // block under it can hold a plant.
 func (g *Generator) seafloorCol(wx, wz int) (floorY int, ok bool) {
-	col := g.columnAt(wx, wz)
+	return g.columnAt(wx, wz).seafloor()
+}
+
+// seafloor is seafloorCol on a column already in hand.
+func (col column) seafloor() (floorY int, ok bool) {
 	if col.h > SeaLevel-1 {
 		return 0, false // dry land
 	}

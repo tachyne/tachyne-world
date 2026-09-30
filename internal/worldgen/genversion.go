@@ -94,4 +94,19 @@ package worldgen
 // build left its ring hanging over the ground they had dug and built in. A
 // spring or pool with a build or a dug-out cell in its box is now left out
 // whole (every draw still made); only chunks near such a build change.
-const GenVersion = 25
+//
+// v26: four of vanilla's 26.3 placements, the new ones behind the build guard:
+//   - spring_lava_frozen: lava out of the snow, powder snow and packed ice
+//     of the frozen peaks, groves, jagged peaks and snowy slopes (its own
+//     draws); and no spring in the deep dark, asked at the spring's cell;
+//   - the desert's (every chunk), the badlands' (one in five) and the
+//     swamp's (one in three) own sugar cane patches, and the sparse
+//     jungle's melons (one in sixty-four), from their own stream — the plain
+//     cane patch leaves those biomes, and the dappled forest, to them, and
+//     pumpkins leave the dappled forest; the plain patches keep their draws,
+//     so no other feature in the chunk moves;
+//   - disk_grass on the mangrove swamp's mud, and no sand or gravel disks
+//     in either swamp;
+//   - igloos face one of four rotations — except an igloo a player has
+//     touched, which keeps its old layout.
+const GenVersion = 26

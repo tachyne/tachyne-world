@@ -75,8 +75,9 @@ func (g *Generator) decorateCaves(ch *Chunk, cx, cz int32) {
 	bg := g.newBuildGuard(cx, cz)
 	for dcx := int32(-1); dcx <= 1; dcx++ {
 		for dcz := int32(-1); dcz <= 1; dcz++ {
-			g.caveChunkFeatures(reg, cx+dcx, cz+dcz)
+			g.caveChunkFeatures(reg, bg, cx+dcx, cz+dcz)
 			g.overworldVegetation(reg, bg, cx+dcx, cz+dcz) // the surface patches (vegetation.go)
+			g.biomePatches(reg, bg, cx+dcx, cz+dcz)        // the single-biome cane and melon patches (patches.go)
 		}
 	}
 }
@@ -109,7 +110,7 @@ func (reg *owRegion) scanFor(x, y, z, dy, max int, target func(s uint32) bool) (
 func solid(s uint32) bool { return s != Air && !IsFluid(s) && Collides(s) }
 
 // caveChunkFeatures replays chunk (ncx, ncz)'s cave feature draws.
-func (g *Generator) caveChunkFeatures(reg *owRegion, ncx, ncz int32) {
+func (g *Generator) caveChunkFeatures(reg *owRegion, bg *buildGuard, ncx, ncz int32) {
 	ox, oz := int(ncx)*16, int(ncz)*16
 	r := newTreeRNG(g.seed^0xCA7E, ox, oz)
 	rangeY := func() int { return MinY + r.Intn(256-MinY+1) } // RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT
@@ -185,7 +186,7 @@ func (g *Generator) caveChunkFeatures(reg *owRegion, ncx, ncz int32) {
 	// in the jungles, the odd pumpkin — and the springs that seep out of
 	// stone walls, which is where a cave's water and lava come from.
 	g.overworldPatches(r, reg, ox, oz)
-	g.overworldSprings(r, reg, ox, oz)
+	g.overworldSprings(r, reg, bg, ox, oz)
 	// Surface mushrooms in the dark, and magma in the underwater caves.
 	g.overworldMushrooms(r, reg, ox, oz)
 	g.underwaterMagma(r, reg, ox, oz)

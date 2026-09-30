@@ -11,6 +11,12 @@ package worldgen
 // chunk, disk_clay and disk_gravel once each. DiskFeature then fills a circle
 // of the sampled radius, walking each column from halfHeight above the origin
 // down to halfHeight below it and replacing whatever the target set names.
+//
+// Each ends in the biome filter, asked at its origin: the swamp and the
+// mangrove swamp take the clay disk but neither sand nor gravel, and the
+// mangrove swamp has disk_grass of its own — its mud floor turned to grass
+// (dirt where anything stands on it or water covers it), which is where the
+// swamp's patches of solid ground come from.
 
 const diskSalt = 0x0D15C5
 
@@ -26,17 +32,32 @@ type diskSpec struct {
 	// becomes sandstone instead, so a disk on the lip of a drop does not
 	// crumble away the moment it is looked at.
 	overAir uint32
+	// notIn is the biomes whose feature lists leave the disk out.
+	notIn map[string]bool
+	// grassRule is disk_grass's state rule: grass where nothing solid and
+	// no water is over the cell, dirt otherwise.
+	grassRule bool
 }
+
+// noSandDisks is where vanilla's feature lists have no sand or gravel disk.
+var noSandDisks = biomeSet("swamp", "mangrove_swamp")
+
+// grassDisk is disk_grass: mud (or dirt) to grass, in the mangrove swamp.
+var grassDisk = diskSpec{block: GrassBlock, radiusLo: 2, radiusHi: 6, halfHeight: 2,
+	targets: []uint32{Dirt, Mud}, count: 1, grassRule: true}
+
+// diskGrassSalt seeds disk_grass's own draws, so the other disks keep theirs.
+const diskGrassSalt = 0x6A55D15C
 
 // diskFeatures is the three overworld disks, in vanilla's own feature order.
 func diskFeatures() []diskSpec {
 	return []diskSpec{
 		{block: Sand, radiusLo: 2, radiusHi: 6, halfHeight: 2,
-			targets: []uint32{Dirt, GrassBlock}, count: 3, overAir: Sandstone},
+			targets: []uint32{Dirt, GrassBlock}, count: 3, overAir: Sandstone, notIn: noSandDisks},
 		{block: Clay, radiusLo: 2, radiusHi: 3, halfHeight: 1,
 			targets: []uint32{Dirt, Clay}, count: 1},
 		{block: Gravel, radiusLo: 2, radiusHi: 5, halfHeight: 2,
-			targets: []uint32{Dirt, GrassBlock}, count: 1},
+			targets: []uint32{Dirt, GrassBlock}, count: 1, notIn: noSandDisks},
 	}
 }
 
@@ -54,6 +75,9 @@ func (g *Generator) decorateDisks(ch *Chunk, cx, cz int32) {
 	for ncx := cx - 1; ncx <= cx+1; ncx++ {
 		for ncz := cz - 1; ncz <= cz+1; ncz++ {
 			ox, oz := int(ncx)*16, int(ncz)*16
+			// disk_grass comes first in the mangrove swamp's list, from its
+			// own stream.
+			g.grassDiskAt(ox, oz, inChunk, at, put)
 			r := newTreeRNG(g.seed^diskSalt, ox, oz)
 			for _, spec := range diskFeatures() {
 				for i := 0; i < spec.count; i++ {
@@ -66,8 +90,9 @@ func (g *Generator) decorateDisks(ch *Chunk, cx, cz int32) {
 					// The column is asked of the GENERATOR, not of the chunk:
 					// eight origins in nine belong to a neighbour, whose cells
 					// this chunk cannot read.
-					y, ok := g.seafloorCol(x, z)
-					if !ok {
+					col := g.columnAt(x, z)
+					y, ok := col.seafloor()
+					if !ok || spec.notIn[col.biome.Name] {
 						continue
 					}
 					g.placeDisk(spec, radius, x, y, z, inChunk, at, put)
@@ -75,6 +100,26 @@ func (g *Generator) decorateDisks(ch *Chunk, cx, cz int32) {
 			}
 		}
 	}
+}
+
+// grassDiskAt replays origin chunk (ox, oz)'s disk_grass: in_square, the
+// OCEAN_FLOOR_WG heightmap one down — the floor block itself, which must be
+// mud — in the mangrove swamp. It is new in explored land, so a disk with a
+// player's build in its circle, up to a roof's reach above, is left out
+// whole.
+func (g *Generator) grassDiskAt(ox, oz int, inChunk func(x, z int) bool, at func(x, y, z int) uint32, put func(x, y, z int, s uint32)) {
+	r := newTreeRNG(g.seed^diskGrassSalt, ox, oz)
+	x, z := ox+r.Intn(16), oz+r.Intn(16)
+	radius := grassDisk.radiusLo + r.Intn(grassDisk.radiusHi-grassDisk.radiusLo+1)
+	col := g.columnAt(x, z)
+	if col.biome.Name != "minecraft:mangrove_swamp" || col.topBlock() != Mud {
+		return
+	}
+	y := col.h - 1
+	if g.builtIn(x-radius, y-grassDisk.halfHeight-1, z-radius, x+radius, y+buildRoofReach, z+radius) {
+		return
+	}
+	g.placeDisk(grassDisk, radius, x, y, z, inChunk, at, put)
 }
 
 // placeDisk is DiskFeature.place: a circle of the sampled radius, each column
@@ -98,6 +143,11 @@ func (g *Generator) placeDisk(spec diskSpec, radius, cx, cy, cz int,
 				s := spec.block
 				if spec.overAir != 0 && at(x, y-1, z) == Air {
 					s = spec.overAir
+				}
+				if spec.grassRule {
+					if above := at(x, y+1, z); solid(above) || IsWater(above) {
+						s = Dirt
+					}
 				}
 				put(x, y, z, s)
 			}

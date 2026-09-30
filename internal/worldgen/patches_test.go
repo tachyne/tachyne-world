@@ -40,6 +40,9 @@ func TestStoneVariantBlobsGenerate(t *testing.T) {
 	}
 }
 
+func waterStone(s uint32) bool { return springStone(s, false) }
+func lavaStone(s uint32) bool  { return springStone(s, true) }
+
 // The spring rule: stone above and below, and of the four sides plus the
 // floor exactly four stone with one way out.
 func TestSpringRule(t *testing.T) {
@@ -52,19 +55,19 @@ func TestSpringRule(t *testing.T) {
 			return Stone
 		}
 	}
-	if !springQualifies(world(map[[3]int]bool{{0, 0, 0}: true, {1, 0, 0}: true}), 0, 0, 0, false) {
+	if !springQualifies(world(map[[3]int]bool{{0, 0, 0}: true, {1, 0, 0}: true}), 0, 0, 0, waterStone) {
 		t.Error("an air cell in stone with one open side is a spring")
 	}
-	if springQualifies(world(map[[3]int]bool{{0, 0, 0}: true}), 0, 0, 0, false) {
+	if springQualifies(world(map[[3]int]bool{{0, 0, 0}: true}), 0, 0, 0, waterStone) {
 		t.Error("walled in on every side, the fluid has nowhere to go")
 	}
-	if springQualifies(world(map[[3]int]bool{{0, 0, 0}: true, {1, 0, 0}: true, {-1, 0, 0}: true}), 0, 0, 0, false) {
+	if springQualifies(world(map[[3]int]bool{{0, 0, 0}: true, {1, 0, 0}: true, {-1, 0, 0}: true}), 0, 0, 0, waterStone) {
 		t.Error("two ways out is a cave, not a spring")
 	}
-	if springQualifies(world(map[[3]int]bool{{0, 0, 0}: true, {1, 0, 0}: true, {0, -1, 0}: true}), 0, 0, 0, false) {
+	if springQualifies(world(map[[3]int]bool{{0, 0, 0}: true, {1, 0, 0}: true, {0, -1, 0}: true}), 0, 0, 0, waterStone) {
 		t.Error("nothing underneath: requires_block_below")
 	}
-	if springQualifies(world(map[[3]int]bool{{0, 0, 0}: true, {1, 0, 0}: true, {0, 1, 0}: true}), 0, 0, 0, false) {
+	if springQualifies(world(map[[3]int]bool{{0, 0, 0}: true, {1, 0, 0}: true, {0, 1, 0}: true}), 0, 0, 0, waterStone) {
 		t.Error("nothing above either")
 	}
 	// Lava springs take a shorter list of stone: no snow or ice.
@@ -79,10 +82,10 @@ func TestSpringRule(t *testing.T) {
 		}
 		return Stone
 	}
-	if springQualifies(snow, 0, 0, 0, true) {
+	if springQualifies(snow, 0, 0, 0, lavaStone) {
 		t.Error("lava does not spring from packed ice")
 	}
-	if !springQualifies(snow, 0, 0, 0, false) {
+	if !springQualifies(snow, 0, 0, 0, waterStone) {
 		t.Error("water does: packed ice is one of its valid blocks")
 	}
 }
@@ -159,7 +162,7 @@ func TestCanePatchNeedsWaterBeside(t *testing.T) {
 	// A dry column takes none.
 	before := ch.Sections
 	_ = before
-	g.canePatch(r, reg, 8, 8)
+	g.canePatch(r, reg, 8, 8, true)
 	dry := 0
 	for s := range ch.Sections {
 		for _, st := range ch.Sections[s] {
