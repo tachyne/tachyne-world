@@ -478,6 +478,12 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgEntityRemove, ev)
 	case attachproto.Chat:
 		send(attachproto.MsgChat, ev)
+	case attachproto.PlayerChat:
+		send(attachproto.MsgPlayerChat, ev)
+	case attachproto.PlayerInfoChat:
+		send(attachproto.MsgPlayerInfoChat, ev)
+	case attachproto.DeleteChat:
+		send(attachproto.MsgDeleteChat, ev)
 	case attachproto.AdvTree:
 		send(attachproto.MsgAdvTree, ev)
 	case attachproto.AdvProgress:
@@ -628,6 +634,7 @@ func emitUnhandled(ev any) {
 func (s *Server) adoptIdentity(p *player, id attach.Identity) {
 	p.bedrock = id.Edition == "bedrock"
 	p.ip = id.IP
+	p.playerChat = id.HasFeature(attachproto.FeaturePlayerChat)
 	for _, pr := range id.Props {
 		p.props = append(p.props, skinProperty{Name: pr.Name, Value: pr.Value, Signature: pr.Signature})
 	}

@@ -29,6 +29,12 @@ type player struct {
 
 	bedrock bool   // joined through the Bedrock gateway (Identity.Edition)
 	ip      string // the client's address, from the gateway (for /ban-ip)
+	// playerChat: the session's gateway renders PlayerChat (attach
+	// FeaturePlayerChat); others are sent player chat as Chat{Sender}.
+	playerChat bool
+	// chatSession is the validated secure-chat session (RemoteChatSession),
+	// set by the hub; nil until the gateway forwarded one.
+	chatSession atomic.Pointer[attachproto.ChatSession]
 
 	x, y, z    float64        // current position (this goroutine's copy, for streaming)
 	yaw, pitch float32        // current look angles
@@ -175,6 +181,11 @@ func isLifecycleFrame(ev any) bool {
 	switch e := ev.(type) {
 	case attachproto.EntityAdd, attachproto.EntityRemove,
 		attachproto.PlayerInfo, attachproto.PlayerInfoMode, attachproto.PlayerGone:
+		return true
+	case attachproto.PlayerChat, attachproto.PlayerInfoChat, attachproto.DeleteChat:
+		// Signed chat is a chain: a lost message — or one overtaken by the
+		// next — breaks the sender's chain on the recipient's client, and a
+		// lost session leaves every later message unverifiable.
 		return true
 	case attachproto.BlockAck:
 		// A dropped acknowledgement leaves the client showing its own guess
