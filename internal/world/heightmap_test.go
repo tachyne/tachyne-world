@@ -41,7 +41,12 @@ func TestStoredHeightmapsFollowEdits(t *testing.T) {
 	x, z := 5, 5
 	checkColumn(t, w, x, z, "generated")
 
+	// BlockBase is the first state, which for leaves is waterlogged — and a
+	// block holding water counts toward MOTION_BLOCKING_NO_LEAVES in 26.3.
 	leaves := worldgen.BlockBase("oak_leaves")
+	if info, ok := worldgen.InfoForState(leaves); ok {
+		leaves = worldgen.SetProperty(info, leaves, "waterlogged", "false")
+	}
 	torch := worldgen.BlockBase("torch")
 	w.SetBlock(x, 300, z, worldgen.Stone)
 	checkColumn(t, w, x, z, "stone at 300")
