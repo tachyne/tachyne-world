@@ -78,18 +78,15 @@ func TestEndCrystalRespawnsDragon(t *testing.T) {
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
 	h.rules.DragonDefeated = true
-	cy := worldgen.EndSurfaceY
-	for h.worldFor(dimEnd).At(0, cy, 0) != worldgen.Air && cy < worldgen.EndSurfaceY+8 {
-		cy++
-	}
-	pl.x, pl.y, pl.z = 8.5, float64(cy), 8.5
+	_, cy, _ := h.worldFor(dimEnd).Gen().EndExitPortal() // the podium's level: its rim is bedrock
+	pl.x, pl.y, pl.z = 8.5, float64(cy+1), 8.5
 	pl.p.setHotbarSlot(0, itemEndCrystal)
-	for _, d := range [4][2]int{{2, 0}, {-2, 0}, {0, 2}, {0, -2}} {
-		h.worldFor(dimEnd).SetBlock(d[0], cy-1, d[1], worldgen.Bedrock)
-		h.worldFor(dimEnd).SetBlock(d[0], cy, d[1], worldgen.Air)
+	for _, d := range [4][2]int{{3, 0}, {-3, 0}, {0, 3}, {0, -3}} {
+		h.worldFor(dimEnd).SetBlock(d[0], cy, d[1], worldgen.Bedrock)
 		h.worldFor(dimEnd).SetBlock(d[0], cy+1, d[1], worldgen.Air)
+		h.worldFor(dimEnd).SetBlock(d[0], cy+2, d[1], worldgen.Air)
 		pl.inv.slots[0] = invStack{item: itemEndCrystal, count: 1}
-		h.placeCrystal(players, evPlaceCrystal{eid: pl.p.eid, x: d[0], y: cy - 1, z: d[1]})
+		h.placeCrystal(players, evPlaceCrystal{eid: pl.p.eid, x: d[0], y: cy, z: d[1]})
 	}
 	if h.dragonRespawn == nil || h.dragon != nil {
 		t.Fatalf("four crystals should start the ceremony: respawn %v dragon %v crystals %d", h.dragonRespawn != nil, h.dragon != nil, len(h.crystals))

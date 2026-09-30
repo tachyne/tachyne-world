@@ -137,4 +137,9 @@ package worldgen
 //     floors, walls and ceilings, in place of the 85% floor carpet; planned
 //     per origin chunk, laid only on cells as the plan found them, a patch
 //     with a player's build or dig in its box rolled back.
+//   - the End's spikes as EndSpikeFeature lays them out from the seed
+//     (radius 2-5, height 76-103, two caged in iron bars, bedrock and fire
+//     under each crystal, obsidian to the floor), a spike a player touched
+//     keeping the old pillar; and the exit podium pre-placed, inactive, at
+//     the island's top unless someone built or dug round 0,0.
 const GenVersion = 26

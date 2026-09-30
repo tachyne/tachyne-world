@@ -81,10 +81,8 @@ func (h *hub) enterEnd(players map[int32]*tracked, arriving *tracked) {
 		}
 	}
 	log.Printf("end: dragon staged eid=%d at (%.0f,%.0f,%.0f)", m.eid, m.x, m.y, m.z)
-	for i := 0; i < worldgen.EndPillars; i++ {
-		px := worldgen.EndPillarRing * cosTurn(float64(i)/worldgen.EndPillars)
-		pz := worldgen.EndPillarRing * sinTurn(float64(i)/worldgen.EndPillars)
-		c := &crystal{eid: h.allocEID(), dim: dimEnd, x: px + 0.5, y: float64(worldgen.EndPillarTop(i)), z: pz + 0.5}
+	for _, sp := range h.worldFor(dimEnd).Gen().EndSpikes() {
+		c := &crystal{eid: h.allocEID(), dim: dimEnd, x: float64(sp.X) + 0.5, y: float64(sp.CrystalY()), z: float64(sp.Z) + 0.5}
 		binary.BigEndian.PutUint32(c.uuid[12:], uint32(c.eid))
 		h.crystals[c.eid] = c
 		for _, t := range players {
@@ -473,34 +471,40 @@ func (h *hub) dragonDefeated(players map[int32]*tracked) {
 	h.rules.DragonDefeated = true
 	h.rules.DragonHealth = 0 // the fight is over; nothing left to resume
 	h.saveRules()
-	cx, cy := 0, worldgen.EndSurfaceY
-	for h.worldFor(dimEnd).At(cx, cy, 0) != worldgen.Air && cy < worldgen.EndSurfaceY+8 {
-		cy++
-	}
-	// Exit portal: a bedrock dais with end-portal blocks and the egg on top.
-	for dx := -2; dx <= 2; dx++ {
-		for dz := -2; dz <= 2; dz++ {
-			if dx*dx+dz*dz > 5 {
-				continue
-			}
-			h.setBlockIn(players, 2, blockPos{dx, cy - 1, dz}, worldgen.Bedrock)
-			if dx*dx+dz*dz <= 2 && !(dx == 0 && dz == 0) {
-				h.setBlockIn(players, 2, blockPos{dx, cy, dz}, worldgen.EndPortalBlock)
-			}
-		}
-	}
-	h.setBlockIn(players, 2, blockPos{0, cy, 0}, worldgen.Bedrock)
+	// Exit portal: EndPodiumFeature, active, where the podium stands
+	// (EnderDragonFight.spawnExitPortal(true)).
+	ex, ey, ez := h.worldFor(dimEnd).Gen().EndExitPortal()
+	h.stampPodium(players, ex, ey, ez, true)
 	// EndDragonFight.setDragonKilled / EnderDragon.tickDeath: every kill
 	// opens a gateway, so a standing one means the dragon fell before. The
 	// egg comes only the first time, and the XP is 12000 then, 500 after.
 	// There is no elytra: that is the End ships' loot.
 	// The experience fell during tickDeath.
 	if h.endGatewaysOpen() == 0 {
-		h.setBlockIn(players, 2, blockPos{0, cy + 1, 0}, worldgen.DragonEgg)
+		// On the MOTION_BLOCKING top at the podium: over the pillar.
+		h.setBlockIn(players, 2, blockPos{ex, ey + 4, ez}, worldgen.DragonEgg)
 	}
 	h.spawnNextEndGateway(players)
 	for _, t := range players {
 		t.p.trySendEv(chatEv("The Ender Dragon has fallen!"))
+	}
+}
+
+// stampPodium places EndPodiumFeature (active: the open exit portal;
+// inactive: closed) at (x, y, z) in the End, cell by cell, changing only
+// what differs.
+func (h *hub) stampPodium(players map[int32]*tracked, x, y, z int, active bool) {
+	w := h.worldFor(dimEnd)
+	cells := worldgen.EndPodium(x, y, z, active)
+	last := map[blockPos]int{} // later cells win (the pillar over the bowl)
+	for i, c := range cells {
+		last[blockPos{c.X, c.Y, c.Z}] = i
+	}
+	for i, c := range cells {
+		pos := blockPos{c.X, c.Y, c.Z}
+		if last[pos] == i && w.At(c.X, c.Y, c.Z) != c.State {
+			h.setBlockIn(players, 2, pos, c.State)
+		}
 	}
 }
 

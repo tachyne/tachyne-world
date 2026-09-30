@@ -20,13 +20,10 @@ func TestDragonRespawnCeremony(t *testing.T) {
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
 	h.rules.DragonDefeated = true
-	cy := worldgen.EndSurfaceY
-	for h.worldFor(dimEnd).At(0, cy, 0) != worldgen.Air && cy < worldgen.EndSurfaceY+8 {
-		cy++
-	}
-	h.worldFor(dimEnd).SetBlock(1, cy, 0, worldgen.EndPortalBlock) // an open portal cell
-	for _, d := range [4][2]int{{2, 0}, {-2, 0}, {0, 2}, {0, -2}} {
-		c := &crystal{eid: h.allocEID(), dim: dimEnd, x: float64(d[0]) + 0.5, y: float64(cy), z: float64(d[1]) + 0.5}
+	_, cy, _ := h.worldFor(dimEnd).Gen().EndExitPortal()
+	h.worldFor(dimEnd).SetBlock(1, cy, 0, worldgen.EndPortalBlock)  // an open portal cell
+	for _, d := range [4][2]int{{3, 0}, {-3, 0}, {0, 3}, {0, -3}} { // on the podium's rim
+		c := &crystal{eid: h.allocEID(), dim: dimEnd, x: float64(d[0]) + 0.5, y: float64(cy + 1), z: float64(d[1]) + 0.5}
 		binary.BigEndian.PutUint32(c.uuid[12:], uint32(c.eid))
 		h.crystals[c.eid] = c
 	}
@@ -34,8 +31,8 @@ func TestDragonRespawnCeremony(t *testing.T) {
 	if h.dragonRespawn == nil || h.dragon != nil {
 		t.Fatal("the ceremony should be under way, the dragon not yet back")
 	}
-	if h.worldFor(dimEnd).At(1, cy, 0) != worldgen.Bedrock {
-		t.Fatal("the portal closes for the ceremony")
+	if h.worldFor(dimEnd).At(1, cy, 0) != worldgen.Air {
+		t.Fatal("the portal closes for the ceremony (the inactive podium: air inside the rim)")
 	}
 	if len(h.crystals) != 4 {
 		t.Fatalf("the four crystals stay through the ceremony: %d", len(h.crystals))

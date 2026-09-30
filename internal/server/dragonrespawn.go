@@ -58,16 +58,11 @@ func (h *hub) dragonRoar(players map[int32]*tracked) {
 	h.toDimEv(players, 2, attachproto.WorldFX{Event: worldEventDragonRoar, X: 0, Y: respawnSkyY, Z: 0})
 }
 
-// startDragonRespawn is respawnDragon: the portal closes (its end-portal
-// blocks turn to bedrock, spawnExitPortal(false)) and the ceremony begins.
+// startDragonRespawn is respawnDragon: the portal closes (the inactive
+// podium, spawnExitPortal(false)) and the ceremony begins.
 func (h *hub) startDragonRespawn(players map[int32]*tracked, found []*crystal, daisY int) {
-	for dx := -2; dx <= 2; dx++ {
-		for dz := -2; dz <= 2; dz++ {
-			if h.worldFor(dimEnd).At(dx, daisY, dz) == worldgen.EndPortalBlock {
-				h.setBlockIn(players, 2, blockPos{dx, daisY, dz}, worldgen.Bedrock)
-			}
-		}
-	}
+	ex, _, ez := h.worldFor(dimEnd).Gen().EndExitPortal()
+	h.stampPodium(players, ex, daisY, ez, false) // spawnExitPortal(false): the portal's cells go to air
 	h.dragonRespawn = &dragonRespawn{stage: respawnStart, crystals: found, daisY: daisY}
 }
 
@@ -103,15 +98,15 @@ func (h *hub) tickDragonRespawn(players map[int32]*tracked) {
 		}
 	case respawnPillars:
 		i := n / 40
-		if i >= worldgen.EndPillars {
+		spikes := h.worldFor(dimEnd).Gen().EndSpikes()
+		if i >= len(spikes) {
 			if n%40 == 0 {
 				r.setStage(respawnDragon)
 			}
 			return
 		}
-		px := int(math.Floor(worldgen.EndPillarRing * cosTurn(float64(i)/worldgen.EndPillars)))
-		pz := int(math.Floor(worldgen.EndPillarRing * sinTurn(float64(i)/worldgen.EndPillars)))
-		top := worldgen.EndPillarTop(i)
+		px, pz := spikes[i].X, spikes[i].Z
+		top := spikes[i].CrystalY()
 		switch n % 40 {
 		case 0:
 			t := blockPos{px, top + 1, pz}

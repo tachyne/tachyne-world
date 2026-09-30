@@ -1,6 +1,9 @@
 package worldgen
 
-import "math"
+import (
+	"math"
+	"sync"
+)
 
 const (
 	MinY         = -64
@@ -54,6 +57,11 @@ type Generator struct {
 	// editsIn walks one chunk's edits (world coordinates): the region form of
 	// editAt, for the build guard's area checks (buildguard.go).
 	editsIn func(cx, cz int32, fn func(x, y, z int, state uint32))
+
+	// spikes is the End's pillar layout (EndSpikes), worked out on first use
+	// from the seed and the build guard; spikeMu guards it.
+	spikeMu sync.Mutex
+	spikes  []EndSpike
 }
 
 // SetCeiling raises the world ceiling to maxY (exclusive top build limit,
@@ -74,12 +82,14 @@ func (g *Generator) SetCeiling(maxY int) {
 func (g *Generator) SetEditLookup(f func(x, y, z int) (uint32, bool)) {
 	g.editAt = f
 	forgetRooms(g)
+	g.forgetEndSpikes()
 }
 
 // SetEditRegion gives generation the per-chunk edit walk (see editsIn).
 func (g *Generator) SetEditRegion(f func(cx, cz int32, fn func(x, y, z int, state uint32))) {
 	g.editsIn = f
 	forgetRooms(g) // the dungeons' build guard read the old overlay
+	g.forgetEndSpikes()
 }
 
 // SectionCount is the world's column height in 16-block sections.
