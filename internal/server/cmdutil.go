@@ -125,7 +125,8 @@ func (h *hub) commandEntities(players map[int32]*tracked, by int32, arg string) 
 	}
 	// One selection over players and mobs together, so a sort and a limit
 	// apply across both (@e[limit=1,sort=nearest] is one entity).
-	return h.selectEntities(players, players[by], spec, true, spec.selectsEntities())
+	from := players[by]
+	return h.selectEntities(players, from, spec, true, reachesEntities(spec, from))
 }
 
 // jDouble formats a double the way Java's Double.toString does, which is how

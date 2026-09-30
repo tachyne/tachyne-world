@@ -293,6 +293,12 @@ func (spec targetSpec) selectsEntities() bool {
 	return spec.kind == 'e' && spec.etype != "player"
 }
 
+// reachesEntities is selectsEntities for a selector read from `from`: an
+// /execute source's @s may be any entity, not only a player.
+func reachesEntities(spec targetSpec, from *tracked) bool {
+	return spec.selectsEntities() || (spec.kind == 's' && from != nil && from.p.exec != nil)
+}
+
 // selectPlayers resolves a spec against the online players, from the point of
 // view of `from` (which may be nil for a console-ish caller).
 func (h *hub) selectPlayers(players map[int32]*tracked, from *tracked, spec targetSpec) []*tracked {
@@ -328,13 +334,23 @@ func (h *hub) selectEntitiesAll(players map[int32]*tracked, from *tracked, spec 
 	case 0: // a plain name: that online player (PlayerList.getPlayerByName ignores case)
 		if withPlayers {
 			for _, t := range players {
-				if strings.EqualFold(t.p.name, spec.name) {
+				if t.p.exec == nil && strings.EqualFold(t.p.name, spec.name) {
 					out = append(out, cmdEntity{t: t})
 				}
 			}
 		}
 		return out
 	case 's':
+		if from != nil && from.p.exec != nil {
+			// An /execute source: @s is its executor, whatever kind of
+			// entity that is, or nothing at all (execute.go).
+			if en, ok := h.execSelf(players, from.p.exec.self); ok &&
+				((en.t != nil && withPlayers) || (en.m != nil && withMobs) || (en.o != nil && withOthers)) &&
+				h.specMatches(spec, en, from) {
+				out = append(out, en)
+			}
+			return out
+		}
 		if withPlayers && from != nil && h.specMatches(spec, cmdEntity{t: from}, from) {
 			out = append(out, cmdEntity{t: from})
 		}
@@ -342,7 +358,8 @@ func (h *hub) selectEntitiesAll(players map[int32]*tracked, from *tracked, spec 
 	}
 	if withPlayers && !(spec.kind == 'e' && spec.etype != "" && spec.etype != "player") {
 		for _, t := range players {
-			if h.specMatches(spec, cmdEntity{t: t}, from) {
+			// /execute's stand-ins and the console are sources, not entities.
+			if t.p.exec == nil && t != h.console && h.specMatches(spec, cmdEntity{t: t}, from) {
 				out = append(out, cmdEntity{t: t})
 			}
 		}
@@ -740,7 +757,7 @@ func (h *hub) commandTargets(players map[int32]*tracked, by int32, arg string) [
 // commandMobs resolves a command's target argument to mobs (only @e does).
 func (h *hub) commandMobs(players map[int32]*tracked, by int32, arg string) []*mob {
 	spec, ok := parseTargetSpec(arg)
-	if !ok || !spec.selectsEntities() {
+	if !ok || !reachesEntities(spec, players[by]) {
 		return nil
 	}
 	return h.selectMobs(players[by], spec)
@@ -750,7 +767,7 @@ func (h *hub) commandMobs(players map[int32]*tracked, by int32, arg string) []*m
 // picks (only @e does).
 func (h *hub) commandOthers(players map[int32]*tracked, by int32, arg string) []*otherEnt {
 	spec, ok := parseTargetSpec(arg)
-	if !ok || !spec.selectsEntities() {
+	if !ok || !reachesEntities(spec, players[by]) {
 		return nil
 	}
 	var out []*otherEnt
@@ -928,6 +945,7 @@ func (h *hub) onTeleportTargets(players map[int32]*tracked, e evTeleportTargets)
 	if moved > 1 {
 		name = fmt.Sprintf("%d entities", moved)
 	}
+	setCmdResult(me.p, moved) // TeleportCommand returns how many it moved
 	if where != "" {
 		h.cmdSuccess(players, me.p, fmt.Sprintf("Teleported %s to %s", name, where), true)
 	} else {

@@ -29,7 +29,7 @@ var cmdPermission = map[string]int{
 	"advancement": permGamemasters, "attribute": permGamemasters, "bossbar": permGamemasters,
 	"clear": permGamemasters, "clone": permGamemasters, "damage": permGamemasters,
 	"defaultgamemode": permGamemasters, "difficulty": permGamemasters, "effect": permGamemasters,
-	"enchant": permGamemasters, "experience": permGamemasters, "xp": permGamemasters,
+	"enchant": permGamemasters, "execute": permGamemasters, "experience": permGamemasters, "xp": permGamemasters,
 	"fetchprofile": permGamemasters, "fill": permGamemasters, "forceload": permGamemasters,
 	"gamemode": permGamemasters, "gm": permGamemasters, "gamerule": permGamemasters,
 	"give": permGamemasters, "item": permGamemasters, "kill": permGamemasters,
@@ -107,6 +107,11 @@ func (s *Server) opPermissionLevel() int {
 func (s *Server) opLevel(name string) int {
 	if name == consoleName {
 		return permOwners
+	}
+	if v, ok := s.execLevels.Load(name); ok { // an /execute source keeps its runner's level (execute.go)
+		if lvl, ok := v.(int); ok {
+			return lvl
+		}
 	}
 	lvl := permAll
 	if s.Ops[name] {

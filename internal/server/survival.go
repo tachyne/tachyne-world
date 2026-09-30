@@ -653,7 +653,7 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 		if h.rules.ShowDeathMsgs { // gamerule showDeathMessages
 			body := msg.chat()
 			for _, o := range players {
-				if h.deathMessageReaches(t.p.name, o.p.name) { // the team's deathMessageVisibility
+				if o.p.exec == nil && h.deathMessageReaches(t.p.name, o.p.name) { // the team's deathMessageVisibility
 					o.p.trySendEv(body)
 				}
 			}

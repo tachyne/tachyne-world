@@ -275,6 +275,7 @@ func (h *hub) onGive(players map[int32]*tracked, e evGive) {
 	if st.item == 0 {
 		st = invStack{item: e.item}
 	}
+	setCmdResult(by, len(targets)) // GiveCommand returns the target count
 	if len(targets) == 1 {
 		h.cmdSuccess(players, by, fmt.Sprintf("Gave %d %s to %s", e.count, stackDisplay(st), targets[0].p.name), true)
 	} else {
@@ -463,6 +464,9 @@ func (h *hub) onKill(players map[int32]*tracked, e evKill) {
 		return
 	}
 	name := ens[0].name()
+	if t := players[e.by]; t != nil {
+		setCmdResult(t.p, len(ens)) // KillCommand returns how many it killed
+	}
 	for _, en := range ens {
 		switch {
 		case en.t != nil:

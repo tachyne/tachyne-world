@@ -458,7 +458,9 @@ func (h *hub) endRaid(players map[int32]*tracked, r *raid) {
 // broadcastChat sends a system message to every connected player.
 func (h *hub) broadcastChat(players map[int32]*tracked, text string) {
 	for _, t := range players {
-		t.p.trySendEv(chatEv(text))
+		if t.p.exec == nil { // not an /execute stand-in (execute.go)
+			t.p.trySendEv(chatEv(text))
+		}
 	}
 }
 

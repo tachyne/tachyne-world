@@ -285,7 +285,9 @@ func (h *hub) commandEntitiesAll(players map[int32]*tracked, by int32, arg strin
 	if !ok {
 		return nil
 	}
-	return h.selectEntitiesAll(players, players[by], spec, true, spec.selectsEntities(), spec.selectsEntities())
+	from := players[by]
+	wide := reachesEntities(spec, from)
+	return h.selectEntitiesAll(players, from, spec, true, wide, wide)
 }
 
 // ---- nbt= -----------------------------------------------------------------

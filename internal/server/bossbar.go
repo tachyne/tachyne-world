@@ -229,8 +229,10 @@ func (h *hub) bossbarCommand(players map[int32]*tracked, t *tracked, args []stri
 		}
 		switch args[2] {
 		case "value":
+			setCmdResult(t.p, b.Value)
 			ok(fmt.Sprintf("Custom bossbar %s has a value of %d", b.displayName(), b.Value))
 		case "max":
+			setCmdResult(t.p, b.Max)
 			ok(fmt.Sprintf("Custom bossbar %s has a maximum of %d", b.displayName(), b.Max))
 		case "visible":
 			if b.Visible {
