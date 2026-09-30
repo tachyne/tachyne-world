@@ -202,7 +202,17 @@ func TestSparseJungleMelons(t *testing.T) {
 		}
 		return
 	}
-	sm, sn := count("minecraft:sparse_jungle")
+	// One origin in sixty-four makes a patch, so a few dozen chunks deep in
+	// the biome often hold none: the positive side replays each chunk's own
+	// origin over a few hundred sparse-jungle chunks instead.
+	sm, sn := 0, 0
+	for _, p := range findBiomeChunks(g, "minecraft:sparse_jungle", 400) {
+		ch := wetChunk(g, p[0], p[1])
+		reg := &owRegion{g: g, ch: ch, baseX: int(p[0]) * 16, baseZ: int(p[1]) * 16, cols: map[[2]int]column{}}
+		g.biomePatches(reg, nil, p[0], p[1])
+		sm += chunkStateCount(ch, melon)
+		sn++
+	}
 	jm, jn := count("minecraft:jungle")
 	t.Logf("melons: sparse jungle %d over %d chunks, jungle %d over %d", sm, sn, jm, jn)
 	if sn > 0 && sm == 0 {
