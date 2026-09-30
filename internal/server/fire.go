@@ -441,6 +441,14 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 			if isTNT(st) && h.primeTNTBy(players, dim, pos.x, pos.y, pos.z, 10+h.rng.Intn(20), cfg.causer) != nil {
 				continue // chain reaction: lit, not vaporized (owned by the blast's cause); with tnt_explodes off it just goes
 			}
+			if isCreakingHeartBlock(st) {
+				// CreakingHeartBlock.onExplosionHit, before the block goes.
+				var by *tracked
+				if t := players[cfg.causer]; t != nil && !cfg.causerMob {
+					by = t
+				}
+				h.heartExplosionHit(players, dim, pos, st, by)
+			}
 			h.setBlockAt(players, dim, pos, worldgen.Air)
 			h.scheduleIn(dim, pos, 1)
 			h.dropExploded(players, dim, pos, st, radius, kind)

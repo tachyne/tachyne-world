@@ -84,6 +84,9 @@ func (h *hub) runSimUpdates(players map[int32]*tracked, age uint64) {
 	delete(h.pending, age)
 	if len(due) > maxUpdatesPerTick {
 		h.pending[age+1] = append(h.pending[age+1], due[maxUpdatesPerTick:]...)
+		for _, sp := range due[maxUpdatesPerTick:] {
+			h.fluidTickMoved(sp, age, age+1)
+		}
 		due = due[:maxUpdatesPerTick]
 	}
 	// Dedupe: a position scheduled several times for this tick (scheduleAround
@@ -107,6 +110,7 @@ func (h *hub) runSimUpdates(players map[int32]*tracked, age uint64) {
 		// instead of generating a chunk here on the hub.
 		if !h.canTickBlocksAt(sp) {
 			h.pending[age+unloadedRetry] = append(h.pending[age+unloadedRetry], sp)
+			h.fluidTickMoved(sp, age, age+unloadedRetry)
 			continue
 		}
 		h.processUpdate(players, sp.dim, sp.blockPos)
@@ -124,6 +128,10 @@ func (h *hub) canTickBlocksAt(sp simPos) bool {
 }
 
 func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
+	// A fluid tick due here runs the fluid (FlowingFluid.tick); any other
+	// update reaching a fluid is a neighbour's change, which only schedules
+	// that tick (LiquidBlock.neighborChanged / updateShape).
+	ft := h.takeFluidTick(dim, pos)
 	if !h.inWorldY(pos.y) {
 		return
 	}
@@ -155,9 +163,17 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		// column, so the water a collapse leaves runs into the cell a piston
 		// or a pickaxe emptied under it.
 		h.updateBubbleColumn(players, dim, pos)
-		h.updateFluid(players, dim, pos, h.worldFor(dim).Block(pos.x, pos.y, pos.z))
+		if now := h.worldFor(dim).Block(pos.x, pos.y, pos.z); ft && worldgen.IsFluid(now) {
+			h.updateFluid(players, dim, pos, now)
+		} else if worldgen.IsBubbleColumn(now) {
+			h.scheduleFluidTick(dim, pos, waterDelay) // a column that stays: its water's tick
+		}
 	case worldgen.IsFluid(state):
-		h.updateFluid(players, dim, pos, state)
+		if ft {
+			h.updateFluid(players, dim, pos, state)
+		} else {
+			h.liquidOnPlace(players, dim, pos, state)
+		}
 	case state == soulFire:
 		// SoulFireBlock has no tick: it burns while its soul block stays
 		// (canSurvive, which the support sweep answers), never ageing out.
@@ -182,6 +198,10 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		// A full composter finishes composting a second after its last item.
 	case h.tickDripleaf(players, dim, pos, state):
 		// A big dripleaf tipping under a load, or pinned flat by a signal.
+	case isCreakingHeartBlock(state):
+		// CreakingHeartBlock.updateShape schedules the heart's tick a tick
+		// out: an uprooted heart whose logs are back takes root.
+		h.creakingHeartTick(players, dim, pos, state)
 	case isPotentSulfur(state):
 		// A neighbour changed without a shape update of its own (a bucket's
 		// water, a live edit): the vent re-derives its state.
@@ -197,8 +217,14 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 	// it — dispatched in the switch above, it took the place of a dripleaf's
 	// tilt, a trapdoor's or rail's redstone and a rod's power, and a
 	// waterlogged leaf's distance update kept its water still.
+	// Its neighbour's change only schedules that water tick, five ticks out,
+	// as a waterlogged block's updateShape does.
 	if now := h.worldFor(dim).Block(pos.x, pos.y, pos.z); worldgen.IsWaterlogged(now) && !worldgen.IsFluid(now) {
-		h.updateFluid(players, dim, pos, now)
+		if ft {
+			h.updateFluid(players, dim, pos, now)
+		} else {
+			h.scheduleFluidTick(dim, pos, waterDelay)
+		}
 	}
 }
 
@@ -247,6 +273,11 @@ func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, stat
 			if _, ok := h.rsDue[simPos{dim: dim, blockPos: pos}]; !ok {
 				h.inDim(dim, func() { h.rsSchedule(pos, 1) })
 			}
+		}
+		// LiquidBlock.onPlace, last: a water or lava state written here
+		// schedules its fluid tick, or — lava meeting water — sets solid.
+		if isLiquidBlock(state) {
+			h.liquidOnPlace(players, dim, pos, state)
 		}
 	}
 	// Break the fence and the knot goes with it, dropping whatever it held.
@@ -310,7 +341,7 @@ func (h *hub) updateFluid(players map[int32]*tracked, dim int, pos blockPos, sta
 	// (source) / cobblestone (flowing); a water cell wakes adjacent lava so it
 	// can solidify on its own tick.
 	if !water {
-		if h.lavaSolidify(players, dim, pos, level) {
+		if h.lavaMeetsWater(players, dim, pos, state) {
 			return
 		}
 	} else {
@@ -330,8 +361,9 @@ func (h *hub) updateFluid(players map[int32]*tracked, dim int, pos blockPos, sta
 	if level != 0 {
 		ns, ok := h.getNewLiquid(dim, pos, water, base, dropOff)
 		if !ok {
+			// setBlockAndUpdate: the neighbours hear the cell go.
 			h.setBlockAt(players, dim, pos, worldgen.Air)
-			h.scheduleAroundIn(dim, pos, delay)
+			h.liquidNotifyNeighbors(players, dim, pos)
 			return
 		}
 		if ns != state {
@@ -344,10 +376,11 @@ func (h *hub) updateFluid(players map[int32]*tracked, dim int, pos blockPos, sta
 			if !water && level < 8 && newLevel < 8 && newLevel < level && h.rng.Intn(4) != 0 {
 				self = delay * 4
 			}
-			h.scheduleIn(dim, pos, self)
-			for _, d := range allNeighbors {
-				h.scheduleIn(dim, blockPos{pos.x + d.x, pos.y + d.y, pos.z + d.z}, delay)
-			}
+			// The write's own onPlace has already asked for the usual delay,
+			// and a cell keeps the first tick it is given, so in practice
+			// the longer wait never lands — vanilla's order, kept.
+			h.scheduleFluidTick(dim, pos, self)
+			h.liquidNotifyNeighbors(players, dim, pos)
 			state, level = ns, newLevel
 		}
 	}
@@ -358,14 +391,14 @@ func (h *hub) updateFluid(players map[int32]*tracked, dim int, pos blockPos, sta
 	if !water && h.inWorldY(below.y) && worldgen.IsWater(belowB) {
 		h.setBlockAt(players, dim, below, worldgen.Stone) // lava landing on water → stone
 		h.fizz(players, dim, below)
-		h.scheduleAroundIn(dim, below, delay)
+		h.liquidNotifyNeighbors(players, dim, below)
 		return
 	}
 	// Flow straight down into an open cell (never into existing same-fluid — that
 	// cell turns to falling on its own tick via getNewLiquid's "fluid above" rule).
 	if h.inWorldY(below.y) && fluidPassable(belowB) && !same(belowB) && worldgen.FluidPassesFace(worldgen.FaceDown, state, belowB) {
 		h.fluidInto(players, dim, below, base+8, water) // falling
-		h.scheduleIn(dim, below, delay)
+		h.scheduleFluidTick(dim, below, delay)
 		if water {
 			h.wakePowder(dim, below) // flowing water solidifies concrete powder it reaches
 		}
@@ -506,7 +539,7 @@ func (h *hub) spreadSides(players map[int32]*tracked, dim int, pos blockPos, bas
 	for _, d := range h.flowDirections(dim, pos, slopeFind) {
 		np := blockPos{pos.x + d.x, pos.y, pos.z + d.z}
 		h.fluidInto(players, dim, np, out, waterFlow)
-		h.scheduleIn(dim, np, delay)
+		h.scheduleFluidTick(dim, np, delay)
 		if waterFlow {
 			h.wakePowder(dim, np) // flowing water solidifies concrete powder beside it
 		}
@@ -517,25 +550,6 @@ func (h *hub) spreadSides(players map[int32]*tracked, dim int, pos blockPos, bas
 // up plus the four horizontals (the opposites of lava's flow directions, per
 // LiquidBlock.POSSIBLE_FLOW_DIRECTIONS).
 var lavaContactDirs = [5]blockPos{{0, 1, 0}, {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}}
-
-// lavaSolidify turns a lava block that water is touching into obsidian (source,
-// level 0) or cobblestone (flowing). Returns true if it solidified.
-func (h *hub) lavaSolidify(players map[int32]*tracked, dim int, pos blockPos, level int) bool {
-	for _, d := range lavaContactDirs {
-		n := blockPos{pos.x + d.x, pos.y + d.y, pos.z + d.z}
-		if worldgen.IsWater(h.worldFor(dim).Block(n.x, n.y, n.z)) {
-			block := worldgen.Cobblestone
-			if level == 0 {
-				block = worldgen.Obsidian
-			}
-			h.setBlockAt(players, dim, pos, block)
-			h.fizz(players, dim, pos)
-			h.scheduleAroundIn(dim, pos, 1)
-			return true
-		}
-	}
-	return false
-}
 
 // fizz is LiquidBlock/LavaFluid.fizz: level event 1501 where a fluid
 // solidified — the quench's hiss and its smoke.

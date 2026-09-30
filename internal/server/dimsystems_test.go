@@ -260,11 +260,17 @@ func TestNetherVillagerOpensNetherDoor(t *testing.T) {
 // heartTrunk stands a pale oak trunk with a heart in it along the given axis
 // delta and places the heart through the block-change entry point.
 func heartTrunk(h *hub, players map[int32]*tracked, w *world.World, dim int, pos blockPos, dx, dy, dz int, heart uint32) {
+	// The logs lie along the trunk (hasRequiredLogs wants their axis to be
+	// the heart's): pale_oak_log's states run axis x, y, z.
+	logState := worldgen.BlockBase("pale_oak_log") + uint32(dy+2*dz)
 	for i := -2; i <= 2; i++ {
-		w.SetBlock(pos.x+dx*i, pos.y+dy*i, pos.z+dz*i, worldgen.PaleOakLog)
+		w.SetBlock(pos.x+dx*i, pos.y+dy*i, pos.z+dz*i, logState)
 	}
 	w.SetBlock(pos.x, pos.y, pos.z, heart)
 	h.onBlock(players, evBlock{dim: dim, x: pos.x, y: pos.y, z: pos.z, state: heart})
+	// The trunk closing round it is a neighbour change: the heart's
+	// updateShape tick has it take root.
+	h.processUpdate(players, dim, pos)
 }
 
 // A heart built in the Nether registers and ticks there, but CREAKING_ACTIVE

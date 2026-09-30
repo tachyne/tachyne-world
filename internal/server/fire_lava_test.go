@@ -97,11 +97,12 @@ func TestNetherLavaRunsFarther(t *testing.T) {
 	}
 }
 
-// LavaFluid.getSpreadDelay: a flowing lava cell that rises waits four times
-// as long for its own next tick, three times in four.
-func TestRisingLavaWaitsLonger(t *testing.T) {
-	slow, n := 0, 80
-	for i := 0; i < n; i++ {
+// LavaFluid.getSpreadDelay asks a rising flow to wait four times as long,
+// three times in four — but the tick's own write runs LiquidBlock.onPlace
+// first, which schedules the usual 30, and a cell keeps the first fluid
+// tick it is given. So a rise waits 30, every time, as vanilla's does.
+func TestRisingLavaKeepsOnPlaceTick(t *testing.T) {
+	for i := 0; i < 20; i++ {
 		h := newTestHub(world.New(1))
 		h.world.ForceLoad(0, 0, 1)
 		h.rng.Seed(int64(i))
@@ -120,22 +121,10 @@ func TestRisingLavaWaitsLonger(t *testing.T) {
 		if got := worldgen.FluidLevel(h.world.At(1, y, 0), worldgen.LavaBase); got != 2 {
 			t.Fatalf("the flow went to level %d, want 2", got)
 		}
-		first := uint64(1 << 62)
-		for due, list := range h.pending {
-			for _, sp := range list {
-				if sp.blockPos == (blockPos{1, y, 0}) && due < first {
-					first = due
-				}
-			}
+		due, ok := h.fluidTicks[simPos{0, blockPos{1, y, 0}}]
+		if !ok || due-now != uint64(lavaDelay) {
+			t.Fatalf("seed %d: the risen flow's fluid tick is due in %d (pending %v), want %d", i, due-now, ok, lavaDelay)
 		}
-		if first-now == 4*uint64(lavaDelay) {
-			slow++
-		} else if first-now != uint64(lavaDelay) {
-			t.Fatalf("next tick in %d, want %d or %d", first-now, lavaDelay, 4*lavaDelay)
-		}
-	}
-	if slow < n/2 || slow == n {
-		t.Fatalf("%d of %d rises waited four times as long, want about three in four", slow, n)
 	}
 }
 

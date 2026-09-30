@@ -19,7 +19,19 @@ func TestInfiniteWaterSource(t *testing.T) {
 		w.SetBlock(10, y, 0, src)
 		w.SetBlock(12, y, 0, src)
 		w.SetBlock(11, y, 0, worldgen.WaterBase+1) // flowing between two sources
-		h.processUpdate(h.playersRef, 0, blockPos{11, y, 0})
+		mid := blockPos{11, y, 0}
+		// A neighbour's update only asks for the fluid tick; the tick recomputes.
+		h.processUpdate(h.playersRef, 0, mid)
+		if got := w.Block(11, y, 0); got != worldgen.WaterBase+1 {
+			t.Errorf("a neighbour update ran the fluid at once: middle cell = %d", got-worldgen.WaterBase)
+		}
+		due, ok := h.fluidTicks[simPos{0, mid}]
+		if !ok {
+			t.Error("the neighbour update scheduled no fluid tick")
+			return
+		}
+		h.tick.Store(due)
+		h.processUpdate(h.playersRef, 0, mid)
 		if got := w.Block(11, y, 0); got != src {
 			t.Errorf("middle cell = %d, want source %d (infinite water)", got-worldgen.WaterBase, 0)
 		}

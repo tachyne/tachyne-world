@@ -59,7 +59,7 @@ func (h *hub) placeMoving(players map[int32]*tracked, pos blockPos, moving uint3
 	h.rsSet(players, pos, moving)
 	mb.due = h.tick.Load() + movingPistonTicks
 	key := simPos{dim: h.rsDim, blockPos: pos}
-	h.movingBlocks[key] = mb
+	h.putMoving(key, mb)
 	h.movingOrder = append(h.movingOrder, key)
 	h.toNearbyEv(players, h.rsDim, float64(pos.x), float64(pos.z), h.movingFrame(pos, mb))
 }
@@ -91,7 +91,7 @@ func (h *hub) landMovingBlocks(players map[int32]*tracked, age uint64) {
 			if isMovingPiston(h.rsWorld().At(key.x, key.y, key.z)) {
 				h.finishMoving(players, key.blockPos)
 			} else {
-				delete(h.movingBlocks, key) // the cell was broken meanwhile
+				h.dropMoving(key) // the cell was broken meanwhile
 			}
 		})
 	}
@@ -148,7 +148,7 @@ func (h *hub) finishMoving(players map[int32]*tracked, pos blockPos) {
 	if ok && h.tick.Load() < mb.due {
 		return
 	}
-	delete(h.movingBlocks, key)
+	h.dropMoving(key)
 	final := uint32(worldgen.Air)
 	if ok {
 		final = landedStateOf(landingShape(h.rsWorld(), pos, mb.moved))
@@ -174,7 +174,7 @@ func (h *hub) finalTickMoving(players map[int32]*tracked, pos blockPos) bool {
 	if !ok || !isMovingPiston(h.rsWorld().At(pos.x, pos.y, pos.z)) {
 		return false
 	}
-	delete(h.movingBlocks, key)
+	h.dropMoving(key)
 	if mb.source {
 		h.rsSet(players, pos, worldgen.Air)
 	} else {
@@ -199,6 +199,27 @@ func (h *hub) rodOnPlace(pos blockPos, state uint32) {
 	}
 	h.rsDue[h.rsKey(pos)] = h.tick.Load() + 8
 	h.rsSchedule(pos, 8)
+}
+
+// putMoving records a moving cell's block entity, and mirrors it for the
+// sessions.
+func (h *hub) putMoving(key simPos, mb movingBlock) {
+	h.movingBlocks[key] = mb
+	h.movingLive.Store(key, struct{}{})
+}
+
+// dropMoving forgets a moving cell's block entity, mirror and all.
+func (h *hub) dropMoving(key simPos) {
+	delete(h.movingBlocks, key)
+	h.movingLive.Delete(key)
+}
+
+// movingCellLive reports, from any goroutine, whether a moving_piston cell
+// has its block entity (PistonMovingBlockEntity) — the question
+// MovingPistonBlock.useWithoutItem asks of a click.
+func (h *hub) movingCellLive(dim int, pos blockPos) bool {
+	_, ok := h.movingLive.Load(simPos{dim: dim, blockPos: pos})
+	return ok
 }
 
 // evUseMovingPiston is a right-click on a moving_piston cell.
@@ -260,8 +281,8 @@ func (h *hub) restoreMoving(saved []savedMoving) {
 		if _, dup := h.movingBlocks[key]; dup {
 			continue
 		}
-		h.movingBlocks[key] = movingBlock{moved: sm.State, facing: [3]int{dx, dy, dz},
-			extending: sm.Extending, source: sm.Source, due: h.tick.Load() + uint64(sm.Left)}
+		h.putMoving(key, movingBlock{moved: sm.State, facing: [3]int{dx, dy, dz},
+			extending: sm.Extending, source: sm.Source, due: h.tick.Load() + uint64(sm.Left)})
 		h.movingOrder = append(h.movingOrder, key)
 	}
 }

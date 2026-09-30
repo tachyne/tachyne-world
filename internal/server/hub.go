@@ -534,9 +534,16 @@ type hub struct {
 	// pending block updates bucketed by the tick they're due — the heart of
 	// world simulation (falling blocks, fluid flow). Hub-goroutine-only.
 	pending map[uint64][]simPos
+	// fluidTicks are the fluid ticks waiting in pending, one per cell at
+	// most (the fluid half of LevelTicks): cell → the tick it is due.
+	fluidTicks map[simPos]uint64
 	// movingBlocks are the moving_piston cells mid-animation (movingpiston.go).
 	movingBlocks map[simPos]movingBlock
-	movingOrder  []simPos // moving cells in the order they were made (their landing order)
+	// movingLive mirrors movingBlocks' keys for the session goroutines
+	// (simPos → struct{}): a click on a moving cell asks whether its block
+	// entity is there. Written only through putMoving / dropMoving.
+	movingLive  sync.Map
+	movingOrder []simPos // moving cells in the order they were made (their landing order)
 
 	// Vanilla's two update kinds for the redstone family (blockticks.go):
 	// scheduled ticks, the immediate neighbour-update cascade, and the
@@ -2874,6 +2881,10 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 			h.setBlockAt(players, e.dim, blockPos{e.x, e.y, e.z}, posed)
 			e.state = posed
 		}
+	}
+	if t := players[e.by]; t != nil && e.broken != 0 && isCreakingHeartBlock(e.broken) {
+		// CreakingHeartBlock.playerWillDestroy: the blow kills its creaking.
+		h.heartBrokenBy(players, t, e.dim, blockPos{e.x, e.y, e.z}, e.broken)
 	}
 	if t := players[e.by]; t != nil && e.broken != 0 && guardedByPiglins[e.broken] {
 		h.angerNearbyPiglins(players, t, false) // Block.playerWillDestroy: #guarded_by_piglins, sight not needed
