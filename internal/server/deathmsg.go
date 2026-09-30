@@ -1,6 +1,11 @@
 package server
 
-import "strings"
+import (
+	"encoding/json"
+	"strings"
+
+	attachproto "github.com/tachyne/tachyne-common/attach"
+)
 
 // Death messages.
 //
@@ -66,32 +71,39 @@ func mobMeleeCause(m *mob) deathCause {
 const killCreditTicks = 100
 
 // deathMessage renders the message for a death the way vanilla's
-// DamageSource.getLocalizedDeathMessage does: the damage type names a
-// death.attack.<id> family, and which member of it depends on whether
-// something is to blame.
+// DamageSource.getLocalizedDeathMessage does, as English text; deathMessageOf
+// is the same message as vanilla's translatable component.
+func deathMessage(victim string, c deathCause) string { return deathMessageOf(victim, c).english() }
+
+// deathMessageOf is DamageSource.getLocalizedDeathMessage: the damage type
+// names a death.attack.<id> family, and which member of it depends on
+// whether something is to blame.
 //
 //   - Something dealt it: death.attack.<id> with the killer as the second
 //     argument, or the .item form when they were holding something named.
 //   - Nothing dealt it, but the victim was fighting recently: the .player
 //     form, which is the "while trying to escape X" wording.
 //   - Nothing at all: the plain form.
-func deathMessage(victim string, c deathCause) string {
+func deathMessageOf(victim string, c deathCause) deathMsg {
+	v := textArg(victim)
 	id := ""
 	if int(c.dt) < len(dmgTypeMsgID) {
 		id = dmgTypeMsgID[c.dt]
 	}
 	if id == "" {
-		return victim + " died"
+		return deathMsg{key: "death.attack.generic", args: []deathArg{v}}
 	}
+	base := "death.attack." + id
 	kind := deathMsgDefault
 	if int(c.dt) < len(dmgTypeDeathKind) {
 		kind = dmgTypeDeathKind[c.dt]
 	}
 	if kind == deathMsgIntentional {
-		// The killer is a link component whose text the client shows in square
-		// brackets: "was killed by [Intentional Game Design]".
-		return format(deathMsgText["death.attack."+id+".message"],
-			victim, "["+deathMsgText["death.attack."+id+".link"]+"]", "")
+		// The killer is a link the client shows in square brackets: "was
+		// killed by [Intentional Game Design]".
+		link := deathArg{plain: "[" + deathMsgText[base+".link"] + "]",
+			comp: attachproto.Text{Translate: "chat.square_brackets", With: []attachproto.Text{{Translate: base + ".link"}}}}
+		return deathMsg{key: base + ".message", args: []deathArg{v, link}}
 	}
 	// The fall family's "doomed to fall by X" wording needs vanilla's combat
 	// tracker, which remembers what put the victim in the air; without it a
@@ -100,19 +112,92 @@ func deathMessage(victim string, c deathCause) string {
 	by := strings.TrimSpace(c.by)
 	if by != "" {
 		if weapon := strings.TrimSpace(c.weapon); weapon != "" {
-			if text, ok := deathMsgText["death.attack."+id+".item"]; ok {
-				return format(text, victim, by, weapon)
+			if _, ok := deathMsgText[base+".item"]; ok {
+				return deathMsg{key: base + ".item", args: []deathArg{v, nameArg(by), weaponArg(weapon)}}
 			}
 		}
-		return format(deathMsgText["death.attack."+id], victim, by, "")
+		return deathMsg{key: base, args: []deathArg{v, nameArg(by)}}
 	}
 	if credit := strings.TrimSpace(c.credit); credit != "" {
-		if text, ok := deathMsgText["death.attack."+id+".player"]; ok {
-			return format(text, victim, credit, "")
+		if _, ok := deathMsgText[base+".player"]; ok {
+			return deathMsg{key: base + ".player", args: []deathArg{v, nameArg(credit)}}
 		}
 	}
-	return format(deathMsgText["death.attack."+id], victim, "", "")
+	return deathMsg{key: base, args: []deathArg{v}}
 }
+
+// deathMsg is a death message as vanilla builds it: a translation key and
+// its arguments (victim, killer or credit, weapon).
+type deathMsg struct {
+	key  string
+	args []deathArg
+}
+
+// deathArg is one argument: the English it reads as, and its component.
+type deathArg struct {
+	plain string
+	comp  attachproto.Text
+}
+
+// textArg is a literal argument — the victim's name, a player's.
+func textArg(s string) deathArg { return deathArg{plain: s, comp: attachproto.Text{Text: s}} }
+
+// nameArg is a killer's or credit's name: a mob's (the English type name the
+// causes carry) is its type's translatable name, entity.minecraft.<id>, as
+// Entity.getDisplayName gives an unnamed mob; anyone else's is literal.
+func nameArg(s string) deathArg {
+	if key, ok := mobNameKeys[s]; ok {
+		return deathArg{plain: s, comp: attachproto.Text{Translate: key, Fallback: s}}
+	}
+	return textArg(s)
+}
+
+// weaponArg is a named weapon: ItemStack.getDisplayName, its name in square
+// brackets.
+func weaponArg(s string) deathArg {
+	return deathArg{plain: s, comp: attachproto.Text{Translate: "chat.square_brackets", With: []attachproto.Text{{Text: s}}}}
+}
+
+// english is the message in vanilla's English.
+func (d deathMsg) english() string {
+	var a [3]string
+	for i := 0; i < len(d.args) && i < len(a); i++ {
+		a[i] = d.args[i].plain
+	}
+	return format(deathMsgText[d.key], a[0], a[1], a[2])
+}
+
+// component is the message as a translatable component, with the English
+// as its fallback.
+func (d deathMsg) component() attachproto.Text {
+	t := attachproto.Text{Translate: d.key, Fallback: d.english()}
+	for _, a := range d.args {
+		t.With = append(t.With, a.comp)
+	}
+	return t
+}
+
+// chat is the message as a chat line: the component, with the English as
+// the plain text renderers without components show.
+func (d deathMsg) chat() attachproto.Chat {
+	c := chatEv(d.english())
+	if raw, err := json.Marshal(d.component()); err == nil {
+		c.Component = raw
+	}
+	return c
+}
+
+// mobNameKeys maps the English type name a death cause carries for a mob
+// ("Cave Spider") to its translation key (entity.minecraft.cave_spider).
+var mobNameKeys = func() map[string]string {
+	m := map[string]string{}
+	for et, n := range advEntityName {
+		if name := strings.TrimPrefix(n, "minecraft:"); name != "" {
+			m[mobDisplayName(et)] = "entity.minecraft." + name
+		}
+	}
+	return m
+}()
 
 // format fills vanilla's positional placeholders. A message that names fewer
 // arguments than it is given simply ignores the rest, as translation does.

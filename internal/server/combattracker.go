@@ -137,18 +137,22 @@ func mostSignificantFall(es []combatEntry) *combatEntry {
 }
 
 // combatDeathMessage is CombatTracker.getDeathMessage.
-func (h *hub) combatDeathMessage(t *tracked) string {
+func (h *hub) combatDeathMessage(t *tracked) string { return h.combatDeathMsg(t).english() }
+
+// combatDeathMsg is CombatTracker.getDeathMessage as a translatable message.
+func (h *hub) combatDeathMsg(t *tracked) deathMsg {
 	c := t.lastCause
 	if int(c.dt) < len(dmgTypeDeathKind) && dmgTypeDeathKind[c.dt] == deathMsgFallVariants {
 		if k := mostSignificantFall(t.combat.entries); k != nil {
 			return fallMessage(t.p.name, *k, c)
 		}
 	}
-	return deathMessage(t.p.name, c)
+	return deathMessageOf(t.p.name, c)
 }
 
 // fallMessage is CombatTracker.getFallMessage.
-func fallMessage(victim string, knockOff combatEntry, killing deathCause) string {
+func fallMessage(victim string, knockOff combatEntry, killing deathCause) deathMsg {
+	v := textArg(victim)
 	src := knockOff.cause
 	if !src.dt.has(tagIsFall) && !src.dt.has(tagAlwaysMostSignificantFall) {
 		switch {
@@ -157,25 +161,25 @@ func fallMessage(victim string, knockOff combatEntry, killing deathCause) string
 		case killing.by != "":
 			return assistedFall(victim, killing, "death.fell.finish")
 		}
-		return format(deathMsgText["death.fell.killer"], victim, "", "")
+		return deathMsg{key: "death.fell.killer", args: []deathArg{v}}
 	}
 	loc := knockOff.fallLoc
 	if loc == "" {
 		loc = "generic"
 	}
-	if text, ok := deathMsgText["death.fell.accident."+loc]; ok {
-		return format(text, victim, "", "")
+	if _, ok := deathMsgText["death.fell.accident."+loc]; ok {
+		return deathMsg{key: "death.fell.accident." + loc, args: []deathArg{v}}
 	}
-	return format(deathMsgText["death.fell.accident.generic"], victim, "", "")
+	return deathMsg{key: "death.fell.accident.generic", args: []deathArg{v}}
 }
 
 // assistedFall is getMessageForAssistedFall: the .item form when the
 // attacker held something named.
-func assistedFall(victim string, by deathCause, key string) string {
+func assistedFall(victim string, by deathCause, key string) deathMsg {
 	if w := by.weapon; w != "" {
-		if text, ok := deathMsgText[key+".item"]; ok {
-			return format(text, victim, by.by, w)
+		if _, ok := deathMsgText[key+".item"]; ok {
+			return deathMsg{key: key + ".item", args: []deathArg{textArg(victim), nameArg(by.by), weaponArg(w)}}
 		}
 	}
-	return format(deathMsgText[key], victim, by.by, "")
+	return deathMsg{key: key, args: []deathArg{textArg(victim), nameArg(by.by)}}
 }
