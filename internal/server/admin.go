@@ -155,6 +155,15 @@ type worldRules struct {
 	// Bossbars are /bossbar's custom bars by id (CustomBossEvents, which
 	// vanilla keeps in the level data).
 	Bossbars map[string]*customBossbar `json:"customBossEvents,omitempty"`
+	// max_command_sequence_length / max_command_forks: a function
+	// execution's command budget and /execute's fork limit (fnexec.go).
+	MaxCmdSeq   int `json:"maxCommandSequenceLength"`
+	MaxCmdForks int `json:"maxCommandForks"`
+	// DataPacks is level.dat's DataPacks: the enabled packs in order and
+	// the disabled ones (datapack.go).
+	DataPacks *dataPackConfig `json:"dataPacks,omitempty"`
+	// ScheduledEvents is the /schedule queue (fnschedule.go).
+	ScheduledEvents *scheduleSave `json:"scheduledEvents,omitempty"`
 }
 
 func defaultRules() worldRules {
@@ -173,7 +182,8 @@ func defaultRules() worldRules {
 		FireSpreadRadius: defaultFireSpreadRadius,
 		AllowNether:      true, PortalDelay: portalDwellTicks, PortalDelayCreate: 0,
 		ProjectilesBreak: true, GlobalSounds: true,
-		SendCommandFeedback: true, LogAdminCommands: true}
+		SendCommandFeedback: true, LogAdminCommands: true,
+		MaxCmdSeq: 65536, MaxCmdForks: 65536}
 }
 
 // summonable maps /summon names to entity types.
@@ -589,6 +599,10 @@ func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {
 		h.rules.SendCommandFeedback = e.on
 	case "log_admin_commands":
 		h.rules.LogAdminCommands = e.on
+	case "max_command_sequence_length":
+		h.rules.MaxCmdSeq = max(0, e.num)
+	case "max_command_forks":
+		h.rules.MaxCmdForks = max(0, e.num)
 	case "global_sound_events":
 		h.rules.GlobalSounds = e.on
 	case "max_snow_accumulation_height":
@@ -673,6 +687,7 @@ func (h *hub) loadRules() {
 		h.dayTime.Store(*dt)
 	}
 	h.unpackClocks()
+	h.unpackSchedule()
 	if ws := h.rules.Weather; ws != nil {
 		h.clearTime, h.rainTime, h.thunderTime = ws.ClearTime, ws.RainTime, ws.ThunderTime
 		h.rainFlag, h.thunderFlag = ws.Raining, ws.Thundering
@@ -705,6 +720,7 @@ func (h *hub) saveRules() {
 	h.rules.DayTime = &dt
 	h.packClocks()
 	h.packStopwatches()
+	h.packSchedule()
 	data, _ := json.MarshalIndent(h.rules, "", "  ")
 	writeStore(h.rulesPath, data)
 }

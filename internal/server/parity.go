@@ -29,6 +29,7 @@ var commandNames = []string{
 	"rescue", "ride", "rotate", "save-all", "save-off", "save-on", "say", "scoreboard", "setidletimeout", "setworldspawn", "spawnpoint",
 	"spectate", "spreadplayers", "stop", "stopsound", "stopwatch", "summon", "swing", "tag", "team", "teammsg", "teleport", "tellraw",
 	"tell", "tick", "time", "tm", "tp", "transfer", "trigger", "version", "w", "waypoint", "weather", "where", "whitelist", "worldborder", "xp",
+	"function", "return", "schedule", "reload", "datapack",
 }
 
 // commandTreeBody is the Commands packet body sent at join.

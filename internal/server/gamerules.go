@@ -61,6 +61,8 @@ var gameruleAlias = map[string]string{
 	"doLimitedCrafting":             "limited_crafting",
 	"reducedDebugInfo":              "reduced_debug_info",
 	"commandModificationBlockLimit": "max_block_modifications",
+	"maxCommandChainLength":         "max_command_sequence_length",
+	"maxCommandForkCount":           "max_command_forks",
 	"spectatorsGenerateChunks":      "spectators_generate_chunks",
 }
 
@@ -97,7 +99,9 @@ var numericRules = []string{"max_block_modifications", "random_tick_speed", "pla
 	"fire_spread_radius_around_player",
 	// The two nether-portal dwell delays, which were hard-coded at vanilla's
 	// values rather than settable.
-	"players_nether_portal_default_delay", "players_nether_portal_creative_delay"}
+	"players_nether_portal_default_delay", "players_nether_portal_creative_delay",
+	// Added 2026-09-30 — functions (fnexec.go).
+	"max_command_sequence_length", "max_command_forks"}
 
 // canonicalRule resolves either spelling to the canonical name, and reports
 // whether it is a rule at all.
