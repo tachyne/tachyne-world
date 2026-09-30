@@ -48,8 +48,8 @@ until the unchecked rows are swept too.
    adventure-mode players, and only the zombie family shows its attack pose.
 3. **Protocol coverage.** (Crouching, sprinting and swimming now show to other players,
    fixed 2026-09-24.) There are no
-   explosion or bulk block-update packets. Creative inventory items arrive without their
-   components, chat is not signed, and keep-alive replies are not read, so latency shows 0.
+   explosion or bulk block-update packets. ~~Creative inventory items arrive without their
+   components~~ (fixed 2026-09-30); chat is not signed, and keep-alive replies are not read, so latency shows 0.
 4. **World generation.** No aquifers or ravines, and many ground-cover features. The Nether
    lava sea sits too low (its bedrock roof arrived 2026-09-25). Changing the generator rewrites unedited
    terrain under existing builds, so these need a decision first.
@@ -72,7 +72,7 @@ The totals above are the 2026-09-24 re-grade's; the fixes dated below are counte
 5. ~~**The off-hand is dead.**~~ **Fixed 2026-09-20.** The use-item event carries the hand; a shield raises in either.
 6. ~~**Status-effect icons never render.**~~ **Fixed 2026-09-20.** Effects carry vanilla's ambient/visible/show-icon flags, and infinite effects pass through.
 7. ~~**A stack holds at most four enchantments.**~~ **Fixed 2026-09-19.** Eight, as vanilla allows.
-8. **Commands are a word splitter** — part fixed. Target selectors (`@s @p @a @r @e` with `type=`, `distance=`, `limit=`, `sort=`, `name=`) and `~`/`^` coordinates landed 2026-09-20. Still 34 verbs of vanilla's 95, no brigadier tree (so no client-side completion), no `/execute`, no `/data`.
+8. **Commands are a word splitter** — part fixed. Target selectors (`@s @p @a @r @e` with `type=`, `distance=`, `limit=`, `sort=`, `name=`) and `~`/`^` coordinates landed 2026-09-20. `/execute`, `/data`, `/place`, `/fillbiome`, data-pack functions and operator levels landed 2026-09-30; `/execute store` into NBT, `if data` and `/data modify … compute` are still to come, a data pack's non-function data is not applied yet, and there is no brigadier tree (so no client-side completion).
 9. **Loot functions dropped at bake time** — mostly fixed 2026-09-19: treasure maps, potions, names, instruments, stew effects and ominous bottles are baked and evaluated. `copy_components` (block-entity data on the drop) and `set_components` (trial-chamber gear) remain; banner patterns now ride a broken banner's drop (2026-09-20).
 10. **Eleven silent species, flat eye heights, no step sounds, babies drop nothing** — mostly fixed 2026-09-19: voices, per-type eye heights, ambient cadence, step sounds and baby drops/XP are in. ~~Splash and fall sounds remain~~ (2026-09-20).
 11. **Seed parity is out of reach by construction**: terrain is a 2-D heightmap with hand-tuned noise, not vanilla's noise router, so no seed reproduces vanilla's terrain, biomes, structures or ores. That is a decision (vanilla-feeling vs vanilla-identical worldgen), not a backlog item.
@@ -103,7 +103,7 @@ Struck-through rows have landed since the audit; the date says when.
 16. Aquifers, lava lakes and ravines (the only substantial world-generation gap left; changing the generator rewrites land under existing builds, so it needs a decision first); ~~springs, ore blobs and the ground-cover features~~ (2026-09-20); ~~dust propagation within the tick~~ (2026-09-19); ~~sky light through translucent blocks~~ (2026-09-20: light was costing double for water and leaves, so everything under them went dark at half the true depth)
 17. ~~Death messages: thirteen ways to die read "<name> died", and three written messages were never passed for anything. Both halves come from the vanilla data now — the message id from the damage type, the English from the game's language file — with the killer, weapon and "while trying to escape" forms~~ (2026-09-20)
 18. ~~Difficulty scaling: it multiplied a hostile mob's bite and nothing else. It now scales as damage reaches a player, from the damage type's own rule — Easy softens rather than halves, Peaceful erases the four always-scaled types, and mob-on-mob damage is no longer scaled at all~~ (2026-09-20)
-19. Default spawn position; a play-state disconnect; hand swap; explosion, section-update and light packets; elytra start; suffocation; ~~selectors and relative coordinates~~ (2026-09-20) with the brigadier tree still to come; titles, tab list and boss-bar styles
+19. ~~Default spawn position~~ (2026-09-30, for new worlds); a play-state disconnect; hand swap; explosion, section-update and light packets; elytra start; suffocation; ~~selectors and relative coordinates~~ (2026-09-20) with the brigadier tree still to come; titles, tab list and boss-bar styles
 
 ## Versions
 

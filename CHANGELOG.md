@@ -11,6 +11,139 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-30
+
+### Added
+- **`/execute`.** The modifiers `as`, `at`, `positioned`, `rotated`,
+  `facing`, `align`, `anchored`, `in`, `on` and `summon` chain as vanilla's
+  do, and the conditions `if` and `unless` test a `block`, `blocks`,
+  `entity`, `score`, `biome`, `dimension`, `loaded`, `items`, `function` or
+  `stopwatch`. `store result` and `store success` write into a score or a
+  boss bar, and every command now reports a return value for them to
+  store. Storing into NBT and `if data` are not in yet.
+- **Data packs and functions.** Packs sit in the world's `datapacks/`
+  folder, as folders or zips, and their `pack.mcmeta` is checked as vanilla
+  checks it. Functions run with macros, function tags work (including
+  `#minecraft:load` and `#minecraft:tick`), and `/function`, `/return`,
+  `/schedule` (schedules survive a restart), `/reload` and
+  `/datapack list|enable|disable|create` are in, with the
+  `max_command_sequence_length` and `max_command_forks` gamerules. A pack's
+  other data (recipes, loot tables, advancements, worldgen) is listed but
+  not applied yet.
+- **`/data`.** `get`, `merge`, `modify` and `remove` work on entities, block
+  entities and command storage. Players can be read but not written, as in
+  vanilla, and `modify … compute` is not in yet.
+- **`/place`.** `template` and `jigsaw` work fully; `structure` places
+  villages, pillager outposts, ancient cities, bastions, trail ruins, trial
+  chambers, abandoned camps and igloos; `feature` places trees and huge
+  mushrooms.
+- **`/fillbiome`.** Sets the biome in vanilla's 4×4×4 cells, with the
+  optional `replace` filter, and the change is saved with the world.
+- **Selectors reach every entity.** `/kill`, `/tp` and `/enchant` now take
+  any kind of entity a selector finds, `/enchant` works on mobs, `/msg`
+  takes selectors, arguments may be quoted, and selectors gain the
+  `advancements=`, `nbt=` and `predicate=` options.
+- **Operator levels.** Operators have vanilla's levels 1 to 4 (`-ops
+  name:N`, the `op1`–`op3` access roles, and `-op-permission-level` for the
+  default), and each command checks the level vanilla asks for it.
+- **Scoreboard statistics and the rest of `/scoreboard`.** Objectives can
+  track the statistic criteria (`minecraft.custom`, `mined`, `used`,
+  `crafted`, `broken`, `picked_up`, `dropped`, `killed`, `killed_by`,
+  `teamkill` and `killedByTeam`); `objectives modify`, `players get`,
+  `players operation` and `players display` work, with number formats;
+  `/team empty` is in, and a team's collision rule is kept by the server.
+- **Friendly fire as vanilla has it.** Teams start with friendly fire on
+  and seeing invisible teammates on, the server enforces friendly fire, and
+  teams saved before this load with vanilla's defaults.
+- **`/particle` takes every particle with options.** `dust`,
+  `dust_color_transition`, `block` and its kin, `item`, `trail`,
+  `vibration`, `shriek`, `sculk_charge`, `entity_effect`, `effect`, `flash`
+  and `dragon_breath` all take their options now, with a spread per axis and
+  `force`.
+- **Creative items keep their components.** An item taken from the creative
+  inventory arrives whole: potions, enchanted books, fireworks, banners,
+  stews, named and dyed items, bundles, shulker boxes and armour stand
+  poses. Creative ctrl+pick copies a container's, spawner's, banner's or
+  shulker box's contents into the picked item.
+- **Player heads keep their owner.** A head shows whose it is when placed,
+  held, after a restart, through `/clone` and when it drops.
+- **Item tooltips show `unbreakable`, `can_break` and `can_place_on`.** An
+  adventure-mode item that acts on a block (a bucket, a flint and steel)
+  honours its `can_place_on`.
+- **Recipes unlock through their own advancements.** Each recipe is granted
+  by vanilla's recipe advancement for it; recipes a player already knows
+  stay known.
+- **Explorer maps show their structure.** The map's icon is the structure's
+  own (26.3's new ones show a stand-in on 26.2 and Bedrock), and explorer
+  maps carry their name on 26.2.
+- **Sounds the whole server hears.** A wither spawning, the dragon dying
+  and an end portal opening are heard by everyone, as vanilla's global
+  level events are, following the `global_sound_events` gamerule.
+- **26.3 mining feedback.** The cracks and hit sounds play on the face
+  being struck.
+- **Colours on clouds and cushions.** Lingering-potion and dragon's breath
+  clouds show their colour, and cushions show their dye.
+- **Chunk tickets for portals and ender pearls.** Travelling through a
+  portal and a thrown ender pearl keep their chunks loaded as vanilla's
+  tickets do.
+- **Vanilla's spawn search for a new world.** A brand-new world picks its
+  spawn point the vanilla way. Existing worlds keep theirs.
+- **Villagers look around.** They glance about, follow what caught their
+  eye, and obey vanilla's rules for the bell, going to work and taking a
+  profession.
+- **The bus console answers more commands.** `/forceload` and the other
+  commands that were silent from `mc.cmd.run` now reply.
+
+### Changed
+- **Lighting is relit block by block, as vanilla's light engine does it.**
+  A torch placed on the highest block of a column now lights the air above
+  it.
+- **Fluids wait their real delay.** Water spreads every 5 ticks and lava
+  every 30 (10 in the Nether), and basalt generators work.
+- **Plants root only where vanilla lets them.** Each plant checks vanilla's
+  ground for it; a flower already standing on sand pops off at its next
+  neighbour change.
+- **Currents push the whole body.** Water and lava currents push mobs,
+  items and TNT over their whole hitbox, as vanilla's do.
+- **Heightmaps.** Each loaded chunk keeps vanilla's four heightmaps.
+- **Scheduled updates split in two.** Fluid and block updates run from
+  separate lists, as vanilla's do, each capped at 65,536 a tick.
+- **XP orbs and mob loot move like vanilla's.** Orbs hop, fall, bounce and
+  home in on the nearest player; a killed mob's loot pops out.
+- **Knockback.** A hit launches a mob about three blocks, and off ledges.
+- **Creaking hearts** root only between logs and die with their creaking.
+- **Placing against a moving block.** You can place against a block a
+  piston is still moving.
+- **Shelves.** An empty hand on an empty shelf slot passes through.
+- **Death, bed and sleep messages are translatable.** They arrive in each
+  player's own language, sleeping shows vanilla's "players sleeping"
+  status, and the old "Good morning" line is gone.
+- **World generation catches up with vanilla (GenVersion 26).** Explored
+  land outside player builds regenerates; builds and anything a player has
+  touched stay. Frozen lava springs appear in snowy peaks and no springs in
+  the deep dark; sugar cane grows in deserts, badlands and swamps and
+  melons in sparse jungles; mangrove swamps get grass disks and swamps lose
+  their sand and gravel disks; igloos face any way; seagrass uses 26.3's
+  eight placements; ores follow 26.3's full table with vanilla's blob
+  shape. Monster rooms are vanilla's, and because they need open cave air
+  that this engine's caves rarely give them, dungeons are now rare. Geodes
+  have their cracks and budding tiers; sculk spreads as vanilla's patches
+  and veins; the End pillars are shuffled by the seed, caged and capped,
+  and the exit podium stands from the start. Villages are decorated with
+  their piles, flowers, cacti and berry bushes, and each biome lays its own
+  ground cover (flower sets, grass counts, dead bushes, cacti, bamboo on
+  podzol). Ocean monuments have their interiors (rooms, the gold core, the
+  wings, the penthouse, the sponge rooms) and face any of four ways, and
+  the terrain adapts around outposts, ancient cities, trial chambers, trail
+  ruins and strongholds.
+
+### Fixed
+- **Dyed leather armour shows its colour.** The colour was sent in the
+  wrong form; it goes as vanilla's four-byte int now.
+- **Potions and suspicious stews show the right effect.** Their effects
+  were sent one registry step off, so a potion was listed and coloured as
+  the next effect along.
+
 ## 2026-09-29
 
 ### Added
