@@ -540,6 +540,8 @@ func (s *Server) Serve() error {
 		s.hub.loadRules()
 		if s.restoreWorldSpawn() { // a /setworldspawn outranks -spawn
 			log.Printf("world spawn from settings: (%.1f, %.0f, %.1f)", s.SpawnX, s.SpawnY, s.SpawnZ)
+		} else {
+			s.newWorldSpawn() // a new world picks its spawn once (worldspawn.go) and saves it
 		}
 		if gm := s.hub.rules.DefaultGamemode; gm != nil { // a /defaultgamemode outranks -gamemode
 			s.DefaultGamemode = *gm

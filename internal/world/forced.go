@@ -57,3 +57,30 @@ func (w *World) ForcedChunks() [][2]int32 {
 	sort.Slice(out, func(i, j int) bool { return pack(out[i]) < pack(out[j]) })
 	return out
 }
+
+// SetTicketed replaces the set of chunks held loaded by timed tickets
+// (TicketType.PORTAL and ENDER_PEARL, whose holder is the hub): while held,
+// the LRU passes over them as it does forced chunks. It never generates;
+// it returns the chunks newly held so the caller can warm them off the hub
+// goroutine.
+func (w *World) SetTicketed(set map[[2]int32]bool) [][2]int32 {
+	w.genMu.Lock()
+	defer w.genMu.Unlock()
+	var fresh [][2]int32
+	next := make(map[chunkPos]bool, len(set))
+	for k := range set {
+		if !w.ticketed[k] {
+			fresh = append(fresh, k)
+		}
+		next[k] = true
+	}
+	w.ticketed = next
+	return fresh
+}
+
+// Ticketed reports whether a timed ticket holds a chunk loaded.
+func (w *World) Ticketed(cx, cz int32) bool {
+	w.genMu.Lock()
+	defer w.genMu.Unlock()
+	return w.ticketed[chunkPos{cx, cz}]
+}

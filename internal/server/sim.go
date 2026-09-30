@@ -10,11 +10,15 @@ import "github.com/tachyne/tachyne-world/internal/worldgen"
 type blockPos struct{ x, y, z int }
 
 const (
-	fallDelay         = 1    // the simulation queue's neighbour re-check delay
-	waterDelay        = 5    // ticks between water spread steps (vanilla)
-	lavaDelay         = 30   // ticks between lava spread steps (vanilla overworld)
-	lavaDelayNether   = 10   // …and in the Nether
-	maxUpdatesPerTick = 8192 // cap per tick so a big flood can't stall the loop
+	fallDelay       = 1  // the simulation queue's neighbour re-check delay
+	waterDelay      = 5  // ticks between water spread steps (vanilla)
+	lavaDelay       = 30 // ticks between lava spread steps (vanilla overworld)
+	lavaDelayNether = 10 // …and in the Nether
+	// maxFluidTicksPerTick is ServerLevel's cap on the fluid tick list
+	// (fluidTicks.tick(time, 65536, …)); the block tick list has its own
+	// (maxBlockTicksPerTick, blockticks.go). What is over a cap waits,
+	// already due, for the next tick.
+	maxFluidTicksPerTick = 65536
 )
 
 var (
@@ -67,28 +71,29 @@ func (h *hub) scheduleAroundIn(dim int, pos blockPos, delay uint64) {
 // then the moving pistons' own tick, which vanilla runs with the block
 // entities after all of that.
 func (h *hub) runUpdates(players map[int32]*tracked, age uint64) {
-	h.runBlockTicks(players, age)
-	h.runSimUpdates(players, age)
+	ran := h.runBlockTicks(players, age)
+	h.runSimUpdates(players, age, maxBlockTicksPerTick-ran)
 	h.runBlockEvents(players)
 	h.landMovingBlocks(players, age)
 }
 
-// runSimUpdates processes the simulation updates due this tick (capped;
-// overflow rolls to the next tick so a large flood spreads its cost instead
-// of stalling).
-func (h *hub) runSimUpdates(players map[int32]*tracked, age uint64) {
+// runSimUpdates processes the simulation updates due this tick. They fall
+// into vanilla's two scheduled-tick lists by what the cell holds when its
+// turn comes: a fluid's own tick (FlowingFluid.tick — water, lava, a bubble
+// column's water) goes on the FLUID list, anything else on the BLOCK list,
+// which it shares with the redstone family's scheduled ticks (blockBudget
+// is what those left of the list's cap this tick). Each list is capped
+// (LevelTicks.tick's maxAllowedTicks: 65536); what is over a cap keeps its
+// order and runs first next tick, so a large flood spreads its cost instead
+// of stalling.
+func (h *hub) runSimUpdates(players map[int32]*tracked, age uint64, blockBudget int) {
 	due := h.pending[age]
 	if due == nil {
 		return
 	}
 	delete(h.pending, age)
-	if len(due) > maxUpdatesPerTick {
-		h.pending[age+1] = append(h.pending[age+1], due[maxUpdatesPerTick:]...)
-		for _, sp := range due[maxUpdatesPerTick:] {
-			h.fluidTickMoved(sp, age, age+1)
-		}
-		due = due[:maxUpdatesPerTick]
-	}
+	fluidBudget := maxFluidTicksPerTick
+	var over []simPos // past a list's cap: due again first thing next tick
 	// Dedupe: a position scheduled several times for this tick (scheduleAround
 	// overlaps heavily for fluids) must process only ONCE — vanilla scheduleTick
 	// is idempotent per position. Without this a receding pool re-processes the
@@ -113,8 +118,23 @@ func (h *hub) runSimUpdates(players map[int32]*tracked, age uint64) {
 			h.fluidTickMoved(sp, age, age+unloadedRetry)
 			continue
 		}
+		budget := &blockBudget
+		if worldgen.IsFluid(h.worldFor(sp.dim).At(sp.x, sp.y, sp.z)) {
+			budget = &fluidBudget
+		}
+		if *budget <= 0 {
+			over = append(over, sp)
+			continue
+		}
+		*budget--
 		h.processUpdate(players, sp.dim, sp.blockPos)
 		h.nbRun(players) // any neighbour updates it queued
+	}
+	if len(over) > 0 {
+		h.pending[age+1] = append(over, h.pending[age+1]...)
+		for _, sp := range over {
+			h.fluidTickMoved(sp, age, age+1) // the cell's one pending fluid tick moves with it
+		}
 	}
 }
 

@@ -94,6 +94,10 @@ type arrowEntity struct {
 	returning   bool     // a loyal trident on its way home (no collisions, steers to the owner)
 	spent       bool     // a trident that has struck something (dealtDamage): it falls away and strikes nothing more
 	pickupStack invStack // the exact stack a retrieved/returned projectile restores (0 item = plain arrow)
+
+	pearlTicketTimer int64  // ender pearl: ticks until its ENDER_PEARL ticket is renewed (tickets.go)
+	pearlChunk       [3]int // …and the {dim, cx, cz} it was last placed at
+	pearlTicketed    bool   // …once one has been placed
 }
 
 // spawnArrow fires an arrow exactly like vanilla's performRangedAttack

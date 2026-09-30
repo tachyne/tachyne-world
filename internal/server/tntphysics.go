@@ -31,15 +31,11 @@ func (h *hub) tntStep(players map[int32]*tracked, t *primedTNT) {
 	if w == nil {
 		return
 	}
-	// Entity.updateInWaterStateAndDoFluidPushing: the water's current at
-	// the charge, normalised and scaled by 0.014, joins its motion.
-	if fx, fy, fz, ok := h.fluidFlow(t.dim, blockPos{floorInt(t.x), floorInt(t.y), floorInt(t.z)}); ok {
-		if n := math.Sqrt(fx*fx + fy*fy + fz*fz); n > 0 {
-			t.vx += fx / n * waterPushPerTick
-			t.vy += fy / n * waterPushPerTick
-			t.vz += fz / n * waterPushPerTick
-		}
-	}
+	// Entity.updateFluidInteraction: the water and lava currents over the
+	// charge's box, normalised and scaled, join its motion.
+	px, py, pz := h.fluidPush(t.dim, t.x-tntHalfWidth, t.y, t.z-tntHalfWidth,
+		t.x+tntHalfWidth, t.y+tntHeight, t.z+tntHalfWidth, t.vx, t.vz)
+	t.vx, t.vy, t.vz = t.vx+px, t.vy+py, t.vz+pz
 	t.vy -= tntGravity
 	ox, oy, oz := t.x, t.y, t.z
 	// Entity.move, one axis at a time against the blocks (Y first, as

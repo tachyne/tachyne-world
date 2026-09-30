@@ -186,6 +186,7 @@ func (h *hub) updateEndPortalEntities(players map[int32]*tracked) {
 			continue
 		}
 		if d, x, y, z, ok := dest(m.dim); ok {
+			h.addChunkTicket(ticketPortal, d, x, z) // PLACE_PORTAL_TICKET (tickets.go)
 			h.entityGone(players, m.dim, m.eid)
 			m.dim, m.x, m.y, m.z = d, x, y, z
 			m.portalCool = entityPortalCooldown
@@ -197,6 +198,7 @@ func (h *hub) updateEndPortalEntities(players map[int32]*tracked) {
 			continue
 		}
 		if d, x, y, z, ok := dest(it.dim); ok {
+			h.addChunkTicket(ticketPortal, d, x, z)
 			h.entityGone(players, it.dim, it.eid)
 			it.dim, it.x, it.y, it.z = d, x, y, z
 			it.portalCool = entityPortalCooldown
@@ -207,6 +209,7 @@ func (h *hub) updateEndPortalEntities(players map[int32]*tracked) {
 			continue
 		}
 		if d, x, y, z, ok := dest(fb.dim); ok {
+			h.addChunkTicket(ticketPortal, d, x, z)
 			h.moveFallingBlock(players, fb, d, x, y, z)
 		}
 	}

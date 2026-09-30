@@ -185,16 +185,20 @@ func (h *hub) tickItem(players map[int32]*tracked, w *world.World, it *itemEntit
 	default:
 		it.vy -= itemGravity
 	}
-	if inWater || (afloat && !onLava) {
-		wp := blockPos{fx, fy, fz}
+	// Entity.updateFluidInteraction: the current of every water and lava
+	// cell the item's box is in, normalised, at water's 0.014 and lava's
+	// 0.0023 (0.007 in the Nether). A surfaced item is measured a block
+	// down, in the fluid it floats on.
+	if inWater || inLava || afloat {
+		by := it.y
 		if afloat {
-			wp.y--
+			by--
 		}
-		if cx, cy, cz, ok := h.fluidFlow(it.dim, wp); ok {
-			it.vx += cx * waterFlowScale
-			it.vy += cy * waterFlowScale
-			it.vz += cz * waterFlowScale
-		}
+		px, py, pz := h.fluidPush(it.dim, it.x-itemHalfHeight, by, it.z-itemHalfHeight,
+			it.x+itemHalfHeight, by+2*itemHalfHeight, it.z+itemHalfHeight, it.vx, it.vz)
+		it.vx += px
+		it.vy += py
+		it.vz += pz
 	}
 
 	// makeStuckInBlock: a cobweb (0.25, 0.05, 0.25) or, for anything not
