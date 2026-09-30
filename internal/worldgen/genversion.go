@@ -142,4 +142,10 @@ package worldgen
 //     under each crystal, obsidian to the floor), a spike a player touched
 //     keeping the old pillar; and the exit podium pre-placed, inactive, at
 //     the island's top unless someone built or dug round 0,0.
+//   - village decor: the pools' feature and empty elements re-rolled after
+//     assembly with vanilla's weights, so some lamps give way to the
+//     biome's trees, hay/melon/pumpkin/snow/ice piles, plains flowers,
+//     desert cacti or taiga grass and berry bushes (or to nothing), and the
+//     trees pools grow their trees; village layouts, beds and job sites
+//     are unchanged.
 const GenVersion = 26

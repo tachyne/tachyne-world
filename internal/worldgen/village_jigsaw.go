@@ -23,6 +23,7 @@ type villKey struct {
 
 var (
 	villCache = map[villKey][]PlacedPiece{}
+	villSpots = map[villKey][]jigsawSpot{} // the unfilled upward jigsaws (villagedecor.go)
 	villMu    sync.Mutex
 )
 
@@ -41,7 +42,8 @@ func (g *Generator) AssembleVillage(v Village) []PlacedPiece {
 		variant = "plains"
 	}
 	rng := newJigsawRNG(g.seed, v.X, v.Z)
-	p = g.AssembleJigsawTerrain("village/"+variant+"/town_centers", v.X, v.Y-1, v.Z, rng, 6)
+	var spots []jigsawSpot
+	p = g.assembleJigsawSpots("village/"+variant+"/town_centers", v.X, v.Y-1, v.Z, rng, 6, true, nil, &spots)
 	// terrain_adaptation beard_thin: the ground rises to meet every rigid
 	// piece (houses, decor) — over water too, as vanilla's dirt pillars.
 	for i := range p {
@@ -49,6 +51,7 @@ func (g *Generator) AssembleVillage(v Village) []PlacedPiece {
 	}
 	villMu.Lock()
 	villCache[k] = p
+	villSpots[k] = spots
 	villMu.Unlock()
 	return p
 }
