@@ -138,7 +138,7 @@ func snbtWrite(b *strings.Builder, v any) {
 			if i > 0 {
 				b.WriteByte(',')
 			}
-			snbtQuote(b, k)
+			snbtQuoteTo(b, k)
 			b.WriteByte(':')
 			snbtWrite(b, x[k])
 		}
@@ -158,11 +158,11 @@ func snbtWrite(b *strings.Builder, v any) {
 			if i > 0 {
 				b.WriteByte(',')
 			}
-			snbtQuote(b, e)
+			snbtQuoteTo(b, e)
 		}
 		b.WriteByte(']')
 	case string:
-		snbtQuote(b, x)
+		snbtQuoteTo(b, x)
 	case bool:
 		b.WriteString(strconv.FormatBool(x))
 	case int64:
@@ -182,8 +182,8 @@ func snbtWrite(b *strings.Builder, v any) {
 	}
 }
 
-// snbtQuote writes s as a double-quoted SNBT string.
-func snbtQuote(b *strings.Builder, s string) {
+// snbtQuoteTo writes s as a double-quoted SNBT string.
+func snbtQuoteTo(b *strings.Builder, s string) {
 	b.WriteByte('"')
 	for i := 0; i < len(s); i++ {
 		switch c := s[i]; c {
