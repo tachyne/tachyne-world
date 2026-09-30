@@ -183,11 +183,11 @@ func (d *stackDecode) component(id int32, r *bytes.Reader) bool {
 		}
 		st.mapID = v
 	case componentDyedColor:
-		v, err := protocol.ReadVarInt(r) // the form stackComponents and the chain use
-		if err != nil {
+		var rgb [4]byte // DyedItemColor: ByteBufCodecs.INT, four bytes
+		if _, err := io.ReadFull(r, rgb[:]); err != nil {
 			return false
 		}
-		st.color = v
+		st.color = int32(binary.BigEndian.Uint32(rgb[:]))
 	case componentTrim:
 		mat, e1 := protocol.ReadVarInt(r)
 		pat, e2 := protocol.ReadVarInt(r)
@@ -235,7 +235,7 @@ func (d *stackDecode) component(id int32, r *bytes.Reader) bool {
 				return false
 			}
 			if st.stew == 0 {
-				st.stew = stewRowFor(holder-1, ticks)
+				st.stew = stewRowFor(holder, ticks) // plain registry id
 			}
 		}
 	case componentRepairCost:
@@ -584,8 +584,8 @@ func (d *stackDecode) potionContents(r *bytes.Reader) bool {
 		if !ok {
 			return false
 		}
-		// potionComponentBytes writes the effect as id + 1.
-		effs = append(effs, potEffect{id: holder - 1, amp: int(amp), ticks: int(ticks)})
+		// MobEffect.STREAM_CODEC: holderRegistry, the plain registry id.
+		effs = append(effs, potEffect{id: holder, amp: int(amp), ticks: int(ticks)})
 	}
 	if has, err = r.ReadByte(); err != nil { // custom name
 		return false
