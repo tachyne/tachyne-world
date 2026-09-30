@@ -57,7 +57,8 @@ func (w *World) cacheCap() int {
 type cacheEntry struct {
 	ch      *worldgen.Chunk
 	elem    *list.Element
-	touched uint64 // epoch of the last LRU promotion (see generated)
+	touched uint64           // epoch of the last LRU promotion (see generated)
+	hm      *chunkHeightmaps // stored heightmaps (heightmap.go), built on first ask
 }
 
 // World wraps the terrain generator with an edit overlay and a generated-chunk
@@ -82,6 +83,8 @@ type World struct {
 	// LRU front at most once per epoch, so the hot read path — thousands of
 	// block reads a tick — is a lookup with no list write.
 	epoch atomic.Uint64
+	// hmMu serialises the stored heightmaps' builds and updates (heightmap.go).
+	hmMu sync.Mutex
 
 	// Computed chunk light, LRU'd like the generator output but INVALIDATED
 	// by edits (light is a pure function of terrain + edits). Natural mob
@@ -811,6 +814,10 @@ func (w *World) RevertEdit(x, y, z int) {
 	w.dirty.Store(true)
 	w.invalidateLight(x, z)
 	w.poiInvalidate(key[0], key[1])
+	if ch := w.cachedGenerated(key); ch != nil { // the cell is generation's again
+		sec, ly := (y-worldgen.MinY)/16, (y-worldgen.MinY)%16
+		w.heightmapUpdate(x, y, z, ch.Sections[sec][(ly*16+lz)*16+lx])
+	}
 }
 
 // SetBlock records a persistent edit at a world coordinate — unless the
@@ -853,6 +860,7 @@ func (w *World) SetBlock(x, y, z int, state uint32) {
 	w.dirty.Store(true)
 	w.invalidateLight(x, z) // cached chunk light is stale for this 3×3
 	w.poiInvalidate(key[0], key[1])
+	w.heightmapUpdate(x, y, z, state)
 }
 
 // cachedGenerated is the generated chunk if the memory cache holds it, nil

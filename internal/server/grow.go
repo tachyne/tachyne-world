@@ -840,18 +840,10 @@ func (h *hub) placeLiveTree(players map[int32]*tracked, dim, x, y, z int, featur
 	return worldgen.PlaceTree(c, x, y, z, h.rng, worldgen.TreeDriver{
 		Set: set, Free: free, Read: read,
 		DirtGround: func(px, py, pz int) bool { return worldgen.IsDirtTag(w.At(px, py, pz)) },
-		// MOTION_BLOCKING_NO_LEAVES by scanning the real column down from the
-		// default world top. Only the litter decorator asks, and no
-		// sapling-grown feature carries litter — this is for completeness.
-		SurfaceTop: func(px, pz int) int {
-			for py := worldgen.MinY + worldgen.SectionCount*16 - 1; py >= worldgen.MinY; py-- {
-				s := w.At(px, py, pz)
-				if s != worldgen.Air && !worldgen.IsLeaves(s) && (worldgen.Collides(s) || worldgen.IsFluid(s)) {
-					return py + 1
-				}
-			}
-			return worldgen.MinY
-		},
+		// MOTION_BLOCKING_NO_LEAVES, from the chunk's stored heightmap. Only
+		// the litter decorator asks, and no sapling-grown feature carries
+		// litter — this is for completeness.
+		SurfaceTop:  func(px, pz int) int { return w.HeightAt(world.MotionBlockingNoLeaves, px, pz) },
 		RootThrough: func(px, py, pz int) bool { return worldgen.IsRootGrowThrough(w.At(px, py, pz)) },
 	})
 }
@@ -1014,20 +1006,11 @@ func (h *hub) precipTick(players map[int32]*tracked, dim, cx, cz int) {
 }
 
 // motionBlockingTop is getHeightmapPos(MOTION_BLOCKING) for a column: the
-// cell above its highest block that blocks motion or holds a fluid. A snow
-// layer does not count, so snow thickens where it lies.
+// cell above its highest block in #blocks_motion_in_heightmap or holding a
+// fluid, read from the chunk's stored heightmap. A snow layer is not in the
+// tag, so snow thickens where it lies.
 func (h *hub) motionBlockingTop(dim, x, z int) int {
-	w := h.worldFor(dim)
-	for y := w.Ceiling() - 1; y >= worldgen.MinY; y-- {
-		st := w.At(x, y, z)
-		if st == worldgen.Air || (st >= snowLayer1 && st <= snowLayer1+7) {
-			continue
-		}
-		if worldgen.Collides(st) || worldgen.IsFluid(st) || worldgen.IsWaterlogged(st) {
-			return y + 1
-		}
-	}
-	return worldgen.MinY
+	return h.worldFor(dim).HeightAt(world.MotionBlocking, x, z)
 }
 
 // snowCanStandOn is SnowLayerBlock.canSurvive's floor test: never ice, packed

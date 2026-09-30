@@ -4,7 +4,7 @@ import (
 	"log"
 	"math"
 
-	"github.com/tachyne/tachyne-world/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 // Zombie siege: vanilla's VillageSiege, run every tick.
@@ -141,12 +141,7 @@ func (h *hub) isVillageAt(x, y, z int) bool {
 }
 
 // worldSurface is the WORLD_SURFACE heightmap: one above the highest block
-// that is not air.
+// that is not air (the chunk's stored heightmap).
 func (h *hub) worldSurface(x, z int) int {
-	for y := h.world.Ceiling() - 1; y > worldgen.MinY; y-- {
-		if h.world.At(x, y, z) != worldgen.Air {
-			return y + 1
-		}
-	}
-	return worldgen.MinY
+	return h.world.HeightAt(world.WorldSurface, x, z)
 }
