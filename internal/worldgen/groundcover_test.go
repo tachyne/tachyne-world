@@ -172,9 +172,28 @@ func TestGroundCoverLeavesOtherFeatures(t *testing.T) {
 			"bamboo", "brown_mushroom", "red_mushroom", "tall_grass", "lilac", "rose_bush", "peony",
 			"pale_moss_carpet", "podzol", "grass_block", "dirt", "coarse_dirt", "mycelium", "snow")
 	}
+	// Chunks a village reaches are left out: its decor piles read the
+	// ground they land on, so they follow the plants too.
+	nearVillage := func(p [2]int32) bool {
+		x, z := int(p[0])*16+8, int(p[1])*16+8
+		for dx := -1; dx <= 1; dx++ {
+			for dz := -1; dz <= 1; dz++ {
+				if v := g.VillageIn(x+dx*villageCell, z+dz*villageCell); v.Exists && absInt(v.X-x) < 200 && absInt(v.Z-z) < 200 {
+					return true
+				}
+			}
+		}
+		return false
+	}
 	var chunks [][2]int32
 	for _, b := range []string{"minecraft:plains", "minecraft:bamboo_jungle", "minecraft:desert", "minecraft:taiga", "minecraft:flower_forest"} {
-		chunks = append(chunks, findBiomeChunks(g, b, 3)...)
+		n := 0
+		for _, p := range findBiomeChunks(g, b, 8) {
+			if n < 3 && !nearVillage(p) {
+				chunks = append(chunks, p)
+				n++
+			}
+		}
 	}
 	for _, p := range chunks {
 		on := g.GenerateChunk(p[0], p[1])
