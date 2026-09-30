@@ -33,8 +33,39 @@ var potionByVanillaName = map[string]int8{
 // decorRedX is map decoration type red_x — the treasure map's cross.
 const decorRedX = 26
 
-// mapDecorationByName names the decoration types a loot table may ask for.
-var mapDecorationByName = map[string]int32{"red_x": decorRedX, "target_x": 4, "target_point": 5, "mansion": 8, "monument": 9, "trial_chambers": 34}
+// mapDecorationByName is the map_decoration_type registry (26.3 ids), every
+// type a loot table or a trade may ask a map to mark.
+var mapDecorationByName = map[string]int32{
+	"player": 0, "frame": 1, "red_marker": 2, "blue_marker": 3, "target_x": 4, "target_point": 5,
+	"player_off_map": 6, "player_off_limits": 7, "mansion": 8, "monument": 9,
+	"banner_white": 10, "banner_orange": 11, "banner_magenta": 12, "banner_light_blue": 13,
+	"banner_yellow": 14, "banner_lime": 15, "banner_pink": 16, "banner_gray": 17,
+	"banner_light_gray": 18, "banner_cyan": 19, "banner_purple": 20, "banner_blue": 21,
+	"banner_brown": 22, "banner_green": 23, "banner_red": 24, "banner_black": 25,
+	"red_x": decorRedX, "village_desert": 27, "village_plains": 28, "village_savanna": 29,
+	"village_snowy": 30, "village_taiga": 31, "jungle_temple": 32, "swamp_hut": 33,
+	"trial_chambers": 34, "abandoned_camp": 35, "ancient_city": 36, "desert_pyramid": 37,
+	"mineshaft": 38, "ocean_ruin_warm": 39,
+}
+
+// decorDefault is ExplorationMapFunction's DEFAULT_DECORATION, for a table
+// that names none (the camp's secret woodland mansion map): the mansion.
+const decorDefault = 8
+
+// decorFirst263 is the first map decoration type 26.3 added (abandoned_camp
+// through ocean_ruin_warm, 35-39). A 26.2 client's registry ends at 34 and
+// cannot decode a higher id, and the gateways do not yet substitute one, so
+// the wire carries the treasure cross for those until they do (decorWire).
+// The map itself keeps the real type.
+const decorFirst263 = 35
+
+// decorWire is the decoration type a map mark is sent as.
+func decorWire(t int32) int32 {
+	if t >= decorFirst263 {
+		return decorRedX
+	}
+	return t
+}
 
 // applyChestExtraFn applies the item-shaping loot functions to a chest stack.
 func (h *hub) applyChestExtraFn(c *lootCtx, f *lootFn, st invStack) invStack {
@@ -84,7 +115,7 @@ func (h *hub) applyChestExtraFn(c *lootCtx, f *lootFn, st invStack) invStack {
 		md := h.maps.create(x, z, int8(f.Zoom), 0)
 		typ, known := mapDecorationByName[f.Decoration]
 		if !known {
-			typ = decorRedX
+			typ = decorDefault
 		}
 		md.Marks = append(md.Marks, mapMark{X: int32(x), Z: int32(z), Type: typ})
 		h.maps.markDirty()
@@ -126,7 +157,7 @@ func mapMarkDecorations(md *mapData) []attach.MapDecoration {
 		if xd < -63 || xd > 63 || zd < -63 || zd > 63 {
 			continue
 		}
-		out = append(out, attach.MapDecoration{Type: m.Type, X: int8(xd*2 + 0.5), Z: int8(zd*2 + 0.5)})
+		out = append(out, attach.MapDecoration{Type: decorWire(m.Type), X: int8(xd*2 + 0.5), Z: int8(zd*2 + 0.5)})
 	}
 	return out
 }
