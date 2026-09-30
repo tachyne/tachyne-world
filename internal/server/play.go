@@ -19,6 +19,7 @@ const (
 	digReleaseUse  = 5 // released right-click (ends an eat-hold / bow draw)
 	digSwapHands   = 6 // F: swap the held item with the off-hand
 	digStab        = 7 // 26.x STAB: a spear's jab (the next action after SWAP, as 26.2 numbers it)
+	digChangeFace  = 8 // 26.3 CHANGE_DESTROY_DIRECTION: still mining, now striking another face (canonical 8; the chain renumbers 26.3's action 1)
 
 	gameEventChangeGameMode = 3 // change game mode (value = mode)
 

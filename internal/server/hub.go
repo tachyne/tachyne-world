@@ -1731,6 +1731,8 @@ func (h *hub) run() {
 				h.startDig(players, e)
 			case evDigStop:
 				h.stopDig(players, e.eid)
+			case evDigFace:
+				h.setDigFace(e.eid, e.face)
 			case evSwapHands:
 				h.onSwapHands(players, e)
 			case evTeleportTo:

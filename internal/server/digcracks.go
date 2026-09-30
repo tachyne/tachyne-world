@@ -30,8 +30,23 @@ type evDigStart struct {
 
 type evDigStop struct{ eid int32 }
 
+// evDigFace is CHANGE_DESTROY_DIRECTION: the same dig, another face struck.
+type evDigFace struct {
+	eid  int32
+	face int32
+}
+
 func (evDigStart) isHubEvent() {}
 func (evDigStop) isHubEvent()  {}
+func (evDigFace) isHubEvent()  {}
+
+// setDigFace turns a dig in progress to the face now being struck; the
+// per-tick crumbs and hit sound come off that face from then on.
+func (h *hub) setDigFace(eid, face int32) {
+	if d := h.digs[eid]; d != nil {
+		d.face = face
+	}
+}
 
 // startDig begins (or moves) a player's dig.
 func (h *hub) startDig(players map[int32]*tracked, e evDigStart) {

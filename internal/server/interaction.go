@@ -51,6 +51,12 @@ func (s *Server) handleDig(p *player, data []byte) {
 		s.hub.post(evDigStop{eid: p.eid}) // ABORT_DESTROY_BLOCK: the cracks go
 		return
 	}
+	if status == digChangeFace {
+		// CHANGE_DESTROY_DIRECTION: the dig goes on; its crumbs now come off
+		// the face just struck (ServerPlayerGameMode.destroyDirection).
+		s.hub.post(evDigFace{eid: p.eid, face: int32(face)})
+		return
+	}
 	if status == digStab {
 		s.hub.post(evSpearStab{eid: p.eid}) // STAB: the jab of a held spear
 		return
