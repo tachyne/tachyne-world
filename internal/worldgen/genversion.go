@@ -131,4 +131,10 @@ package worldgen
 //     where its points meet air or fluid, budding amethyst one in twelve
 //     and buds of every tier; planned once and left out whole where a
 //     player built or dug. Geodes now go in before the dungeons and ores.
+//   - the deep dark's sculk as vanilla grows it: sculk_patch_deep_dark
+//     (SculkSpreader's world-generation charge cursors: veins, sculk,
+//     sensors, can-summon shriekers, a catalyst on half) and sculk_vein on
+//     floors, walls and ceilings, in place of the 85% floor carpet; planned
+//     per origin chunk, laid only on cells as the plan found them, a patch
+//     with a player's build or dig in its box rolled back.
 const GenVersion = 26
