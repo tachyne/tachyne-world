@@ -124,7 +124,7 @@ func newInvStore(path string) *invStore {
 // name, repairCost and instrument existed on invStack but never reached the
 // row, so every rollout turned potions into water bottles, stripped anvil
 // names, reset the prior-work cost and made every goat horn play ponder.
-type stackRow [51]int32 // 51 on 2026-09-30 for a player head's profile; 50 on 2026-09-29 for lore, unbreakable, can_break and can_place_on; 46 the same day for an armor stand's entity_data; 45 on 2026-09-27 for a statue's pose; 41 on 2026-09-26 for the ominous banner, 44 for a crossbow's load; 28 → 30 on 2026-09-19 for enchantments 5-8, 32 on 2026-09-20 for a firework's flight and bursts, 36 for a pot's four sherds, 38 on 2026-09-24 for a sulfur cube bucket's block and age, 39 for a bucketed mob's variant, 40 for its health; older rows load with the tail zero
+type stackRow [52]int32 // 52 on 2026-09-30: a player head's profile (50) and a ctrl-picked block_entity_data (51); 50 on 2026-09-29 for lore, unbreakable, can_break and can_place_on; 46 the same day for an armor stand's entity_data; 45 on 2026-09-27 for a statue's pose; 41 on 2026-09-26 for the ominous banner, 44 for a crossbow's load; 28 → 30 on 2026-09-19 for enchantments 5-8, 32 on 2026-09-20 for a firework's flight and bursts, 36 for a pot's four sherds, 38 on 2026-09-24 for a sulfur cube bucket's block and age, 39 for a bucketed mob's variant, 40 for its health; older rows load with the tail zero
 
 func packStack(st invStack) stackRow {
 	r := stackRow{st.item, int32(st.count), int32(st.dmg), packEnch(st.ench), st.mapID}
@@ -172,6 +172,7 @@ func packStack(st invStack) stackRow {
 	r[48] = globalNames.Load().intern(st.tags.canBreak)       // can_break (column 48)
 	r[49] = globalNames.Load().intern(st.tags.canPlace)       // can_place_on (column 49)
 	r[50] = globalNames.Load().intern(profileKey(st.profile)) // a player head's profile (column 50)
+	r[51] = globalNames.Load().intern(st.beData)              // block_entity_data (column 51)
 	return r
 }
 
@@ -206,6 +207,7 @@ func unpackStack(r stackRow) invStack {
 	st.tags = itemTags{lore: globalNames.Load().get(r[46]), unbreakable: r[47] != 0,
 		canBreak: globalNames.Load().get(r[48]), canPlace: globalNames.Load().get(r[49])}
 	st.profile = profileFromKey(globalNames.Load().get(r[50]))
+	st.beData = globalNames.Load().get(r[51])
 	return st
 }
 

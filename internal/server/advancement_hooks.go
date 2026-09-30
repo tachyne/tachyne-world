@@ -13,6 +13,8 @@ import (
 	"sync"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
+
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // advEntityName reverses entityByName for the advancement entity strings
@@ -164,6 +166,10 @@ func (h *hub) advTick(players map[int32]*tracked) {
 		// Nether.
 		bx, by, bz := int(math.Floor(t.x)), int(math.Floor(t.y)), int(math.Floor(t.z))
 		w := h.worldFor(t.dim)
+		// EnterBlockTrigger for water (polled): the boats' recipe unlocks.
+		if worldgen.IsWater(w.At(bx, by, bz)) || worldgen.IsWater(w.At(bx, int(math.Floor(t.y+playerEyeStand)), bz)) {
+			h.recipeUnlocksInWater(t)
+		}
 		loc := advMatch{feet: t.armor[3].item, biome: w.BiomeAt3D(bx, by, bz)}
 		if t.dim == 0 {
 			loc.structure = h.structureAt(bx, bz)

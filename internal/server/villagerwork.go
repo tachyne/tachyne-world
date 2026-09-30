@@ -43,7 +43,10 @@ func (h *hub) villagerWorkTick(players map[int32]*tracked, m *mob) {
 	if dist3sq(cx, cy, cz, m.x, m.y, m.z) >= workReachSq {
 		return
 	}
-	// start: the work sound, the workstation, and the restock.
+	// start: LOOK_TARGET on the job site, the work sound, the workstation,
+	// and the restock; the behaviour then runs its 60 ticks (villagerBrainStep).
+	m.vWorkUntil = now + vWorkAtTicks
+	m.setLookBlock(m.work)
 	h.playSoundDim(players, m.dim, "minecraft:entity.villager.work_"+professionNames[m.profession], sndNeutral, m.x, m.y, m.z, 1, h.voicePitch(m))
 	if m.profession == profFarmer {
 		h.workAtComposter(players, m)

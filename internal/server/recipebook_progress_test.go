@@ -7,6 +7,7 @@ import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 func drainRB(pl *tracked) (out []attachproto.RecipeBook) {
@@ -30,8 +31,8 @@ func TestRecipeUnlocks(t *testing.T) {
 	h := newTestHub(world.New(1))
 
 	oak := itemByName["oak_planks"]
-	if len(rbIngredientIndex[oak]) == 0 {
-		t.Fatal("oak planks should be an ingredient of something")
+	if len(rbItemRules[oak]) == 0 {
+		t.Fatal("oak planks should unlock something (has_planks)")
 	}
 	h.recipeUnlocks(pl, []int32{oak})
 	n := len(pl.rbKnown)
@@ -215,5 +216,68 @@ func TestFurnaceBookClickLoadsTheInput(t *testing.T) {
 	h.placeRecipe(players, pl, evCraftRequest{eid: pl.p.eid, windowID: pl.winID, recipeID: smelt})
 	if f.slots[furnaceInput].count != 2 {
 		t.Fatalf("second click should stack, input = %+v", f.slots[furnaceInput])
+	}
+}
+
+// Recipes unlock through their own recipe advancements, polled from advTick:
+// the crafting table from the first tick; the wooden pickaxe on a stick
+// (has_stick), but not the torch — its advancement wants a stone pickaxe,
+// not the stick and coal it is made from; the chest with ten slots in use;
+// a boat once the player is in water.
+func TestRecipeUnlocksFollowRecipeAdvancements(t *testing.T) {
+	h, pl, players := cmdHub()
+	known := func(name string) bool { return pl.rbKnown[recipeIDByName[name]] }
+	h.advTick(players)
+	if !known("crafting_table") {
+		t.Fatal("the crafting table unlocks from the first tick (minecraft:tick)")
+	}
+	if known("wooden_pickaxe") || known("chest") || known("oak_boat") {
+		t.Fatal("an empty-handed player on dry land unlocked more than the crafting table")
+	}
+	pl.inv.slots[0] = invStack{item: itemByName["stick"], count: 4}
+	pl.inv.slots[1] = invStack{item: itemByName["coal"], count: 4}
+	h.advTick(players)
+	if !known("wooden_pickaxe") {
+		t.Error("a stick unlocks the wooden pickaxe (has_stick)")
+	}
+	if known("torch") {
+		t.Error("the torch waits for a stone pickaxe, not its ingredients")
+	}
+	for i := 2; i < 10; i++ {
+		pl.inv.slots[i] = invStack{item: itemByName["dirt"], count: 1}
+	}
+	if known("chest") {
+		t.Fatal("chest known before ten slots were in use")
+	}
+	h.advTick(players)
+	if !known("chest") {
+		t.Error("ten occupied slots unlock the chest")
+	}
+	h.world.SetBlock(0, 180, 0, worldgen.Water)
+	h.advTick(players)
+	if !known("oak_boat") {
+		t.Error("being in water unlocks the boats")
+	}
+	// A taken recipe stays taken: the advancement is done.
+	id := recipeIDByName["wooden_pickaxe"]
+	h.applyRecipeCommand(players, evRecipeCmd{by: 1, target: "@s", ids: []int32{id}})
+	h.advTick(players)
+	if pl.rbKnown[id] {
+		t.Error("the poll handed back a taken recipe")
+	}
+}
+
+// Every recipe the book can show has a recipe advancement that unlocks it.
+func TestEveryBookRecipeHasAnUnlockRule(t *testing.T) {
+	covered := map[int32]bool{}
+	for _, ids := range rbRuleIDs {
+		for _, id := range ids {
+			covered[id] = true
+		}
+	}
+	for id, name := range recipeNames {
+		if !covered[int32(id)] {
+			t.Errorf("recipe %s has no unlock advancement", name)
+		}
 	}
 }

@@ -60,6 +60,11 @@ func (h *hub) idleLook(players map[int32]*tracked, m *mob) {
 		return
 	}
 	switch {
+	case m.etype == entityVillager:
+		// The villager's head follows its brain's LOOK_TARGET
+		// (LookAtTargetSink, villagerlook.go), not LookAtPlayerGoal.
+		h.villagerHeadLook(players, m)
+		return
 	case isCamelKind(m.etype):
 		// CamelAi: SetEntityLookTargetSometimes(PLAYER, 6, 30-60),
 		// LookAtTargetSink(45, 90), RandomLookAround(150-250, 30, 0, 0).

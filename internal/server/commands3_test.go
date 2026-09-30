@@ -204,10 +204,12 @@ func TestRecipeCommand(t *testing.T) {
 	}
 	// Holding the ingredients again does not bring a taken recipe back.
 	var ings []int32
-	for item, ids := range rbIngredientIndex {
-		for _, r := range ids {
-			if r == id {
-				ings = append(ings, item)
+	for item, rules := range rbItemRules {
+		for _, r := range rules {
+			for _, rid := range rbRuleIDs[r] {
+				if rid == id {
+					ings = append(ings, item)
+				}
 			}
 		}
 	}

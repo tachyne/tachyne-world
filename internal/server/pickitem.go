@@ -45,7 +45,12 @@ func (h *hub) pickItem(players map[int32]*tracked, t *tracked, e attachproto.Pic
 				float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5, 1, 1) {
 			return
 		}
-		st = invStack{item: cloneItem(w.At(pos.x, pos.y, pos.z))}
+		state := w.At(pos.x, pos.y, pos.z)
+		st = invStack{item: cloneItem(state)}
+		// includeData: hasInfiniteMaterials() && the ctrl flag.
+		if st.item > 0 && e.IncludeData && t.gamemode == gmCreative {
+			st = h.addBlockDataToItem(simPos{dim: t.dim, blockPos: pos}, state, st)
+		}
 	}
 	if st.item <= 0 {
 		return

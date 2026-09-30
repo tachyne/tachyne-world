@@ -3,6 +3,7 @@ package server
 import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
 
+	"encoding/json"
 	"fmt"
 	"math"
 
@@ -319,7 +320,7 @@ func (h *hub) handleUseBed(players map[int32]*tracked, t *tracked, pos blockPos)
 	info, _ := worldgen.InfoForState(hs)
 	// BedBlock.useWithoutItem: someone is in it already.
 	if boolProp(hs, "occupied") && !t.sleeping {
-		t.p.trySendEv(actionBarEv("This bed is occupied"))
+		t.p.trySendEv(overlayKey("block.minecraft.bed.occupied", "This bed is occupied"))
 		return
 	}
 	// ServerPlayer.startSleepInBed, in vanilla's order; the refusals are
@@ -330,17 +331,17 @@ func (h *hub) handleUseBed(players map[int32]*tracked, t *tracked, pos blockPos)
 		return math.Abs(t.x-float64(b.x)-0.5) <= 3 && math.Abs(t.y-float64(b.y)) <= 2 && math.Abs(t.z-float64(b.z)-0.5) <= 3
 	}
 	if !reach(head) && !reach(foot) {
-		t.p.trySendEv(actionBarEv("You may not rest now; the bed is too far away"))
+		t.p.trySendEv(overlayKey("block.minecraft.bed.too_far_away", "You may not rest now; the bed is too far away"))
 		return
 	}
 	if worldgen.IsFullCube(w.Block(head.x, head.y+1, head.z)) || worldgen.IsFullCube(w.Block(foot.x, foot.y+1, foot.z)) {
-		t.p.trySendEv(actionBarEv("This bed is obstructed")) // bedBlocked: a suffocating block above either half
+		t.p.trySendEv(overlayKey("block.minecraft.bed.obstructed", "This bed is obstructed")) // bedBlocked: a suffocating block above either half
 		return
 	}
 	if h.spawns != nil && !h.isStrawBedAt(t.dim, head) { // a straw bed's rule is canSetSpawn NEVER; setRespawnPosition(…, true): the message only when it changes
 		if cur, dim, had := h.spawns.get(t.p.key()); !had || cur != head || dim != t.dim {
 			h.spawns.set(t.p.key(), head, t.dim)
-			t.p.trySendEv(chatEv("Respawn point set"))
+			t.p.trySendEv(chatKey("block.minecraft.set_spawn", "Respawn point set")) // ServerPlayer.SPAWN_SET_MESSAGE
 		}
 	}
 	// Player.startSleepInBed refuses only while it is DAY, and Level.isDay is
@@ -348,7 +349,7 @@ func (h *hub) handleUseBed(players map[int32]*tracked, t *tracked, pos blockPos)
 	// over the line. That is why you can sleep through one at noon, and why
 	// ordinary rain (which darkens the sky but not enough) will not do.
 	if h.isDaylight() {
-		t.p.trySendEv(actionBarEv("You can sleep only at night or during thunderstorms"))
+		t.p.trySendEv(overlayKey("block.minecraft.bed.no_sleep", "You can sleep only at night or during thunderstorms"))
 		return
 	}
 	bx, by, bz := float64(head.x)+0.5, float64(head.y), float64(head.z)+0.5
@@ -359,21 +360,62 @@ func (h *hub) handleUseBed(players map[int32]*tracked, t *tracked, pos blockPos)
 		if m.hostile && m.dying == 0 && m.dim == t.dim &&
 			math.Abs(m.x-bx) <= monsterRangeH && math.Abs(m.z-bz) <= monsterRangeH &&
 			math.Abs(m.y-by) <= monsterRangeV {
-			t.p.trySendEv(actionBarEv("You may not rest now; there are monsters nearby"))
+			t.p.trySendEv(overlayKey("block.minecraft.bed.not_safe", "You may not rest now; there are monsters nearby"))
 			return
 		}
 	}
 	if !t.sleeping {
 		h.setSleeping(players, t, head)
-		n, m := sleepCount(players)
-		body := chatEv(fmt.Sprintf("%s is sleeping (%d/%d)", t.p.name, n, m))
-		for _, o := range players {
-			o.p.trySendEv(body)
-		}
+		h.announceSleepStatus(players, t.dim)
 	}
 	// The night-skip itself is timed: updateSleep (tick loop) turns the clock
 	// only after everyone has been in bed sleepSkipTicks — the window where the
 	// client plays the lying pose + screen fade (vanilla behaviour).
+}
+
+// announceSleepStatus is ServerLevel.announceSleepStatus, as a player lies
+// down: every player in the dimension is shown, over the hotbar, how many
+// sleep of how many are needed (sleep.players_sleeping), or that the night
+// is being skipped (sleep.skipping_night). Nothing when sleeping cannot skip
+// the night (playersSleepingPercentage above 100).
+func (h *hub) announceSleepStatus(players map[int32]*tracked, dim int) {
+	pct := h.rules.SleepPercent
+	if pct > 100 {
+		return
+	}
+	slept, eligible := sleepCount(players)
+	need := max(1, (eligible*pct+99)/100) // SleepStatus.sleepersNeeded: max(1, ceil(active·pct/100))
+	msg := overlayKey("sleep.skipping_night", "Sleeping through this night")
+	if slept < need {
+		msg = overlayKey("sleep.players_sleeping", fmt.Sprintf("%d/%d players sleeping", slept, need),
+			map[string]any{"text": fmt.Sprint(slept)}, map[string]any{"text": fmt.Sprint(need)})
+	}
+	for _, o := range players {
+		if o.dim == dim {
+			o.p.trySendEv(msg)
+		}
+	}
+}
+
+// overlayKey is a translatable overlay message (sendOverlayMessage), with
+// its English as the plain text for renderers that draw no component.
+func overlayKey(key, english string, with ...any) attachproto.Chat {
+	c := chatKey(key, english, with...)
+	c.ActionBar = true
+	return c
+}
+
+// chatKey is a translatable system chat line, English beside it.
+func chatKey(key, english string, with ...any) attachproto.Chat {
+	comp := map[string]any{"translate": key}
+	if len(with) > 0 {
+		comp["with"] = with
+	}
+	c := chatEv(english)
+	if raw, err := json.Marshal(comp); err == nil {
+		c.Component = raw
+	}
+	return c
 }
 
 // sleepCount returns (sleeping, eligible) — spectators don't count toward the
@@ -421,12 +463,10 @@ func (h *hub) updateSleep(players map[int32]*tracked) {
 		h.resetWeatherCycle()
 	}
 	body := h.timeFrame()
-	morning := chatEv("Good morning — the night was slept away")
 	for _, t := range players {
 		slept := t.sleeping && now-t.sleepingAt >= catGiftMinSleep
 		h.wakePlayer(players, t)
 		t.p.trySendEv(body)
-		t.p.trySendEv(morning)
 		if slept {
 			h.catMorningGifts(players, t)
 		}
@@ -541,7 +581,8 @@ func (h *hub) respawnPointCharging(players map[int32]*tracked, t *tracked, spend
 					}
 				}
 			}
-			t.p.trySendEv(chatEv("You have no home bed or charged respawn anchor, or it was obstructed"))
+			// NO_RESPAWN_BLOCK_AVAILABLE: the client prints block.minecraft.spawn.not_valid.
+			t.p.trySendEv(chatKey("block.minecraft.spawn.not_valid", "You have no home bed or charged respawn anchor, or it was obstructed"))
 		}
 	}
 	x, y, z := h.worldSpawn()

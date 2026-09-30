@@ -23,8 +23,8 @@ import (
 //
 // A RunOne shuffles its choices by weight (ShufflingList) and starts the
 // first that can; a one-shot choice that finds nothing to do still counts as
-// the pick. SetWalkTargetFromLookTarget has no look target to follow here
-// and never starts.
+// the pick. SetWalkTargetFromLookTarget walks to the LOOK_TARGET its look
+// behaviours keep (villagerlook.go), and starts only with one.
 
 const (
 	vSpeedBase        = 1.0       // speedModifier 0.5: the engine's villager pace
@@ -56,6 +56,8 @@ const (
 	secondaryPoiScan  = 40 // …every forty ticks
 	nearestBedRange   = 48 // NearestBedSensor: HOME POIs within 48
 	nearestBedBatch   = 4  // …at most four tried a scan (++triedCount >= 5 refuses)
+	nearestBedCache   = 40 // …a tried bed stays cached this long past the scan (CACHE_TIMEOUT)
+	nearestBedJitter  = 20 // …the scan's lastUpdate is now + nextInt(20)
 	jumpBedReachTime  = 100
 	jumpBedJumpsMin   = 3 // 3 + nextInt(4)
 	jumpBedJumpsRand  = 4
@@ -77,7 +79,8 @@ type villagerWalk struct {
 	set     bool
 	x, y, z float64
 	block   bool    // a block position: walked to over its height (pathSteerTo)
-	eid     int32   // a mob followed (0 = none)
+	eid     int32   // a mob or player followed (0 = none)
+	player  bool    // …eid is a player
 	speed   float64 // a multiple of the engine's villager pace
 	close   int     // closeEnoughDist, Manhattan in blocks
 	until   uint64  // MoveToTargetSink's time limit
@@ -144,6 +147,14 @@ func (h *hub) villagerBrainStep(players map[int32]*tracked, m *mob) bool {
 	act := h.villagerActivity(m)
 	switch act {
 	case vsWork:
+		// A running WorkAtPoi holds the WORK RunOne: no stroll starts while
+		// it lasts (60 ticks) and the villager stays within 1.73 of the site.
+		site := m.work
+		if now < m.vWorkUntil && site != (blockPos{}) &&
+			dist3sq(float64(site.x)+0.5, float64(site.y)+0.5, float64(site.z)+0.5, m.x, m.y, m.z) < vWorkAtReach*vWorkAtReach {
+			break
+		}
+		m.vWorkUntil = 0
 		h.villagerWorkStrolls(m, now)
 	case vsGather:
 		h.villagerMeetStrolls(m, now)
@@ -225,7 +236,15 @@ func (h *hub) villagerBlockPos(m *mob) blockPos {
 // villager is still walking.
 func (h *hub) villagerWalkStep(m *mob, now uint64) bool {
 	wt := &m.vWalk
-	if wt.eid != 0 {
+	switch {
+	case wt.eid != 0 && wt.player:
+		t := h.playersRef[wt.eid]
+		if t == nil || t.dead || t.dim != m.dim {
+			*wt = villagerWalk{}
+			return false
+		}
+		wt.x, wt.y, wt.z = t.x, t.y, t.z
+	case wt.eid != 0:
 		o := h.mobs[wt.eid]
 		if o == nil || o.dying > 0 || o.dim != m.dim {
 			*wt = villagerWalk{}
@@ -260,12 +279,13 @@ func (h *hub) villagerIdlePick(m *mob, now uint64, play bool) {
 		pVillager = iota
 		pCat
 		pStroll
+		pLookWalk
 		pJump
 		pWait
 	)
-	weights := []int{2, 1, 1, 1, 1}
+	weights := []int{2, 1, 1, 1, 1, 1}
 	if play {
-		weights = []int{2, 1, 1, 2, 2}
+		weights = []int{2, 1, 1, 1, 2, 2}
 	}
 	for _, pick := range h.shuffledPicks(weights) {
 		switch pick {
@@ -281,6 +301,10 @@ func (h *hub) villagerIdlePick(m *mob, now uint64, play bool) {
 			x, z := h.villageStroll(m)
 			h.setWalk(m, x, m.y, z, vSpeedBase, 0, play)
 			return
+		case pLookWalk: // SetWalkTargetFromLookTarget(0.5, 2)
+			if h.walkFromVillagerLook(m, play) {
+				return
+			}
 		case pJump:
 			if h.startJumpOnBed(m, play) {
 				return
@@ -298,13 +322,16 @@ func (h *hub) villagerIdlePick(m *mob, now uint64, play bool) {
 
 // villagerInteractWith is InteractWith(type, 8, INTERACTION_TARGET, 0.5, 2):
 // with one of that kind in sight it starts, and walks up to the closest
-// within eight blocks if there is one.
+// within eight blocks if there is one — its INTERACTION_TARGET and
+// LOOK_TARGET too.
 func (h *hub) villagerInteractWith(m *mob, etype int, play bool) bool {
 	o, ok := h.nearestVisible(m, etype)
 	if !ok {
 		return false
 	}
 	if o != nil && dist3sq(o.x, o.y, o.z, m.x, m.y, m.z) <= vInteractRange*vInteractRange {
+		h.setInteraction(m, o)
+		m.setLookMob(o)
 		h.setWalkMob(m, o, vSpeedBase, vInteractStop, play)
 	}
 	return true
@@ -450,8 +477,12 @@ func (h *hub) villagerMeetStrolls(m *mob, now uint64) {
 			}
 			return
 		}
-		// SocializeAtBell: now and then, near the bell with a villager in
-		// sight, over to the closest within √32 at a stroll.
+		// SocializeAtBell: with no INTERACTION_TARGET, now and then, near
+		// the bell with a villager in sight, over to the closest within √32
+		// at a stroll — it becomes the interaction and look target.
+		if m.vInteract != 0 || m.showTrades.player != 0 {
+			continue
+		}
 		if h.rng.Intn(vSocializeOdds/mobMoveInterval) != 0 || bellD2 >= vSocializeBell*vSocializeBell {
 			continue
 		}
@@ -460,6 +491,8 @@ func (h *hub) villagerMeetStrolls(m *mob, now uint64) {
 			continue
 		}
 		if o != nil && dist3sq(o.x, o.y, o.z, m.x, m.y, m.z) <= vSocializeReachSq {
+			h.setInteraction(m, o)
+			m.setLookMob(o)
 			h.setWalkMob(m, o, vSpeedSocialize, 1, false)
 		}
 		return
@@ -467,8 +500,13 @@ func (h *hub) villagerMeetStrolls(m *mob, now uint64) {
 }
 
 // senseNearestBed is NearestBedSensor for a child, every twenty ticks: the
-// nearest bed within 48 it has a path to (four tried a scan). The memory is
-// only ever replaced, never cleared.
+// nearest bed within 48 it has a path to. A bed tried goes into the
+// sensor's cache for forty ticks past the scan's (jittered) time and is
+// skipped while it is there; at most four are tried a scan (the fifth
+// candidate ends the batch). A scan that finds no path with fewer than five
+// candidates clears the lapsed entries; one that finds a bed, or ran out of
+// batch, leaves the cache as it is. The memory is only ever replaced, never
+// cleared.
 func (h *hub) senseNearestBed(m *mob) {
 	if !m.baby || m.etype != entityVillager || m.dying > 0 {
 		return
@@ -477,16 +515,35 @@ func (h *hub) senseNearestBed(m *mob) {
 	if w == nil {
 		return
 	}
+	last := h.tick.Load() + uint64(h.rng.Intn(nearestBedJitter)) // lastUpdate
+	if m.vBedCache == nil {
+		m.vBedCache = map[blockPos]uint64{}
+	}
+	tried := 0
+	var batch []blockPos
 	isHome := func(p world.POI) bool { return p.Kind == poiKindHome }
-	homes := w.POIsNear(floorInt(m.x), floorInt(m.y), floorInt(m.z), nearestBedRange, isHome)
-	for i, p := range homes {
-		if i >= nearestBedBatch {
-			break
-		}
+	for _, p := range w.POIsNear(floorInt(m.x), floorInt(m.y), floorInt(m.z), nearestBedRange, isHome) {
 		pos := blockPos{p.X, p.Y, p.Z}
+		if _, cached := m.vBedCache[pos]; cached {
+			continue
+		}
+		if tried++; tried > nearestBedBatch {
+			continue
+		}
+		m.vBedCache[pos] = last + nearestBedCache
+		batch = append(batch, pos)
+	}
+	for _, pos := range batch {
 		if h.poiReachable(m, pos, poiValidRange[poiHome]) {
 			m.vBed, m.vBedSet = pos, true
 			return
+		}
+	}
+	if tried <= nearestBedBatch {
+		for pos, until := range m.vBedCache {
+			if until < last {
+				delete(m.vBedCache, pos)
+			}
 		}
 	}
 }
@@ -587,9 +644,18 @@ func (h *hub) poiCompetitorScan(players map[int32]*tracked, m *mob) {
 // villager that never traded.
 func (h *hub) loseJobSite(players map[int32]*tracked, v *mob) {
 	v.work = blockPos{}
-	if v.profession >= 0 && v.tradeLevel <= 1 && v.tradeXP == 0 {
-		v.profession = profUnemployed
-		v.offers = nil
-		h.sendVillagerData(players, v)
+	h.resetProfession(players, v)
+}
+
+// resetProfession is ResetProfession, a core behaviour that runs whenever
+// the villager has no JOB_SITE: one with a trade (not none, not a nitwit)
+// that never earned experience and is still level one goes back to none,
+// and its offers with it.
+func (h *hub) resetProfession(players map[int32]*tracked, v *mob) {
+	if v.work != (blockPos{}) || v.profession < 0 || v.tradeLevel > 1 || v.tradeXP != 0 {
+		return
 	}
+	v.profession = profUnemployed
+	v.offers = nil
+	h.sendVillagerData(players, v)
 }

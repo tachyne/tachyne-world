@@ -640,10 +640,10 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 		h.resetCustom(t, "time_since_death")
 		h.sbCriteria(players, "deathCount", t.p.name, 1, false)
 		h.creditPlayerDeath(players, t)
-		log.Printf("%q died at (%.0f,%.0f,%.0f): %s", t.p.name, t.x, t.y, t.z,
-			h.combatDeathMessage(t))
+		msg := h.combatDeathMsg(t) // translatable, with the English beside it
+		log.Printf("%q died at (%.0f,%.0f,%.0f): %s", t.p.name, t.x, t.y, t.z, msg.english())
 		if h.rules.ShowDeathMsgs { // gamerule showDeathMessages
-			body := chatEv(h.combatDeathMessage(t))
+			body := msg.chat()
 			for _, o := range players {
 				if h.deathMessageReaches(t.p.name, o.p.name) { // the team's deathMessageVisibility
 					o.p.trySendEv(body)
@@ -656,7 +656,8 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 		} else {
 			h.catalystHears(players, t.dim, t.x, t.y, t.z, 0) // no experience to give, but a catalyst still blooms
 		}
-		t.p.trySendEv(attachproto.Death{EID: t.p.eid, Message: h.combatDeathMessage(t)})
+		comp := msg.component() // the death screen's (needs tachyne-common's Death.Component)
+		t.p.trySendEv(attachproto.Death{EID: t.p.eid, Message: msg.english(), Component: &comp})
 		if h.rules.ImmediateResp { // gamerule doImmediateRespawn skips the death screen
 			h.post(evRespawn{eid: t.p.eid})
 		}
