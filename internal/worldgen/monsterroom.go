@@ -81,6 +81,11 @@ func forgetRooms(g *Generator) {
 			delete(roomCache, k)
 		}
 	}
+	for k := range geodeCache { // geode.go: the same guard
+		if k.g == g {
+			delete(geodeCache, k)
+		}
+	}
 }
 
 // monsterRooms is origin chunk (cx, cz)'s placed rooms, cached.

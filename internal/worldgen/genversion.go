@@ -126,4 +126,9 @@ package worldgen
 //     floors and 0-2 chests; one with a build or dig in its box is left
 //     out. The old 48-block-grid dungeons go, except one a player touched,
 //     which stays as it was.
+//   - amethyst geodes as GeodeFeature: three or four points' distance
+//     field with noise, vanilla's layer thresholds, a crack (95%), no geode
+//     where its points meet air or fluid, budding amethyst one in twelve
+//     and buds of every tier; planned once and left out whole where a
+//     player built or dug. Geodes now go in before the dungeons and ores.
 const GenVersion = 26

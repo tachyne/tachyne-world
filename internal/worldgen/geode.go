@@ -2,16 +2,22 @@ package worldgen
 
 import "math"
 
-// Amethyst geodes: buried hollow spheres with a smooth-basalt shell, a calcite
-// layer, an amethyst-block lining studded with budding_amethyst, and amethyst
-// clusters growing into the hollow. A faithful-appearance approximation of the
-// vanilla amethyst_geode feature (single centre + per-cell hash jitter rather
-// than its multi-point distance field). Rare (≈1/24 chunks), y -58..30.
+// Amethyst geodes: vanilla's amethyst_geode, GeodeFeature — one chunk in
+// 24, uniform from six above the bottom to y=30. Three or four points 4–6
+// blocks out from the origin (each with an offset of 1–2) make a distance
+// field: the sum of 1/sqrt(d²+offset) over the points, plus a little noise,
+// sets each cell of the 33-block box to the air filling, the amethyst lining
+// (one in twelve budding), calcite or the smooth-basalt crust by vanilla's
+// layer thresholds. A crack (95%) of three more points opens the shell on
+// one side. A geode two of whose points land in air or an invalid block
+// (bedrock, fluid, ice) is not placed. Budding amethyst grows a bud or
+// cluster (the four tiers equally likely) into its first open neighbour,
+// one in three times.
 //
-// Cross-chunk consistency: a geode can straddle chunk borders, so each chunk
-// stamps the portion of every geode rooted in its 3×3 neighbourhood that falls
-// inside it. All per-cell decisions are pure functions of the geode's origin
-// seed + cell coords, so neighbouring chunks agree without communication.
+// A geode is planned once on the pre-decoration terrain (the owRegion
+// scratch view) from its origin chunk's own stream, and every chunk pass
+// writes its part of the plan, so the chunks agree. A geode with a player's
+// build or dug cell in its box is left out whole.
 
 var (
 	smoothBasalt        = blockBase("smooth_basalt")
@@ -24,25 +30,217 @@ var (
 	largeBudBase        = blockBase("large_amethyst_bud")
 )
 
-// geode layer radii (blocks from centre): <air hollow, then amethyst, calcite,
-// basalt shell. A per-cell jitter (~±0.4) roughens the surface.
+// geodeSalt seeds the geodes' own streams.
+const geodeSalt = 0x6E0DE_0026
+
+// Vanilla's amethyst_geode configuration and GeodeFeature's defaults.
 const (
-	geodeAirR      = 3.0
-	geodeAmethystR = 3.9
-	geodeCalciteR  = 4.6
-	geodeBasaltR   = 5.3
-	geodeReach     = 6          // bounding half-size to scan
-	geodeHollow    = 0xFFFFFFFF // sentinel: carve to air (Air==0 collides with "outside")
+	geodeChance      = 24  // rarity_filter
+	geodeFilling     = 1.7 // layers
+	geodeInnerLayer  = 2.2
+	geodeMiddleLayer = 3.2
+	geodeOuterLayer  = 4.2
+	geodeCrackChance = 0.95
+	geodeCrackBase   = 2.0
+	geodeCrackOffset = 2
+	geodeAltChance   = 0.083 // use_alternate_layer0_chance: budding amethyst
+	geodePlaceChance = 0.35  // use_potential_placements_chance
+	geodeWallMin     = 4     // outer_wall_distance 4..6
+	geodeWallMax     = 6
+	geodeNoiseMul    = 0.05
+	geodeGenOffset   = 16 // min/max_gen_offset
 )
 
-// budFacing maps an outward step to the bud/cluster facing index
-// (north,east,south,west,up,down) in the state table.
-var budFacing = map[[3]int]int{
-	{0, 0, -1}: 0, {1, 0, 0}: 1, {0, 0, 1}: 2, {-1, 0, 0}: 3, {0, 1, 0}: 4, {0, -1, 0}: 5,
+// geodePlan is one geode's writes.
+type geodePlan struct {
+	cx, cz     int32 // its origin chunk
+	cells      map[[3]int]uint32
+	x0, y0, z0 int // bounding box of the writes
+	x1, y1, z1 int
 }
 
-func budState(base uint32, dir [3]int) uint32 {
-	return base + uint32(budFacing[dir])*2 + 1 // +1 selects waterlogged=false
+var geodeCache = map[roomKey]*geodePlan{}
+
+// geodeIn is origin chunk (cx, cz)'s geode, or nil; cached like the rooms.
+func (g *Generator) geodeIn(cx, cz int32) *geodePlan {
+	k := roomKey{g: g, cx: cx, cz: cz}
+	roomMu.Lock()
+	p, ok := geodeCache[k]
+	roomMu.Unlock()
+	if ok {
+		return p
+	}
+	p = g.planGeode(cx, cz)
+	roomMu.Lock()
+	if len(geodeCache) >= roomCacheCap {
+		geodeCache = map[roomKey]*geodePlan{}
+	}
+	geodeCache[k] = p
+	roomMu.Unlock()
+	return p
+}
+
+// planGeode is GeodeFeature.place for origin chunk (cx, cz)'s draw.
+func (g *Generator) planGeode(cx, cz int32) *geodePlan {
+	ox, oz := int(cx)*16, int(cz)*16
+	r := newTreeRNG(g.seed^geodeSalt, ox, oz)
+	if r.Float64() >= 1.0/geodeChance {
+		return nil
+	}
+	x0, z0 := ox+r.Intn(16), oz+r.Intn(16)
+	y0 := oreUniform(oreAboveBottom(6), oreAbs(30)).sample(r, g.Ceiling())
+	view := &owRegion{g: g, baseX: ox, baseZ: oz, cols: map[[2]int]column{}, capture: map[[3]int]uint32{}}
+
+	numPoints := 3 + r.Intn(2) // distribution_points 3..4
+	adj := float64(numPoints) / geodeWallMax
+	innerAir := 1 / math.Sqrt(geodeFilling)
+	innermost := 1 / math.Sqrt(geodeInnerLayer+adj)
+	innerCrust := 1 / math.Sqrt(geodeMiddleLayer+adj)
+	outerCrust := 1 / math.Sqrt(geodeOuterLayer+adj)
+	extra := 0.0
+	if numPoints > 3 {
+		extra = adj
+	}
+	crackSize := 1 / math.Sqrt(geodeCrackBase+r.Float64()/2+extra)
+	crack := r.Float64() < geodeCrackChance
+	type point struct{ x, y, z, off int }
+	var points []point
+	invalid := 0
+	for i := 0; i < numPoints; i++ {
+		px := x0 + geodeWallMin + r.Intn(geodeWallMax-geodeWallMin+1)
+		py := y0 + geodeWallMin + r.Intn(geodeWallMax-geodeWallMin+1)
+		pz := z0 + geodeWallMin + r.Intn(geodeWallMax-geodeWallMin+1)
+		if s := view.read(px, py, pz); s == Air || geodeInvalid(s) {
+			if invalid++; invalid > 1 { // invalid_blocks_threshold
+				return nil
+			}
+		}
+		points = append(points, point{px, py, pz, 1 + r.Intn(2)}) // point_offset 1..2
+	}
+	var cracks [][3]int
+	if crack {
+		o := numPoints*2 + 1
+		var dx, dz int
+		switch r.Intn(4) {
+		case 0:
+			dx, dz = o, 0
+		case 1:
+			dx, dz = 0, o
+		case 2:
+			dx, dz = o, o
+		default:
+			dx, dz = 0, 0
+		}
+		for _, dy := range [3]int{7, 5, 1} {
+			cracks = append(cracks, [3]int{x0 + dx, y0 + dy, z0 + dz})
+		}
+	}
+	noise := NewPerlin(g.seed ^ geodeSalt)
+	p := &geodePlan{cx: cx, cz: cz, cells: map[[3]int]uint32{}, x0: math.MaxInt, y0: math.MaxInt, z0: math.MaxInt,
+		x1: math.MinInt, y1: math.MinInt, z1: math.MinInt}
+	top := g.Ceiling()
+	set := func(x, y, z int, s uint32) {
+		if y < MinY || y >= top || inAnyRange(view.read(x, y, z), featuresCannotReplace) {
+			return
+		}
+		p.cells[[3]int{x, y, z}] = s
+		view.capture[[3]int{x, y, z}] = s
+		p.x0, p.y0, p.z0 = min(p.x0, x), min(p.y0, y), min(p.z0, z)
+		p.x1, p.y1, p.z1 = max(p.x1, x), max(p.y1, y), max(p.z1, z)
+	}
+	var budding [][3]int
+	// BlockPos.betweenClosed's order: x fastest, then y, then z.
+	for z := z0 - geodeGenOffset; z <= z0+geodeGenOffset; z++ {
+		for y := y0 - geodeGenOffset; y <= y0+geodeGenOffset; y++ {
+			for x := x0 - geodeGenOffset; x <= x0+geodeGenOffset; x++ {
+				n := noise.Noise3(float64(x)/16, float64(y)/16, float64(z)/16) * geodeNoiseMul
+				sum := 0.0
+				for _, q := range points {
+					dx, dy, dz := x-q.x, y-q.y, z-q.z
+					sum += 1/math.Sqrt(float64(dx*dx+dy*dy+dz*dz+q.off)) + n
+				}
+				if sum < outerCrust {
+					continue
+				}
+				if sum >= innerAir {
+					set(x, y, z, Air)
+					continue
+				}
+				crackSum := 0.0
+				for _, c := range cracks {
+					dx, dy, dz := x-c[0], y-c[1], z-c[2]
+					crackSum += 1/math.Sqrt(float64(dx*dx+dy*dy+dz*dz+geodeCrackOffset)) + n
+				}
+				switch {
+				case crack && crackSum >= crackSize:
+					set(x, y, z, Air)
+				case sum >= innermost:
+					if r.Float64() < geodeAltChance {
+						set(x, y, z, buddingAmethyst)
+						if r.Float64() < geodePlaceChance {
+							budding = append(budding, [3]int{x, y, z})
+						}
+					} else {
+						set(x, y, z, amethystBlock)
+					}
+				case sum >= innerCrust:
+					set(x, y, z, calcite)
+				default:
+					set(x, y, z, smoothBasalt)
+				}
+			}
+		}
+	}
+	buds := [4]string{"small_amethyst_bud", "medium_amethyst_bud", "large_amethyst_bud", "amethyst_cluster"}
+	for _, b := range budding {
+		name := buds[r.Intn(len(buds))]
+		for _, d := range geodeDirections {
+			x, y, z := b[0]+d.dx, b[1]+d.dy, b[2]+d.dz
+			at := view.read(x, y, z)
+			if at == Air || at == Water { // canClusterGrowAtState: air or a water source
+				wl := "false"
+				if at == Water {
+					wl = "true"
+				}
+				set(x, y, z, withProps(name, "facing", d.name, "waterlogged", wl))
+				break
+			}
+		}
+	}
+	if len(p.cells) == 0 || g.touchedIn(p.x0, p.y0, p.z0, p.x1, p.y1, p.z1) {
+		return nil // a player built or dug where it would stand
+	}
+	return p
+}
+
+// geodeDirections is Direction.values(): down, up, north, south, west, east.
+var geodeDirections = [6]struct {
+	name       string
+	dx, dy, dz int
+}{{"down", 0, -1, 0}, {"up", 0, 1, 0}, {"north", 0, 0, -1}, {"south", 0, 0, 1}, {"west", -1, 0, 0}, {"east", 1, 0, 0}}
+
+// geodeInvalid is #geode_invalid_blocks: bedrock, water, lava and the ices.
+func geodeInvalid(s uint32) bool {
+	return s == Bedrock || IsFluid(s) || s == Ice || s == PackedIce || s == BlueIce
+}
+
+// placeGeodes stamps into this chunk every geode rooted in its 3×3
+// neighbourhood (a geode reaches sixteen blocks from its origin).
+func (g *Generator) placeGeodes(ch *Chunk, cx, cz int32) {
+	baseX, baseZ := int(cx)*16, int(cz)*16
+	for dcx := int32(-1); dcx <= 1; dcx++ {
+		for dcz := int32(-1); dcz <= 1; dcz++ {
+			p := g.geodeIn(cx+dcx, cz+dcz)
+			if p == nil || p.x1 < baseX || p.x0 > baseX+15 || p.z1 < baseZ || p.z0 > baseZ+15 {
+				continue
+			}
+			for c, s := range p.cells {
+				if lx, lz := c[0]-baseX, c[2]-baseZ; lx >= 0 && lx < 16 && lz >= 0 && lz < 16 {
+					setSectionBlock(ch, lx, c[1], lz, s, true)
+				}
+			}
+		}
+	}
 }
 
 // cellHash mixes a geode-origin seed with a cell coord into a stable value.
@@ -54,162 +252,4 @@ func cellHash(seed uint64, x, y, z int) uint64 {
 		h ^= h >> 27
 	}
 	return h
-}
-
-func geodeNoise(seed uint64, x, y, z int) float64 {
-	return float64(cellHash(seed, x, y, z)>>11) / float64(1<<53)
-}
-
-// geodeAt deterministically decides whether a chunk roots a geode and where.
-func (g *Generator) geodeAt(ncx, ncz int32) (originSeed uint64, cx, cy, cz int, ok bool) {
-	s := uint64(oreSeed(g.seed^0x6a0de, ncx, ncz))
-	if s%24 != 0 { // rarity_filter chance 24
-		return 0, 0, 0, 0, false
-	}
-	cx = int(ncx)*16 + int((s>>8)%16)
-	cz = int(ncz)*16 + int((s>>16)%16)
-	cy = -58 + int((s>>24)%89) // uniform -58..30
-	return s, cx, cy, cz, true
-}
-
-// placeGeodes stamps into this chunk every geode rooted nearby.
-func (g *Generator) placeGeodes(ch *Chunk, cx, cz int32) {
-	topY := MinY + len(ch.Sections)*16 - 1
-	for dcx := int32(-1); dcx <= 1; dcx++ {
-		for dcz := int32(-1); dcz <= 1; dcz++ {
-			seed, gx, gy, gz, ok := g.geodeAt(cx+dcx, cz+dcz)
-			if !ok {
-				continue
-			}
-			g.stampGeode(ch, int(cx), int(cz), topY, seed, gx, gy, gz)
-		}
-	}
-}
-
-func (g *Generator) stampGeode(ch *Chunk, cx, cz, topY int, seed uint64, gx, gy, gz int) {
-	base := cx * 16
-	baseZ := cz * 16
-	// Pass 1: shell + hollow.
-	for bx := gx - geodeReach; bx <= gx+geodeReach; bx++ {
-		lx := bx - base
-		if lx < 0 || lx > 15 {
-			continue
-		}
-		for bz := gz - geodeReach; bz <= gz+geodeReach; bz++ {
-			lz := bz - baseZ
-			if lz < 0 || lz > 15 {
-				continue
-			}
-			for by := gy - geodeReach; by <= gy+geodeReach; by++ {
-				if by <= MinY || by >= topY {
-					continue
-				}
-				d := math.Sqrt(float64((bx-gx)*(bx-gx)+(by-gy)*(by-gy)+(bz-gz)*(bz-gz))) +
-					(geodeNoise(seed, bx, by, bz)-0.5)*0.8
-				setGeodeCell(ch, lx, by, lz, geodeShell(seed, bx, by, bz, d))
-			}
-		}
-	}
-	// Pass 2: clusters in hollow cells adjacent to budding amethyst.
-	for bx := gx - geodeReach; bx <= gx+geodeReach; bx++ {
-		lx := bx - base
-		if lx < 0 || lx > 15 {
-			continue
-		}
-		for bz := gz - geodeReach; bz <= gz+geodeReach; bz++ {
-			lz := bz - baseZ
-			if lz < 0 || lz > 15 {
-				continue
-			}
-			for by := gy - geodeReach + 1; by < gy+geodeReach; by++ {
-				if by <= MinY || by >= topY {
-					continue
-				}
-				if !isHollow(seed, gx, gy, gz, bx, by, bz) {
-					continue
-				}
-				if c := geodeCluster(seed, gx, gy, gz, bx, by, bz); c != 0 {
-					yi := by - MinY
-					sec, idx := yi/16, ((yi%16)*16+lz)*16+lx
-					if ch.Sections[sec][idx] == Air {
-						ch.Sections[sec][idx] = c
-					}
-				}
-			}
-		}
-	}
-}
-
-// geodeShell returns the block for a cell at distance d, or 0 if outside.
-func geodeShell(seed uint64, bx, by, bz int, d float64) uint32 {
-	switch {
-	case d <= geodeAirR:
-		return geodeHollow // carve to air (distinct from 0 = outside geode)
-	case d <= geodeAmethystR:
-		if cellHash(seed, bx, by, bz)%7 == 0 {
-			return buddingAmethyst
-		}
-		return amethystBlock
-	case d <= geodeCalciteR:
-		return calcite
-	case d <= geodeBasaltR:
-		return smoothBasalt
-	}
-	return 0
-}
-
-// isHollow reports whether a cell falls in the geode's air pocket.
-func isHollow(seed uint64, gx, gy, gz, bx, by, bz int) bool {
-	d := math.Sqrt(float64((bx-gx)*(bx-gx)+(by-gy)*(by-gy)+(bz-gz)*(bz-gz))) +
-		(geodeNoise(seed, bx, by, bz)-0.5)*0.8
-	return d <= geodeAirR
-}
-
-// geodeCluster returns an amethyst cluster/bud state to place in this hollow
-// cell if a budding_amethyst sits against it, else 0.
-func geodeCluster(seed uint64, gx, gy, gz, bx, by, bz int) uint32 {
-	for _, dir := range [6][3]int{{0, 0, -1}, {1, 0, 0}, {0, 0, 1}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}} {
-		nx, ny, nz := bx+dir[0], by+dir[1], bz+dir[2]
-		d := math.Sqrt(float64((nx-gx)*(nx-gx)+(ny-gy)*(ny-gy)+(nz-gz)*(nz-gz))) +
-			(geodeNoise(seed, nx, ny, nz)-0.5)*0.8
-		if d > geodeAirR && d <= geodeAmethystR && cellHash(seed, nx, ny, nz)%7 == 0 {
-			// A budding block is on the `dir` side; the cluster grows back the
-			// other way, facing from the budding block toward this hollow cell.
-			out := [3]int{-dir[0], -dir[1], -dir[2]}
-			r := cellHash(seed, bx, by, bz) % 100
-			switch { // ~35% grows something; larger stages rarer
-			case r < 10:
-				return budState(amethystClusterBase, out)
-			case r < 18:
-				return budState(largeBudBase, out)
-			case r < 26:
-				return budState(mediumBudBase, out)
-			case r < 35:
-				return budState(smallBudBase, out)
-			}
-			return 0
-		}
-	}
-	return 0
-}
-
-// setGeodeCell writes a shell block, replacing only stone/deepslate (so the
-// geode doesn't overwrite bedrock, fluids, or carve odd holes in cave walls),
-// while the hollow carves stone/deepslate to air.
-func setGeodeCell(ch *Chunk, lx, y, lz int, block uint32) {
-	if block == 0 {
-		return
-	}
-	yi := y - MinY
-	sec, idx := yi/16, ((yi%16)*16+lz)*16+lx
-	cur := ch.Sections[sec][idx]
-	if block == geodeHollow {
-		if cur == Stone || cur == Deepslate {
-			ch.Sections[sec][idx] = Air
-		}
-		return
-	}
-	if cur == Stone || cur == Deepslate {
-		ch.Sections[sec][idx] = block
-	}
 }

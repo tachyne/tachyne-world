@@ -588,9 +588,9 @@ func (g *Generator) GenerateChunk(cx, cz int32) *Chunk {
 	g.supportSurface(ch, cx, cz)    // fill undercut surface crusts (no floating dirt/grass)
 	g.carveCanyons(ch, cx, cz)      // ravines (the canyon carver)
 	g.placeLavaLakes(ch, cx, cz)    // lake_lava_surface / lake_lava_underground
+	g.placeGeodes(ch, cx, cz)       // amethyst geodes (LOCAL_MODIFICATIONS; may straddle chunk borders)
 	g.placeMonsterRooms(ch, cx, cz) // monster_room / _deep: the dungeons (UNDERGROUND_STRUCTURES)
 	g.placeOres(ch, cx, cz)         // after carving: veins only in surviving stone
-	g.placeGeodes(ch, cx, cz)       // amethyst geodes (may straddle chunk borders)
 	// Forest rocks, ice spikes and ice patches, before the plants.
 	g.decorateSurface(ch, cx, cz)
 	g.decorate(ch, cx, cz)
