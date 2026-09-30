@@ -8,13 +8,14 @@ import (
 	"strings"
 )
 
-// readLeadingString reads a VarInt-length-prefixed string from the start of a
-// packet body. Both Chat Message and Chat Command lead with their text, and the
-
 // commandFields splits a command line into its arguments on whitespace, the
-// way brigadier reads a selector or an SNBT value as one argument: spaces
-// inside [...] or {...} (and inside quotes there) do not split, so
-// `@e[type=cow, limit=1]` and `{a: 1, b: "x y"}` stay whole.
+// way brigadier reads a selector, an SNBT value or a quoted string as one
+// argument: spaces inside [...] or {...} (and inside quotes there) do not
+// split, and neither do spaces inside a "quoted" or 'quoted' argument
+// (StringReader.readQuotedString: a quote opens one only at the start of an
+// argument, with backslash escapes), so `@e[type=cow, limit=1]`,
+// `{a: 1, b: "x y"}` and `"Red Team"` stay whole. The quotes stay on the
+// field; unquoteArg takes them off where an argument is a string.
 func commandFields(cmd string) []string {
 	var out []string
 	var cur strings.Builder
@@ -36,7 +37,7 @@ func commandFields(cmd string) []string {
 			} else if c == quote {
 				quote = 0
 			}
-		case depth > 0 && (c == '"' || c == '\''):
+		case (depth > 0 || cur.Len() == 0) && (c == '"' || c == '\''):
 			quote = c
 		case c == '[' || c == '{':
 			depth++
@@ -50,6 +51,22 @@ func commandFields(cmd string) []string {
 	}
 	flush()
 	return out
+}
+
+// unquoteArg is StringArgumentType.string()'s value: a quoted argument
+// without its quotes and escapes, anything else as it is.
+func unquoteArg(a string) string {
+	if len(a) < 2 || (a[0] != '"' && a[0] != '\'') || a[len(a)-1] != a[0] {
+		return a
+	}
+	var b strings.Builder
+	for i := 1; i < len(a)-1; i++ {
+		if a[i] == '\\' && i+1 < len(a)-1 {
+			i++
+		}
+		b.WriteByte(a[i])
+	}
+	return b.String()
 }
 
 // tell sends a private system message to one player.
@@ -77,7 +94,7 @@ func (s *Server) handleCommand(p *player, cmd string) {
 	switch fields[0] {
 	case "help":
 		help := "Commands: /help /say /msg /teammsg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /enchant /setblock /fill /seed /me /spawnpoint /setworldspawn /playsound /stopsound /tellraw /difficulty /gamerule /gamemode /defaultgamemode /hud /worldborder /locate /title /advancement /attribute /recipe /tag /ride /damage /spreadplayers /forceload /random /compute /swing /clone /bossbar /save-all /save-off /save-on /version /stop /item /loot /fetchprofile /bug" +
-			" — targets take @s @p @a @r @e (with type=, distance=, limit=, name=, tag=), coordinates take ~ and ^." +
+			" — targets take @s @p @a @r @e (with type=, name=, tag=, distance=, x/y/z=, dx/dy/dz=, limit=, sort=, scores=, team=, level=, gamemode=, x_rotation=, y_rotation=, advancements=, nbt=, predicate=), coordinates take ~ and ^." +
 			" /bug <what went wrong> reports something with the blocks around you attached; /bug list shows the last few and /bug re <text> adds to one."
 		if s.hub.plugHost != nil {
 			help += s.hub.plugHost.pluginHelp()

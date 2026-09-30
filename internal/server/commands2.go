@@ -30,15 +30,28 @@ type evWhisper struct {
 
 func (evWhisper) isHubEvent() {}
 
+// onWhisper is MsgCommand: the targets are EntityArgument.players(), so a
+// name or any player selector (@a, @p, @r, @a[team=red]…); each target
+// hears it and the sender sees one outgoing line per target.
 func (h *hub) onWhisper(players map[int32]*tracked, e evWhisper) {
-	for _, t := range players {
-		if strings.EqualFold(t.p.name, e.to) {
-			t.p.trySendEv(chatEv(fmt.Sprintf("%s whispers to you: %s", e.from.name, e.text)))
-			e.from.trySendEv(chatEv(fmt.Sprintf("You whisper to %s: %s", t.p.name, e.text)))
-			return
-		}
+	spec, ok := parseTargetSpec(e.to)
+	if !ok {
+		e.from.trySendEv(chatEv("Invalid name or UUID"))
+		return
 	}
-	e.from.trySendEv(chatEv("No player named " + e.to + " is online."))
+	if spec.selectsEntities() { // EntityArgument.players(): ERROR_ONLY_PLAYERS_ALLOWED
+		e.from.trySendEv(chatEv("Only players may be affected by this command, but the provided selector includes entities"))
+		return
+	}
+	targets := h.selectPlayers(players, players[e.from.eid], spec)
+	if len(targets) == 0 {
+		e.from.trySendEv(chatEv("No player was found"))
+		return
+	}
+	for _, t := range targets {
+		t.p.trySendEv(chatEv(fmt.Sprintf("%s whispers to you: %s", sourceName(e.from), e.text)))
+		e.from.trySendEv(chatEv(fmt.Sprintf("You whisper to %s: %s", t.p.name, e.text)))
+	}
 }
 
 // cmdKick disconnects an online player (op only).

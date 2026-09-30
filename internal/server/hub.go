@@ -1702,14 +1702,7 @@ func (h *hub) run() {
 			case evGive:
 				h.onGive(players, e)
 			case evKill:
-				for _, t := range h.commandTargets(players, e.by, e.target) {
-					h.damageOf(players, t, 100000, dtGenericKill)
-				}
-				// /kill @e[type=…] reaches the mobs too, which is the whole
-				// reason anyone types a selector.
-				for _, m := range h.commandMobs(players, e.by, e.target) {
-					h.killMob(players, m)
-				}
+				h.onKill(players, e)
 			case evXP:
 				h.onXPCommand(players, e)
 			case evPaddleBoat:

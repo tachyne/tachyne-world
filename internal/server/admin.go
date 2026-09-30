@@ -450,6 +450,36 @@ type evKill struct {
 	target string
 	by     int32
 }
+
+// onKill is KillCommand: every entity the selector picks — players, mobs,
+// and (for @e) the items, projectiles, vehicles and the rest — is killed,
+// and the caller told "Killed <name>" or "Killed <n> entities".
+func (h *hub) onKill(players map[int32]*tracked, e evKill) {
+	ens := h.commandEntitiesAll(players, e.by, e.target)
+	if len(ens) == 0 {
+		if t := players[e.by]; t != nil {
+			cmdFail(t.p, "No entity was found")
+		}
+		return
+	}
+	name := ens[0].name()
+	for _, en := range ens {
+		switch {
+		case en.t != nil:
+			h.damageOf(players, en.t, 100000, dtGenericKill)
+		case en.m != nil:
+			h.killMob(players, en.m)
+		case en.o != nil:
+			en.o.kill(players)
+		}
+	}
+	if len(ens) == 1 {
+		h.cmdOK(players, e.by)("Killed " + name)
+	} else {
+		h.cmdOK(players, e.by)(fmt.Sprintf("Killed %d entities", len(ens)))
+	}
+}
+
 type evXP struct {
 	op     string // add, set, query
 	target string

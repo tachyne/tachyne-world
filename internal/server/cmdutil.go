@@ -59,12 +59,18 @@ func (c *cmdTally) n(nonZero bool) int {
 type cmdEntity struct {
 	t *tracked
 	m *mob
+	// o is a non-living entity (selectall.go); only the selections that ask
+	// for them (commandEntitiesAll) ever fill it.
+	o *otherEnt
 }
 
 // name is the entity's display name as feedback prints it.
 func (e cmdEntity) name() string {
 	if e.t != nil {
 		return e.t.p.name
+	}
+	if e.o != nil {
+		return e.o.name()
 	}
 	if e.m.customName != "" {
 		return e.m.customName
@@ -76,6 +82,9 @@ func (e cmdEntity) dim() int {
 	if e.t != nil {
 		return e.t.dim
 	}
+	if e.o != nil {
+		return e.o.dim
+	}
 	return e.m.dim
 }
 
@@ -83,12 +92,18 @@ func (e cmdEntity) pos() (float64, float64, float64) {
 	if e.t != nil {
 		return e.t.x, e.t.y, e.t.z
 	}
+	if e.o != nil {
+		return e.o.x, e.o.y, e.o.z
+	}
 	return e.m.x, e.m.y, e.m.z
 }
 
 func (e cmdEntity) eid() int32 {
 	if e.t != nil {
 		return e.t.p.eid
+	}
+	if e.o != nil {
+		return e.o.eid
 	}
 	return e.m.eid
 }

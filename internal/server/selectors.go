@@ -14,8 +14,10 @@ import (
 // `~` / `^` make a coordinate relative to where you stand or which way you
 // look, so `/tp ~ ~10 ~` and `/kill @e[type=zombie,distance=..16]` work.
 //
-// This is not the full brigadier grammar — no NBT predicates, no scores —
-// but it is the part players actually type.
+// The options are EntitySelectorOptions': name, distance, level, x/y/z,
+// dx/dy/dz, x_rotation/y_rotation, limit, sort, gamemode, team, type, tag,
+// nbt, scores, advancements and predicate. @e reaches every entity the
+// engine keeps (selectall.go) for the commands that can act on them.
 
 // targetSpec is a parsed selector. An empty kind means a literal name.
 type targetSpec struct {
@@ -54,6 +56,19 @@ type targetSpec struct {
 	xRot, yRot [2]float64
 	hasXRot    bool
 	hasYRot    bool
+	// advancements={…} (players only).
+	advs []advSelPred
+	// nbt={…} / nbt=!{…}: a compound the entity's saved data must contain.
+	nbts []nbtSel
+	// predicate=id / predicate=!id. No data pack defines one here, so a
+	// predicate never holds (vanilla: an unknown predicate is false).
+	preds []bool // each entry: inverted
+}
+
+// nbtSel is one nbt= option.
+type nbtSel struct {
+	tag    map[string]any
+	invert bool
 }
 
 // parseTargetSpec reads one selector argument. A bare word is a player name,
@@ -201,6 +216,26 @@ func parseTargetSpec(arg string) (targetSpec, bool) {
 			} else {
 				spec.gamemodes = append(spec.gamemodes, mode)
 			}
+		case "advancements":
+			advs, ok := parseAdvancementsOption(v)
+			if !ok {
+				return targetSpec{}, false
+			}
+			spec.advs = append(spec.advs, advs...)
+		case "nbt":
+			inv := strings.HasPrefix(v, "!")
+			tag, err := parseSNBT(strings.TrimSpace(strings.TrimPrefix(v, "!")))
+			m, isCompound := tag.(map[string]any)
+			if err != nil || !isCompound {
+				return targetSpec{}, false
+			}
+			spec.nbts = append(spec.nbts, nbtSel{tag: m, invert: inv})
+		case "predicate":
+			id := strings.TrimPrefix(v, "!")
+			if id == "" {
+				return targetSpec{}, false
+			}
+			spec.preds = append(spec.preds, strings.HasPrefix(v, "!"))
 		case "x_rotation", "y_rotation":
 			lo, hi, ok := parseSelectorFloatRange(v)
 			if !ok {
@@ -221,15 +256,23 @@ func parseTargetSpec(arg string) (targetSpec, bool) {
 }
 
 // splitPredicates splits a predicate list on commas that are not inside
-// nested brackets or quotes.
+// nested brackets or quotes (either kind, with backslash escapes).
 func splitPredicates(s string) []string {
 	var out []string
-	depth, quoted, start := 0, false, 0
+	depth, start := 0, 0
+	quote, escaped := rune(0), false
 	for i, r := range s {
 		switch {
-		case r == '"':
-			quoted = !quoted
-		case quoted:
+		case escaped:
+			escaped = false
+		case quote != 0 && r == '\\':
+			escaped = true
+		case quote != 0:
+			if r == quote {
+				quote = 0
+			}
+		case r == '"' || r == '\'':
+			quote = r
 		case r == '[' || r == '{':
 			depth++
 		case r == ']' || r == '}':
@@ -274,12 +317,18 @@ func (h *hub) selectMobs(from *tracked, spec targetSpec) []*mob {
 // selector's sort — nearest for @p, random for @r, arbitrary (a stable
 // order) for @a and @e unless sort= says otherwise — and cut to its limit.
 func (h *hub) selectEntities(players map[int32]*tracked, from *tracked, spec targetSpec, withPlayers, withMobs bool) []cmdEntity {
+	return h.selectEntitiesAll(players, from, spec, withPlayers, withMobs, false)
+}
+
+// selectEntitiesAll is selectEntities that also reaches the non-living
+// entities (withOthers) — items, orbs, projectiles, vehicles and the rest.
+func (h *hub) selectEntitiesAll(players map[int32]*tracked, from *tracked, spec targetSpec, withPlayers, withMobs, withOthers bool) []cmdEntity {
 	var out []cmdEntity
 	switch spec.kind {
-	case 0: // a plain name: that online player
+	case 0: // a plain name: that online player (PlayerList.getPlayerByName ignores case)
 		if withPlayers {
 			for _, t := range players {
-				if t.p.name == spec.name {
+				if strings.EqualFold(t.p.name, spec.name) {
 					out = append(out, cmdEntity{t: t})
 				}
 			}
@@ -302,6 +351,13 @@ func (h *hub) selectEntities(players map[int32]*tracked, from *tracked, spec tar
 		for _, m := range h.mobs {
 			if m.dying == 0 && h.specMatches(spec, cmdEntity{m: m}, from) {
 				out = append(out, cmdEntity{m: m})
+			}
+		}
+	}
+	if withOthers && spec.kind == 'e' && spec.etype != "player" {
+		for _, o := range h.otherEntities() {
+			if h.specMatches(spec, cmdEntity{o: o}, from) {
+				out = append(out, cmdEntity{o: o})
 			}
 		}
 	}
@@ -329,7 +385,7 @@ func (h *hub) selectEntities(players map[int32]*tracked, from *tracked, spec tar
 		if a.t != nil {
 			return a.t.p.name < b.t.p.name
 		}
-		return a.m.eid < b.m.eid
+		return a.eid() < b.eid()
 	}
 	switch {
 	case sortBy == "nearest" && hasFrom:
@@ -399,13 +455,35 @@ func (h *hub) specMatches(spec targetSpec, en cmdEntity, from *tracked) bool {
 		if containsInt(spec.notGmodes, t.gamemode) {
 			return false
 		}
+		if len(spec.advs) > 0 && !advancementsMatch(t.adv, spec.advs) {
+			return false
+		}
+	} else if o := en.o; o != nil {
+		tags, name, owner, etype = nil, o.name(), uuidString(o.uuid), o.etype
+		yaw, pitch, w, ht = o.yaw, o.pitch, o.w, o.h
+		if spec.hasLevel || len(spec.gamemodes) > 0 || len(spec.advs) > 0 {
+			return false // level=, gamemode= and advancements= select players only
+		}
 	} else {
 		m := en.m
 		tags, name, owner, etype = m.tags, en.name(), uuidString(m.uuid), entityTypeName(m.etype)
 		b := m.box()
 		yaw, w, ht = m.yaw, b.w, b.h
-		if spec.hasLevel || len(spec.gamemodes) > 0 {
-			return false // level= and gamemode= select players only
+		if spec.hasLevel || len(spec.gamemodes) > 0 || len(spec.advs) > 0 {
+			return false // level=, gamemode= and advancements= select players only
+		}
+	}
+	for _, inverted := range spec.preds {
+		if !inverted { // an undefined predicate never holds
+			return false
+		}
+	}
+	if len(spec.nbts) > 0 {
+		view := h.entityNBTView(en)
+		for _, n := range spec.nbts {
+			if nbtMatches(n.tag, view, true) == n.invert { // NbtUtils.compareNbt, partial lists
+				return false
+			}
 		}
 	}
 	if spec.etype != "" && etype != spec.etype {
@@ -668,6 +746,20 @@ func (h *hub) commandMobs(players map[int32]*tracked, by int32, arg string) []*m
 	return h.selectMobs(players[by], spec)
 }
 
+// commandOthers resolves a target argument to the non-living entities it
+// picks (only @e does).
+func (h *hub) commandOthers(players map[int32]*tracked, by int32, arg string) []*otherEnt {
+	spec, ok := parseTargetSpec(arg)
+	if !ok || !spec.selectsEntities() {
+		return nil
+	}
+	var out []*otherEnt
+	for _, en := range h.selectEntitiesAll(players, players[by], spec, false, false, true) {
+		out = append(out, en.o)
+	}
+	return out
+}
+
 // evTeleportTo is /tp <player|selector>: the hub knows where everyone is.
 type evTeleportTo struct {
 	eid    int32
@@ -687,6 +779,8 @@ func (h *hub) onTeleportTo(players map[int32]*tracked, e evTeleportTo) {
 		x, y, z, dim, ok = ts[0].x, ts[0].y, ts[0].z, ts[0].dim, true
 	} else if ms := h.commandMobs(players, e.eid, e.target); len(ms) > 0 {
 		x, y, z, dim, ok = ms[0].x, ms[0].y, ms[0].z, ms[0].dim, true
+	} else if os := h.commandOthers(players, e.eid, e.target); len(os) > 0 {
+		x, y, z, dim, ok = os[0].x, os[0].y, os[0].z, os[0].dim, true
 	}
 	if !ok {
 		me.p.tell("No entity was found.")
@@ -732,7 +826,8 @@ func (h *hub) onTeleportTargets(players map[int32]*tracked, e evTeleportTargets)
 	}
 	ts := h.commandTargets(players, e.by, e.targets)
 	ms := h.commandMobs(players, e.by, e.targets)
-	if len(ts)+len(ms) == 0 {
+	os := h.commandOthers(players, e.by, e.targets)
+	if len(ts)+len(ms)+len(os) == 0 {
 		me.p.tell("No entity was found")
 		return
 	}
@@ -742,6 +837,8 @@ func (h *hub) onTeleportTargets(players map[int32]*tracked, e evTeleportTargets)
 			x, y, z, dim, where = d[0].x, d[0].y, d[0].z, d[0].dim, d[0].p.name
 		} else if d := h.commandMobs(players, e.by, e.dest); len(d) > 0 {
 			x, y, z, dim, where = d[0].x, d[0].y, d[0].z, d[0].dim, mobDisplayName(d[0].etype)
+		} else if d := h.commandOthers(players, e.by, e.dest); len(d) > 0 {
+			x, y, z, dim, where = d[0].x, d[0].y, d[0].z, d[0].dim, d[0].name()
 		} else {
 			me.p.tell("No entity was found")
 			return
@@ -809,6 +906,20 @@ func (h *hub) onTeleportTargets(players map[int32]*tracked, e evTeleportTargets)
 		}
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, false))
 		moved, name = moved+1, mobDisplayName(m.etype)
+	}
+	for _, o := range os {
+		// An item, projectile, vehicle or the like: moved within its level
+		// (a hanging entity, which has no setPos, stays on its block).
+		if o.setPos == nil || o.dim != dim {
+			continue
+		}
+		yaw := o.yaw
+		if e.rot {
+			yaw = e.yaw
+		}
+		o.setPos(x, y, z, yaw)
+		h.toTracking(players, o.eid, o.dim, x, z, entMove(o.eid, x, y, z, yaw, 0, false))
+		moved, name = moved+1, o.name()
 	}
 	if moved == 0 {
 		me.p.tell("That destination is in another dimension")
