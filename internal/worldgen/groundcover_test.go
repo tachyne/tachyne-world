@@ -25,8 +25,8 @@ func groundCoverOnly(g *Generator, cx, cz int32) *Chunk {
 	return ch
 }
 
-// inRange reports whether a state belongs to one of the named blocks.
-func inRange(s uint32, names ...string) bool {
+// isAnyOf reports whether a state belongs to one of the named blocks.
+func isAnyOf(s uint32, names ...string) bool {
 	for _, n := range names {
 		if lo, hi := BlockRange(n); s >= lo && s <= hi {
 			return true
@@ -72,7 +72,7 @@ func TestGroundCoverBiomeSets(t *testing.T) {
 				for lz := 0; lz < 16; lz++ {
 					for y := MinY + 1; y < MinY+g.sections*16-1; y++ {
 						s := sectionBlockAt(ch, lx, y, lz)
-						if !inRange(s, c.blocks...) {
+						if !isAnyOf(s, c.blocks...) {
 							continue
 						}
 						found++
@@ -91,29 +91,29 @@ func TestGroundCoverBiomeSets(t *testing.T) {
 func checkCoverSupport(t *testing.T, biome string, s, below uint32) {
 	t.Helper()
 	switch {
-	case inRange(s, "cactus"):
-		if !inRange(below, "cactus", "sand", "red_sand") {
+	case isAnyOf(s, "cactus"):
+		if !isAnyOf(below, "cactus", "sand", "red_sand") {
 			t.Errorf("%s: cactus on %d", biome, below)
 		}
-	case inRange(s, "cactus_flower"):
-		if !inRange(below, "cactus") {
+	case isAnyOf(s, "cactus_flower"):
+		if !isAnyOf(below, "cactus") {
 			t.Errorf("%s: cactus flower on %d", biome, below)
 		}
-	case inRange(s, "bamboo"):
+	case isAnyOf(s, "bamboo"):
 		if !supportsBamboo(below) {
 			t.Errorf("%s: bamboo on %d", biome, below)
 		}
-	case inRange(s, "dead_bush"):
+	case isAnyOf(s, "dead_bush"):
 		if !supportsDryVegetation(below) {
 			t.Errorf("%s: dead bush on %d", biome, below)
 		}
-	case inRange(s, "brown_mushroom", "red_mushroom"):
+	case isAnyOf(s, "brown_mushroom", "red_mushroom"):
 		if below == Air || IsFluid(below) {
 			t.Errorf("%s: mushroom on %d", biome, below)
 		}
-	case inRange(s, "tall_grass", "lilac", "peony", "rose_bush"):
+	case isAnyOf(s, "tall_grass", "lilac", "peony", "rose_bush"):
 		// either half: the lower on vegetation ground, the upper on its lower
-		if !supportsVegetation(below) && !inRange(below, "tall_grass", "lilac", "peony", "rose_bush") {
+		if !supportsVegetation(below) && !isAnyOf(below, "tall_grass", "lilac", "peony", "rose_bush") {
 			t.Errorf("%s: double plant on %d", biome, below)
 		}
 	default:
@@ -136,7 +136,7 @@ func TestGroundCoverInGeneratedChunks(t *testing.T) {
 				for lz := 0; lz < 16; lz++ {
 					h := g.Height(int(p[0])*16+lx, int(p[1])*16+lz)
 					for y := h - 3; y < h+4; y++ {
-						if inRange(sectionBlockAt(ch, lx, y, lz), names...) {
+						if isAnyOf(sectionBlockAt(ch, lx, y, lz), names...) {
 							hits++
 						}
 					}
@@ -166,7 +166,7 @@ func TestGroundCoverLeavesOtherFeatures(t *testing.T) {
 		if s == Air || IsReplaceable(s) {
 			return true
 		}
-		return inRange(s, "short_grass", "fern", "dandelion", "poppy", "blue_orchid", "allium", "azure_bluet",
+		return isAnyOf(s, "short_grass", "fern", "dandelion", "poppy", "blue_orchid", "allium", "azure_bluet",
 			"red_tulip", "orange_tulip", "white_tulip", "pink_tulip", "oxeye_daisy", "cornflower", "lily_of_the_valley",
 			"pink_petals", "closed_eyeblossom", "red_shrub", "dead_bush", "cactus", "cactus_flower", "sweet_berry_bush",
 			"bamboo", "brown_mushroom", "red_mushroom", "tall_grass", "lilac", "rose_bush", "peony",
@@ -209,7 +209,7 @@ func TestGroundCoverSkipsRoofedGround(t *testing.T) {
 			for lz := 0; lz < 16; lz++ {
 				h := g.Height(int(cx)*16+lx, int(cz)*16+lz)
 				for y := h; y < h+3; y++ {
-					if inRange(sectionBlockAt(ch, lx, y, lz), "short_grass", "dandelion", "poppy", "azure_bluet",
+					if isAnyOf(sectionBlockAt(ch, lx, y, lz), "short_grass", "dandelion", "poppy", "azure_bluet",
 						"oxeye_daisy", "cornflower", "red_tulip", "orange_tulip", "white_tulip", "pink_tulip") {
 						n++
 					}
