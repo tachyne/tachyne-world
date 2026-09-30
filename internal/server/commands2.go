@@ -459,12 +459,12 @@ func (s *Server) cmdParticle(p *player, args []string) {
 		return
 	}
 	e := evParticleCmd{by: p.eid, dim: p.dim, x: p.x, y: p.y, z: p.z}
-	pid, name, msg := parseParticleArg(args[0])
+	pid, name, opts, msg := parseParticleArg(args[0])
 	if msg != "" {
 		p.tell(msg)
 		return
 	}
-	e.pid, e.name = pid, name
+	e.pid, e.name, e.opts = pid, name, opts
 	if len(args) >= 4 {
 		x, y, z, ok := parsePosition(args[1:4], p.x, p.y, p.z, p.yaw, p.pitch)
 		if !ok {
@@ -513,29 +513,42 @@ func (s *Server) cmdParticle(p *player, args []string) {
 }
 
 // parseParticleArg is ParticleArgument: a particle type by id (26.3's
-// registry), with its options as SNBT when the type takes them. The
-// attach Particles frame carries a type id and nothing else, so a type
-// that needs options — or options given at all — cannot reach a client yet
-// and is refused by name, rather than sent bare (which a client cannot
-// parse). A bare canonical id is still taken, as this command once did.
-func parseParticleArg(arg string) (int32, string, string) {
+// registry), with its options as SNBT when the type takes them. A type the
+// attach frame cannot name for any client yet (new in 26.x) is refused by
+// name. A bare canonical id is still taken, as this command once did.
+func parseParticleArg(arg string) (int32, string, *attachproto.ParticleOptions, string) {
 	name, opts, hasOpts := strings.Cut(arg, "{")
 	name = strings.TrimPrefix(name, "minecraft:")
-	if pid, ok := particleByName[name]; ok && !hasOpts {
-		return pid, "minecraft:" + name, ""
+	if ot, ok := particleOptTypes[name]; ok {
+		tag := map[string]any{}
+		if hasOpts {
+			v, err := parseSNBT("{" + opts)
+			if err != nil {
+				return 0, "", nil, fmt.Sprintf("Can't parse particle options: %v", err)
+			}
+			tag, _ = v.(map[string]any)
+		}
+		o, msg := parseParticleOptions(ot.kind, tag)
+		if msg != "" {
+			return 0, "", nil, msg
+		}
+		return ot.pid, "minecraft:" + name, o, ""
+	}
+	if pid, ok := particleByName[name]; ok {
+		if hasOpts { // a type without options takes none (vanilla's codec reads an empty unit)
+			if _, err := parseSNBT("{" + opts); err != nil {
+				return 0, "", nil, fmt.Sprintf("Can't parse particle options: %v", err)
+			}
+		}
+		return pid, "minecraft:" + name, nil, ""
 	}
 	if n, err := strconv.Atoi(name); err == nil && !hasOpts {
-		return int32(n), "minecraft:" + name, ""
+		return int32(n), "minecraft:" + name, nil, ""
 	}
 	if !particleTypes263[name] {
-		return 0, "", "Unknown particle: minecraft:" + name
+		return 0, "", nil, "Unknown particle: minecraft:" + name
 	}
-	if hasOpts {
-		if _, err := parseSNBT("{" + opts); err != nil {
-			return 0, "", fmt.Sprintf("Can't parse particle options: %v", err)
-		}
-	}
-	return 0, "", fmt.Sprintf("The particle minecraft:%s can't be shown yet: particles with options (or new in 26.x) have no way to the client", name)
+	return 0, "", nil, fmt.Sprintf("The particle minecraft:%s can't be shown yet: it is new in 26.x and has no canonical id", name)
 }
 
 // particleTypes263 is 26.3's minecraft:particle_type registry.
@@ -578,12 +591,13 @@ type evParticleCmd struct {
 	count   int32
 	force   bool   // force: seen from 512 blocks, not 32
 	viewers string // a player selector ("" = every player)
+	opts    *attachproto.ParticleOptions
 }
 
 // onParticleCmd is ParticleCommand.sendParticles: to each viewer in the
 // operator's dimension whose block position is within 32 blocks of the
-// point (512 with force), counting who saw it. The attach frame has one
-// spread, not three, so the widest delta stands for all three axes.
+// point (512 with force), counting who saw it. The deltas go per axis and
+// force as the packet's overrideLimiter, as sendParticles sends them.
 func (h *hub) onParticleCmd(players map[int32]*tracked, e evParticleCmd) {
 	var by *player
 	if t := players[e.by]; t != nil {
@@ -597,7 +611,6 @@ func (h *hub) onParticleCmd(players map[int32]*tracked, e evParticleCmd) {
 	} else {
 		viewers = h.commandTargets(players, e.by, e.viewers)
 	}
-	spread := float32(math.Max(math.Abs(e.delta[0]), math.Max(math.Abs(e.delta[1]), math.Abs(e.delta[2]))))
 	r := 32.0
 	if e.force {
 		r = 512
@@ -613,7 +626,9 @@ func (h *hub) onParticleCmd(players map[int32]*tracked, e evParticleCmd) {
 		if dx*dx+dy*dy+dz*dz >= r*r { // BlockPos.closerToCenterThan
 			continue
 		}
-		t.p.trySendEv(attachproto.Particles{PID: e.pid, X: e.x, Y: e.y, Z: e.z, Spread: spread, Speed: e.speed, Count: e.count})
+		t.p.trySendEv(attachproto.Particles{PID: e.pid, X: e.x, Y: e.y, Z: e.z,
+			DX: float32(e.delta[0]), DY: float32(e.delta[1]), DZ: float32(e.delta[2]),
+			Speed: e.speed, Count: e.count, Force: e.force, Options: e.opts})
 		seen++
 	}
 	if seen == 0 {
