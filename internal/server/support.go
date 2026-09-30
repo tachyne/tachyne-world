@@ -16,27 +16,102 @@ import (
 // support was a six-block list checked only directly above an edit, so a wall
 // torch survived the wall it was on and a rail could be placed in mid-air.
 
-// plantSoils are the blocks a plant will root in — vanilla's dirt tag plus the
-// handful of other grounds saplings and flowers accept.
-var plantSoils = func() map[uint32]bool {
-	out := map[uint32]bool{}
-	for _, n := range []string{
-		"dirt", "grass_block", "podzol", "coarse_dirt", "rooted_dirt", "mycelium",
-		"moss_block", "pale_moss_block", "mud", "muddy_mangrove_roots", "farmland",
-		"sand", "red_sand", "suspicious_sand", "soul_sand", "soul_soil",
-		"crimson_nylium", "warped_nylium", "clay", "gravel", "terracotta",
-		"snow_block", "powder_snow", "end_stone", "netherrack",
-	} {
-		lo, hi, ok := worldgen.BlockRangeOK(n)
-		if !ok {
-			continue
+// Each plant roots in its own ground: VegetationBlock.mayPlaceOn is
+// #supports_vegetation, and a subclass names its own tag or rule. These are
+// the tags the plants answer to (plantMayPlaceOn).
+var (
+	supportsVegetation    = worldgen.BlockTag("supports_vegetation")
+	supportsAzalea        = worldgen.BlockTag("supports_azalea")
+	supportsDryVegetation = worldgen.BlockTag("supports_dry_vegetation")
+	supportsCrimsonFungus = worldgen.BlockTag("supports_crimson_fungus")
+	supportsWarpedFungus  = worldgen.BlockTag("supports_warped_fungus")
+	supportsCrimsonRoots  = worldgen.BlockTag("supports_crimson_roots")
+	supportsWarpedRoots   = worldgen.BlockTag("supports_warped_roots")
+	supportsNetherSprouts = worldgen.BlockTag("supports_nether_sprouts")
+	supportsNetherWart    = worldgen.BlockTag("supports_nether_wart")
+	supportsWitherRose    = worldgen.BlockTag("supports_wither_rose")
+	supportsMangroveProp  = worldgen.BlockTag("supports_mangrove_propagule")
+	supportsHangingProp   = worldgen.BlockTag("supports_hanging_mangrove_propagule")
+	supportsSmallDripleaf = worldgen.BlockTag("supports_small_dripleaf")
+	supportsMelonStem     = worldgen.BlockTag("supports_melon_stem")
+	supportsPumpkinStem   = worldgen.BlockTag("supports_pumpkin_stem")
+	cannotSupportSeagrass = worldgen.BlockTag("cannot_support_seagrass")
+	dryVegetationPlants   = blockRange("dead_bush", "short_dry_grass", "tall_dry_grass")
+	azaleaPlants          = blockRange("azalea", "flowering_azalea")
+	crimsonFungusStates   = blockRange("crimson_fungus")
+	warpedFungusStates    = blockRange("warped_fungus")
+	crimsonRootsStates    = blockRange("crimson_roots")
+	warpedRootsStates     = blockRange("warped_roots")
+	netherSproutsStates   = blockRange("nether_sprouts")
+	netherWartStates      = blockRange("nether_wart")
+	witherRoseStates      = blockRange("wither_rose")
+	seagrassStates        = blockRange("seagrass")
+	smallDripleafStates   = blockRange("small_dripleaf")
+	melonStemStates       = blockRange("melon_stem", "attached_melon_stem")
+	pumpkinStemStates     = blockRange("pumpkin_stem", "attached_pumpkin_stem")
+)
+
+// plantMayPlaceOn is the plant's own mayPlaceOn, asked of the block below
+// it (b) — canSurvive for every VegetationBlock: dry grass and dead bushes
+// on #supports_dry_vegetation, azaleas on #supports_azalea, the Nether's
+// fungi, roots and sprouts, wart and the wither rose on their own tags,
+// seagrass on any sturdy top but magma, a small dripleaf on clay or moss —
+// or on ordinary ground when it stands in a water source — a propagule on
+// #supports_mangrove_propagule (hanging: under #supports_hanging_mangrove_
+// propagule), a stem on farmland, and everything else on
+// #supports_vegetation.
+func plantMayPlaceOn(w *world.World, pos blockPos, state, b uint32) bool {
+	switch {
+	case inRanges2(state, dryVegetationPlants):
+		return inRanges2(b, supportsDryVegetation)
+	case inRanges2(state, azaleaPlants):
+		return inRanges2(b, supportsAzalea)
+	case inRanges2(state, crimsonFungusStates):
+		return inRanges2(b, supportsCrimsonFungus)
+	case inRanges2(state, warpedFungusStates):
+		return inRanges2(b, supportsWarpedFungus)
+	case inRanges2(state, crimsonRootsStates):
+		return inRanges2(b, supportsCrimsonRoots)
+	case inRanges2(state, warpedRootsStates):
+		return inRanges2(b, supportsWarpedRoots)
+	case inRanges2(state, netherSproutsStates):
+		return inRanges2(b, supportsNetherSprouts)
+	case inRanges2(state, netherWartStates):
+		return inRanges2(b, supportsNetherWart)
+	case inRanges2(state, witherRoseStates):
+		return inRanges2(b, supportsWitherRose)
+	case isPropagule(state):
+		// MangrovePropaguleBlock.canSurvive: a hanging one by the leaves
+		// above it, a planted one by its ground.
+		if propaguleHanging(state) {
+			return inRanges2(w.At(pos.x, pos.y+1, pos.z), supportsHangingProp)
 		}
-		for s := lo; s <= hi; s++ {
-			out[s] = true
-		}
+		return inRanges2(b, supportsMangroveProp)
+	case inRanges2(state, seagrassStates):
+		return worldgen.IsFaceSturdy(b, worldgen.FaceUp) && !inRanges2(b, cannotSupportSeagrass)
+	case inRanges2(state, smallDripleafStates):
+		// The fluid "above the ground" is the plant's own cell: a
+		// waterlogged dripleaf stands in its water source.
+		return inRanges2(b, supportsSmallDripleaf) || (worldgen.IsWaterlogged(state) && inRanges2(b, supportsVegetation))
+	case inRanges2(state, melonStemStates):
+		return inRanges2(b, supportsMelonStem)
+	case inRanges2(state, pumpkinStemStates):
+		return inRanges2(b, supportsPumpkinStem)
 	}
-	return out
-}()
+	return inRanges2(b, supportsVegetation)
+}
+
+// soilHeardFrom reports whether a plant's updateShape re-asks canSurvive
+// when the neighbour at offset d (from the plant toward the change) changes.
+// VegetationBlock does from every side; MangrovePropaguleBlock only from the
+// block above it — a planted propagule whose ground is dug out stays until
+// something over it changes, as vanilla's does.
+func soilHeardFrom(state uint32, d [3]int) bool {
+	if isPropagule(state) {
+		return d == [3]int{0, 1, 0}
+	}
+	return true
+}
 
 // Column plants stand on their own kind. Vanilla's canSurvive for sugar cane
 // and cactus accepts "the block below is this block" before it ever looks at
@@ -70,19 +145,6 @@ func plantStates(name string) stateRange {
 }
 
 func inStates(s uint32, r stateRange) bool { return s >= r.lo && s <= r.hi }
-
-// stacksOnItself reports whether a column plant may stand on the block below.
-func stacksOnItself(state, below uint32) bool {
-	switch {
-	case inStates(state, caneStates):
-		return inStates(below, caneStates)
-	case inStates(state, cactusStates):
-		return inStates(below, cactusStates)
-	case inStates(state, bambooStates), inStates(state, bambooSapStates):
-		return inStates(below, bambooStates) || inStates(below, bambooSapStates)
-	}
-	return false
-}
 
 // canPlaceAt is supported plus the rules vanilla checks only when a block is
 // placed, never afterwards: a wall hanging sign must be held from either
@@ -265,7 +327,7 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 			return inStates(b, bambooStates) || inStates(b, bambooSapStates) || worldgen.IsDirtTag(b) ||
 				inRanges2(b, sandStates) || inRanges2(b, gravelStates)
 		}
-		return plantSoils[below()] || stacksOnItself(state, below())
+		return plantMayPlaceOn(w, pos, state, below())
 	case worldgen.SupportFarmland:
 		// CropBlock.canSurvive: farmland under it, and a raw brightness of
 		// eight or more (sky light at full day, or block light) where it grows.
@@ -601,6 +663,9 @@ func (h *hub) dropUnsupported(players map[int32]*tracked, dim int, pos blockPos)
 				h.dropLoose(players, dim, n, st)
 				queue = append(queue, n)
 				continue
+			}
+			if worldgen.SupportFor(st) == worldgen.SupportSoil && !soilHeardFrom(st, [3]int{-d[0], -d[1], -d[2]}) {
+				continue // this plant's updateShape does not look this way
 			}
 			if (worldgen.SupportFor(st) == worldgen.SupportNone && !isBedBlock(st) && !isFire(st)) || supported(h.worldFor(dim), n, st) {
 				continue
