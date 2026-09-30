@@ -43,7 +43,8 @@ var cmdPermission = map[string]int{
 	"team": permGamemasters, "teleport": permGamemasters, "tp": permGamemasters,
 	"tellraw": permGamemasters, "time": permGamemasters, "title": permGamemasters,
 	"version": permGamemasters, "waypoint": permGamemasters, "weather": permGamemasters,
-	"worldborder": permGamemasters,
+	"worldborder": permGamemasters, "function": permGamemasters, "return": permGamemasters,
+	"schedule": permGamemasters, "reload": permGamemasters, "datapack": permGamemasters,
 	// LEVEL_ADMINS
 	"ban": permAdmins, "ban-ip": permAdmins, "banlist": permAdmins, "deop": permAdmins,
 	"kick": permAdmins, "op": permAdmins, "pardon": permAdmins, "pardon-ip": permAdmins,
@@ -143,5 +144,12 @@ func (s *Server) isAnyOp(name string) bool { return s.opLevel(name) > permAll }
 // node.
 func (s *Server) commandPermitted(p *player, cmd string) bool {
 	need, ok := cmdPermission[cmd]
-	return !ok || s.hasPermission(p.name, need)
+	if !ok {
+		return true
+	}
+	lvl := s.opLevel(p.name)
+	if p.permCap > 0 && lvl > p.permCap { // the function source: held to its level
+		lvl = p.permCap
+	}
+	return lvl >= need
 }

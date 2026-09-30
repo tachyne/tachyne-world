@@ -18,7 +18,7 @@ func (s *Server) onHub(fn func(players map[int32]*tracked)) {
 // cmdFail is a command's failure line: never suppressed by the feedback
 // rules, and only its caller sees it.
 func cmdFail(p *player, text string) {
-	if p != nil {
+	if p != nil && p.fnSilent.Load() == 0 { // a silenced source hears no failures either
 		p.trySendEv(chatEv(text))
 	}
 }

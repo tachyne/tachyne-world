@@ -210,6 +210,12 @@ type Server struct {
 	execLevels        sync.Map   // /execute stand-ins' permission levels: name → int (execute.go)
 	execSeq           atomic.Int32
 
+	// DataPackDir is the world's datapacks/ folder (default: beside
+	// WorldFile). fnServerState is the function runtime's bookkeeping
+	// (fnexec.go).
+	DataPackDir string
+	fnServerState
+
 	// PluginDataDir is where compiled-in plugins keep per-plugin config +
 	// data folders (default "plugins", cwd-relative like settings.json).
 	PluginDataDir string
@@ -546,6 +552,7 @@ func (s *Server) Serve() error {
 			s.modes.setDefault(*gm)
 		}
 		s.hub.restoreForced()
+		s.initDataPacks() // after loadRules: the saved selection and schedule
 		// Rebuild the lightning-rod POI set from the persisted edits, so rods
 		// placed before a restart keep attracting storms.
 		s.hub.world.ForEachEdit(func(x, y, z int, state uint32) {
@@ -605,6 +612,7 @@ func (s *Server) Serve() error {
 		if err := s.enablePlugins(); err != nil {
 			return err
 		}
+		s.startFunctionRunner()
 		go s.hub.run()
 		if s.natsURL != "" {
 			s.connectBusWithRetry(s.natsURL)

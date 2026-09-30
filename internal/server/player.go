@@ -82,6 +82,15 @@ type player struct {
 	held        int  // selected hotbar slot, 0..8 (connection-owned)
 	hudOn       bool // action-bar HUD preference (this goroutine's copy)
 
+	// permCap caps the permission level this source's commands run at (0 =
+	// no cap): the server's function source is the console held to the
+	// function permission level (fnexec.go). Set before use, never changed.
+	permCap int
+	// fnSilent counts the function runs silencing this source: while it is
+	// above zero, command feedback and failures meant for it are dropped
+	// (CommandSourceStack.withSuppressedOutput).
+	fnSilent atomic.Int32
+
 	hubX, hubZ atomic.Uint64 // hub-VALIDATED position (float bits) — chunk-stream gate
 	digStartAt uint64        // tick the current survival dig began
 	digPos     blockPos      // …and the block it's digging

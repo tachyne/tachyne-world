@@ -28,8 +28,8 @@ func adminLine(name, text string) string { return "§7§o[" + name + ": " + text
 
 // cmdSuccess is sendSuccess for a command the player caller ran.
 func (h *hub) cmdSuccess(players map[int32]*tracked, caller *player, text string, broadcast bool) {
-	if caller == nil {
-		return
+	if caller == nil || caller.fnSilent.Load() > 0 {
+		return // a silenced source (a running function's) sends nothing, not even to operators
 	}
 	// An /execute source answers to whoever ran /execute (execute.go):
 	// the rule is theirs, and the line is kept for them with the rest of

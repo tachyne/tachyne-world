@@ -430,10 +430,17 @@ type hub struct {
 	world        *world.World // the overworld
 	dims         dimensions   // every other dimension's world, by id (dimtable.go)
 	events       chan hubEvent
-	stop         chan struct{}                    // closed to end run(); production never closes it, tests do (t.Cleanup)
-	console      *tracked                         // the console source while a console command is in flight (console.go)
-	execProxies  map[int32]*tracked               // /execute's stand-in sources while their commands run (execute.go)
-	execEval     *player                          // the stand-in /execute reads selectors through (execute.go)
+	stop         chan struct{}      // closed to end run(); production never closes it, tests do (t.Cleanup)
+	console      *tracked           // the console source while a console command is in flight (console.go)
+	execProxies  map[int32]*tracked // /execute's stand-in sources while their commands run (execute.go)
+	execEval     *player            // the stand-in /execute reads selectors through (execute.go)
+	// Data pack functions (fnexec.go): the loaded library, the load tag
+	// due after a (re)load, the runner the tick hands calls to, and the
+	// /schedule queue (hub-owned, saved in settings.json).
+	functions    atomic.Pointer[functionLibrary]
+	fnPostReload atomic.Bool
+	fnKick       func(fnJob)
+	sched        timerQueue
 	runConsole   func(string) ([]string, error)   // runs a line as the console (Server.runAsConsole); nil = none
 	eidCounter   int64                            // per-pod eid mint counter, fed through shard.MintEID when sharded
 	tick         atomic.Uint64                    // world age (ticks); atomic so connections can read it
@@ -1145,7 +1152,8 @@ func (h *hub) run() {
 			for _, w := range h.allDims() {
 				w.Tick() // LRU epoch: cached chunks promote at most once per tick
 			}
-			h.expireTickets() // portal and pearl tickets past their time (tickets.go)
+			h.expireTickets()    // portal and pearl tickets past their time (tickets.go)
+			h.functionsTick(age) // load/tick tags and due /schedule calls → the function runner
 			dueNow := len(h.pending[age])
 			dt := h.tickClocks() // the world clocks advance (timecmd.go)
 			if age%600 == 0 {    // PlayerList.tick: everyone's latency, every 600 ticks
