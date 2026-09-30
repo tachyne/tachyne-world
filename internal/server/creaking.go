@@ -109,16 +109,159 @@ func (h *hub) heartStanding(dim int, pos blockPos) bool {
 	if w == nil {
 		return false
 	}
-	dx, dy, dz := heartAxisDelta(w.At(pos.x, pos.y, pos.z))
-	above := w.At(pos.x+dx, pos.y+dy, pos.z+dz)
-	below := w.At(pos.x-dx, pos.y-dy, pos.z-dz)
-	return isPaleOakLog(above) && isPaleOakLog(below)
+	return heartHasLogs(w, pos, w.At(pos.x, pos.y, pos.z))
 }
 
-// isPaleOakLog covers the log's six orientation states.
-func isPaleOakLog(state uint32) bool {
-	base := worldgen.BlockBase("pale_oak_log")
-	return state >= base && state <= base+2
+// heartHasLogs is CreakingHeartBlock.hasRequiredLogs for a heart in the given
+// state: the cells either side of it along its axis are both #pale_oak_logs
+// lying along that same axis. A log turned across the heart does not count.
+func heartHasLogs(w interface{ At(x, y, z int) uint32 }, pos blockPos, state uint32) bool {
+	dx, dy, dz := heartAxisDelta(state)
+	axis := heartAxisName(state)
+	for _, s := range [2]int{1, -1} {
+		n := w.At(pos.x+s*dx, pos.y+s*dy, pos.z+s*dz)
+		if !isPaleOakLog(n) || logAxis(n) != axis {
+			return false
+		}
+	}
+	return true
+}
+
+// heartAxisName is the heart's AXIS property, by name.
+func heartAxisName(state uint32) string {
+	switch (state - worldgen.CreakingHeartBase) / 6 {
+	case 0:
+		return "x"
+	case 2:
+		return "z"
+	}
+	return "y"
+}
+
+// logAxis is a pillar block's AXIS property ("" when it has none).
+func logAxis(state uint32) string {
+	info, ok := worldgen.InfoForState(state)
+	if !ok || !info.HasProperty("axis") {
+		return ""
+	}
+	return worldgen.GetProperty(info, state, "axis")
+}
+
+// paleOakLogs is the #pale_oak_logs block tag: the log, the wood and their
+// stripped forms, every axis.
+var paleOakLogs = worldgen.BlockTag("pale_oak_logs")
+
+// isPaleOakLog is #pale_oak_logs — what a heart needs either side of it and
+// what its resin grows on.
+func isPaleOakLog(state uint32) bool { return inRanges2(state, paleOakLogs) }
+
+// heartStateOf is the heart's CREAKING_HEART_STATE: heartUprooted,
+// heartDormant or heartAwake.
+func heartStateOf(state uint32) int { return int((state-worldgen.CreakingHeartBase)%6) / 2 }
+
+// heartNatural is the heart's NATURAL property: grown with its tree, not set
+// by a player.
+func heartNatural(state uint32) bool { return (state-worldgen.CreakingHeartBase)%2 == 0 }
+
+// heartUpdateState is CreakingHeartBlock.updateState: an uprooted heart with
+// its logs in place comes to — awake while creakings are active (the
+// overworld's night), dormant otherwise. A heart already rooted is left as
+// it is; losing the logs is the block entity's business.
+func heartUpdateState(w interface{ At(x, y, z int) uint32 }, pos blockPos, state uint32, active bool) uint32 {
+	if heartStateOf(state) != heartUprooted || !heartHasLogs(w, pos, state) {
+		return state
+	}
+	if active {
+		return heartWith(state, heartAwake)
+	}
+	return heartWith(state, heartDormant)
+}
+
+// creakingActive is the CREAKING_ACTIVE environment attribute: the
+// overworld's night. The Nether and the End have no night, so a heart there
+// never wakes.
+func (h *hub) creakingActive(dim int) bool { return dim == dimOverworld && h.nightNow() }
+
+// creakingHeartTick is CreakingHeartBlock.updateShape's one-tick tick: any
+// neighbour change has the heart look again, so an uprooted heart whose logs
+// are put back takes root at once, not on the block entity's next check. A
+// heart that takes root starts its block entity's ticking (the ticker only
+// runs while it is not uprooted).
+func (h *hub) creakingHeartTick(players map[int32]*tracked, dim int, pos blockPos, state uint32) {
+	ns := heartUpdateState(h.worldFor(dim), pos, state, h.creakingActive(dim))
+	if ns == state {
+		return
+	}
+	h.setBlockAt(players, dim, pos, ns)
+	h.heartIndexOnBlockChange(dim, pos.x, pos.y, pos.z, ns)
+}
+
+// creakingHeartPlaced is CreakingHeartBlock.getStateForPlacement: the
+// clicked face's axis (already set on def), then updateState — so a heart set
+// between two logs lying along its axis goes in dormant or awake, never
+// uprooted.
+func creakingHeartPlaced(w interface{ At(x, y, z int) uint32 }, pos blockPos, def uint32, active bool) uint32 {
+	return heartUpdateState(w, pos, def, active)
+}
+
+// heartRemoveProtector is CreakingHeartBlockEntity.removeProtector. With no
+// cause (the heart removed some other way, dawn, a leash run out) the
+// creaking tears down; with one — a player's blow on the heart, a blast —
+// it dies of it: blamed on the player behind it, with the twitch.
+func (h *hub) heartRemoveProtector(players map[int32]*tracked, link *heartLink, by *tracked) {
+	if link == nil || link.creaking == 0 {
+		return
+	}
+	m := h.mobs[link.creaking]
+	if m == nil || m.dying > 0 || by == nil {
+		h.loseCreaking(players, link)
+		return
+	}
+	h.hurtByPlayerOn(m, by) // blameSourceForDamage
+	m.health = 0
+	h.killMob(players, m) // die(source)
+	h.playSoundDim(players, m.dim, "minecraft:entity.creaking.twitch", sndHostile, m.x, m.y, m.z, 1, 1)
+	link.creaking = 0
+}
+
+// heartAwardXP is CreakingHeartBlock.tryAwardExperience: a player who is not
+// in creative or spectator mode, taking down a heart that grew with its
+// tree, gets 20-24 experience (popExperience, so only with block drops on).
+func (h *hub) heartAwardXP(players map[int32]*tracked, t *tracked, dim int, pos blockPos, state uint32) {
+	if t == nil || t.gamemode == gmCreative || t.gamemode == gmSpectator || !heartNatural(state) || !h.rules.DoTileDrops {
+		return
+	}
+	h.spawnXPOrbIn(players, dim, 20+h.rng.Intn(5), float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5)
+}
+
+// heartExplosionHit is CreakingHeartBlock.onExplosionHit, for a blast that
+// breaks blocks: the protector dies of the blast, and when a player set it
+// off (their TNT) they are blamed and paid as for mining a natural heart.
+// The block itself then goes as any block the blast reaches.
+func (h *hub) heartExplosionHit(players map[int32]*tracked, dim int, pos blockPos, state uint32, by *tracked) {
+	// Every heart has its block entity; one the hub has not indexed yet
+	// simply has no creaking bound to it.
+	if link := h.hearts[simPos{dim: dim, blockPos: pos}]; link != nil && link.creaking != 0 {
+		if m := h.mobs[link.creaking]; m != nil && m.dying == 0 && by == nil {
+			// The blast's own source: it dies, blamed on nobody.
+			m.health = 0
+			h.killMob(players, m)
+			h.playSoundDim(players, m.dim, "minecraft:entity.creaking.twitch", sndHostile, m.x, m.y, m.z, 1, 1)
+			link.creaking = 0
+		} else {
+			h.heartRemoveProtector(players, link, by)
+		}
+	}
+	h.heartAwardXP(players, by, dim, pos, state)
+}
+
+// heartBrokenBy is CreakingHeartBlock.playerWillDestroy: the player's blow
+// kills the protector, and a natural heart pays out.
+func (h *hub) heartBrokenBy(players map[int32]*tracked, t *tracked, dim int, pos blockPos, state uint32) {
+	if link := h.hearts[simPos{dim: dim, blockPos: pos}]; link != nil {
+		h.heartRemoveProtector(players, link, t)
+	}
+	h.heartAwardXP(players, t, dim, pos, state)
 }
 
 // registerHeartChunks discovers worldgen-placed creaking hearts near players.
@@ -194,37 +337,43 @@ func (h *hub) updateHearts(players map[int32]*tracked) {
 
 		state := h.worldFor(key.dim).At(pos.x, pos.y, pos.z)
 		if _, ok := creakingHeartState(state); !ok {
-			h.loseCreaking(players, link) // the heart is gone: so is its creaking
+			h.loseCreaking(players, link) // preRemoveSideEffects: the heart is gone, so is its creaking
 			delete(h.hearts, key)
 			continue
 		}
-		// A heart whose tree has been cut out of from under it uproots, and an
-		// uprooted heart neither wakes nor spawns.
-		if !h.heartStanding(key.dim, pos) {
-			if up := heartWith(state, heartUprooted); state != up {
-				h.setBlockAt(players, key.dim, pos, up)
-			}
-			h.loseCreaking(players, link)
+		if heartStateOf(state) == heartUprooted {
+			// getTicker: an uprooted heart's block entity does not tick. It
+			// comes back through its updateShape tick when its logs return.
 			continue
 		}
+		if m := h.mobs[link.creaking]; link.creaking != 0 && (m == nil || m.dying > 0) {
+			link.creaking = 0 // its creaking died some other way
+		}
+		// updateCreakingState: a heart cut out of its tree uproots — but only
+		// while no creaking is out; one that has a protector keeps its state
+		// until the protector is gone.
 		want := heartWith(state, heartDormant)
 		if night {
 			want = heartWith(state, heartAwake)
 		}
+		if !h.heartStanding(key.dim, pos) && link.creaking == 0 {
+			want = heartWith(state, heartUprooted)
+		}
 		if state != want {
 			h.setBlockAt(players, key.dim, pos, want)
+			if heartStateOf(want) == heartUprooted {
+				continue
+			}
 		}
 
 		if link.creaking == 0 {
-			if night && h.rules.DoMobSpawning && h.rules.Difficulty != diffPeaceful {
+			if heartStateOf(want) == heartAwake && h.rules.DoMobSpawning && h.rules.Difficulty != diffPeaceful {
 				h.trySpawnCreaking(players, link)
 			}
 			continue
 		}
 		m := h.mobs[link.creaking]
 		switch {
-		case m == nil || m.dying > 0:
-			link.creaking = 0
 		case !night:
 			h.loseCreaking(players, link) // dawn: it comes apart
 		default:

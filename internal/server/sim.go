@@ -198,6 +198,10 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		// A full composter finishes composting a second after its last item.
 	case h.tickDripleaf(players, dim, pos, state):
 		// A big dripleaf tipping under a load, or pinned flat by a signal.
+	case isCreakingHeartBlock(state):
+		// CreakingHeartBlock.updateShape schedules the heart's tick a tick
+		// out: an uprooted heart whose logs are back takes root.
+		h.creakingHeartTick(players, dim, pos, state)
 	case isPotentSulfur(state):
 		// A neighbour changed without a shape update of its own (a bucket's
 		// water, a live edit): the vent re-derives its state.

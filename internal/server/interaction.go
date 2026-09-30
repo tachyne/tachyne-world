@@ -594,6 +594,9 @@ func (s *Server) handlePlace(p *player, data []byte) {
 				state = worldgen.SetProperty(pi, worldgen.SetProperty(pi, state, "age", "4"), "hanging", "false")
 			}
 		}
+		if isCreakingHeartBlock(state) { // CreakingHeartBlock.getStateForPlacement: set between its logs it takes root
+			state = creakingHeartPlaced(s.worldFor(p), blockPos{tx, ty, tz}, state, s.hub.creakingActive(p.dim))
+		}
 		if isAnyRail(state) {
 			state = s.hub.placeRailShape(s.worldFor(p), tx, ty, tz, state, p.yaw)
 		}

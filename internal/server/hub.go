@@ -2855,6 +2855,10 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 			e.state = posed
 		}
 	}
+	if t := players[e.by]; t != nil && e.broken != 0 && isCreakingHeartBlock(e.broken) {
+		// CreakingHeartBlock.playerWillDestroy: the blow kills its creaking.
+		h.heartBrokenBy(players, t, e.dim, blockPos{e.x, e.y, e.z}, e.broken)
+	}
 	if t := players[e.by]; t != nil && e.broken != 0 && guardedByPiglins[e.broken] {
 		h.angerNearbyPiglins(players, t, false) // Block.playerWillDestroy: #guarded_by_piglins, sight not needed
 	}
