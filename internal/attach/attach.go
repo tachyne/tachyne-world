@@ -86,6 +86,26 @@ type Identity struct {
 	Props   []proto.Property
 	Edition string
 	IP      string // the client's address, as the gateway saw it
+	// Features are the optional frames the gateway renders
+	// (proto.FeaturePlayerChat, …), from its Hello.
+	Features []string
+}
+
+// HasFeature reports whether the session's gateway renders a feature.
+func (id Identity) HasFeature(f string) bool {
+	for _, x := range id.Features {
+		if x == f {
+			return true
+		}
+	}
+	return false
+}
+
+// SignedChatter is the optional half of a Remote that takes secure chat:
+// a signed message (Chat.Signed) and the player's chat session.
+type SignedChatter interface {
+	SignedChat(proto.Chat)
+	ChatSession(proto.ChatSession)
 }
 
 // Remote is a hub-attached player, as the attach layer sees it.
@@ -249,7 +269,7 @@ func session(c net.Conn, cfg Config) {
 	var pre [][]byte
 	welcomed := false
 	if cfg.Join != nil || cfg.Resume != nil {
-		id := Identity{Name: hello.Name, Roles: hello.Roles, Props: hello.Props, Edition: hello.Edition, IP: hello.IP}
+		id := Identity{Name: hello.Name, Roles: hello.Roles, Props: hello.Props, Edition: hello.Edition, IP: hello.IP, Features: hello.Features}
 		parseUUID(hello.UUID, &id.UUID)
 		emit := func(typ byte, payload []byte) {
 			b := frame(typ, payload)
@@ -440,7 +460,18 @@ func session(c net.Conn, cfg Config) {
 			if remote != nil {
 				var ch proto.Chat
 				if jsonUnmarshal(payload, &ch) == nil && ch.Text != "" {
-					remote.Chat(ch.Text)
+					if sc, ok := remote.(SignedChatter); ok && ch.Signed != nil {
+						sc.SignedChat(ch) // secure chat: the signature rides to every recipient
+					} else {
+						remote.Chat(ch.Text)
+					}
+				}
+			}
+		case proto.MsgChatSession:
+			if sc, ok := remote.(SignedChatter); ok {
+				var cs proto.ChatSession
+				if jsonUnmarshal(payload, &cs) == nil {
+					sc.ChatSession(cs)
 				}
 			}
 		case proto.MsgCommand:
@@ -502,6 +533,8 @@ func session(c net.Conn, cfg Config) {
 			actTo(remote, payload, proto.Latency{})
 		case proto.MsgSuggestReq:
 			actTo(remote, payload, proto.SuggestReq{})
+		case proto.MsgCustomClickAction:
+			actTo(remote, payload, proto.CustomClickAction{})
 		case proto.MsgTeleportToEntity:
 			actTo(remote, payload, proto.TeleportToEntity{})
 		case proto.MsgPlayerAbilities:

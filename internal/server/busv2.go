@@ -28,6 +28,7 @@ func (h *hub) registerBusBridge() {
 	bridgeEv[*plugin.PlayerQuitEvent](h)
 	bridgeEv[*plugin.PlayerChatEvent](h)
 	bridgeEv[*plugin.PlayerCommandEvent](h)
+	bridgeEv[*plugin.PlayerCustomClickEvent](h)
 	bridgeEv[*plugin.PlayerMoveEvent](h)
 	bridgeEv[*plugin.BlockBreakEvent](h)
 	bridgeEv[*plugin.BlockPlaceEvent](h)

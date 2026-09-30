@@ -45,6 +45,7 @@ var cmdPermission = map[string]int{
 	"version": permGamemasters, "waypoint": permGamemasters, "weather": permGamemasters,
 	"worldborder": permGamemasters, "function": permGamemasters, "return": permGamemasters,
 	"schedule": permGamemasters, "reload": permGamemasters, "datapack": permGamemasters,
+	"data": permGamemasters, "place": permGamemasters, "fillbiome": permGamemasters, "dialog": permGamemasters,
 	// LEVEL_ADMINS
 	"ban": permAdmins, "ban-ip": permAdmins, "banlist": permAdmins, "deop": permAdmins,
 	"kick": permAdmins, "op": permAdmins, "pardon": permAdmins, "pardon-ip": permAdmins,

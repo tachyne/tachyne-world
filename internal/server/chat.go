@@ -104,7 +104,7 @@ func (s *Server) handleCommand(p *player, cmd string) {
 	}
 	switch fields[0] {
 	case "help":
-		help := "Commands: /help /say /msg /teammsg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /enchant /setblock /fill /fillbiome /seed /me /spawnpoint /setworldspawn /playsound /stopsound /tellraw /difficulty /gamerule /gamemode /defaultgamemode /hud /worldborder /locate /title /advancement /attribute /recipe /tag /ride /damage /spreadplayers /forceload /random /compute /execute /swing /clone /data /place /bossbar /save-all /save-off /save-on /version /stop /item /loot /fetchprofile /bug /function /return /schedule /reload /datapack" +
+		help := "Commands: /help /say /msg /teammsg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /enchant /setblock /fill /fillbiome /seed /me /spawnpoint /setworldspawn /playsound /stopsound /tellraw /difficulty /gamerule /gamemode /defaultgamemode /hud /worldborder /locate /title /dialog /advancement /attribute /recipe /tag /ride /damage /spreadplayers /forceload /random /compute /execute /swing /clone /data /place /bossbar /save-all /save-off /save-on /version /stop /item /loot /fetchprofile /bug /function /return /schedule /reload /datapack" +
 			" — targets take @s @p @a @r @e (with type=, name=, tag=, distance=, x/y/z=, dx/dy/dz=, limit=, sort=, scores=, team=, level=, gamemode=, x_rotation=, y_rotation=, advancements=, nbt=, predicate=), coordinates take ~ and ^." +
 			" /bug <what went wrong> reports something with the blocks around you attached; /bug list shows the last few and /bug re <text> adds to one."
 		if s.hub.plugHost != nil {
@@ -133,6 +133,8 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		s.cmdBug(p, fields[1:])
 	case "title":
 		s.cmdTitle(p, fields[1:])
+	case "dialog":
+		s.cmdDialog(p, fields[1:])
 	case "posteffect":
 		s.cmdPostEffect(p, fields[1:])
 	case "tick":

@@ -90,6 +90,9 @@ type evBlock struct {
 type evChat struct {
 	from *player
 	text string
+	// signed is a secure-chat message's signature and signed body (text is
+	// its content): relayed to every player as player_chat (securechat.go).
+	signed *attachproto.SignedChat
 }
 type evList struct{ p *player }             // send the online-player list to one player
 type evSetTime struct{ t uint64 }           // explicit day-time set (command/bus) — fires the plugin event
@@ -1649,12 +1652,21 @@ func (h *hub) run() {
 					}
 					msg = cev.Message
 				}
+				if e.signed != nil {
+					// Secure chat: PlayerList.broadcastChatMessage, the
+					// signature intact; a plugin's rewrite rides as the
+					// unsigned (decorated) content.
+					h.roomChatSigned(players, e.from, e.text, msg, e.signed)
+					break
+				}
 				// Player chat carries a Sender so the gateway renders it as
 				// profileless_chat — the client decorates it "<name> msg" (the
 				// vanilla look) yet does NOT apply the secure-chat heuristic that
 				// hides "<name>"-pattern SYSTEM messages from other players on an
 				// offline server. (System lines below keep plain system_chat.)
 				h.roomChatFrom(players, e.from.name, msg)
+			case evChatSession:
+				h.setChatSession(players, e)
 			case evSetTime:
 				h.setDayTime(e.t)
 			case evAnnounce:
@@ -1826,6 +1838,10 @@ func (h *hub) run() {
 				}
 			case evTitle:
 				h.onTitle(players, e)
+			case evDialog:
+				h.onDialog(players, e)
+			case evCustomClick:
+				h.onCustomClick(players, e)
 			case evBugList:
 				if t := players[e.eid]; t != nil {
 					h.showBugList(t)
@@ -3168,7 +3184,7 @@ func entGone(eids ...int32) attachproto.EntityRemove {
 // player's game mode (every client reads a spectator from this entry, its
 // own included).
 func infoAdd(p *player, mode int) attachproto.PlayerInfo {
-	pi := attachproto.PlayerInfo{UUID: p.uuid, Name: p.name, Gamemode: int32(mode), Latency: p.latency.Load()}
+	pi := attachproto.PlayerInfo{UUID: p.uuid, Name: p.name, Gamemode: int32(mode), Latency: p.latency.Load(), Chat: p.chatSession.Load()}
 	for _, pr := range p.props {
 		pi.Props = append(pi.Props, attachproto.Property{Name: pr.Name, Value: pr.Value, Signature: pr.Signature})
 	}
