@@ -103,24 +103,34 @@ func TestRedstoneLapisGeneration(t *testing.T) {
 	t.Logf("redstone=%d (deep %d) lapis=%d (mid %d)", redstone, redstoneDeep, lapis, lapisMid)
 }
 
-// TestEmeraldMountainsOnly: emerald ore only appears in chunks whose biome is
-// a mountain biome, and it does appear where mountains exist.
+// TestEmeraldMountainsOnly: emerald ore only appears within a blob's reach
+// of a mountain column (the biome filter asks the origin's column), and it
+// does appear where mountains exist.
 func TestEmeraldMountainsOnly(t *testing.T) {
 	skipHeavy(t)
 	g := NewGenerator(1)
+	nearMountain := func(x, z int) bool {
+		for dx := -3; dx <= 3; dx++ {
+			for dz := -3; dz <= 3; dz++ {
+				if mountainBiomes[g.resolveBiome(x+dx, z+dz).Name] {
+					return true
+				}
+			}
+		}
+		return false
+	}
 	mountainChunks, emeraldTotal, emeraldOffMountain := 0, 0, 0
 	for cx := int32(-20); cx <= 20; cx++ {
 		for cz := int32(-20); cz <= 20; cz++ {
-			isMtn := mountainBiomes[g.resolveBiome(int(cx)*16+8, int(cz)*16+8).Name]
-			if isMtn {
+			if mountainBiomes[g.resolveBiome(int(cx)*16+8, int(cz)*16+8).Name] {
 				mountainChunks++
 			}
 			ch := g.GenerateChunk(cx, cz)
 			for sec := range ch.Sections {
-				for _, s := range ch.Sections[sec] {
+				for i, s := range ch.Sections[sec] {
 					if s == EmeraldOre || s == DeepslateEmeraldOre {
 						emeraldTotal++
-						if !isMtn {
+						if !nearMountain(int(cx)*16+i&15, int(cz)*16+(i>>4)&15) {
 							emeraldOffMountain++
 						}
 					}
@@ -129,7 +139,7 @@ func TestEmeraldMountainsOnly(t *testing.T) {
 		}
 	}
 	if emeraldOffMountain != 0 {
-		t.Errorf("%d emerald ore blocks generated outside mountain chunks", emeraldOffMountain)
+		t.Errorf("%d emerald ore blocks generated away from any mountain column", emeraldOffMountain)
 	}
 	if mountainChunks > 0 && emeraldTotal == 0 {
 		t.Errorf("%d mountain chunks but no emerald generated", mountainChunks)
@@ -138,7 +148,9 @@ func TestEmeraldMountainsOnly(t *testing.T) {
 }
 
 // TestOreDepthVariants: ore below the deepslate transition must use the
-// deepslate variant (it replaced deepslate, not stone), and vice versa.
+// deepslate variant (it replaced deepslate, not stone), and vice versa. The
+// lower granite, diorite and andesite blobs start at y=0 and reach seven
+// below it, into the deepslate, and an ore in them takes the stone variant.
 func TestOreDepthVariants(t *testing.T) {
 	g := NewGenerator(1)
 	for cx := int32(-2); cx <= 2; cx++ {
@@ -148,7 +160,7 @@ func TestOreDepthVariants(t *testing.T) {
 				y := MinY + s*16 + i/256
 				switch st {
 				case CoalOre, IronOre, CopperOre, GoldOre, DiamondOre:
-					if y < 0 {
+					if y < -7 {
 						t.Fatalf("stone-variant ore %d at y=%d (deepslate zone)", st, y)
 					}
 				case DeepslateCoalOre, DeepslateIronOre, DeepslateCopperOre, DeepslateGoldOre, DeepslateDiamondOre:
@@ -162,6 +174,7 @@ func TestOreDepthVariants(t *testing.T) {
 }
 
 // A soil blob with a build near it is not placed; the others still are.
+// Through placeOres, on a chunk of solid stone.
 func TestSoilBlobBuildGuard(t *testing.T) {
 	stoneChunk := func() *Chunk {
 		ch := NewChunk(SectionCount)
@@ -185,7 +198,7 @@ func TestSoilBlobBuildGuard(t *testing.T) {
 	}
 	g := NewGenerator(7)
 	ch := stoneChunk()
-	g.placeBlobs(ch, 3, 5, earthBlobs, &blobGuard{g: g, cx: 3, cz: 5})
+	g.placeOres(ch, 3, 5)
 	dirt, at := count(ch, Dirt)
 	gravel, _ := count(ch, Gravel)
 	if dirt == 0 || gravel == 0 {
@@ -194,11 +207,98 @@ func TestSoilBlobBuildGuard(t *testing.T) {
 	g2 := NewGenerator(7)
 	setTestEdits(g2, map[[3]int]uint32{{3*16 + at[0], at[1], 5*16 + at[2]}: BlockBase("stone_bricks")})
 	ch2 := stoneChunk()
-	g2.placeBlobs(ch2, 3, 5, earthBlobs, &blobGuard{g: g2, cx: 3, cz: 5})
+	g2.placeOres(ch2, 3, 5)
 	if s := sectionBlockAt(ch2, at[0], at[1], at[2]); s != Stone {
 		t.Errorf("blob cell beside a build is %d, want stone", s)
 	}
 	if dirt2, _ := count(ch2, Dirt); dirt2 == 0 || dirt2 >= dirt {
 		t.Errorf("dirt %d → %d: want only the guarded blob gone", dirt, dirt2)
+	}
+}
+
+// 26.3's ore step: every placement the old eleven specs lacked is there,
+// with vanilla's size, count and discard chance.
+func TestOrePlacements(t *testing.T) {
+	want := map[string]struct {
+		size, count, rarity int
+		discard             float64
+	}{
+		"ore_coal_upper": {17, 30, 0, 0}, "ore_coal_lower": {17, 20, 0, 0.5},
+		"ore_iron_upper": {9, 90, 0, 0}, "ore_iron_middle": {9, 10, 0, 0}, "ore_iron_small": {4, 10, 0, 0},
+		"ore_copper": {10, 16, 0, 0}, "ore_copper_large": {20, 16, 0, 0},
+		"ore_gold": {9, 4, 0, 0.5}, "ore_gold_extra": {9, 50, 0, 0}, "ore_gold_lower": {9, 0, 0, 0.5},
+		"ore_diamond": {4, 7, 0, 0.5}, "ore_diamond_medium": {8, 2, 0, 0.5},
+		"ore_diamond_large": {12, 0, 9, 0.7}, "ore_diamond_buried": {8, 4, 0, 1},
+		"ore_lapis_buried": {7, 4, 0, 1}, "ore_granite_upper": {64, 0, 6, 0},
+	}
+	seen := map[string]bool{}
+	salts := map[int64]bool{}
+	for _, p := range orePlacements {
+		if salts[p.salt] {
+			t.Errorf("%s shares a salt", p.name)
+		}
+		salts[p.salt] = true
+		seen[p.name] = true
+		if w, ok := want[p.name]; ok && (w.size != p.cfg.size || w.count != p.count || w.rarity != p.rarity || w.discard != p.cfg.discard) {
+			t.Errorf("%s: size %d count %d rarity %d discard %v, want %+v", p.name, p.cfg.size, p.count, p.rarity, p.cfg.discard, w)
+		}
+	}
+	for name := range want {
+		if !seen[name] {
+			t.Errorf("no %s placement", name)
+		}
+	}
+	if len(orePlacements) != 30 {
+		t.Errorf("%d ore placements, want 30", len(orePlacements))
+	}
+}
+
+// OreFeature's shape: one blob is a single lump of cells near its origin,
+// and with discard_chance_on_air_exposure 1 no ore cell touches air while
+// at 0 the same blob fills its exposed cells too.
+func TestOreBlobShapeAndDiscard(t *testing.T) {
+	g := NewGenerator(3)
+	porous := func() *owRegion { // stone with every third layer open
+		ch := NewChunk(SectionCount)
+		for s := range ch.Sections {
+			for i := range ch.Sections[s] {
+				if (MinY+s*16+i>>8)%3 != 0 {
+					ch.Sections[s][i] = Stone
+				}
+			}
+		}
+		return &owRegion{g: g, ch: ch, baseX: 0, baseZ: 0, cols: map[[2]int]column{}}
+	}
+	top := MinY + SectionCount*16
+	place := func(discard float64) (*owRegion, int) {
+		reg := porous()
+		cfg := oreOf(CoalOre, DeepslateCoalOre, 17, discard)
+		oreBlob(reg, nil, cfg, newTreeRNG(11, 0, 0), 8, 40, 8, top, 11, 1)
+		n := 0
+		for s := range reg.ch.Sections {
+			for i, v := range reg.ch.Sections[s] {
+				if v != CoalOre {
+					continue
+				}
+				n++
+				x, y, z := i&15, MinY+s*16+i>>8, (i>>4)&15
+				if abs(x-8) > 6 || abs(z-8) > 6 || y < 40-6 || y > 40+4 {
+					t.Errorf("discard %v: ore at (%d,%d,%d), far from its origin", discard, x, y, z)
+				}
+			}
+		}
+		return reg, n
+	}
+	reg, n := place(1)
+	for s := range reg.ch.Sections {
+		for i, v := range reg.ch.Sections[s] {
+			if v == CoalOre && oreNextToAir(reg, i&15, MinY+s*16+i>>8, (i>>4)&15) {
+				t.Fatalf("discard 1: an ore cell touches air")
+			}
+		}
+	}
+	_, all := place(0)
+	if all <= n || all == 0 {
+		t.Errorf("discard 0 placed %d, discard 1 %d: want more with no discard", all, n)
 	}
 }

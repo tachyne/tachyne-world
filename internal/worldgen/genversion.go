@@ -113,4 +113,11 @@ package worldgen
 //     one column of the chunk, its own tall odds, only in biomes listing the
 //     same placement, and none under a player's build (own streams; kelp
 //     and pickles keep their draws).
+//   - the ore step as 26.3's thirty placements (the upper coal, the iron
+//     upper/middle/small split, large copper in the dripstone caves, the
+//     badlands' extra gold, lower gold, the diamond medium/large/buried
+//     split), every blob — ores, soil and the stone variants — OreFeature's
+//     ellipsoid across chunk borders with its discard on air exposure, a
+//     blob with a player's build in its box left out. Every underground
+//     changes.
 const GenVersion = 26
