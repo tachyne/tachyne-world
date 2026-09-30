@@ -137,7 +137,8 @@ multi-pod plan).
   the Nether and End are split into their sub-biomes too. Each biome lays its own
   surface blocks and decorates with the matching trees + ground flora, which in
   turn drives the habitat-specific mob spawns.
-- Real two-pass lighting (sky + block); torches light caves, dawn light ramps
+- Real two-pass lighting (sky + block), relit block by block on every edit the
+  way vanilla's light engine does; torches light caves, dawn light ramps
 - Block breaking/placement with orientation (stairs, slabs, logs, furnaces),
   tool-gated drops, falling sand/gravel, flowing water/lava, crop growth
 - Fire (flint & steel, burn-out, a real burning status doused by water/rain)
