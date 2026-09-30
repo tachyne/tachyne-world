@@ -68,4 +68,5 @@ func (h *hub) fluidInto(players map[int32]*tracked, dim int, pos blockPos, fluid
 		}
 	}
 	h.setBlockAt(players, dim, pos, fluid)
+	h.liquidNotifyNeighbors(players, dim, pos) // setBlockAndUpdate: the cells around hear it arrive
 }

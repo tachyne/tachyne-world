@@ -364,7 +364,13 @@ func (h *hub) neighborChanged(players map[int32]*tracked, sp simPos) {
 			h.inDim(sp.dim, func() { h.nbAdd(base) })
 		}
 	}
-	h.scheduleIn(sp.dim, sp.blockPos, 1)
+	if isLiquidBlock(st) {
+		// LiquidBlock.neighborChanged: lava meeting water sets solid now,
+		// and the fluid's tick is asked for its own delay away.
+		h.liquidOnPlace(players, sp.dim, sp.blockPos, st)
+	} else {
+		h.scheduleIn(sp.dim, sp.blockPos, 1)
+	}
 	// The quasi-connectivity relay (updateRedstone does the same for the
 	// redstone blocks): an update at the cell above a piston reaches it.
 	if below := w.At(sp.x, sp.y-1, sp.z); isPistonBase(below) && !isPistonBase(st) {

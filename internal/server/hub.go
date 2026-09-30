@@ -534,6 +534,9 @@ type hub struct {
 	// pending block updates bucketed by the tick they're due — the heart of
 	// world simulation (falling blocks, fluid flow). Hub-goroutine-only.
 	pending map[uint64][]simPos
+	// fluidTicks are the fluid ticks waiting in pending, one per cell at
+	// most (the fluid half of LevelTicks): cell → the tick it is due.
+	fluidTicks map[simPos]uint64
 	// movingBlocks are the moving_piston cells mid-animation (movingpiston.go).
 	movingBlocks map[simPos]movingBlock
 	movingOrder  []simPos // moving cells in the order they were made (their landing order)

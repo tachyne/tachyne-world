@@ -174,7 +174,7 @@ func TestWaterDoesNotWashAMovingBlock(t *testing.T) {
 	if !moving {
 		t.Fatalf("the stone never started moving: %d", w.At(x+2, y, z))
 	}
-	h.scheduleIn(0, blockPos{x + 2, y, z + 1}, 1) // the water ticks while the stone slides
+	h.scheduleFluidTick(0, blockPos{x + 2, y, z + 1}, 1) // the water ticks while the stone slides
 	stepTicks(h, players, 6)
 	if got := w.At(x+2, y, z); got != worldgen.Stone {
 		t.Fatalf("the pushed stone should land beside the water, got %d", got)
