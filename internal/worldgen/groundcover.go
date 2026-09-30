@@ -468,8 +468,10 @@ func (g *Generator) bambooAt(r TreeRNG, reg *owRegion, bg *buildGuard, x, y, z i
 	if r.Float64() < podzolChance {
 		rad = r.Intn(4) + 1
 	}
+	// BambooStalkBlock.canSurvive: the cell under the origin, as the terrain
+	// has it (a cave can open the surface under the column's top block).
 	c := reg.col(x, z)
-	if y != c.h || !supportsBamboo(c.topBlock()) {
+	if y != c.h || !supportsBamboo(g.terrainCell(c, x, y-1, z)) {
 		return
 	}
 	for xx := x - rad; xx <= x+rad; xx++ {
