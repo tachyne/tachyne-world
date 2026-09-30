@@ -50,7 +50,11 @@ func (s *Server) cmdEnchant(p *player, args []string) {
 	s.hub.post(evEnchantCmd{by: p.eid, target: args[0], ench: id, lvl: int8(lvl)})
 }
 
-// applyEnchantCommand runs /enchant on the hub.
+// applyEnchantCommand runs /enchant on the hub. The targets are
+// EntityArgument.entities(): a living one — a player or a mob — has the
+// item in its main hand enchanted; anything else is not a valid target.
+// With a single target each refusal is an error; with several, the ones
+// that cannot take it are passed over.
 func (h *hub) applyEnchantCommand(players map[int32]*tracked, e evEnchantCmd) {
 	caller := players[e.by]
 	tell := func(msg string) {
@@ -58,35 +62,59 @@ func (h *hub) applyEnchantCommand(players map[int32]*tracked, e evEnchantCmd) {
 			caller.p.trySendEv(chatEv(msg))
 		}
 	}
-	targets := h.commandTargets(players, e.by, e.target)
-	done := 0
-	for _, t := range targets {
-		slot := t.p.heldSlot()
-		st := t.inv.slots[slot]
+	targets := h.commandEntitiesAll(players, e.by, e.target)
+	if len(targets) == 0 {
+		tell("No entity was found")
+		return
+	}
+	single := len(targets) == 1
+	done, doneName := 0, ""
+	for _, en := range targets {
+		var st invStack
+		switch {
+		case en.t != nil:
+			st = en.t.inv.slots[en.t.p.heldSlot()]
+		case en.m != nil:
+			st = en.m.heldStack()
+		default:
+			if single {
+				tell(en.name() + " is not a valid entity for this command")
+				return
+			}
+			continue
+		}
 		switch {
 		case st.item == 0:
-			if len(targets) == 1 {
-				tell(t.p.name + " is not holding any item")
+			if single {
+				tell(en.name() + " is not holding any item")
 				return
 			}
 		case !enchIsSupported(e.ench, st.item) || !enchCompatibleWith(e.ench, st.ench):
-			if len(targets) == 1 {
+			if single {
 				tell(itemNameOf[st.item] + " cannot support that enchantment")
 				return
 			}
 		default:
 			st.ench = enchSetLevel(st.ench, e.ench, e.lvl)
-			t.inv.slots[slot] = st
-			h.sendSlot(t, slot)
+			if t := en.t; t != nil {
+				slot := t.p.heldSlot()
+				t.inv.slots[slot] = st
+				h.sendSlot(t, slot)
+			} else {
+				m := en.m
+				m.setHeld(st)
+				h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(), invStack{}, m.gear))
+			}
 			done++
+			doneName = en.name()
 		}
 	}
 	name := enchDefs[e.ench].name
 	switch {
 	case done == 0:
 		tell("Nothing changed. Targets either have no item in their hands or the enchantment could not be applied")
-	case len(targets) == 1:
-		h.cmdOK(players, e.by)(fmt.Sprintf("Applied enchantment %s to %s's item", name, targets[0].p.name))
+	case done == 1:
+		h.cmdOK(players, e.by)(fmt.Sprintf("Applied enchantment %s to %s's item", name, doneName))
 	default:
 		h.cmdOK(players, e.by)(fmt.Sprintf("Applied enchantment %s to %d entities", name, done))
 	}

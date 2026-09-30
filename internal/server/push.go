@@ -275,6 +275,21 @@ func (h *hub) pushMobs(players map[int32]*tracked) {
 		k := [3]int{m.dim, cx, cz}
 		cells[k] = append(cells[k], m)
 	}
+	// Team collision rules (EntitySelector.pushableBy): only when some team
+	// has members is there anything to look up.
+	members := h.sbMemberTeams()
+	var teamCache map[*mob]string
+	teamOfMob := func(m *mob) string {
+		tn, ok := teamCache[m]
+		if !ok {
+			tn = members[uuidString(m.uuid)]
+			teamCache[m] = tn
+		}
+		return tn
+	}
+	if members != nil {
+		teamCache = map[*mob]string{}
+	}
 	for _, m := range pushers {
 		cx, cz := pushCellOf(m.x), pushCellOf(m.z)
 		crowd := 0
@@ -282,6 +297,9 @@ func (h *hub) pushMobs(players map[int32]*tracked) {
 			for dz := -1; dz <= 1; dz++ {
 				for _, o := range cells[[3]int{m.dim, cx + dx, cz + dz}] {
 					if o == m || !m.overlaps(o) {
+						continue
+					}
+					if members != nil && !h.teamPushAllowed(teamOfMob(m), teamOfMob(o)) {
 						continue
 					}
 					crowd++
@@ -297,16 +315,23 @@ func (h *hub) pushMobs(players map[int32]*tracked) {
 			h.hurtMobOf(players, m, crammingDamage, dtCramming)
 		}
 	}
-	h.crampPlayers(players, cells)
+	h.crampPlayers(players, cells, members)
 }
 
 // crampPlayers is pushEntities' cramming check run by a player: packed in
 // with max_entity_cramming or more others — the mobs and players sharing its
 // box, not counting passengers — it takes the same six points a mob would.
-func (h *hub) crampPlayers(players map[int32]*tracked, cells map[[3]int][]*mob) {
+//
+// members is the team index (nil: no team has members); a team's collision
+// rule keeps its entities out of each other's count as vanilla's
+// pushableBy keeps them out of the neighbour list.
+func (h *hub) crampPlayers(players map[int32]*tracked, cells map[[3]int][]*mob, members map[string]string) {
 	limit := h.rules.MaxCramming
 	if limit <= 0 {
 		return
+	}
+	pushes := func(own, their string) bool {
+		return members == nil || h.teamPushAllowed(members[own], members[their])
 	}
 	for _, t := range players {
 		if t.dead || !isSurvival(t.gamemode) {
@@ -321,7 +346,8 @@ func (h *hub) crampPlayers(players map[int32]*tracked, cells map[[3]int][]*mob) 
 		for dx := -1; dx <= 1; dx++ {
 			for dz := -1; dz <= 1; dz++ {
 				for _, o := range cells[[3]int{t.dim, cx + dx, cz + dz}] {
-					if b := o.box(); o.mount == 0 && touches(o.x, o.y, o.z, b.w/2, b.h) {
+					if b := o.box(); o.mount == 0 && touches(o.x, o.y, o.z, b.w/2, b.h) &&
+						(members == nil || pushes(t.p.name, uuidString(o.uuid))) {
 						crowd++
 					}
 				}
@@ -329,7 +355,7 @@ func (h *hub) crampPlayers(players map[int32]*tracked, cells map[[3]int][]*mob) 
 		}
 		for _, o := range players {
 			if o != t && o.dim == t.dim && !o.dead && o.gamemode != gmSpectator &&
-				touches(o.x, o.y, o.z, o.halfWidth(), psPlayerHeight*o.scale()) {
+				touches(o.x, o.y, o.z, o.halfWidth(), psPlayerHeight*o.scale()) && pushes(t.p.name, o.p.name) {
 				crowd++
 			}
 		}

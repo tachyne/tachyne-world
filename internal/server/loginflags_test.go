@@ -48,7 +48,7 @@ func TestGameruleFlagsReachClients(t *testing.T) {
 	if v, ok := h.ruleValueText("reduced_debug_info"); !ok || v != "true" {
 		t.Fatalf("reduced_debug_info reads %q %v", v, ok)
 	}
-	if opLevelEvent(5, true).Status != 28 || opLevelEvent(5, false).Status != 24 {
+	if opLevelEvent(5, 4).Status != 28 || opLevelEvent(5, 0).Status != 24 || opLevelEvent(5, 2).Status != 26 {
 		t.Fatal("op level events are not 24 + level")
 	}
 }
