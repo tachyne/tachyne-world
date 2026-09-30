@@ -109,4 +109,8 @@ package worldgen
 //     in either swamp;
 //   - igloos face one of four rotations — except an igloo a player has
 //     touched, which keeps its old layout.
+//   - seagrass as 26.3's eight placements: each a patch of attempts about
+//     one column of the chunk, its own tall odds, only in biomes listing the
+//     same placement, and none under a player's build (own streams; kelp
+//     and pickles keep their draws).
 const GenVersion = 26
