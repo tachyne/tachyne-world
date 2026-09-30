@@ -82,8 +82,8 @@ func TestSculkPatchSpreads(t *testing.T) {
 			t.Fatal("a patch refused an air cell on a cave floor")
 		}
 		for c, s := range w.view.capture {
-			if w.orig[c] == s {
-				continue
+			if o, set := w.orig[c]; !set || o == s {
+				continue // the fixture's own cells, or a cell set back as it was
 			}
 			if dx, dz := c[0]-x, c[2]-z; dx*dx+dz*dz > 14*14 {
 				t.Fatalf("seed %d: sculk %d at %v, beyond the patch's reach", seed, s, c)
