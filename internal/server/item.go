@@ -67,6 +67,7 @@ type itemEntity struct {
 	load          xbowLoad    // a crossbow's charged_projectiles
 	golemPose     int8        // a copper golem statue's pose (block_state)
 	standTags     string      // an armor stand's entity_data
+	profile       string      // a player head's owner
 	tags          itemTags    // lore, unbreakable, can_break, can_place_on
 	vx, vy, vz    float64     // motion per tick (tickItem); all 0 at rest
 	born          uint64      // world tick spawned
@@ -86,7 +87,7 @@ func (it *itemEntity) stack() invStack {
 		hiveID: it.hiveID, bundleID: it.bundleID, potion: it.potion, repairCost: it.repairCost,
 		instrument: it.instrument, name: it.name, lode: it.lode, color: it.color, stew: it.stew,
 		shieldBase: it.shieldBase, sherds: it.sherds, flight: it.flight, starID: it.starID, cube: it.cube,
-		ominous: it.ominous, load: it.load, golemPose: it.golemPose, standTags: it.standTags, tags: it.tags}
+		ominous: it.ominous, load: it.load, golemPose: it.golemPose, standTags: it.standTags, profile: it.profile, tags: it.tags}
 }
 
 // setFrom is stack()'s inverse: everything a slot carries, onto the dropped
@@ -105,6 +106,7 @@ func (it *itemEntity) setFrom(st invStack) {
 	it.cube, it.ominous, it.load = st.cube, st.ominous, st.load
 	it.golemPose = st.golemPose
 	it.standTags = st.standTags
+	it.profile = st.profile
 	it.tags = st.tags
 }
 
@@ -166,6 +168,10 @@ func (h *hub) spawnBlockDrop(players map[int32]*tracked, dim int, item int32, co
 	if it != nil {
 		if n := h.takeHeldBlockName(simPos{dim: dim, blockPos: blockPos{x, y, z}}, item); n != "" {
 			it.name = n // copy_components custom_name
+		}
+		if p := h.takeHeldSkullProfile(simPos{dim: dim, blockPos: blockPos{x, y, z}}, item); p != "" {
+			it.profile = p // copy_components profile
+			h.refreshItemMeta(players, it)
 		}
 		if p := h.takeHeldStatuePose(simPos{dim: dim, blockPos: blockPos{x, y, z}}, item); p != 0 {
 			it.golemPose = p // copy_state copper_golem_pose
@@ -412,7 +418,8 @@ func stackComponents(st invStack) []byte {
 		// component for its NBT (maps, books, and now the dye), and a dyed
 		// piece is never a map or a book.
 		b = protocol.AppendVarInt(b, componentDyedColor)
-		b = protocol.AppendVarInt(b, st.color)
+		b = protocol.AppendI32(b, st.color) // DyedItemColor.STREAM_CODEC: ByteBufCodecs.INT, four bytes
+
 	}
 	if st.dmg > 0 {
 		b = protocol.AppendVarInt(b, componentDamage)
@@ -485,7 +492,7 @@ func stackComponents(st invStack) []byte {
 		// but it is a synced component, so it belongs on the wire.
 		b = protocol.AppendVarInt(b, componentStewEffects)
 		b = protocol.AppendVarInt(b, 1)
-		b = protocol.AppendVarInt(b, e.effect+1) // holder ref = id + 1
+		b = protocol.AppendVarInt(b, e.effect) // MobEffect.STREAM_CODEC: holderRegistry, the plain registry id
 		b = protocol.AppendVarInt(b, int32(e.secs*20))
 	}
 	if st.repairCost > 0 {

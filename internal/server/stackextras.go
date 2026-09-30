@@ -78,6 +78,14 @@ func extraComponents(st invStack) (int32, []byte) {
 		b = protocol.AppendString(b, statuePoses[st.golemPose-1])
 		n++
 	}
+	if _, ok := profileOf(st.profile); ok && st.item == itemPlayerHead {
+		// profile: the head's owner, in its canonical stream form (1.21.5's
+		// ResolvableProfile) — the chain reshapes it for 26.x. The client
+		// draws the face and names the stack "<name>'s Head" from it.
+		b = protocol.AppendVarInt(b, componentProfile)
+		b = append(b, st.profile...)
+		n++
+	}
 	if c, cb := tagComponents(st); c > 0 {
 		n += c
 		b = append(b, cb...)

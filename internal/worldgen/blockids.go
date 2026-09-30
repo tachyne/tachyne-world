@@ -56,6 +56,24 @@ func BlockRegistryID(name string) (uint32, bool) {
 	return id, ok
 }
 
+var (
+	blockRegistryNames     map[uint32]string
+	blockRegistryNamesOnce sync.Once
+)
+
+// BlockRegistryName is BlockRegistryID's inverse: the block (no namespace)
+// a minecraft:block registry id names, false for an unknown id.
+func BlockRegistryName(id uint32) (string, bool) {
+	blockRegistryNamesOnce.Do(func() {
+		blockRegistryNames = make(map[uint32]string, len(blockRegistryID))
+		for name, i := range blockRegistryID {
+			blockRegistryNames[i] = name
+		}
+	})
+	name, ok := blockRegistryNames[id]
+	return name, ok
+}
+
 // stateRanges is the reverse of blockStateBase: every block's [Min, Max]
 // state range with its name, sorted by Min, for StateName's lookup.
 var (

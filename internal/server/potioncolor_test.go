@@ -98,8 +98,8 @@ func TestPotionComponentCarriesEffects(t *testing.T) {
 			id, _ := protocol.ReadVarInt(r)
 			amp, _ := protocol.ReadVarInt(r)
 			ticks, _ := protocol.ReadVarInt(r)
-			if id != e.id+1 {
-				t.Errorf("effect %d: holder %d, want %d", j, id, e.id+1)
+			if id != e.id {
+				t.Errorf("effect %d: holder %d, want %d", j, id, e.id)
 			}
 			if amp != int32(e.amp) {
 				t.Errorf("effect %d: amplifier %d, want %d", j, amp, e.amp)
@@ -159,8 +159,8 @@ func TestStewAndRepairCostComponents(t *testing.T) {
 	n, _ := protocol.ReadVarInt(r)
 	id, _ := protocol.ReadVarInt(r)
 	dur, _ := protocol.ReadVarInt(r)
-	if n != 1 || id != want.effect+1 || dur != int32(want.secs*20) {
-		t.Errorf("stew carries %d×(%d, %d ticks), want 1×(%d, %d)", n, id, dur, want.effect+1, int32(want.secs*20))
+	if n != 1 || id != want.effect || dur != int32(want.secs*20) {
+		t.Errorf("stew carries %d×(%d, %d ticks), want 1×(%d, %d)", n, id, dur, want.effect, int32(want.secs*20))
 	}
 }
 

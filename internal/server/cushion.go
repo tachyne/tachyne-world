@@ -32,11 +32,10 @@ const (
 
 	metaIndexCushionColor = 8 // Cushion.DATA_COLOR: DYE_COLOR (26.3 serializer 43)
 	// cushionColorSynced gates DATA_COLOR. DYE_COLOR is a serializer only
-	// 26.3 has, so it cannot go out in the canonical numbering; it would go
-	// as an INT placeholder the gateway restores (as the copper golem's
-	// state does), which the gateways do not do yet. Until then every
-	// cushion shows white.
-	cushionColorSynced = false
+	// 26.3 has, so it goes out as an INT placeholder the gateway restores
+	// (as the copper golem's state does; FixCushionMeta). Roll the gateways
+	// first: an older one would send the INT and the client would reject it.
+	cushionColorSynced = true
 )
 
 // cushionColor maps each cushion item to its DyeColor.

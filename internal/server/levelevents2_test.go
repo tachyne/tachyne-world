@@ -166,3 +166,28 @@ func TestDragonEggBlinkEvent(t *testing.T) {
 		t.Fatalf("the packed jump points at %v, which holds no egg", to)
 	}
 }
+
+// CHANGE_DESTROY_DIRECTION turns a dig in progress: the crumbs that follow
+// come off the new face, and the dig itself goes on.
+func TestDigFaceChange(t *testing.T) {
+	h := newTestHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	digger := survPlayer(h)
+	players := map[int32]*tracked{digger.p.eid: digger}
+	digger.x, digger.y, digger.z, digger.onGround = 0.5, 200, 0.5, true
+	h.world.SetBlock(1, 200, 0, worldgen.BlockBase("stone"))
+	digger.inv.slots[digger.p.held] = invStack{item: itemByName["wooden_pickaxe"], count: 1}
+	h.startDig(players, evDigStart{eid: digger.p.eid, x: 1, y: 200, z: 0, face: 4})
+	h.tickDigCracks(players)
+	drainEvs(digger.p)
+	h.setDigFace(digger.p.eid, 1) // now striking the top
+	h.tickDigCracks(players)
+	fx := drainFX(digger)
+	if len(fx) != 1 || fx[0].Data != 1 {
+		t.Fatalf("after the face change: %+v, want one event on face 1 (up)", fx)
+	}
+	if h.digs[digger.p.eid] == nil || h.digs[digger.p.eid].ticks != 2 {
+		t.Fatalf("the dig restarted instead of going on: %+v", h.digs[digger.p.eid])
+	}
+	h.setDigFace(12345, 3) // nobody digging: nothing to turn, no panic
+}

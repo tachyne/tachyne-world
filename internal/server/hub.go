@@ -709,6 +709,8 @@ type hub struct {
 	lastPotSherds    potSherds       // …and its faces, for the drop that follows
 	lastNamedPos     simPos          // a named block just removed…
 	lastNamedName    string          // …and its name, for the drop that follows
+	lastSkullPos     simPos          // a player head just removed…
+	lastSkullProfile string          // …and its owner, for the drop that follows
 	lastPosePos      simPos          // a copper golem statue just removed…
 	lastPose         int8            // …and its pose + 1, for the drop that follows (copy_state)
 	hopperTicking    map[simPos]bool // hoppers among the block-entity tickers (tickHoppers)…
@@ -724,6 +726,7 @@ type hub struct {
 	shelfView        *shelfStore             // the chunk builders' mutex'd read view of the shelves
 	potSherds        *potSherdStore          // …and of the decorated pots' faces
 	blockNames       *blockNameStore         // custom names of placed containers, banners, heads
+	skulls           *skullStore             // placed player heads' owners (skullprofile.go)
 	detectorsOn      map[simPos]uint64       // pressed detector rails, by dimension → the tick of their next 20-tick checkPressed
 	spawnerDelays    map[simPos]int          // placed spawners' spawnDelay (spawnerbe.go)
 	spawnerNext      map[simPos]uint64       // spawner cooldowns, per dimension:
@@ -923,6 +926,7 @@ func newHub(w *world.World) *hub {
 		shelfView:     newShelfStore(),
 		potSherds:     newPotSherdStore(),
 		blockNames:    newBlockNameStore(),
+		skulls:        newSkullStore(),
 		jukeboxes:     map[simPos]*jukebox{},
 		beacons:       map[simPos]*beacon{},
 		campfires:     map[simPos]*campfire{},
@@ -1036,6 +1040,7 @@ func (h *hub) run() {
 		h.initStars(h.containers.loadStars())
 		h.potSherds.restore(h.containers.loadPotSherds())
 		h.blockNames.restore(h.containers.loadBlockNames())
+		h.skulls.restore(h.containers.loadSkulls())
 		h.initBundles(h.containers.loadBundles())
 		h.hiveItems, h.nextHiveID = h.containers.loadHiveItems()
 		h.conduits = h.containers.loadConduits()
@@ -1404,6 +1409,7 @@ func (h *hub) run() {
 					h.containers.recordStars(h.stars)
 					h.containers.recordPotSherds(h.potSherds)
 					h.containers.recordBlockNames(h.blockNames)
+					h.containers.recordSkulls(h.skulls)
 					h.containers.recordBundles(h.bundles)
 					h.containers.recordHiveItems(h.hiveItems, h.nextHiveID)
 					h.containers.recordConduits(h.conduits)
@@ -1731,6 +1737,8 @@ func (h *hub) run() {
 				h.startDig(players, e)
 			case evDigStop:
 				h.stopDig(players, e.eid)
+			case evDigFace:
+				h.setDigFace(e.eid, e.face)
 			case evSwapHands:
 				h.onSwapHands(players, e)
 			case evTeleportTo:
@@ -2153,10 +2161,16 @@ func (h *hub) run() {
 				// a hacked survival client sending set_creative_slot is ignored.
 				if t := players[e.eid]; t != nil && t.gamemode == gmCreative && t.inv != nil && t.winID == 0 {
 					if ptr, hot := h.winSlotPtr(t, e.slot); ptr != nil {
-						*ptr = e.st
+						st := e.st
+						if len(e.comps) > 0 && st.item != 0 && st.count > 0 {
+							// The whole stack, components and all
+							// (handleSetCreativeModeSlot keeps them).
+							st = h.creativeStack(st.item, st.count, e.comps)
+						}
+						*ptr = st
 						if hot >= 0 {
-							t.p.setHotbarSlot(hot, e.st.item)
-							t.p.setHandTags(hot, e.st.tags)
+							t.p.setHotbarSlot(hot, st.item)
+							t.p.setHandTags(hot, st.tags)
 						}
 						h.broadcastEquipment(players, t)
 					}
@@ -2407,6 +2421,7 @@ func (h *hub) run() {
 					h.containers.recordStars(h.stars)
 					h.containers.recordPotSherds(h.potSherds)
 					h.containers.recordBlockNames(h.blockNames)
+					h.containers.recordSkulls(h.skulls)
 					h.containers.recordBundles(h.bundles)
 					h.containers.recordHiveItems(h.hiveItems, h.nextHiveID)
 					h.containers.recordConduits(h.conduits)
@@ -2845,6 +2860,8 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 		// before the evConsume that empties the slot (the channel is FIFO).
 		st := placedStack(t, e.state)
 		h.nameBlockFromStack(simPos{dim: e.dim, blockPos: blockPos{e.x, e.y, e.z}}, e.state, st)
+		// A head placed from a stack with a profile wears that face.
+		h.ownSkullFromStack(players, simPos{dim: e.dim, blockPos: blockPos{e.x, e.y, e.z}}, e.state, st)
 		// A statue's stack carries its pose (block_state): the placed block
 		// takes it, which the placer's own prediction could not know.
 		if posed := withStatuePose(e.state, st.golemPose); posed != e.state {

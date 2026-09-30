@@ -39,19 +39,19 @@ func TestCreativeSlotTracking(t *testing.T) {
 	srv := &Server{hub: newTestHub(world.New(1)), modes: newModeStore("", gmCreative)}
 
 	// Put item id 5 in window slot 36 (= hotbar slot 0).
-	srv.applyCreativeSlot(p, 36, 5, 1, "")
+	srv.applyCreativeSlot(p, 36, 5, 1, "", nil)
 	if p.hotbar[0] != 5 {
 		t.Errorf("hotbar[0] = %d, want 5", p.hotbar[0])
 	}
 
 	// An empty stack (count 0) in slot 44 (= hotbar slot 8) leaves it empty.
-	srv.applyCreativeSlot(p, 44, 0, 0, "")
+	srv.applyCreativeSlot(p, 44, 0, 0, "", nil)
 	if p.hotbar[8] != 0 {
 		t.Errorf("hotbar[8] = %d, want 0 (empty)", p.hotbar[8])
 	}
 
 	// Non-hotbar slots (e.g. main inventory, 9) are ignored.
-	srv.applyCreativeSlot(p, 9, 99, 1, "")
+	srv.applyCreativeSlot(p, 9, 99, 1, "", nil)
 	for i, it := range p.hotbar {
 		if i != 0 && it != 0 {
 			t.Errorf("hotbar[%d] = %d, want unchanged", i, it)

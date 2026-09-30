@@ -3,6 +3,8 @@ package server
 import (
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
+
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -151,30 +153,51 @@ func TestPortalProjectileAndSoundRules(t *testing.T) {
 	}
 }
 
-// ServerLevel.globalLevelEvent: everyone in the dimension hears it, and a
-// listener out of earshot hears it from a point thirty-two blocks off in its
-// direction rather than from where it really happened.
-func TestGlobalSoundReachesEveryone(t *testing.T) {
+// ServerLevel.globalLevelEvent: every player on the server gets the event
+// with the global flag — at the block within 32 blocks, 32 blocks off along
+// the line to it further away, and at their own block in another dimension.
+// With global_sound_events off it is an ordinary event for those nearby.
+func TestGlobalLevelEventReachesEveryone(t *testing.T) {
 	h := newTestHub(world.New(43))
-	near, far := testTracked(), testTracked()
-	far.p.eid = 99
+	h.rules.GlobalSounds = true
+	near, far, other := testTracked(), testTracked(), testTracked()
+	far.p.eid, other.p.eid = 99, 98
 	near.dim, near.x, near.y, near.z = 0, 5, 70, 0
-	far.dim, far.x, far.y, far.z = 0, 5000, 70, 0
-	players := map[int32]*tracked{near.p.eid: near, far.p.eid: far}
+	far.dim, far.x, far.y, far.z = 0, 5000.5, 70, 0.5
+	other.dim, other.x, other.y, other.z = 1, 12.5, 40, -7.5
+	players := map[int32]*tracked{near.p.eid: near, far.p.eid: far, other.p.eid: other}
 
-	// Nothing panics and nothing is skipped: both are in the dimension.
-	h.playSoundGlobal(players, 0, "minecraft:entity.wither.spawn", sndHostile, 0, 70, 0, 4, 1)
-
-	// The clamp itself: a listener 5000 blocks away is given a source 32 away.
-	sx, sy, sz := 0.0, 70.0, 0.0
-	d := dist3(far.x, far.y, far.z, sx, sy, sz)
-	cx := far.x + (sx-far.x)/d*globalSoundRange
-	if got := dist3(far.x, far.y, far.z, cx, sy, sz); got < globalSoundRange-1 || got > globalSoundRange+1 {
-		t.Errorf("the clamped source sits %v blocks away, want %v", got, globalSoundRange)
+	h.globalLevelEvent(players, 0, worldEventWitherSpawn, 0, 70, 0, 0)
+	one := func(pl *tracked) attachproto.WorldFX {
+		t.Helper()
+		fx := drainFX(pl)
+		if len(fx) != 1 || fx[0].Event != worldEventWitherSpawn || !fx[0].Global {
+			t.Fatalf("eid %d got %+v, want one global 1023", pl.p.eid, fx)
+		}
+		return fx[0]
 	}
-	// A player in another dimension hears nothing at all.
-	far.dim = 1
-	h.playSoundGlobal(players, 0, "minecraft:entity.wither.spawn", sndHostile, 0, 70, 0, 4, 1)
+	if fx := one(near); fx.X != 0 || fx.Y != 70 || fx.Z != 0 {
+		t.Errorf("near listener: at %d,%d,%d, want the block 0,70,0", fx.X, fx.Y, fx.Z)
+	}
+	// 5000 blocks east: 32 blocks from the listener, towards the block.
+	if fx := one(far); fx.X != 4968 || fx.Y != 70 || fx.Z != 0 {
+		t.Errorf("far listener: at %d,%d,%d, want 4968,70,0", fx.X, fx.Y, fx.Z)
+	}
+	if fx := one(other); fx.X != 12 || fx.Y != 40 || fx.Z != -8 {
+		t.Errorf("listener in another dimension: at %d,%d,%d, want their own block 12,40,-8", fx.X, fx.Y, fx.Z)
+	}
+
+	h.rules.GlobalSounds = false
+	h.globalLevelEvent(players, 0, worldEventWitherSpawn, 0, 70, 0, 0)
+	if fx := drainFX(near); len(fx) != 1 || fx[0].Global {
+		t.Errorf("rule off, near: %+v, want one local event", fx)
+	}
+	if fx := drainFX(far); len(fx) != 0 {
+		t.Errorf("rule off, far: %+v, want nothing", fx)
+	}
+	if fx := drainFX(other); len(fx) != 0 {
+		t.Errorf("rule off, other dimension: %+v, want nothing", fx)
+	}
 }
 
 // /gamerule <rule>: every rule the command lists can be read back.

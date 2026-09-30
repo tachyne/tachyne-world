@@ -57,6 +57,10 @@ type evCreativeSlot struct { // creative set_creative_slot: write through to the
 	eid  int32
 	slot int16 // player-window slot number (0-45)
 	st   invStack
+	// comps is the stack's canonical component patch as the gateway sent
+	// it; the hub reads it into st (creativeStack), where the stores a
+	// book, box, bundle or firework needs live.
+	comps []byte
 }
 
 func (evClick) isHubEvent()        {}

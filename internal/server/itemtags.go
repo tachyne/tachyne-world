@@ -1,8 +1,10 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -248,20 +250,213 @@ func (t itemTags) loreLines() []string {
 	return strings.Split(t.lore, "\n")
 }
 
-// tagComponents are the item tags a client is sent: the lore. (Unbreakable,
-// can_break and can_place_on have no canonical component the gateways'
-// translation chain carries yet; they act on the server.)
+// Canonical (1.21.5) ids of adventure mode's two predicates.
+const (
+	componentCanPlaceOn = 11 // can_place_on: AdventureModePredicate
+	componentCanBreak   = 12 // can_break: AdventureModePredicate
+)
+
+// tagComponents are the item tags a client is sent: the lore, unbreakable
+// (a Unit, which puts "Unbreakable" in the tooltip), and can_break /
+// can_place_on (the tooltip's "Can break:" / "Can be placed on:" lists).
 func tagComponents(st invStack) (int32, []byte) {
-	lines := st.tags.loreLines()
-	if len(lines) == 0 {
-		return 0, nil
+	var n int32
+	var b []byte
+	if lines := st.tags.loreLines(); len(lines) > 0 {
+		b = protocol.AppendVarInt(b, componentLore)
+		b = protocol.AppendVarInt(b, int32(len(lines)))
+		for _, l := range lines {
+			b = append(b, chatNBT(l)...)
+		}
+		n++
 	}
-	b := protocol.AppendVarInt(nil, componentLore)
-	b = protocol.AppendVarInt(b, int32(len(lines)))
-	for _, l := range lines {
-		b = append(b, chatNBT(l)...)
+	if st.tags.unbreakable {
+		b = protocol.AppendVarInt(b, componentUnbreakable) // no payload
+		n++
 	}
-	return 1, b
+	for _, c := range []struct {
+		id int32
+		js string
+	}{{componentCanBreak, st.tags.canBreak}, {componentCanPlaceOn, st.tags.canPlace}} {
+		if pb, ok := advPredicateBytes(c.js); ok {
+			b = protocol.AppendVarInt(b, c.id)
+			b = append(b, pb...)
+			n++
+		}
+	}
+	return n, b
+}
+
+// advPredicateBytes is a stored predicate list as AdventureModePredicate's
+// STREAM_CODEC writes it: a list of BlockPredicates, each an optional
+// HolderSet<Block> (0 then the tag's name, or the count + 1 then block
+// registry ids), optional StatePropertiesPredicate (a list of property
+// name + either an exact value or an optional min and max), no NbtPredicate
+// and empty DataComponentMatchers (an exact list and a partial list, both
+// empty). Properties go out sorted by name. False when there is nothing to
+// send.
+func advPredicateBytes(js string) ([]byte, bool) {
+	preds := advPredsOf(js)
+	if len(preds) == 0 {
+		return nil, false
+	}
+	b := protocol.AppendVarInt(nil, int32(len(preds)))
+	for _, p := range preds {
+		switch {
+		case p.Tag != "":
+			b = append(b, 1)
+			b = protocol.AppendVarInt(b, 0)
+			b = protocol.AppendString(b, nsID(p.Tag))
+		case len(p.Blocks) > 0:
+			var ids []int32
+			for _, name := range p.Blocks {
+				if id, ok := worldgen.BlockRegistryID(name); ok {
+					ids = append(ids, int32(id))
+				}
+			}
+			b = append(b, 1)
+			b = protocol.AppendVarInt(b, int32(len(ids))+1)
+			for _, id := range ids {
+				b = protocol.AppendVarInt(b, id)
+			}
+		default:
+			b = append(b, 0)
+		}
+		if len(p.State) == 0 {
+			b = append(b, 0)
+		} else {
+			props := make([]string, 0, len(p.State))
+			for k := range p.State {
+				props = append(props, k)
+			}
+			sort.Strings(props)
+			b = append(b, 1)
+			b = protocol.AppendVarInt(b, int32(len(props)))
+			for _, k := range props {
+				r := p.State[k]
+				b = protocol.AppendString(b, k)
+				if r.Exact != "" {
+					b = append(b, 1)
+					b = protocol.AppendString(b, r.Exact)
+					continue
+				}
+				b = append(b, 0)
+				for _, v := range []string{r.Min, r.Max} {
+					b = protocol.AppendBool(b, v != "")
+					if v != "" {
+						b = protocol.AppendString(b, v)
+					}
+				}
+			}
+		}
+		b = append(b, 0)    // no nbt
+		b = append(b, 0, 0) // no component matchers: exact, partial
+	}
+	return b, true
+}
+
+// readAdvPredicate reads what advPredicateBytes writes back into the JSON a
+// stack stores. A predicate the engine cannot keep — an nbt or component
+// matcher, a block or tag it does not know — fails the whole component, as
+// /give refuses one.
+func readAdvPredicate(r *bytes.Reader) (string, bool) {
+	n, err := protocol.ReadVarInt(r)
+	if err != nil || n <= 0 || n > 64 {
+		return "", false
+	}
+	flag := func() (bool, bool) {
+		v, err := r.ReadByte()
+		return v == 1, err == nil && v <= 1
+	}
+	preds := make([]advPred, 0, n)
+	for i := int32(0); i < n; i++ {
+		var p advPred
+		has, ok := flag()
+		if !ok {
+			return "", false
+		}
+		if has {
+			k, err := protocol.ReadVarInt(r)
+			if err != nil || k < 0 || k > 4097 {
+				return "", false
+			}
+			if k == 0 {
+				tag, err := protocol.ReadString(r)
+				if err != nil {
+					return "", false
+				}
+				tag = strings.TrimPrefix(tag, "minecraft:")
+				if _, ok := blockTagMembers(tag); !ok {
+					return "", false
+				}
+				p.Tag = tag
+			}
+			for j := int32(0); j < k-1; j++ {
+				id, err := protocol.ReadVarInt(r)
+				if err != nil || id < 0 {
+					return "", false
+				}
+				name, ok := worldgen.BlockRegistryName(uint32(id))
+				if !ok {
+					return "", false
+				}
+				p.Blocks = append(p.Blocks, name)
+			}
+		}
+		if has, ok = flag(); !ok {
+			return "", false
+		}
+		if has {
+			m, err := protocol.ReadVarInt(r)
+			if err != nil || m < 0 || m > 64 {
+				return "", false
+			}
+			p.State = map[string]advRange{}
+			for j := int32(0); j < m; j++ {
+				prop, err := protocol.ReadString(r)
+				if err != nil {
+					return "", false
+				}
+				exact, ok := flag()
+				if !ok {
+					return "", false
+				}
+				var rg advRange
+				if exact {
+					if rg.Exact, err = protocol.ReadString(r); err != nil {
+						return "", false
+					}
+				} else {
+					for _, dst := range []*string{&rg.Min, &rg.Max} {
+						present, ok := flag()
+						if !ok {
+							return "", false
+						}
+						if present {
+							if *dst, err = protocol.ReadString(r); err != nil {
+								return "", false
+							}
+						}
+					}
+				}
+				p.State[prop] = rg
+			}
+		}
+		if has, ok = flag(); !ok || has { // an nbt predicate is not kept
+			return "", false
+		}
+		for j := 0; j < 2; j++ { // component matchers: exact, partial
+			if c, err := protocol.ReadVarInt(r); err != nil || c != 0 {
+				return "", false
+			}
+		}
+		preds = append(preds, p)
+	}
+	js, err := json.Marshal(preds)
+	if err != nil {
+		return "", false
+	}
+	return string(js), true
 }
 
 // textOf reads a text component value as plain text: a string, or a

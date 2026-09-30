@@ -89,6 +89,10 @@ type invStack struct {
 	// An armor stand's entity_data: the stand tags it places with
 	// (armorstandpose.go), "" = none.
 	standTags string
+	// A player head's owner (the profile component) in its canonical
+	// stream form, "" = none (skullprofile.go). A string, so invStack stays
+	// comparable.
+	profile string
 	// Components a command or a loot table sets and nothing in play does:
 	// lore, unbreakable, and adventure mode's can_break / can_place_on.
 	tags itemTags

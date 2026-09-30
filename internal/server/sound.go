@@ -282,33 +282,39 @@ var ambientIntervals = func() map[string]int32 {
 	return m
 }()
 
-// globalSoundRange is how far ServerLevel.globalLevelEvent places a sound a
+// globalSoundRange is how far ServerLevel.globalLevelEvent places an event a
 // listener is further away from than this: on the line towards it, so it still
-// arrives from the right direction at full volume.
+// arrives from the right direction.
 const globalSoundRange = 32.0
 
-// playSoundGlobal is ServerLevel.globalLevelEvent — the handful of sounds
-// everyone in a dimension is meant to hear wherever they are: a wither waking
-// up, the dragon dying, an end portal opening. A listener out of earshot hears
-// it from a point globalSoundRange blocks off in its direction, which is what
-// makes it carry without being placeless. The global_sound_events gamerule
-// turns that off, and then only the people nearby hear it.
-func (h *hub) playSoundGlobal(players map[int32]*tracked, dim int, name string, category int32, x, y, z float64, volume, pitch float32) {
+// globalLevelEvent is ServerLevel.globalLevelEvent — the three level events
+// everyone on the server is meant to hear wherever they are: a wither
+// waking (1023), the dragon dying (1028), an end portal opening (1038). Each
+// goes out with the packet's global flag set, to every player in every
+// dimension. A listener in the event's dimension within globalSoundRange
+// gets the block itself; one further off gets the block on the line towards
+// it at that distance, so it arrives from the right direction; a listener
+// in another dimension gets the block they stand in. The
+// global_sound_events gamerule turns all of that off, and then it is an
+// ordinary level event for the people nearby.
+func (h *hub) globalLevelEvent(players map[int32]*tracked, dim int, event int32, x, y, z int, data int32) {
 	if !h.rules.GlobalSounds {
-		h.playSoundDim(players, dim, name, category, x, y, z, volume, pitch)
+		h.levelEvent(players, dim, event, x, y, z, data)
 		return
 	}
+	cx, cy, cz := float64(x)+0.5, float64(y)+0.5, float64(z)+0.5 // Vec3.atCenterOf
 	for _, t := range players {
-		if t.dim != dim {
-			continue
+		sx, sy, sz := t.x, t.y, t.z
+		if t.dim == dim {
+			if d := dist3(t.x, t.y, t.z, cx, cy, cz); d < globalSoundRange {
+				sx, sy, sz = cx, cy, cz
+			} else {
+				sx = t.x + (cx-t.x)/d*globalSoundRange
+				sy = t.y + (cy-t.y)/d*globalSoundRange
+				sz = t.z + (cz-t.z)/d*globalSoundRange
+			}
 		}
-		sx, sy, sz := x, y, z
-		if d := dist3(t.x, t.y, t.z, x, y, z); d > globalSoundRange {
-			sx = t.x + (x-t.x)/d*globalSoundRange
-			sy = t.y + (y-t.y)/d*globalSoundRange
-			sz = t.z + (z-t.z)/d*globalSoundRange
-		}
-		t.p.trySendEv(soundEv(name, category, sx, sy, sz, volume, pitch))
+		t.p.trySendEv(attachproto.WorldFX{Event: event, X: floorInt(sx), Y: floorInt(sy), Z: floorInt(sz), Data: data, Global: true})
 	}
 }
 
