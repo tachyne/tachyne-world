@@ -89,6 +89,9 @@ type invStack struct {
 	// An armor stand's entity_data: the stand tags it places with
 	// (armorstandpose.go), "" = none.
 	standTags string
+	// block_entity_data: the block entity a creative ctrl-pick copied, as an
+	// SNBT compound with its type under "id" (pickdata.go), "" = none.
+	beData string
 	// Components a command or a loot table sets and nothing in play does:
 	// lore, unbreakable, and adventure mode's can_break / can_place_on.
 	tags itemTags

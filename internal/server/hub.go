@@ -1540,7 +1540,19 @@ func (h *hub) run() {
 					// This runs before the evConsume that empties the slot,
 					// because the events channel is FIFO.
 					if t := players[e.by]; t != nil {
-						h.restoreShulkerBox(simPos{dim: e.dim, blockPos: blockPos{e.x, e.y, e.z}}, heldStack(t).boxID)
+						pos := simPos{dim: e.dim, blockPos: blockPos{e.x, e.y, e.z}}
+						if id := heldStack(t).boxID; t.gamemode == gmCreative && id != 0 && h.boxes != nil {
+							// Creative keeps the stack, and with it the
+							// contents: the box gets a copy.
+							if c, ok := h.boxes.get(id); ok {
+								for i := range c.slots {
+									c.slots[i] = h.forkStack(c.slots[i])
+								}
+								h.chests[pos] = &c
+							}
+						} else {
+							h.restoreShulkerBox(pos, heldStack(t).boxID)
+						}
 					}
 				}
 				if e.broken == 0 && isDecoratedPot(e.state) {
@@ -2845,6 +2857,9 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 		// before the evConsume that empties the slot (the channel is FIFO).
 		st := placedStack(t, e.state)
 		h.nameBlockFromStack(simPos{dim: e.dim, blockPos: blockPos{e.x, e.y, e.z}}, e.state, st)
+		// A stack carrying block_entity_data (a creative ctrl-pick) loads it
+		// into the block entity it placed.
+		h.applyItemBlockEntityData(players, t, simPos{dim: e.dim, blockPos: blockPos{e.x, e.y, e.z}}, e.state, st)
 		// A statue's stack carries its pose (block_state): the placed block
 		// takes it, which the placer's own prediction could not know.
 		if posed := withStatuePose(e.state, st.golemPose); posed != e.state {
