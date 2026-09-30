@@ -1118,6 +1118,7 @@ func (h *hub) run() {
 	for {
 		select {
 		case <-h.ticker.C:
+			delete(players, consoleEID) // never across a tick, whatever path an event left by (console.go)
 			if !h.tickGate(players) {
 				continue // frozen: no simulation this tick
 			}
