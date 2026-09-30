@@ -98,15 +98,15 @@ func (h *hub) villagerJobTick(players map[int32]*tracked, m *mob) {
 		if dist3(float64(m.work.x)+0.5, float64(m.work.y), float64(m.work.z)+0.5, m.x, m.y, m.z) <= jobValidateDist {
 			if p := jobBlockProfession(w.At(m.work.x, m.work.y, m.work.z)); p < 0 || (m.profession >= 0 && p != m.profession) {
 				m.work = blockPos{}
-				if m.profession >= 0 && m.tradeLevel <= 1 && m.tradeXP == 0 {
-					m.profession = profUnemployed
-					m.offers = nil
-					h.sendVillagerData(players, m)
-				}
+				h.resetProfession(players, m)
 			}
 		}
 		return
 	}
+	// ResetProfession runs whenever JOB_SITE is absent, not only when it is
+	// lost: a villager with a trade but no workstation (summoned so, or one
+	// that lost its site before) that never traded is unemployed again.
+	h.resetProfession(players, m)
 	// Walking to a potential site: GoToPotentialJobSite's stop validates it,
 	// and an unemployed villager yields it to a neighbour whose trade it is.
 	if m.jobPos != (blockPos{}) {
