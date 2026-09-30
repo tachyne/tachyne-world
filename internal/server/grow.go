@@ -181,6 +181,13 @@ func (h *hub) runRandomTicks(players map[int32]*tracked) {
 			}
 		}
 	}
+	// Portal and pearl tickets block-tick the chunks within r-1 of theirs.
+	h.forEachTicketChunk(1, func(dim, cx, cz int) {
+		if c := [3]int{dim, cx, cz}; !seen[c] {
+			seen[c] = true
+			h.randomTickChunk(players, dim, cx, cz)
+		}
+	})
 }
 
 func (h *hub) randomTickChunk(players map[int32]*tracked, dim, cx, cz int) {

@@ -177,6 +177,10 @@ func (h *hub) reconcileEntityChunks(players map[int32]*tracked) {
 			set[[3]int32{int32(dim), c[0], c[1]}] = true
 		}
 	}
+	// A portal or pearl ticket entity-ticks the chunks within r-2 of it.
+	h.forEachTicketChunk(2, func(dim, cx, cz int) {
+		set[[3]int32{int32(dim), int32(cx), int32(cz)}] = true
+	})
 	h.reconcileMobChunks(players, set)
 }
 

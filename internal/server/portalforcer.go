@@ -106,7 +106,11 @@ func (h *hub) netherPortalExit(players map[int32]*tracked, fromDim int, entry bl
 	} else {
 		rx, ry, rz = 0.5, 0, 0
 	}
-	return h.portalTransition(toDim, exit, entryAxisZ, rx, ry, rz, width, height), true
+	a := h.portalTransition(toDim, exit, entryAxisZ, rx, ry, rz, width, height)
+	// PLAY_PORTAL_SOUND.then(placePortalTicket): the far side stays loaded
+	// and ticking for the traveller (tickets.go).
+	h.addChunkTicket(ticketPortal, a.dim, a.x, a.z)
+	return a, true
 }
 
 // portalTransition is createDimensionTransition: the relative position laid

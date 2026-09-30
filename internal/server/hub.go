@@ -507,7 +507,10 @@ type hub struct {
 	activeChunks map[[3]int32]bool
 	// scratchEntityChunks is reconcileEntityChunks' reusable chunk set.
 	scratchEntityChunks map[[3]int32]bool
-	chunkOutAt          map[[3]int32]uint64
+	// tickets are the held timed chunk tickets (tickets.go), each to the
+	// tick it lapses on.
+	tickets    map[chunkTicket]uint64
+	chunkOutAt map[[3]int32]uint64
 
 	// reloading is true only while loadMobs reconstructs persisted mobs at boot:
 	// it suppresses MobSpawnEvent (these entities already existed — they are being
@@ -1127,6 +1130,7 @@ func (h *hub) run() {
 			for _, w := range h.allDims() {
 				w.Tick() // LRU epoch: cached chunks promote at most once per tick
 			}
+			h.expireTickets() // portal and pearl tickets past their time (tickets.go)
 			dueNow := len(h.pending[age])
 			dt := h.tickClocks() // the world clocks advance (timecmd.go)
 			if age%600 == 0 {    // PlayerList.tick: everyone's latency, every 600 ticks
@@ -1168,7 +1172,7 @@ func (h *hub) run() {
 			// loop (not inside updateMobs) so tests that drive updateMobs directly
 			// are unaffected. Before this gate the boot herds walked the world for
 			// nobody, generating terrain into the chunk cache around the clock.
-			if age%mobMoveInterval == 0 && (len(players) > 0 || h.anyForced()) {
+			if age%mobMoveInterval == 0 && (len(players) > 0 || h.anyForced() || len(h.tickets) > 0) {
 				h.updateMobs(players)      // living world: mob behaviour + movement
 				h.updateOpenDoors(players) // shut wooden doors villagers left open
 				h.updateShadows(players)   // cross-seam: push near-border entities to neighbours
@@ -1179,6 +1183,7 @@ func (h *hub) run() {
 			h.updatePortalTravel(players) // mobs and drops standing in a portal go through
 			h.updateEndPortalEntities(players)
 			h.updateArrows(players)  // every tick: arrows are fast enough to tunnel otherwise
+			h.pearlTickets(players)  // a player's pearl in flight holds its chunk (tickets.go)
 			h.updateClouds(players)  // lingering-potion clouds: dose, shrink, expire
 			h.updateBobbers(players) // fishing bobbers: flight, bobbing, the catch timers
 			h.mapsTick(players)      // held filled maps: color scan + holder updates
