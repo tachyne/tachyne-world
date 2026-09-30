@@ -366,7 +366,7 @@ func (h *hub) dragonTickDeath(players map[int32]*tracked, m *mob) {
 		h.spawnXPOrbIn(players, m.dim, int(float64(xp)*0.08), m.x, m.y, m.z)
 	}
 	if d.deathTime == 1 {
-		h.playSoundGlobal(players, dimEnd, "minecraft:entity.ender_dragon.death", sndHostile, m.x, m.y, m.z, 5, 1)
+		h.globalLevelEvent(players, dimEnd, worldEventDragonDeath, floorInt(m.x), floorInt(m.y), floorInt(m.z), 0)
 	}
 	m.y += 0.1
 	h.dragonBroadcast(players, m)

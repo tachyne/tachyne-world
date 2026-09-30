@@ -52,9 +52,9 @@ func (h *hub) insertEye(players map[int32]*tracked, t *tracked, pos blockPos, st
 					}
 				}
 			}
-			// LevelEvent 1038: the whole dimension hears the portal open.
-			h.playSoundGlobal(players, dimOverworld, "minecraft:block.end_portal.spawn", sndBlock,
-				float64(cx)+0.5, float64(pos.y)+0.5, float64(cz)+0.5, 1, 1)
+			// LevelEvent 1038 at the frame's centre (EnderEyeItem: the
+			// ring's corner offset by 1, 0, 1): the whole server hears it.
+			h.globalLevelEvent(players, t.dim, worldEventEndPortalOpen, cx, pos.y, cz, 0)
 			return
 		}
 	}

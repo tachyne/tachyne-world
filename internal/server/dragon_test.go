@@ -288,7 +288,7 @@ func TestDragonDeathSoundIsGlobal(t *testing.T) {
 	h.killMob(players, h.dragon)
 	h.updateDragon(players)
 	for len(pl.p.out) > 0 {
-		if ev, ok := (<-pl.p.out).ev.(attachproto.Sound); ok && ev.Name == "minecraft:entity.ender_dragon.death" {
+		if ev, ok := (<-pl.p.out).ev.(attachproto.WorldFX); ok && ev.Event == worldEventDragonDeath && ev.Global {
 			return
 		}
 	}

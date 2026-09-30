@@ -81,8 +81,7 @@ func (h *hub) spawnWitherFrom(players map[int32]*tracked, by int32, dim, cx, top
 		return
 	}
 	m.health = witherHealth
-	m.spawnInvuln = witherSpawnCharge
-	h.playSoundGlobal(players, dim, "minecraft:entity.wither.spawn", sndHostile, m.x, m.y, m.z, 4, 1)
+	m.spawnInvuln = witherSpawnCharge // WitherBoss.makeInvulnerable: silent; the roar comes when the charge ends
 }
 
 // updateWithers runs the spawn-charge countdown + blast and drives every
@@ -96,7 +95,7 @@ func (h *hub) updateWithers(players map[int32]*tracked) {
 			if m.spawnInvuln--; m.spawnInvuln == 0 {
 				// Charge complete: level the terrain around it and roar free.
 				h.explodeBy(players, m.dim, m.x, m.y+1, m.z, witherBlastPower, witherBlastPower, blastMob, mobDisplayName(m.etype), withHiveRelease(), withBlastCause(m.eid, true))
-				h.playSoundGlobal(players, m.dim, "minecraft:entity.wither.spawn", sndHostile, m.x, m.y, m.z, 4, 1)
+				h.globalLevelEvent(players, m.dim, worldEventWitherSpawn, floorInt(m.x), floorInt(m.y), floorInt(m.z), 0)
 			}
 		}
 		h.witherHeadsTick(players, m) // the two side heads pick their own victims

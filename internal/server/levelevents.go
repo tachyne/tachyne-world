@@ -45,6 +45,9 @@ const (
 	worldEventZombieDoorCrash  = 1021 // SOUND_ZOMBIE_DOOR_CRASH: the door gives
 	worldEventWitherBreak      = 1022 // SOUND_WITHER_BLOCK_BREAK
 	worldEventWitherShoot      = 1024 // SOUND_WITHER_BOSS_SHOOT: each skull
+	worldEventWitherSpawn      = 1023 // SOUND_WITHER_BOSS_SPAWN (global)
+	worldEventDragonDeath      = 1028 // SOUND_DRAGON_DEATH (global)
+	worldEventEndPortalOpen    = 1038 // SOUND_END_PORTAL_SPAWN (global)
 	worldEventPortalTravel     = 1032 // SOUND_PORTAL_TRAVEL: to the traveller, on arrival
 	worldEventBrew             = 1035 // SOUND_BREWING_STAND_BREW
 	worldEventPhantomBite      = 1039 // SOUND_PHANTOM_BITE
