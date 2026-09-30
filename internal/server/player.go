@@ -117,6 +117,11 @@ type player struct {
 	crit     []outPkt
 	critMu   sync.Mutex
 	critWake chan struct{} // buffered(1): nudges the pump to drain crit
+
+	// exec is set on the stand-in players /execute runs a command as
+	// (execute.go): what they are sent is captured for the one who ran
+	// /execute instead of queued for a connection. Nil for every real player.
+	exec *execCtx
 }
 
 // outPkt is one typed domain event queued for the session pump (remote.go's
@@ -198,6 +203,10 @@ func isLifecycleFrame(ev any) bool {
 // session, never the hub. Lifecycle frames divert to the reliable overflow so
 // they neither block nor drop even when this runs on the hub goroutine.
 func (p *player) sendEv(ev any) {
+	if p.exec != nil {
+		p.exec.capture(ev)
+		return
+	}
 	if isLifecycleFrame(ev) {
 		p.sendEvReliable(ev)
 		return
@@ -216,6 +225,10 @@ func (p *player) sendEv(ev any) {
 // Lifecycle frames are the exception (see isLifecycleFrame): they must not drop,
 // so they divert to the reliable overflow.
 func (p *player) trySendEv(ev any) {
+	if p.exec != nil {
+		p.exec.capture(ev)
+		return
+	}
 	if isLifecycleFrame(ev) {
 		p.sendEvReliable(ev)
 		return
@@ -235,6 +248,10 @@ func (p *player) trySendEv(ev any) {
 // hub goroutine. A session past critCap is hopelessly behind and is disconnected
 // rather than growing crit without bound.
 func (p *player) sendEvReliable(ev any) {
+	if p.exec != nil {
+		p.exec.capture(ev)
+		return
+	}
 	p.critMu.Lock()
 	if len(p.crit) > 0 { // overflow already active — stay in crit to keep FIFO
 		if len(p.crit) >= critCap {

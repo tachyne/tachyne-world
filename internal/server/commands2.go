@@ -52,6 +52,7 @@ func (h *hub) onWhisper(players map[int32]*tracked, e evWhisper) {
 		t.p.trySendEv(chatEv(fmt.Sprintf("%s whispers to you: %s", sourceName(e.from), e.text)))
 		e.from.trySendEv(chatEv(fmt.Sprintf("You whisper to %s: %s", t.p.name, e.text)))
 	}
+	setCmdResult(e.from, len(targets)) // MsgCommand returns the target count
 }
 
 // cmdKick disconnects an online player (op only).
@@ -205,12 +206,16 @@ func (h *hub) onClearInv(players map[int32]*tracked, e evClearInv) {
 	case total == 0:
 		e.by.trySendEv(chatEv(fmt.Sprintf("No items were found on %d players", len(targets))))
 	case e.max == 0 && len(targets) == 1:
+		setCmdResult(e.by, total)
 		h.cmdSuccess(players, e.by, fmt.Sprintf("Found %d matching item(s) on player %s", total, who), true)
 	case e.max == 0:
+		setCmdResult(e.by, total)
 		h.cmdSuccess(players, e.by, fmt.Sprintf("Found %d matching item(s) on %d players", total, len(targets)), true)
 	case len(targets) == 1:
+		setCmdResult(e.by, total)
 		h.cmdSuccess(players, e.by, fmt.Sprintf("Removed %d item(s) from player %s", total, who), true)
 	default:
+		setCmdResult(e.by, total) // ClearInventoryCommands returns the items it counted
 		h.cmdSuccess(players, e.by, fmt.Sprintf("Removed %d item(s) from %d players", total, len(targets)), true)
 	}
 }

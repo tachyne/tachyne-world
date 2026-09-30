@@ -91,6 +91,9 @@ func (h *hub) applyStopwatch(players map[int32]*tracked, e evStopwatch) int {
 		okTell(fmt.Sprintf("Created stopwatch '%s'", e.id))
 	case "query":
 		secs := float64(run.elapsedMs(now)) / 1000
+		if t := players[e.by]; t != nil {
+			setCmdResult(t.p, int(secs*e.scale))
+		}
 		okTell(fmt.Sprintf("Stopwatch '%s' has run for %ss", e.id, jDouble(secs)))
 		return int(secs * e.scale)
 	case "restart":

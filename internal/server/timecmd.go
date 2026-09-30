@@ -290,6 +290,7 @@ func (h *hub) runTime(players map[int32]*tracked, p *player, args []string) {
 	}
 	verb, rest := args[0], args[1:]
 	if verb == "query" && !named && len(rest) == 1 && rest[0] == "gametime" {
+		setCmdResult(p, int(h.tick.Load()%math.MaxInt32))               // (int)(gameTime % Integer.MAX_VALUE)
 		info(fmt.Sprintf("The game time is %d tick(s)", h.tick.Load())) // needs no clock
 		return
 	}
@@ -345,6 +346,7 @@ func (h *hub) runTime(players map[int32]*tracked, p *player, args []string) {
 			}
 			h.setClockTotal(players, clock, uint64(n))
 			h.saveRules()
+			setCmdResult(p, int(n))
 			okTell(fmt.Sprintf("Set %s to %d tick(s)", key, n))
 			return
 		}
@@ -382,6 +384,7 @@ func (h *hub) runTime(players map[int32]*tracked, p *player, args []string) {
 		h.setClockTotal(players, clock, uint64(total))
 		run.Partial = partial
 		h.saveRules()
+		setCmdResult(p, int(total%math.MaxInt32))
 		okTell(fmt.Sprintf("Set %s to %d tick(s)", key, total))
 	case "pause", "resume":
 		paused := verb == "pause"
@@ -426,6 +429,7 @@ func (h *hub) runTime(players map[int32]*tracked, p *player, args []string) {
 		okTell(fmt.Sprintf("Clock %s will now advance at %sx normal rate", key, jFloat(rate)))
 	case "query":
 		if rest[0] == "time" {
+			setCmdResult(p, int(h.clockTotal(clock)%math.MaxInt32))
 			info(fmt.Sprintf("Clock %s is at %d tick(s)", key, h.clockTotal(clock)))
 			return
 		}
@@ -449,6 +453,7 @@ func (h *hub) runTime(players map[int32]*tracked, p *player, args []string) {
 			if tl.period > 0 {
 				reps = total / tl.period
 			}
+			setCmdResult(p, int(reps%math.MaxInt32))
 			info(fmt.Sprintf("Timeline %s has passed %d repetition(s)", id, reps))
 			return
 		}
@@ -456,6 +461,7 @@ func (h *hub) runTime(players map[int32]*tracked, p *player, args []string) {
 		if tl.period > 0 {
 			cur = total % tl.period
 		}
+		setCmdResult(p, int(cur%math.MaxInt32))
 		info(fmt.Sprintf("Timeline %s is at %d tick(s)", id, cur))
 	}
 }

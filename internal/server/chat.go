@@ -99,7 +99,7 @@ func (s *Server) handleCommand(p *player, cmd string) {
 	}
 	switch fields[0] {
 	case "help":
-		help := "Commands: /help /say /msg /teammsg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /enchant /setblock /fill /seed /me /spawnpoint /setworldspawn /playsound /stopsound /tellraw /difficulty /gamerule /gamemode /defaultgamemode /hud /worldborder /locate /title /advancement /attribute /recipe /tag /ride /damage /spreadplayers /forceload /random /compute /swing /clone /bossbar /save-all /save-off /save-on /version /stop /item /loot /fetchprofile /bug" +
+		help := "Commands: /help /say /msg /teammsg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /enchant /setblock /fill /seed /me /spawnpoint /setworldspawn /playsound /stopsound /tellraw /difficulty /gamerule /gamemode /defaultgamemode /hud /worldborder /locate /title /advancement /attribute /recipe /tag /ride /damage /spreadplayers /forceload /random /compute /execute /swing /clone /bossbar /save-all /save-off /save-on /version /stop /item /loot /fetchprofile /bug" +
 			" — targets take @s @p @a @r @e (with type=, name=, tag=, distance=, x/y/z=, dx/dy/dz=, limit=, sort=, scores=, team=, level=, gamemode=, x_rotation=, y_rotation=, advancements=, nbt=, predicate=), coordinates take ~ and ^." +
 			" /bug <what went wrong> reports something with the blocks around you attached; /bug list shows the last few and /bug re <text> adds to one."
 		if s.hub.plugHost != nil {
@@ -141,8 +141,9 @@ func (s *Server) handleCommand(p *player, cmd string) {
 			p.tell("You don't have permission to use /say.")
 			break
 		}
-		if len(fields) > 1 {
-			s.hub.post(evChat{text: fmt.Sprintf("[%s] %s", p.name, strings.Join(fields[1:], " "))})
+		if len(fields) > 1 { // SayCommand: the source's display name, which /execute as changes
+			s.hub.post(evChat{text: fmt.Sprintf("[%s] %s", sourceName(p), strings.Join(fields[1:], " "))})
+			setCmdResult(p, 1)
 		}
 	case "list":
 		s.hub.post(evList{p: p})
@@ -293,7 +294,8 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		s.info(p, fmt.Sprintf("Seed: [%d]", s.Seed))
 	case "me":
 		if len(fields) > 1 { // EmoteCommands: "* name action" to everyone
-			s.hub.post(evChat{text: fmt.Sprintf("* %s %s", p.name, strings.Join(fields[1:], " "))})
+			s.hub.post(evChat{text: fmt.Sprintf("* %s %s", sourceName(p), strings.Join(fields[1:], " "))})
+			setCmdResult(p, 1)
 		}
 	case "difficulty":
 		s.cmdDifficulty(p, fields[1:])
@@ -341,6 +343,8 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		s.cmdSwing(p, fields[1:])
 	case "teammsg", "tm":
 		s.cmdTeamMsg(p, fields[1:])
+	case "execute":
+		s.cmdExecute(p, fields[1:])
 	default:
 		p.tell("Unknown command: /" + fields[0] + " (try /help)")
 	}

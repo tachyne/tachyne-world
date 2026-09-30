@@ -31,8 +31,18 @@ func (h *hub) cmdSuccess(players map[int32]*tracked, caller *player, text string
 	if caller == nil {
 		return
 	}
+	// An /execute source answers to whoever ran /execute (execute.go):
+	// the rule is theirs, and the line is kept for them with the rest of
+	// what the command said.
+	origin := caller
+	if c := caller.exec; c != nil {
+		c.noteSuccess()
+		if c.origin != nil {
+			origin = c.origin
+		}
+	}
 	// The console always hears its answer; a player only while the rule is on.
-	if h.rules.SendCommandFeedback || caller.name == consoleName {
+	if h.rules.SendCommandFeedback || origin.name == consoleName {
 		caller.trySendEv(chatEv(text))
 	}
 	if !broadcast {
@@ -41,7 +51,7 @@ func (h *hub) cmdSuccess(players map[int32]*tracked, caller *player, text string
 	line := adminLine(sourceName(caller), text)
 	if h.rules.SendCommandFeedback && h.isOp != nil {
 		for _, t := range players {
-			if t.p != caller && h.isOp(t.p.name) {
+			if t.p != caller && t.p != origin && t.p.exec == nil && h.isOp(t.p.name) {
 				t.p.trySendEv(chatEv(line))
 			}
 		}

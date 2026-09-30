@@ -286,6 +286,9 @@ func (h *hub) applySetBlocks(players map[int32]*tracked, e evSetBlocks) {
 	case changed == 0:
 		tell("No blocks were filled")
 	default:
+		if t := players[e.eid]; t != nil {
+			setCmdResult(t.p, changed) // FillCommand returns the blocks it changed
+		}
 		h.cmdOK(players, e.eid)(fmt.Sprintf("Successfully filled %d block(s)", changed))
 	}
 }

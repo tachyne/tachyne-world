@@ -207,6 +207,8 @@ type Server struct {
 	OpPermissionLevel int
 	roleOps           sync.Map   // online players' op roles from tachyne-access: name → opEntry
 	consoleMu         sync.Mutex // console commands (console.go) run one at a time
+	execLevels        sync.Map   // /execute stand-ins' permission levels: name → int (execute.go)
+	execSeq           atomic.Int32
 
 	// PluginDataDir is where compiled-in plugins keep per-plugin config +
 	// data folders (default "plugins", cwd-relative like settings.json).

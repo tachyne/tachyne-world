@@ -432,6 +432,8 @@ type hub struct {
 	events       chan hubEvent
 	stop         chan struct{}                    // closed to end run(); production never closes it, tests do (t.Cleanup)
 	console      *tracked                         // the console source while a console command is in flight (console.go)
+	execProxies  map[int32]*tracked               // /execute's stand-in sources while their commands run (execute.go)
+	execEval     *player                          // the stand-in /execute reads selectors through (execute.go)
 	runConsole   func(string) ([]string, error)   // runs a line as the console (Server.runAsConsole); nil = none
 	eidCounter   int64                            // per-pod eid mint counter, fed through shard.MintEID when sharded
 	tick         atomic.Uint64                    // world age (ticks); atomic so connections can read it
@@ -1496,6 +1498,7 @@ func (h *hub) run() {
 			if h.useItemEvent(players, ev) || h.useOnEvent(players, ev) {
 				continue
 			}
+			proxied := h.execEnter(players, ev) // /execute's sources stand in the map for this event (execute.go)
 			switch e := ev.(type) {
 			case evJoin:
 				h.onJoin(players, e)
@@ -2458,6 +2461,7 @@ func (h *hub) run() {
 				}
 				close(e.done)
 			}
+			h.execLeave(players, proxied)
 		}
 	}
 }
@@ -2949,7 +2953,9 @@ func chunkFloor(v float64) int { return int(math.Floor(v / 16)) }
 func (h *hub) roomChat(players map[int32]*tracked, text string) {
 	body := chatEv(text)
 	for _, t := range players {
-		t.p.trySendEv(body)
+		if t.p.exec == nil { // an /execute stand-in would echo it to its runner
+			t.p.trySendEv(body)
+		}
 	}
 	log.Printf("chat: %s", text)
 	h.npcsHear(text) // so NPCs can hear and remember the room
@@ -2965,7 +2971,9 @@ func (h *hub) roomChat(players map[int32]*tracked, text string) {
 func (h *hub) roomChatFrom(players map[int32]*tracked, sender, msg string) {
 	body := attachproto.Chat{Text: msg, Sender: sender}
 	for _, t := range players {
-		t.p.trySendEv(body)
+		if t.p.exec == nil {
+			t.p.trySendEv(body)
+		}
 	}
 	attributed := fmt.Sprintf("<%s> %s", sender, msg)
 	log.Printf("chat: %s", attributed)

@@ -33,8 +33,13 @@ const consoleDisplay = "Server"
 // consoleEID is the console's entity id: far outside the minted range.
 const consoleEID = math.MinInt32 + 1
 
-// sourceName is a command caller's name as feedback shows it.
+// sourceName is a command caller's name as feedback shows it: an
+// /execute source's display name (its executor's), the console's
+// "Server", a player's own name.
 func sourceName(p *player) string {
+	if p.exec != nil {
+		return p.exec.display
+	}
 	if p.name == consoleName {
 		return consoleDisplay
 	}
@@ -47,16 +52,22 @@ func sourceName(p *player) string {
 // real player may reach for state the console does not carry.
 func (h *hub) runHubCmd(players map[int32]*tracked, fn func(map[int32]*tracked)) {
 	c := h.console
-	if c == nil {
+	if c == nil && len(h.execProxies) == 0 {
 		fn(players)
 		return
 	}
-	players[c.p.eid] = c
-	defer delete(players, c.p.eid)
+	if c != nil {
+		players[c.p.eid] = c
+		defer delete(players, c.p.eid)
+	}
+	// An /execute stand-in (execute.go) is no more a real player than the
+	// console is: its commands get the same containment.
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("console: command panicked: %v", r)
-			c.p.trySendEv(chatEv("An unexpected error occurred trying to execute that command"))
+			if c != nil {
+				c.p.trySendEv(chatEv("An unexpected error occurred trying to execute that command"))
+			}
 		}
 	}()
 	fn(players)

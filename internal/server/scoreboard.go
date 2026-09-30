@@ -640,6 +640,7 @@ func (h *hub) cmdScoreboard(players map[int32]*tracked, e evScoreboardCmd) {
 			return
 		}
 		var last int32
+		total := 0 // CommandResponseTracker's total: every value set, summed
 		for _, owner := range owners {
 			v := int32(n)
 			switch a[1] {
@@ -650,7 +651,9 @@ func (h *hub) cmdScoreboard(players map[int32]*tracked, e evScoreboardCmd) {
 			}
 			h.sbSetScore(players, owner, a[3], v)
 			last = v
+			total += int(v)
 		}
+		setCmdResult(e.p, total)
 		single := len(owners) == 1
 		switch {
 		case a[1] == "set" && single:
@@ -684,6 +687,7 @@ func (h *hub) cmdScoreboard(players map[int32]*tracked, e evScoreboardCmd) {
 			tell(fmt.Sprintf("Can't get value of %s for %s; none is set", a[3], owners[0]))
 			return
 		}
+		setCmdResult(e.p, int(v)) // getScore returns the value
 		info(fmt.Sprintf("%s has %d %s", owners[0], v, o.sbFormatted()))
 		return
 	case len(a) == 7 && a[0] == "players" && a[1] == "operation":
@@ -708,6 +712,7 @@ func (h *hub) cmdScoreboard(players map[int32]*tracked, e evScoreboardCmd) {
 			return
 		}
 		var last int32
+		total := 0
 		for _, target := range targets {
 			if _, has := h.sb.Scores[target][a[3]]; !has {
 				h.sbSetScore(players, target, a[3], 0) // getOrCreatePlayerScore
@@ -734,7 +739,9 @@ func (h *hub) cmdScoreboard(players map[int32]*tracked, e evScoreboardCmd) {
 			}
 			h.sbSetScore(players, target, a[3], tv)
 			last = tv
+			total += int(tv)
 		}
+		setCmdResult(e.p, total) // performOperation: the targets' new values, summed
 		if len(targets) == 1 {
 			ok(fmt.Sprintf("Set %s for %s to %d", to.sbFormatted(), targets[0], last))
 		} else {
@@ -873,6 +880,7 @@ func (h *hub) cmdScoreboard(players map[int32]*tracked, e evScoreboardCmd) {
 			info("There are no tracked entities")
 			return
 		}
+		setCmdResult(e.p, len(names))
 		info(fmt.Sprintf("There are %d tracked entity/entities: %s", len(names), strings.Join(names, ", ")))
 		return
 	case len(a) == 3 && a[0] == "players" && a[1] == "list":
@@ -891,6 +899,7 @@ func (h *hub) cmdScoreboard(players map[int32]*tracked, e evScoreboardCmd) {
 			objs = append(objs, obj)
 		}
 		sort.Strings(objs)
+		setCmdResult(e.p, len(objs))
 		info(fmt.Sprintf("%s has %d score(s):", owner, len(objs)))
 		for _, obj := range objs {
 			title := obj
