@@ -151,3 +151,45 @@ func TestAdventureCanBreakCanPlaceOn(t *testing.T) {
 		t.Errorf("adventure placed on dirt, which can_place_on does not name: %d", got)
 	}
 }
+
+// An item's own use on a block (ItemStack.useOn) is refused to adventure
+// unless its can_place_on names the clicked block: a pig spawn egg with
+// can_place_on stone hatches on stone and does nothing on dirt.
+func TestAdventureCanPlaceOnItemUse(t *testing.T) {
+	s, h, p := breakPlaceServer(t)
+	w := s.world
+	st, msg := parseItemArg(`pig_spawn_egg[can_place_on={blocks:"stone"}]`)
+	if msg != "" {
+		t.Fatal(msg)
+	}
+	st.count = 4
+	onHub(t, h, func() {
+		tr := h.playersRef[p.eid]
+		tr.inv.slots[0] = st
+		h.sendSlot(tr, 0)
+	})
+	selectSlot(p, 0)
+	s.modes.set(p.name, gmAdventure)
+	onHub(t, h, func() { h.playersRef[p.eid].gamemode = gmAdventure })
+
+	w.SetBlock(3, 80, 3, worldgen.Dirt)
+	w.SetBlock(3, 81, 3, worldgen.Air)
+	w.SetBlock(3, 82, 3, worldgen.Air)
+	var before int
+	onHub(t, h, func() { before = len(h.mobs) })
+	s.handlePlace(p, placeBody(3, 80, 3, 1))
+	var n int
+	onHub(t, h, func() { n = len(h.mobs) })
+	if n != before {
+		t.Fatalf("adventure hatched an egg on dirt, which can_place_on does not name: %d → %d mobs", before, n)
+	}
+
+	w.SetBlock(5, 80, 3, worldgen.Stone)
+	w.SetBlock(5, 81, 3, worldgen.Air)
+	w.SetBlock(5, 82, 3, worldgen.Air)
+	s.handlePlace(p, placeBody(5, 80, 3, 1))
+	onHub(t, h, func() { n = len(h.mobs) })
+	if n != before+1 {
+		t.Errorf("can_place_on stone did not let adventure hatch an egg on stone: %d → %d mobs", before, n)
+	}
+}
