@@ -539,7 +539,11 @@ type hub struct {
 	fluidTicks map[simPos]uint64
 	// movingBlocks are the moving_piston cells mid-animation (movingpiston.go).
 	movingBlocks map[simPos]movingBlock
-	movingOrder  []simPos // moving cells in the order they were made (their landing order)
+	// movingLive mirrors movingBlocks' keys for the session goroutines
+	// (simPos → struct{}): a click on a moving cell asks whether its block
+	// entity is there. Written only through putMoving / dropMoving.
+	movingLive  sync.Map
+	movingOrder []simPos // moving cells in the order they were made (their landing order)
 
 	// Vanilla's two update kinds for the redstone family (blockticks.go):
 	// scheduled ticks, the immediate neighbour-update cascade, and the

@@ -984,6 +984,9 @@ func (s *Server) tryUseBlock(p *player, off bool, x, y, z int, seq int32, face i
 		return true
 	}
 	if isMovingPiston(state) { // MovingPistonBlock.useWithoutItem: an orphaned cell is cleared
+		if s.hub.movingCellLive(p.dim, blockPos{x, y, z}) {
+			return false // a live cell (its block entity is there) PASSes: the held item acts
+		}
 		s.hub.post(evUseMovingPiston{eid: p.eid, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
