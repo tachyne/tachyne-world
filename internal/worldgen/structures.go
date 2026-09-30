@@ -234,6 +234,7 @@ func (g *Generator) stampLegacyDungeons(ch *Chunk, cx, cz int32) {
 
 // stampStructures is the decoration entry point for all of the above.
 func (g *Generator) stampStructures(ch *Chunk, cx, cz int32) {
+	g.adaptTerrain(ch, cx, cz) // the Beardifier's terrain adaptation, before any piece stamps (terrainadapt.go)
 	g.stampLakes(ch, cx, cz)
 	g.stampMineshafts(ch, cx, cz)
 	g.stampLegacyDungeons(ch, cx, cz) // old dungeons players touched (monster rooms: placeMonsterRooms)

@@ -165,4 +165,11 @@ package worldgen
 //     of four ways, and the elder guardians at the rooms' cells — except a
 //     monument a player has built in or dug into, which keeps its old
 //     layout.
+//   - terrain adaptation as the Beardifier works it (beard_thin for
+//     pillager outposts, beard_box for ancient cities, encapsulate for
+//     trial chambers, bury for trail ruins and strongholds): the ground
+//     rises under a piece and is shaved back over its floor, and the caves
+//     round a buried structure close — a post-pass over the heightfield,
+//     before the pieces stamp, left out whole for any structure a player
+//     has built near or dug into.
 const GenVersion = 26
