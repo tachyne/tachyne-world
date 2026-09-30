@@ -40,6 +40,31 @@ func parseSNBTPrefix(s string) (any, int, error) {
 type snbtParser struct {
 	s string
 	i int
+	// typed keeps the tag types apart (nbttag.go): numbers come back as
+	// nbtByte … nbtDouble, booleans as bytes and lists as *nbtList, as the
+	// /data command needs them. Off, values are the untyped forms above.
+	typed bool
+}
+
+// parseSNBTTyped is parseSNBT with the tag types kept (nbttag.go).
+func parseSNBTTyped(s string) (any, error) {
+	p := &snbtParser{s: s, typed: true}
+	v, err := p.value()
+	if err != nil {
+		return nil, err
+	}
+	p.ws()
+	if p.i != len(p.s) {
+		return nil, p.errf("Trailing data found")
+	}
+	return v, nil
+}
+
+// parseSNBTTypedPrefix is parseSNBTPrefix with the tag types kept.
+func parseSNBTTypedPrefix(s string) (any, int, error) {
+	p := &snbtParser{s: s, typed: true}
+	v, err := p.value()
+	return v, p.i, err
 }
 
 func (p *snbtParser) errf(msg string) error {
@@ -90,6 +115,9 @@ func (p *snbtParser) value() (any, error) {
 	word := p.s[start:p.i]
 	if word == "" {
 		return nil, p.errf("Expected value")
+	}
+	if p.typed {
+		return snbtTypedScalar(word), nil
 	}
 	return snbtScalar(word), nil
 }
@@ -221,13 +249,21 @@ func (p *snbtParser) nsKey(start int) bool {
 func (p *snbtParser) list() (any, error) {
 	p.i++ // [
 	// A typed array: [B; …], [I; …], [L; …].
+	arr := byte(0)
 	if p.i+1 < len(p.s) && strings.IndexByte("BIL", p.s[p.i]) >= 0 && p.s[p.i+1] == ';' {
+		arr = p.s[p.i]
 		p.i += 2
 	}
 	out := []any{}
+	done := func() (any, error) {
+		if !p.typed {
+			return out, nil
+		}
+		return typedListOf(arr, out)
+	}
 	if p.peek() == ']' {
 		p.i++
-		return out, nil
+		return done()
 	}
 	for {
 		v, err := p.value()
@@ -240,7 +276,7 @@ func (p *snbtParser) list() (any, error) {
 			p.i++
 		case ']':
 			p.i++
-			return out, nil
+			return done()
 		default:
 			return nil, p.errf("Expected ']'")
 		}

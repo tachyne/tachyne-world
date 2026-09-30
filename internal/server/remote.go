@@ -446,6 +446,8 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgSuggestions, ev)
 	case attachproto.PostEffects:
 		send(attachproto.MsgPostEffects, ev)
+	case attachproto.ChunksBiomes:
+		send(attachproto.MsgChunksBiomes, ev)
 	case attachproto.GhostRecipe:
 		send(attachproto.MsgGhostRecipe, ev)
 	case attachproto.TransientBlock:

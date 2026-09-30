@@ -160,11 +160,20 @@ func (g *Generator) assembleJigsawAliased(startPool string, sx, sy, sz int, prng
 	if terrain {
 		sy = g.SurfaceWG(sx+sw/2, sz+sd/2) - 1
 	}
-	pieces := []*PlacedPiece{{Tmpl: start, OX: sx, OY: sy, OZ: sz, Rot: 0, Proc: sp.procFor(startLoc),
-		TerrainMatch: terrain && sp.terrainMatching(startLoc), x1: sx + sw, y1: sy + sh, z1: sz + sd}}
+	first := &PlacedPiece{Tmpl: start, OX: sx, OY: sy, OZ: sz, Rot: 0, Proc: sp.procFor(startLoc),
+		TerrainMatch: terrain && sp.terrainMatching(startLoc), x1: sx + sw, y1: sy + sh, z1: sz + sd}
+	return g.growJigsaw(first, prng, maxDepth, terrain, alias)
+}
+
+// growJigsaw is the expansion half of JigsawPlacement.addPieces: from a
+// placed start piece, each open jigsaw draws a connecting piece from its
+// pool, breadth first, until maxDepth. Returns every placed piece, the start
+// first.
+func (g *Generator) growJigsaw(first *PlacedPiece, prng *jigsawRNG, maxDepth int, terrain bool, alias map[string]string) []PlacedPiece {
+	pieces := []*PlacedPiece{first}
 
 	q := make([]queued, 0, 16)
-	for _, j := range start.Jigsaws {
+	for _, j := range first.Tmpl.Jigsaws {
 		q = append(q, queued{pieces[0], j, 0})
 	}
 

@@ -18,7 +18,8 @@ import (
 type chatLog struct {
 	mu        sync.Mutex
 	lines     []string
-	particles []attachproto.Particles // …and every particle burst (/particle)
+	particles []attachproto.Particles    // …and every particle burst (/particle)
+	biomes    []attachproto.ChunksBiomes // …and every chunks-biomes frame (/fillbiome)
 }
 
 func (c *chatLog) all() []string {
@@ -38,6 +39,11 @@ func recordChat(t *testing.T, p *player) *chatLog {
 				if pa, ok := pkt.ev.(attachproto.Particles); ok {
 					c.mu.Lock()
 					c.particles = append(c.particles, pa)
+					c.mu.Unlock()
+				}
+				if cb, ok := pkt.ev.(attachproto.ChunksBiomes); ok {
+					c.mu.Lock()
+					c.biomes = append(c.biomes, cb)
 					c.mu.Unlock()
 				}
 				// The HUD's once-a-second action bar is not a reply; on a slow
