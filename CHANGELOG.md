@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-30
 
 ### Added
+- **Signed chat.** Online Java players' chat is signed end to end, as
+  vanilla's secure chat is: the gateway checks each player's Mojang-issued
+  chat key and message chain, every client can verify who said what, chat
+  is reportable, and it shows vanilla's `<name>` style again. Bedrock and
+  offline players' chat keeps the plain relay.
+- **Dialogs.** `/dialog show <targets> <dialog>` opens one of 26.x's
+  dialogs (a built-in one, or an inline dialog written in the command) on
+  players' screens, and `/dialog clear` closes it. Buttons that send a
+  custom action reach plugins and the bus as `player_custom_click`.
 - **`/execute`.** The modifiers `as`, `at`, `positioned`, `rotated`,
   `facing`, `align`, `anchored`, `in`, `on` and `summon` chain as vanilla's
   do, and the conditions `if` and `unless` test a `block`, `blocks`,
