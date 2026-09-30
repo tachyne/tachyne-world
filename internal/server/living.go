@@ -23,6 +23,10 @@ type living struct {
 	// wpIcon is LivingEntity.locatorBarIcon: how its waypoint draws on a
 	// locator bar (/waypoint modify).
 	wpIcon waypointIcon
+	// custom is Entity.customData: the free-form "data" compound /data
+	// merges into an entity (typed tags, nbttag.go). Kept while the entity
+	// lives; not yet written with the saved player or mob.
+	custom map[string]any
 }
 
 // hasEffect returns the 1-based level of an active effect (0 = none).

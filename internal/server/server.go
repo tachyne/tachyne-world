@@ -533,6 +533,7 @@ func (s *Server) Serve() error {
 		s.hub.spawns = newSpawnStore(s.SpawnPointFile)
 		s.hub.hivestore = newHiveStore(hivesPathFor(s.SpawnPointFile))
 		s.hub.postFX = newPostEffectStore(postEffectsPathFor(s.SpawnPointFile))
+		s.hub.cmdStorage = newCommandStorage(commandStoragePathFor(s.SpawnPointFile))
 		s.hub.hivesLoad()
 		s.hub.rulesPath = "settings.json"
 		s.hub.isOp = s.isOp               // announce targeting: the -ops list and the op role

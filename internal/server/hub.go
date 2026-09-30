@@ -440,6 +440,7 @@ type hub struct {
 	ticks        tickState                        // /tick: target rate, freeze, step, sprint (TickRateManager)
 	ticker       *time.Ticker                     // the loop's tick clock, reset by /tick
 	postFX       *postEffectStore                 // /posteffect: each player's screen shaders
+	cmdStorage   *commandStorage                  // /data … storage: CommandStorage (datacmd.go)
 	dayTime      atomic.Uint64                    // time of day (ticks); advances with tick, settable by /time
 	clocks       [numClocks]clockRun              // the world clocks' rate, pause and partial tick; the End's total (timecmd.go)
 	lastTime     atomic.Pointer[attachproto.Time] // the last clock sync the hub built, for session joins (timeFrame)
