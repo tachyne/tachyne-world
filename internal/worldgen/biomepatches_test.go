@@ -55,7 +55,7 @@ func runBiomePatches(g *Generator, ch *Chunk, cx, cz int32, bg *buildGuard) {
 	}
 }
 
-func countIn(ch *Chunk, st uint32) int {
+func chunkStateCount(ch *Chunk, st uint32) int {
 	n := 0
 	for s := range ch.Sections {
 		for _, b := range ch.Sections[s] {
@@ -91,7 +91,7 @@ func TestBiomeCanePatches(t *testing.T) {
 		for _, p := range chunks {
 			ch := wetChunk(g, p[0], p[1])
 			runBiomePatches(g, ch, p[0], p[1], nil)
-			cane += countIn(ch, sugarCane)
+			cane += chunkStateCount(ch, sugarCane)
 			// Every cane stands on cane or on its ground, with water beside
 			// the bottom one's ground.
 			for lx := 0; lx < 16; lx++ {
@@ -132,8 +132,8 @@ func TestPlainPatchesLeaveTheirBiomes(t *testing.T) {
 			for seed := 0; seed < seeds; seed++ {
 				g.overworldPatches(newTreeRNG(int64(seed), reg.baseX, reg.baseZ), reg, reg.baseX, reg.baseZ)
 			}
-			cane += countIn(ch, sugarCane)
-			pumpkins += countIn(ch, pumpkin)
+			cane += chunkStateCount(ch, sugarCane)
+			pumpkins += chunkStateCount(ch, pumpkin)
 		}
 		return
 	}
@@ -176,8 +176,8 @@ func TestCanePatchDryRunDrawsTheSame(t *testing.T) {
 		bx, bz := int(p[0])*16, int(p[1])*16
 		g.canePatch(rw, &owRegion{g: g, ch: wet, baseX: bx, baseZ: bz, cols: map[[2]int]column{}}, bx+8, bz+8, true)
 		g.canePatch(rd, &owRegion{g: g, ch: dry, baseX: bx, baseZ: bz, cols: map[[2]int]column{}}, bx+8, bz+8, false)
-		placed += countIn(wet, sugarCane)
-		if n := countIn(dry, sugarCane); n != 0 {
+		placed += chunkStateCount(wet, sugarCane)
+		if n := chunkStateCount(dry, sugarCane); n != 0 {
 			t.Fatalf("dry run placed %d cane", n)
 		}
 		if a, b := rw.Intn(1<<30), rd.Intn(1<<30); a != b {
@@ -197,7 +197,7 @@ func TestSparseJungleMelons(t *testing.T) {
 		for _, p := range surroundedChunks(g, biome, 40) {
 			ch := wetChunk(g, p[0], p[1])
 			runBiomePatches(g, ch, p[0], p[1], nil)
-			melons += countIn(ch, melon)
+			melons += chunkStateCount(ch, melon)
 			chunks++
 		}
 		return
@@ -222,7 +222,7 @@ func TestBiomePatchesSkipBuilds(t *testing.T) {
 	for _, p := range surroundedChunks(g, "minecraft:desert", 12) {
 		ch := wetChunk(g, p[0], p[1])
 		runBiomePatches(g, ch, p[0], p[1], nil)
-		if countIn(ch, sugarCane) > 0 {
+		if chunkStateCount(ch, sugarCane) > 0 {
 			cx, cz, ok = p[0], p[1], true
 			break
 		}
@@ -247,7 +247,7 @@ func TestBiomePatchesSkipBuilds(t *testing.T) {
 	})
 	ch := wetChunk(g, cx, cz)
 	runBiomePatches(g, ch, cx, cz, g.newBuildGuard(cx, cz))
-	if n := countIn(ch, sugarCane); n != 0 {
+	if n := chunkStateCount(ch, sugarCane); n != 0 {
 		t.Errorf("%d cane grew under the roof", n)
 	}
 }

@@ -5,7 +5,6 @@ import (
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/protocol"
-	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // The dragon respawn ceremony (EndDragonFight.respawnDragon +

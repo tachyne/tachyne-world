@@ -291,7 +291,7 @@ func (g *Generator) adaptColumn(ch *Chunk, lx, lz, x, z, y0, y1 int, rs []beardR
 		ground := adaptGround[cur]
 		switch {
 		case ground:
-			t = max(min(adaptGrad*(float64(col.h)-0.5-float64(y)), adaptSolid), 0.05)
+			t = math.Max(math.Min(adaptGrad*(float64(col.h)-0.5-float64(y)), adaptSolid), 0.05)
 		case cur == Air || IsFluid(cur) || IsReplaceable(cur) && y >= col.h:
 			if y >= col.h {
 				t = adaptGrad * (float64(col.h) - 0.5 - float64(y))

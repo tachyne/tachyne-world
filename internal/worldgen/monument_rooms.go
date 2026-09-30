@@ -132,7 +132,7 @@ const (
 // while it is being stamped the chunk it writes into.
 type monPiece struct {
 	kind   int
-	box    monBox
+	bb     monBox
 	dir    int
 	def    *monDef
 	design int // the simple rooms' and the wings' mainDesign
@@ -163,24 +163,24 @@ func monRoomBox(dir int, def *monDef, w, h, d int) monBox {
 func (p *monPiece) worldX(x, z int) int {
 	switch p.dir {
 	case dirNorth, dirSouth:
-		return p.box.x0 + x
+		return p.bb.x0 + x
 	case dirWest:
-		return p.box.x1 - z
+		return p.bb.x1 - z
 	default:
-		return p.box.x0 + z
+		return p.bb.x0 + z
 	}
 }
 
-func (p *monPiece) worldY(y int) int { return p.box.y0 + y }
+func (p *monPiece) worldY(y int) int { return p.bb.y0 + y }
 
 func (p *monPiece) worldZ(x, z int) int {
 	switch p.dir {
 	case dirNorth:
-		return p.box.z1 - z
+		return p.bb.z1 - z
 	case dirSouth:
-		return p.box.z0 + z
+		return p.bb.z0 + z
 	default:
-		return p.box.z0 + x
+		return p.bb.z0 + x
 	}
 }
 
@@ -318,11 +318,11 @@ func (g *Generator) monumentPlan(m Monument) *monPlan {
 	r := newTreeRNG(g.seed^monPlanSalt, m.X, m.Z)
 	dir := [4]int{dirNorth, dirEast, dirSouth, dirWest}[r.Intn(4)] // Direction.Plane.HORIZONTAL
 	pl := &monPlan{}
-	pl.bld = monPiece{box: makeMonBox(m.X-monumentHalf, m.Y, m.Z-monumentHalf, dir, 58, 23, 58), dir: dir}
+	pl.bld = monPiece{bb: makeMonBox(m.X-monumentHalf, m.Y, m.Z-monumentHalf, dir, 58, 23, 58), dir: dir}
 	defs, source, core := monRoomGraph(r)
 	source.claimed = true
 	add := func(kind int, def *monDef, w, h, d int) *monPiece {
-		p := &monPiece{kind: kind, dir: dir, def: def, box: monRoomBox(dir, def, w, h, d)}
+		p := &monPiece{kind: kind, dir: dir, def: def, bb: monRoomBox(dir, def, w, h, d)}
 		pl.pieces = append(pl.pieces, p)
 		return p
 	}
@@ -359,14 +359,14 @@ func (g *Generator) monumentPlan(m Monument) *monPlan {
 	}
 	off := pl.bld.worldPos(9, 0, 22)
 	for _, p := range pl.pieces {
-		p.box = p.box.moved(off[0], off[1], off[2])
+		p.bb = p.bb.moved(off[0], off[1], off[2])
 	}
 	wing := r.Intn(2) // wingRandom & 1, and the next value's for the right wing
 	b := &pl.bld
 	pl.pieces = append(pl.pieces,
-		&monPiece{kind: monWing, dir: dir, design: wing, box: monBoxCorners(b.worldPos(1, 1, 1), b.worldPos(23, 8, 21))},
-		&monPiece{kind: monWing, dir: dir, design: (wing + 1) & 1, box: monBoxCorners(b.worldPos(34, 1, 1), b.worldPos(56, 8, 21))},
-		&monPiece{kind: monPenthouse, dir: dir, box: monBoxCorners(b.worldPos(22, 13, 22), b.worldPos(35, 17, 35))})
+		&monPiece{kind: monWing, dir: dir, design: wing, bb: monBoxCorners(b.worldPos(1, 1, 1), b.worldPos(23, 8, 21))},
+		&monPiece{kind: monWing, dir: dir, design: (wing + 1) & 1, bb: monBoxCorners(b.worldPos(34, 1, 1), b.worldPos(56, 8, 21))},
+		&monPiece{kind: monPenthouse, dir: dir, bb: monBoxCorners(b.worldPos(22, 13, 22), b.worldPos(35, 17, 35))})
 	// Run the wings and the penthouse once with no chunk to collect their
 	// spawnElder cells (they draw nothing).
 	for _, p := range pl.pieces {

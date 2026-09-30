@@ -78,10 +78,10 @@ func TestMonumentOrientations(t *testing.T) {
 		m := Monument{X: i * 997, Y: 30, Z: i * 331, Exists: true}
 		pl := g.monumentPlan(m)
 		dirs[pl.bld.dir] = true
-		b := pl.bld.box
+		b := pl.bld.bb
 		for _, p := range pl.pieces {
-			if p.box.x0 < b.x0 || p.box.x1 > b.x1 || p.box.z0 < b.z0 || p.box.z1 > b.z1 || p.box.y0 < b.y0 || p.box.y1 > b.y1 {
-				t.Errorf("plan %d (dir %d): piece %d box %v outside the building %v", i, pl.bld.dir, p.kind, p.box, b)
+			if p.bb.x0 < b.x0 || p.bb.x1 > b.x1 || p.bb.z0 < b.z0 || p.bb.z1 > b.z1 || p.bb.y0 < b.y0 || p.bb.y1 > b.y1 {
+				t.Errorf("plan %d (dir %d): piece %d box %v outside the building %v", i, pl.bld.dir, p.kind, p.bb, b)
 			}
 		}
 		for _, e := range pl.elders {
