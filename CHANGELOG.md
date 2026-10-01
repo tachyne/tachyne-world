@@ -11,7 +11,7 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
-## 2026-09-30
+## 2026-10-01
 
 ### Added
 - **Signed chat.** Online Java players' chat is signed end to end, as
@@ -23,6 +23,10 @@ the public history since the project was open-sourced on 2026-07-10.
   dialogs (a built-in one, or an inline dialog written in the command) on
   players' screens, and `/dialog clear` closes it. Buttons that send a
   custom action reach plugins and the bus as `player_custom_click`.
+
+## 2026-09-30
+
+### Added
 - **`/execute`.** The modifiers `as`, `at`, `positioned`, `rotated`,
   `facing`, `align`, `anchored`, `in`, `on` and `summon` chain as vanilla's
   do, and the conditions `if` and `unless` test a `block`, `blocks`,
