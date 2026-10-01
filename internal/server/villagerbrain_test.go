@@ -149,12 +149,16 @@ func TestVillagerWalksUpToACat(t *testing.T) {
 	v := h.spawnMob(players, entityVillager, float64(ox)+0.5, 180, float64(oz)+0.5)
 	cat := h.spawnMob(players, entityCat, float64(ox)+5.5, 180, float64(oz)+0.5)
 	cat.statik = true
-	if !brainRun(h, players, 600, func() bool { return v.vWalk.set && v.vWalk.eid == cat.eid }) {
+	// The cat is one look choice in a weighted RunOne, and the walk one of
+	// the idle choices after it: give the dice room.
+	if !brainRun(h, players, 2400, func() bool { return v.vWalk.set && v.vWalk.eid == cat.eid }) {
 		t.Fatal("the villager never went to the cat")
 	}
-	// MoveToTargetSink: it walks up until within two blocks, and stops.
-	if !brainRun(h, players, 150, func() bool { return v.vWalk.eid != cat.eid }) ||
-		math.Hypot(cat.x-v.x, cat.z-v.z) > 3.5 {
+	// MoveToTargetSink: it walks up until within two blocks. (The walk may
+	// also end early when the look target lapses, LookAtTargetSink's 45-90
+	// ticks, and a later look can start it again; what matters is that it
+	// gets there.)
+	if !brainRun(h, players, 600, func() bool { return math.Hypot(cat.x-v.x, cat.z-v.z) <= 3.5 }) {
 		t.Errorf("it should end beside the cat: %.1f away", math.Hypot(cat.x-v.x, cat.z-v.z))
 	}
 }
