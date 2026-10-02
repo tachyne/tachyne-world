@@ -554,6 +554,10 @@ type hub struct {
 	// fluidTicks are the fluid ticks waiting in pending, one per cell at
 	// most (the fluid half of LevelTicks): cell → the tick it is due.
 	fluidTicks map[simPos]uint64
+	// simTicks are the typed block ticks waiting in pending (the block
+	// half of LevelTicks, for the blocks off the redstone queue): cell →
+	// the block it was scheduled for and its trigger tick (simticks.go).
+	simTicks map[simPos]simTickMark
 	// movingBlocks are the moving_piston cells mid-animation (movingpiston.go).
 	movingBlocks map[simPos]movingBlock
 	// movingLive mirrors movingBlocks' keys for the session goroutines

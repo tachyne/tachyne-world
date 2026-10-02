@@ -133,7 +133,7 @@ func (h *hub) wakeEyeblossomsAround(dim int, from blockPos, old uint32) {
 				if hi > lo {
 					delay += h.rng.Intn(hi - lo + 1)
 				}
-				h.scheduleIn(dim, p, uint64(max(1, delay)))
+				h.scheduleBlockTickIn(dim, p, uint64(max(1, delay))) // Level.scheduleTick: one per flower
 			}
 		}
 	}

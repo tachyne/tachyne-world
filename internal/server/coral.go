@@ -75,19 +75,27 @@ func (h *hub) scheduleCoralDeath(dim int, pos blockPos) {
 		if coralTouchesWater(w, p, st) {
 			continue
 		}
-		h.scheduleIn(dim, p, uint64(coralDieMin+h.rng.Intn(coralDieVar)))
+		// tryScheduleDieTick: one die tick per coral; a second change while
+		// it waits keeps the first (the delay is rolled either way).
+		h.scheduleBlockTickIn(dim, p, uint64(coralDieMin+h.rng.Intn(coralDieVar)))
 	}
 }
 
-// tickCoral is the scheduled tick: still dry, still coral → it bleaches.
-// Reports whether it handled the update.
-func (h *hub) tickCoral(players map[int32]*tracked, dim int, pos blockPos, state uint32) bool {
+// tickCoral handles an update on a coral. On its scheduled tick (tick:
+// still dry, still coral) it bleaches; a neighbour's change (updateShape)
+// only books that tick if the coral is dry. Reports whether it was a coral.
+func (h *hub) tickCoral(players map[int32]*tracked, dim int, pos blockPos, state uint32, scheduled bool) bool {
 	dead, isCoral := coralDead[state]
 	if !isCoral {
 		return false
 	}
-	if !coralTouchesWater(h.worldFor(dim), pos, state) {
+	if coralTouchesWater(h.worldFor(dim), pos, state) {
+		return true
+	}
+	if scheduled {
 		h.setBlockAt(players, dim, pos, dead)
+	} else {
+		h.scheduleBlockTickIn(dim, pos, uint64(coralDieMin+h.rng.Intn(coralDieVar)))
 	}
 	return true
 }

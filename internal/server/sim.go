@@ -116,6 +116,7 @@ func (h *hub) runSimUpdates(players map[int32]*tracked, age uint64, blockBudget 
 		if !h.canTickBlocksAt(sp) {
 			h.pending[age+unloadedRetry] = append(h.pending[age+unloadedRetry], sp)
 			h.fluidTickMoved(sp, age, age+unloadedRetry)
+			h.blockTickMoved(sp, age, age+unloadedRetry)
 			continue
 		}
 		budget := &blockBudget
@@ -134,6 +135,7 @@ func (h *hub) runSimUpdates(players map[int32]*tracked, age uint64, blockBudget 
 		h.pending[age+1] = append(over, h.pending[age+1]...)
 		for _, sp := range over {
 			h.fluidTickMoved(sp, age, age+1) // the cell's one pending fluid tick moves with it
+			h.blockTickMoved(sp, age, age+1) // …and its scheduled block tick
 		}
 	}
 }
@@ -153,16 +155,33 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 	// that tick (LiquidBlock.neighborChanged / updateShape).
 	ft := h.takeFluidTick(dim, pos)
 	if !h.inWorldY(pos.y) {
+		delete(h.simTicks, simPos{dim: dim, blockPos: pos})
 		return
 	}
 	state := h.worldFor(dim).Block(pos.x, pos.y, pos.z)
+	// A scheduled block tick due here, for the block still here, runs the
+	// block's tick(); any other update is a neighbour's change (simticks.go).
+	bt := h.takeBlockTick(dim, pos, state)
 	switch {
 	case state == openEyeblossom || state == closedEyeblossom:
-		// A flower woken by the one that turned beside it: it switches on the
-		// SHORT sound, and wakes its own neighbours in turn.
-		h.switchEyeblossom(players, dim, pos.x, pos.y, pos.z, state, false)
-	case h.tickFrostedIce(players, dim, pos, state):
-		// Frost Walker's ice ages itself back to water on its own schedule.
+		// A flower woken by the one that turned beside it: on its own tick
+		// it switches on the SHORT sound, and wakes its own neighbours in
+		// turn. A neighbour's change does nothing to it.
+		if bt {
+			h.switchEyeblossom(players, dim, pos.x, pos.y, pos.z, state, false)
+		}
+	case isFrostedIce(state):
+		// Frost Walker's ice ages itself back to water on its own schedule;
+		// a neighbour's change does not age it (FrostedIceBlock.
+		// neighborChanged melts only a lone cell beside frosted ice that
+		// melted, which frostedMelt does as it goes).
+		if bt {
+			h.tickFrostedIce(players, dim, pos, state)
+		} else if !h.hasBlockTickIn(dim, pos, state) {
+			// Ice whose tick was lost (vanilla saves ticks with the chunk;
+			// a restart here drops them): it is booked afresh, as onPlace.
+			h.frostedOnPlace(dim, pos)
+		}
 	case worldgen.IsConcretePowder(state) && h.powderTouchesWater(dim, pos):
 		h.setBlockAt(players, dim, pos, worldgen.ConcreteFor(state))
 	case h.updateLeafDistance(players, dim, pos.x, pos.y, pos.z, state):
@@ -205,8 +224,9 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		// The egg cracks twice and then opens.
 	case h.tickChorusPlant(players, dim, pos.x, pos.y, pos.z, state):
 		// A plant segment that lost its footing pops, taking the rest with it.
-	case h.tickCoral(players, dim, pos, state):
-		// Coral left out of water bleaches to its dead twin.
+	case h.tickCoral(players, dim, pos, state, bt):
+		// Coral left out of water bleaches to its dead twin on its tick; a
+		// neighbour's change books that tick.
 	case state == spongeState || state == wetSpongeState:
 		// SpongeBlock.neighborChanged: water that flowed up to it (or a
 		// piston-moved sponge) is drunk; WetSpongeBlock.onPlace: a wet one
@@ -274,6 +294,9 @@ func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, stat
 		h.observersSee(players, dim, pos, state) // the shape update an observer watches for
 		h.fallShapeUpdates(dim, pos, state)      // FallingBlock.onPlace / updateShape: sand looks at what is under it
 		h.fireBesideHives(players, dim, pos, state)
+		if isFrostedIce(state) {
+			h.frostedOnPlace(dim, pos) // FrostedIceBlock.onPlace: every write books its tick
+		}
 		// CoralBlock.updateShape: water gone from beside a coral (a sponge, a
 		// piston, a flow receding) sets its die tick, not only a player's edit.
 		if worldgen.IsWater(old) && !worldgen.IsWater(state) {

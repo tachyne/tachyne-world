@@ -30,7 +30,7 @@ func TestCoralDiesOutOfWater(t *testing.T) {
 
 	dry := blockPos{0, 180, 0}
 	w.SetBlock(dry.x, dry.y, dry.z, live)
-	h.tickCoral(players, 0, dry, live)
+	h.tickCoral(players, 0, dry, live, true)
 	if w.At(dry.x, dry.y, dry.z) != dead {
 		t.Error("coral in open air should have bleached")
 	}
@@ -38,7 +38,7 @@ func TestCoralDiesOutOfWater(t *testing.T) {
 	wet := blockPos{10, 180, 0}
 	w.SetBlock(wet.x, wet.y, wet.z, live)
 	w.SetBlock(wet.x+1, wet.y, wet.z, worldgen.WaterBase)
-	h.tickCoral(players, 0, wet, live)
+	h.tickCoral(players, 0, wet, live, true)
 	if w.At(wet.x, wet.y, wet.z) != live {
 		t.Error("coral with water beside it should live")
 	}
