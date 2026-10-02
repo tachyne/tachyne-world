@@ -169,6 +169,9 @@ func (h *hub) sbScoreFrame(owner, obj string, v int32) attachproto.Score {
 	sc := attachproto.Score{Owner: owner, Objective: obj, Value: v}
 	if x := h.sb.Extras[owner][obj]; x != nil {
 		sc.Format = x.NumberFormat.frame()
+		if x.Display != "" { // ScoreAccess.display: shown in place of the owner
+			sc.Display = &attachproto.Text{Text: x.Display}
+		}
 	}
 	return sc
 }
@@ -802,7 +805,12 @@ func (h *hub) cmdScoreboard(players map[int32]*tracked, e evScoreboardCmd) {
 				if _, has := h.sb.Scores[owner][a[4]]; !has {
 					h.sbSetScore(players, owner, a[4], 0) // getOrCreatePlayerScore
 				}
-				h.sbExtra(owner, a[4]).Display = display
+				x := h.sbExtra(owner, a[4])
+				if x.Display != display { // ScoreAccess.display: a change is sent again
+					x.Display = display
+					h.sbDirty = true
+					h.sbBroadcast(players, h.sbScoreFrame(owner, a[4], h.sb.Scores[owner][a[4]]))
+				}
 			}
 			if display == "" {
 				ok(fmt.Sprintf("Cleared display name for %s in %s", who, o.sbFormatted()))
