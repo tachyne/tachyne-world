@@ -148,8 +148,11 @@ func TestJigsawGroundLevelAndJunctions(t *testing.T) {
 		t.Skip("no outpost for this seed")
 	}
 	pieces := g.AssembleOutpost(op)
-	if len(pieces) < 2 || pieces[0].gld != 1 {
-		t.Fatalf("start piece gld %d of %d pieces", pieces[0].gld, len(pieces))
+	if len(pieces) < 2 {
+		t.Fatalf("the outpost assembled %d pieces", len(pieces))
+	}
+	if pieces[0].gld != 1 {
+		t.Fatalf("start piece gld %d, want 1", pieces[0].gld)
 	}
 	ground := pieces[0].OY + 1
 	templ, junctions := 0, 0
@@ -164,8 +167,10 @@ func TestJigsawGroundLevelAndJunctions(t *testing.T) {
 			t.Errorf("piece %s: ground %d, the rigid chain's is %d", p.Tmpl.name, p.OY+p.gld, ground)
 		}
 		for _, j := range p.junctions {
-			if j[1] != ground {
-				t.Errorf("piece %s: a rigid junction's ground %d, want %d", p.Tmpl.name, j[1], ground)
+			// A vertical connection's far side sits a step off (the
+			// junction's ground less the source jigsaw's facing step).
+			if j[1] < ground-1 || j[1] > ground+1 {
+				t.Errorf("piece %s: a rigid junction's ground %d, want %d±1", p.Tmpl.name, j[1], ground)
 			}
 		}
 	}

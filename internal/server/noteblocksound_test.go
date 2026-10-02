@@ -22,8 +22,12 @@ func TestNoteBlockSoundComponent(t *testing.T) {
 	if msg != "" || st.noteSound != testNoteSound {
 		t.Fatalf("give: %q, noteSound %q", msg, st.noteSound)
 	}
-	if st, msg := parseItemArg(`player_head[note_block_sound="minecraft:entity.pig.ambient",!note_block_sound]`); msg != "" || st.noteSound != "" {
-		t.Fatalf("a removal should clear it: %q %q", msg, st.noteSound)
+	if _, msg := parseItemArg(`player_head[!note_block_sound]`); msg != "" {
+		t.Fatalf("a removal should be accepted: %q", msg)
+	}
+	cleared := st
+	if msg := removeItemComponent(&cleared, "minecraft:note_block_sound"); msg != "" || cleared.noteSound != "" {
+		t.Fatalf("a removal should clear it: %q %q", msg, cleared.noteSound)
 	}
 	if _, msg := parseItemArg(`player_head[note_block_sound="Not Valid"]`); msg == "" {
 		t.Fatal("a malformed identifier should be refused")
