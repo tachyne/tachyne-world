@@ -21,6 +21,17 @@ type DimensionType struct {
 	// Open builds the dimension's world for a seed over an optional store.
 	Open func(seed int64, store Store) (*World, error)
 
+	// Type is the dimension's dimension_type entry ("" = its own Key, which
+	// is what the three built-in dimensions use). TypeData is that type's
+	// element in the data-pack JSON form when it is not one of the built-in
+	// types (nil = the client's own pack has it); the gateways send it
+	// inline in the dimension_type registry.
+	Type     string
+	TypeData []byte
+	// Clock is the world_clock the dimension's time runs on
+	// (DimensionType.defaultClock; "" = none, as in the Nether).
+	Clock string
+
 	CoordinateScale    float64 // horizontal scale against the overworld (portals, the travel landing)
 	MinY               int     // the logical floor natural spawning draws from
 	HasSkyLight        bool
@@ -51,7 +62,7 @@ const (
 var Dimensions = []DimensionType{
 	{
 		ID: DimOverworld, Key: "minecraft:overworld", Name: "overworld",
-		File: "world.gob", AnvilDir: "", Open: NewWithStore,
+		File: "world.gob", AnvilDir: "", Open: NewWithStore, Clock: "minecraft:overworld",
 		CoordinateScale: 1, MinY: worldgen.MinY, HasSkyLight: true,
 		BedWorks: true, PiglinsZombify: true, CanStartRaid: true,
 	},
@@ -63,7 +74,7 @@ var Dimensions = []DimensionType{
 	},
 	{
 		ID: DimEnd, Key: "minecraft:the_end", Name: "end",
-		File: "end.gob", AnvilDir: "DIM1", Open: NewEnd,
+		File: "end.gob", AnvilDir: "DIM1", Open: NewEnd, Clock: "minecraft:the_end",
 		CoordinateScale: 1, MinY: 0, PiglinsZombify: true, CanStartRaid: true,
 	},
 }
@@ -89,6 +100,14 @@ func DimensionByKey(key string) *DimensionType {
 		}
 	}
 	return nil
+}
+
+// TypeKey is the dimension's dimension_type entry.
+func (d *DimensionType) TypeKey() string {
+	if d.Type != "" {
+		return d.Type
+	}
+	return d.Key
 }
 
 // DimensionByName resolves a short name ("overworld", "nether", "end").

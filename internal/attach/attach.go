@@ -66,6 +66,11 @@ type Config struct {
 	// player may have any chunk. nil = no gate.
 	ChunkGate func(r Remote) func(dim, cx, cz int32) bool
 
+	// ConfigData is what the world adds to the client's configuration
+	// phase (Welcome.Config): its dimension table and a data pack's tags.
+	// nil = the built-in data and the default three dimensions.
+	ConfigData func() *proto.ConfigData
+
 	// Status answers a Hello{Purpose:"status"} with the server-list roster.
 	// nil = report an empty server (solo/test).
 	Status func() proto.Status
@@ -115,6 +120,13 @@ type SignedChatter interface {
 // (MessageArgument.resolveChatMessage).
 type SignedCommander interface {
 	SignedCommand(proto.Command)
+}
+
+// Dimensioned is the optional half of a Remote that knows which dimension
+// its player is in (Welcome.Dim); without it a session starts in the
+// overworld.
+type Dimensioned interface {
+	Dim() int32
 }
 
 // Remote is a hub-attached player, as the attach layer sees it.
@@ -269,6 +281,9 @@ func session(c net.Conn, cfg Config) {
 	if cfg.LoginFlags != nil {
 		welcome.NoRespawnScreen, welcome.LimitedCrafting, welcome.ReducedDebug = cfg.LoginFlags()
 	}
+	if cfg.ConfigData != nil {
+		welcome.Config = cfg.ConfigData()
+	}
 	var remote Remote
 	// Welcome MUST be the session's first frame (gateways refuse otherwise),
 	// but Join emits frames synchronously (command tree, abilities) and its
@@ -311,6 +326,9 @@ func session(c net.Conn, cfg Config) {
 		welcome.Spawn.X, welcome.Spawn.Y, welcome.Spawn.Z = remote.Spawn()
 		welcome.Gamemode = remote.Gamemode()
 		welcome.Death = remote.Death()
+		if d, ok := remote.(Dimensioned); ok {
+			welcome.Dim = d.Dim()
+		}
 	}
 	send(frameJSON(proto.MsgWelcome, welcome))
 	preMu.Lock() // flush held frames; concurrent emits block until we're done
