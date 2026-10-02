@@ -130,7 +130,7 @@ var rbItemRules, rbTickRules, rbWaterRules, rbSlotRules = func() (map[int32][]in
 func representatives(sets []uint16) []int32 {
 	out := make([]int32, len(sets))
 	for i, set := range sets {
-		if s := ingredientSets[set]; len(s) > 0 {
+		if s := ingredientSet(set); len(s) > 0 {
 			out[i] = s[0]
 		}
 	}
@@ -143,20 +143,17 @@ func rbBuildEntries(ids []int32, replace, notify bool, highlighted map[int32]boo
 	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
 	for _, id := range ids {
 		hl := highlighted[id]
-		if int(id) < len(shapedRecipes) {
-			r := &shapedRecipes[id]
+		if r, ok := bookCraft(id); ok && r.shaped { // generated or a data pack's
 			rb.Shaped = append(rb.Shaped, attachproto.ShapedRecipe{
 				ID: id, W: int32(r.W), H: int32(r.H), Cells: representatives(r.Cells),
 				Result: r.Result, Count: int32(r.Count), Notify: notify, Highlight: hl,
 			})
-		} else if n := int(id) - len(shapedRecipes); n < len(shapelessRecipes) {
-			r := &shapelessRecipes[n]
+		} else if ok {
 			rb.Shapeless = append(rb.Shapeless, attachproto.ShapelessRecipe{
 				ID: id, Ingredients: representatives(r.Ingredients),
 				Result: r.Result, Count: int32(r.Count), Notify: notify, Highlight: hl,
 			})
-		} else if n := int(id - cookBookFirstID); n >= 0 && n < len(cookBookRecipes) {
-			r := cookBookRecipes[n]
+		} else if r, ok := bookCook(id); ok {
 			r.Notify, r.Highlight = notify, hl
 			rb.Cooking = append(rb.Cooking, r)
 		}
@@ -219,7 +216,18 @@ func (h *hub) recipeUnlocksInWater(t *tracked) {
 // one /recipe take removed (the advancement stays done, so only /recipe
 // give brings it back).
 func (h *hub) rbGrant(t *tracked, rule int, fresh []int32) []int32 {
+	pc := currentPack()
+	pr := pc.recipeSet()
 	for _, id := range rbRuleIDs[rule] {
+		if pr != nil && pr.removedBook[id] {
+			// The reward names its recipe by key: a data pack's recipe of
+			// that name stands in, and one a pack removed is not given.
+			nid, ok := recipeIDIn(pc, recipeNames[id])
+			if !ok {
+				continue
+			}
+			id = nid
+		}
 		if !t.rbKnown[id] && !t.rbTaken[id] {
 			t.rbKnown[id] = true
 			t.rbHighlight[id] = true
@@ -351,19 +359,21 @@ func (s *recipeBookStore) loadInto(t *tracked, name string) {
 	t.rbHighlight = make(map[int32]bool, len(highlight))
 	// A name this build does not have — a recipe a later version removed — is
 	// dropped, as vanilla drops a recipe key it cannot resolve.
+	pc := currentPack() // a data pack's recipes are named too
 	for _, n := range known {
-		if id, ok := recipeIDByName[n]; ok {
+		if id, ok := recipeIDIn(pc, n); ok {
 			t.rbKnown[id] = true
 		}
 	}
 	for _, n := range highlight {
-		if id, ok := recipeIDByName[n]; ok {
+		if id, ok := recipeIDIn(pc, n); ok {
 			t.rbHighlight[id] = true
 		}
 	}
 	t.rbTaken = nil
+	t.rbDormant = nil
 	for _, n := range st.TakenNames {
-		if id, ok := recipeIDByName[n]; ok {
+		if id, ok := recipeIDIn(pc, n); ok {
 			if t.rbTaken == nil {
 				t.rbTaken = map[int32]bool{}
 			}
@@ -379,19 +389,25 @@ func (s *recipeBookStore) record(name string, t *tracked) {
 		return
 	}
 	st := rbState{Open: t.rbSettings.Open, Filter: t.rbSettings.Filter}
+	pc := currentPack()
 	for id := range t.rbKnown {
-		if int(id) < len(recipeNames) {
-			st.Names = append(st.Names, recipeNames[id])
+		if n, ok := recipeNameIn(pc, id); ok {
+			st.Names = append(st.Names, n)
 		}
 	}
+	// Recipes the current data packs lack, known before a reload: kept by
+	// name for a reload that brings them back.
+	for n := range t.rbDormant {
+		st.Names = append(st.Names, n)
+	}
 	for id := range t.rbHighlight {
-		if int(id) < len(recipeNames) {
-			st.HighlightNames = append(st.HighlightNames, recipeNames[id])
+		if n, ok := recipeNameIn(pc, id); ok {
+			st.HighlightNames = append(st.HighlightNames, n)
 		}
 	}
 	for id := range t.rbTaken {
-		if int(id) < len(recipeNames) {
-			st.TakenNames = append(st.TakenNames, recipeNames[id])
+		if n, ok := recipeNameIn(pc, id); ok {
+			st.TakenNames = append(st.TakenNames, n)
 		}
 	}
 	sort.Strings(st.Names)

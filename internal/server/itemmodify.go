@@ -10,9 +10,9 @@ import (
 // /item modify and the modifier tail of /item … from. A modifier is an id
 // from the registry, or an inline SNBT function — one {function:…}
 // compound, or a list of them applied in order (a sequence). Vanilla ships
-// no item_modifier files, and a datapack cannot add any here, so every id
-// is unknown; the inline functions are the ones the engine's loot tables
-// run, plus the component-setting ones a command needs:
+// no item_modifier files; an enabled data pack's (packloot.go) are found by
+// id. The functions are the ones the engine's loot tables run, plus the
+// component-setting ones a command needs:
 //
 //	set_count, set_damage, enchant_randomly, enchant_with_levels,
 //	set_enchantments, set_potion, set_name, set_lore, set_item,
@@ -28,6 +28,11 @@ type itemModifier func(h *hub, c *lootCtx, st invStack) invStack
 // parseItemModifier reads the modifier argument.
 func parseItemModifier(arg string) (itemModifier, string) {
 	if !strings.HasPrefix(arg, "{") && !strings.HasPrefix(arg, "[") {
+		if id, ok := parseResID(arg); ok {
+			if m, ok := packItemModifier(id); ok {
+				return m, ""
+			}
+		}
 		return nil, fmt.Sprintf("Can't find element '%s' in registry 'minecraft:item_modifier'", nsID(arg))
 	}
 	v, err := parseSNBT(arg)
@@ -298,7 +303,7 @@ func parseLootFunction(v any) (itemModifier, string) {
 		return func(_ *hub, _ *lootCtx, st invStack) invStack { return st }, ""
 	case "minecraft:furnace_smelt": // SmeltItemFunction
 		return func(_ *hub, _ *lootCtx, st invStack) invStack {
-			if r, ok := smeltResult[st.item]; ok {
+			if r, ok := cookerRecipe(cookFurnace, st.item); ok {
 				st.item = r.Out
 			}
 			return st

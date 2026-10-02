@@ -54,6 +54,9 @@ type lootCond struct {
 	BaseChance float64 `json:"base_chance"`
 	LinearBase float64 `json:"linear_base"`
 	PerLevel   float64 `json:"per_level"`
+	// weather_check (a data pack's predicate): each set flag must match
+	Raining    *bool `json:"raining,omitempty"`
+	Thundering *bool `json:"thundering,omitempty"`
 }
 
 type lootFn struct {
@@ -144,8 +147,12 @@ func init() {
 	}
 }
 
-// lootForEntity finds the baked table for an entity type id, or nil.
+// lootForEntity finds the table for an entity type id — a data pack's,
+// else the baked one — or nil.
 func lootForEntity(etype int32) *lootTable {
+	if t, ok := packEntityLoot(etype); ok {
+		return t
+	}
 	if t, ok := entityLoot[etype]; ok {
 		return &t
 	}
@@ -161,8 +168,12 @@ func (h *hub) evalEntityLoot(etype int32, ctx lootCtx) ([]drop, bool) {
 	return h.evalTable(tbl, ctx), true
 }
 
-// lootFor finds the baked table for a block state, or nil.
+// lootFor finds the table for a block state — a data pack's, else the baked
+// one — or nil.
 func lootFor(state uint32) *lootTable {
+	if t, ok := packBlockLoot(state); ok {
+		return t
+	}
 	i := sort.Search(len(blockLoot), func(i int) bool { return blockLoot[i].Hi >= state })
 	if i < len(blockLoot) && blockLoot[i].Lo <= state && state <= blockLoot[i].Hi {
 		return &blockLoot[i].Table
@@ -200,6 +211,12 @@ type lootCtx struct {
 	// chest, so no opener's luck can reach this — the LUCK attribute applies
 	// where the roll does have an owner, which is fishing.
 	luck float64
+
+	// A command's context (`execute if predicate`): the weather where it
+	// runs, and the type of the entity it runs as ("" = none known).
+	weatherKnown        bool
+	raining, thundering bool
+	thisType            string
 }
 
 // evalBlockLoot rolls the baked table. It returns nil ONLY when the block has
@@ -308,7 +325,7 @@ func (c *lootCtx) emit(e *lootEntry, poolFns []lootFn) (int32, int, bool) {
 	apply(poolFns)
 	id := e.ID
 	if c.onFire && (hasSmelt(e.Functions) || hasSmelt(poolFns)) {
-		if r, ok := smeltResult[id]; ok {
+		if r, ok := cookerRecipe(cookFurnace, id); ok { // the smelting recipe, a data pack's too
 			id = r.Out
 		}
 	}
@@ -414,9 +431,9 @@ func (c *lootCtx) cond(cd *lootCond) bool {
 		if !c.located || c.biomeAt == nil {
 			return false
 		}
-		b := c.biomeAt(c.pos.x, c.pos.y, c.pos.z)
+		b := nsID(c.biomeAt(c.pos.x, c.pos.y, c.pos.z))
 		for _, want := range cd.Biomes {
-			if b == want {
+			if b == nsID(want) {
 				return true
 			}
 		}
@@ -493,6 +510,20 @@ func (c *lootCtx) cond(cd *lootCond) bool {
 			return false
 		}
 		if cd.OnFire && !c.onFire {
+			return false
+		}
+		if cd.EType != "" && c.thisType != "" && c.thisType != cd.EType {
+			return false
+		}
+		return true
+	case "weather": // WeatherCheck
+		if !c.weatherKnown {
+			return false
+		}
+		if cd.Raining != nil && *cd.Raining != c.raining {
+			return false
+		}
+		if cd.Thundering != nil && *cd.Thundering != c.thundering {
 			return false
 		}
 		return true

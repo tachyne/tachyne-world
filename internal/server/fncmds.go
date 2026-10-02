@@ -33,13 +33,16 @@ func (s *Server) initDataPacks() {
 	lib.config = packConfigFor(avail, selected)
 	h.rules.DataPacks = lib.config
 	h.functions.Store(lib)
+	installPackContent(lib.content) // the hub has not started: no player to tell
 	h.fnPostReload.Store(true)
-	log.Printf("datapacks: %d enabled %v, %d functions, %d function tags", len(selected), selected, len(lib.functions), len(lib.tags))
+	log.Printf("datapacks: %d enabled %v, %d functions, %d function tags; %s", len(selected), selected, len(lib.functions), len(lib.tags), lib.content.summary())
 }
 
 // reloadDataPacks is MinecraftServer.reloadResources: the packs re-read,
 // the selection set (packs no longer on disk drop out), the functions and
-// tags replaced, the load tag due again, and the selection saved.
+// tags replaced, the pack content (tags, recipes, loot tables, predicates,
+// item modifiers) installed on the hub with every player's recipe book sent
+// again, the load tag due again, and the selection saved.
 func (s *Server) reloadDataPacks(selected []string) *functionLibrary {
 	s.packMu.Lock()
 	defer s.packMu.Unlock()
@@ -56,12 +59,14 @@ func (s *Server) reloadDataPacks(selected []string) *functionLibrary {
 	h := s.hub
 	h.functions.Store(lib)
 	cfg := lib.config
+	content := lib.content
+	h.post(evHubCmd{fn: func(players map[int32]*tracked) { h.applyPackContent(players, content) }})
 	h.post(evRunOnHub{fn: func() {
 		h.rules.DataPacks = cfg
 		h.fnPostReload.Store(true)
 		h.saveRules()
 	}})
-	log.Printf("datapacks: reloaded %d packs %v, %d functions, %d function tags", len(sel), sel, len(lib.functions), len(lib.tags))
+	log.Printf("datapacks: reloaded %d packs %v, %d functions, %d function tags; %s", len(sel), sel, len(lib.functions), len(lib.tags), lib.content.summary())
 	return lib
 }
 
@@ -644,7 +649,7 @@ func (s *Server) listEnabledPacks(p *player, sel []string, avail []*dataPack) {
 	}
 	for _, pk := range packs {
 		if kinds := lib.unapplied[pk.id]; len(kinds) > 0 {
-			s.info(p, fmt.Sprintf("%s also carries %s: this server loads only a pack's functions and function tags, so that data is not applied", pk.chatLink(), strings.Join(kinds, ", ")))
+			s.info(p, fmt.Sprintf("%s also carries %s: this server does not apply that data", pk.chatLink(), strings.Join(kinds, ", ")))
 		}
 	}
 }

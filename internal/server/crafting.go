@@ -92,9 +92,10 @@ func init() {
 }
 
 // ingredientAccepts reports whether item may fill a slot whose ingredient is
-// ingredientSets[set]. Set 0 is the empty set and accepts nothing.
+// set (ingredientSet: a generated set or a data pack recipe's). Set 0 is the
+// empty set and accepts nothing.
 func ingredientAccepts(set uint16, item int32) bool {
-	s := ingredientSets[set]
+	s := ingredientSet(set)
 	i := sort.Search(len(s), func(i int) bool { return s[i] >= item })
 	return i < len(s) && s[i] == item
 }
@@ -200,32 +201,34 @@ func matchRecipeID(grid []invStack, w int) (int32, int, int32) {
 		}
 		return 0
 	}
-	for _, ri := range shapedIndex[uint16(bw)<<8|uint16(bh)] {
-		rec := &shapedRecipes[ri]
-		direct, mirror := true, true
-		for r := 0; r < bh && (direct || mirror); r++ {
-			for c := 0; c < bw; c++ {
-				want := rec.Cells[r*bw+c]
-				if !cellFits(want, cell(r, c)) {
-					direct = false
-				}
-				if !cellFits(want, cell(r, bw-1-c)) {
-					mirror = false
-				}
-			}
-		}
-		if direct || mirror {
-			return rec.Result, int(rec.Count), int32(ri)
-		}
-	}
-
 	ids := make([]int32, 0, n)
 	for i := range grid {
 		if s := grid[i]; s.item != 0 && s.count > 0 {
 			ids = append(ids, s.item)
 		}
 	}
+	// A data pack's recipes come first; the generated ones a pack replaced
+	// or removed are out of the game.
+	pr := currentPack().recipeSet()
+	if pr != nil {
+		if rec, ok := pr.matchPackCraft(bw, bh, cell, ids); ok {
+			return rec.Result, int(rec.Count), rec.bookID
+		}
+	}
+	for _, ri := range shapedIndex[uint16(bw)<<8|uint16(bh)] {
+		if pr != nil && pr.removedBook[int32(ri)] {
+			continue
+		}
+		rec := &shapedRecipes[ri]
+		if shapedFits(rec.Cells, bw, bh, cell) {
+			return rec.Result, int(rec.Count), int32(ri)
+		}
+	}
+
 	for _, ri := range shapelessIndex[n] {
+		if pr != nil && pr.removedBook[int32(len(shapedRecipes)+ri)] {
+			continue
+		}
 		rec := &shapelessRecipes[ri]
 		if pairIngredients(ids, rec.Ingredients) {
 			return rec.Result, int(rec.Count), int32(len(shapedRecipes) + ri)

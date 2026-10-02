@@ -12,6 +12,7 @@ import (
 // runner started and "fp" enabled above vanilla.
 func functionServer(t *testing.T, files map[string]string) (*Server, *hub, map[string]*player, map[string]*chatLog) {
 	t.Helper()
+	t.Cleanup(func() { installPackContent(nil) }) // the load is process-wide
 	s, h, ps, logs := feedbackServer(t)
 	s.DataPackDir = t.TempDir()
 	writePack(t, s.DataPackDir, "fp", "", files)
@@ -267,8 +268,8 @@ func TestMaxCommandSequenceLength(t *testing.T) {
 // packs that cannot be enabled.
 func TestDatapackCommand(t *testing.T) {
 	s, h, ps, logs := functionServer(t, map[string]string{
-		"data/test/function/a.mcfunction": "say a",
-		"data/test/recipe/thing.json":     "{}",
+		"data/test/function/a.mcfunction":  "say a",
+		"data/test/advancement/thing.json": "{}",
 	})
 	writeZipPack(t, s.DataPackDir, "z.zip", "", nil)
 	writePack(t, s.DataPackDir, "old", `{"pack":{"description":"old","pack_format":48}}`, nil)
@@ -280,7 +281,7 @@ func TestDatapackCommand(t *testing.T) {
 	a := linesBetween(logs["alice"], "D0", "D1")
 	for _, want := range []string{
 		"There are 2 data pack(s) enabled: [vanilla (built-in)], [file/fp (world)]",
-		"[file/fp (world)] also carries recipe: this server loads only a pack's functions and function tags, so that data is not applied",
+		"[file/fp (world)] also carries advancement: this server does not apply that data",
 		"There are 2 data pack(s) available: [file/old (world)] (Made for an older version of Minecraft), [file/z.zip (world)]",
 	} {
 		if !hasLine(a, want) {

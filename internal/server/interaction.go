@@ -968,7 +968,7 @@ func (s *Server) tryUseBlock(p *player, off bool, x, y, z int, seq int32, face i
 		return true
 	}
 	if isCampfireBlock(state) {
-		if _, cookable := campfireResult[held]; cookable { // lit or not, as vanilla
+		if _, cookable := campfireRecipe(held); cookable { // lit or not, as vanilla
 			s.hub.post(evCampfireAdd{eid: p.eid, x: x, y: y, z: z})
 			s.sendBlockChange(p, x, y, z, state, seq)
 			return true

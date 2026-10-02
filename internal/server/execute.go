@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -45,7 +46,7 @@ import (
 // (execRunFunctions and the rest); unbound, `if function` finds no
 // function. Not here: `if data`, `if slots`, and storing into block,
 // entity or storage NBT, which need /data's NBT access; item predicates
-// past a plain item id or `*`; and local (^) coordinates inside the
+// past an item id, an item #tag or `*`; and local (^) coordinates inside the
 // command after `run` measured from the eyes of an `anchored eyes` source
 // (the chain's own coordinates honour the anchor).
 
@@ -1340,8 +1341,12 @@ func (h *hub) execTest(players map[int32]*tracked, st execStep, s *execSource) (
 		if msg != "" {
 			return false, 0, false, msg
 		}
-		if strings.HasPrefix(a[4], "#") {
-			return false, 0, false, fmt.Sprintf("Can't find tag '%s' of type 'minecraft:worldgen/biome'", nsID(a[4][1:]))
+		if tag, ok := strings.CutPrefix(a[4], "#"); ok { // a biome tag, a data pack's too
+			members, found := biomeTagMembers(nsID(tag))
+			if !found {
+				return false, 0, false, fmt.Sprintf("Can't find tag '%s' of type 'minecraft:worldgen/biome'", nsID(tag))
+			}
+			return slices.Contains(members, nsID(w.BiomeAt3D(pos.x, pos.y, pos.z))), 0, false, ""
 		}
 		return nsID(w.BiomeAt3D(pos.x, pos.y, pos.z)) == nsID(a[4]), 0, false, ""
 	case "dimension":
@@ -1356,12 +1361,13 @@ func (h *hub) execTest(players map[int32]*tracked, st execStep, s *execSource) (
 			return false, 0, false, msg
 		}
 		return w != nil && w.Loaded(int32(pos.x>>4), int32(pos.z>>4)), 0, false, ""
-	case "predicate":
-		if strings.HasPrefix(a[1], "{") { // an inline predicate: no condition type is modelled
-			return false, 0, false, ""
+	case "predicate": // a data pack's predicate (or vanilla's), or one written inline
+		conds, msg := predicateFor(a[1])
+		if msg != "" {
+			return false, 0, false, msg
 		}
-		// No data pack is loaded, so no predicate exists.
-		return false, 0, false, fmt.Sprintf("Can't find element '%s' in registry 'minecraft:predicate'", nsID(a[1]))
+		ctx := h.commandLootCtx(s)
+		return ctx.condsPass(conds), 0, false, ""
 	case "function":
 		if tag, ok := strings.CutPrefix(a[1], "#"); ok {
 			return false, 0, false, fmt.Sprintf("Unknown function tag '%s'", nsID(tag))
@@ -1567,7 +1573,8 @@ func (h *hub) execCountItems(players map[int32]*tracked, s *execSource, a []stri
 }
 
 // parseItemPredicate is ItemPredicateArgument for what the engine can
-// test: `*` or an item id. Tags and component predicates are refused.
+// test: `*`, an item id or an item #tag (vanilla's or a data pack's).
+// Component predicates are refused.
 func parseItemPredicate(arg string) (func(invStack) bool, string) {
 	base, comps := arg, ""
 	if i := strings.IndexByte(arg, '['); i >= 0 {
@@ -1579,8 +1586,16 @@ func parseItemPredicate(arg string) (func(invStack) bool, string) {
 	if base == "*" {
 		return func(invStack) bool { return true }, ""
 	}
-	if tag, ok := strings.CutPrefix(base, "#"); ok {
-		return nil, fmt.Sprintf("Unknown item tag '%s'", nsID(tag))
+	if tag, ok := strings.CutPrefix(base, "#"); ok { // an item tag, a data pack's too
+		ids, found := itemTagIDs(nsID(tag))
+		if !found {
+			return nil, fmt.Sprintf("Unknown item tag '%s'", nsID(tag))
+		}
+		set := make(map[int32]bool, len(ids))
+		for _, id := range ids {
+			set[id] = true
+		}
+		return func(st invStack) bool { return set[st.item] }, ""
 	}
 	id, ok := itemByName[strings.TrimPrefix(base, "minecraft:")]
 	if !ok {

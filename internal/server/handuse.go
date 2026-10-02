@@ -76,7 +76,7 @@ func (s *Server) useOffhandOnBlock(p *player, state uint32, held int32, x, y, z 
 			ev = evUseComposter{eid: p.eid, slot: offhandSlot, x: x, y: y, z: z, off: true}
 		}
 	case isCampfireBlock(state):
-		if _, cookable := campfireResult[held]; cookable { // CampfireBlock.useItemOn: food on the fire
+		if _, cookable := campfireRecipe(held); cookable { // CampfireBlock.useItemOn: food on the fire
 			ev = evCampfireAdd{eid: p.eid, x: x, y: y, z: z, off: true}
 		}
 	case isLectern(state):

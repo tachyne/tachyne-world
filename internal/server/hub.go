@@ -250,6 +250,7 @@ type tracked struct {
 	rbKnown        map[int32]bool    // recipe book: unlocked display ids
 	rbHighlight    map[int32]bool    // recipe book: "new" badges not yet viewed
 	rbTaken        map[int32]bool    // recipe book: taken by /recipe take — the ingredient poll leaves them out until given back
+	rbDormant      map[string]bool   // recipe book: known recipes the current data packs lack, by name (back on a reload that has them)
 	rbSettings     attachproto.RecipeSettings
 	migrating      string // non-empty (migID) while a handover to a neighbour is in flight
 	x, y, z        float64
