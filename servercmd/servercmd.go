@@ -44,6 +44,7 @@ func Main() {
 	earth := flag.String("earth", "", "EARTH MODE: overworld terrain from an embedded real elevation model, e.g. capetown (empty = procedural noise)")
 	earthVScale := flag.Float64("earth-vscale", 4.5, "earth mode: metres of real elevation per block above sea level")
 	ceiling := flag.Int("ceiling", 0, "TALL WORLD: overworld top build limit (0 = vanilla 320; Java max 2032). Pair with -earth-vscale so the region's summits fit, e.g. -ceiling 1664 -earth-vscale 1")
+	caves := flag.String("caves", "", "cave generator for a NEW world: native (the engine's own) or vanilla (26.3's noise caves and cave carvers). Fixed when the world is made and kept in worldgen.json beside the world file; ignored, with a log line, for an existing world (empty = native)")
 	pluginDir := flag.String("plugindir", "plugins", "directory for per-plugin config + data folders")
 	simRadius := flag.Int("simradius", 4, "chunks around each player that random-tick (crops, grass, ice, fire). Vanilla ticks everything inside its simulation distance, default 10; 4 is what this engine has always run. Raising it roughly doubles the per-tick sweep at 10 — watch the slow-tick log.")
 	spawner := flag.String("spawner", "vanilla", "natural-spawn model: only vanilla (the NaturalSpawner port) exists now; kept so older manifests still parse")
@@ -67,6 +68,7 @@ func Main() {
 	srv.EarthName = *earth
 	srv.EarthVScale = *earthVScale
 	srv.Ceiling = *ceiling
+	srv.Caves = *caves
 	srv.AttachAddr = *attachAddr
 	srv.AttachToken = os.Getenv("ATTACH_TOKEN")
 	// tachyne-access admin API: /op, /deop, /ban, /ban-ip, /pardon,

@@ -149,6 +149,21 @@ func (w *World) SetEarth(name string, vscale float64) (*worldgen.EarthDEM, error
 	return dem, nil
 }
 
+// SetCaves picks the overworld's cave generator (worldgen/vanillacaves.go).
+// Must be called at boot, before any chunk is generated. Vanilla caves key
+// the chunk cache with a "CV." prefix so their chunks never collide with a
+// native world's of the same seed; native keeps the keys it always had.
+func (w *World) SetCaves(m worldgen.CaveMode) {
+	was := w.gen.CaveMode()
+	w.gen.SetCaveMode(m)
+	if was != worldgen.CavesVanilla && w.gen.CaveMode() == worldgen.CavesVanilla {
+		w.dimTag = "CV." + w.dimTag
+	}
+}
+
+// Caves is the world's cave generator.
+func (w *World) Caves() worldgen.CaveMode { return w.gen.CaveMode() }
+
 // SetCeiling raises the world's top build limit (tall worlds — earth mode at
 // true vertical scale). Must be called at boot, before any chunk is generated.
 // The chunk-cache key gains an "H<sections>." prefix so tall chunks never
