@@ -137,7 +137,10 @@ func (s *Server) placeStandingOrWall(p *player, standingDef, wallDef uint32, tx,
 		return false
 	}
 	state = waterlogPlaced(w, tx, ty, tz, state) // a sign placed under water keeps it
-	s.putBlock(p, tx, ty, tz, state, true, seq)
+	// A block item's placement: the hub applies what the stack carries — a
+	// banner's or head's name, a head's profile and note sound, a copied
+	// sign's text (onBlock's placed branch).
+	s.putPlaced(p, tx, ty, tz, state, true, seq)
 	return true
 }
 
@@ -219,7 +222,7 @@ func (s *Server) placeHangingSign(p *player, ceilingDef, wallDef uint32, tx, ty,
 		return false
 	}
 	state = waterlogPlaced(w, tx, ty, tz, state) // a sign placed under water keeps it
-	s.putBlock(p, tx, ty, tz, state, true, seq)
+	s.putPlaced(p, tx, ty, tz, state, true, seq)
 	s.hub.post(evSignPlaced{eid: p.eid, x: tx, y: ty, z: tz, dim: p.dim, hanging: true})
 	return true
 }

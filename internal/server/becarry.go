@@ -29,6 +29,7 @@ type carriedBE struct {
 	sign      *signData
 	banner    []attachproto.BannerLayer
 	skull     string // a player head's owner (profile stream form; "" = none)
+	skullNote string // …and its note_block_sound ("" = none)
 	spawner   string // the entity a spawner spawns ("" = none, or an empty cage)
 	spawnerDl *int   // …and its delay, when it has one of its own
 }
@@ -37,7 +38,7 @@ func (c carriedBE) empty() bool {
 	return c.chest == nil && c.furnace == nil && c.bin == nil && c.brew == nil &&
 		c.jukebox == nil && c.lectern == nil && c.shelf == nil && c.woodShelf == nil &&
 		c.pot == nil && c.sherds == nil && c.campfire == nil && c.sign == nil && c.banner == nil &&
-		c.skull == "" && c.spawner == ""
+		c.skull == "" && c.skullNote == "" && c.spawner == ""
 }
 
 // peekBlockEntity copies a cell's block-entity data, leaving the cell as it
@@ -130,6 +131,7 @@ func (h *hub) peekBlockEntity(pos simPos, fork bool) carriedBE {
 	}
 	if h.skulls != nil {
 		c.skull = h.skulls.get(pos)
+		c.skullNote = h.skulls.note(pos)
 	}
 	if w := h.worldFor(pos.dim); w != nil && w.At(pos.x, pos.y, pos.z) == spawnerBlock {
 		c.spawner = h.spawnerEntityAt(pos) // a seed spawner's own mob comes along too
@@ -236,8 +238,8 @@ func (h *hub) placeBlockEntity(players map[int32]*tracked, pos simPos, c carried
 		h.toNearbyEv(players, pos.dim, float64(pos.x), float64(pos.z), attachproto.BannerPatterns{
 			X: int32(pos.x), Y: int32(pos.y), Z: int32(pos.z), Layers: c.banner})
 	}
-	if c.skull != "" && isPlayerHeadState(state) {
-		h.ownSkullFromStack(players, pos, state, invStack{profile: c.skull})
+	if (c.skull != "" || c.skullNote != "") && isPlayerHeadState(state) {
+		h.ownSkullFromStack(players, pos, state, invStack{profile: c.skull, noteSound: c.skullNote})
 	}
 	if c.spawner != "" && state == spawnerBlock {
 		h.setSpawnerEntity(pos, c.spawner)

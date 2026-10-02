@@ -68,7 +68,7 @@ func appendBlockEntities(b []byte, w *world.World, cx, cz int32, dim int, signs 
 			// A player head's update tag: its owner, whose face the client
 			// draws (a plain head has none).
 			pos := simPos{dim: dim, blockPos: blockPos{int(cx)*16 + int(e.LX), int(e.Y), int(cz)*16 + int(e.LZ)}}
-			buf = skullUpdateTagNBT(buf, skulls.get(pos))
+			buf = skullUpdateTagNBT(buf, skulls.get(pos), skulls.note(pos))
 		} else {
 			buf = append(buf, 0x00) // NBT: TAG_End — no data (renderer needs only type+pos)
 		}

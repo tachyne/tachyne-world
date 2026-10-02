@@ -55,6 +55,9 @@ func stackNBT(st invStack) map[string]any {
 			comps[key] = lv
 		}
 	}
+	if st.noteSound != "" {
+		comps["minecraft:note_block_sound"] = st.noteSound
+	}
 	if len(comps) > 0 {
 		m["components"] = comps
 	}

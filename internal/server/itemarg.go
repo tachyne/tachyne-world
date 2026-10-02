@@ -149,6 +149,8 @@ func removeItemComponent(st *invStack, key string) string {
 		st.standTags = ""
 	case "minecraft:profile":
 		st.profile = ""
+	case "minecraft:note_block_sound":
+		st.noteSound = ""
 	case "minecraft:written_book_content", "minecraft:writable_book_content":
 		st.bookID = 0
 	default:
@@ -251,6 +253,14 @@ func applyItemComponent(st *invStack, key string, v any) string {
 			return bad()
 		}
 		st.profile = profileString(p)
+	case "minecraft:note_block_sound":
+		// Identifier.CODEC: any item may carry it; a placed player head
+		// keeps it for the note block under it.
+		id, ok := noteSoundFromSNBT(v)
+		if !ok {
+			return bad()
+		}
+		st.noteSound = id
 	default:
 		return applyItemTagComponent(st, key, v)
 	}

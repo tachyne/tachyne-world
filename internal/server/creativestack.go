@@ -548,6 +548,16 @@ func (d *stackDecode) component(id int32, r *bytes.Reader) bool {
 		if st.item == itemPlayerHead {
 			st.profile = profileString(p)
 		}
+	case componentNoteBlockSound:
+		s, err := protocol.ReadString(r) // Identifier.STREAM_CODEC
+		if err != nil {
+			return false
+		}
+		id, ok := parseResID(s)
+		if !ok {
+			return false
+		}
+		st.noteSound = id
 	default:
 		return false
 	}

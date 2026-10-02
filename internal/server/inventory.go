@@ -93,6 +93,10 @@ type invStack struct {
 	// stream form, "" = none (skullprofile.go). A string, so invStack stays
 	// comparable.
 	profile string
+	// note_block_sound: the sound a note block plays under this head once
+	// it is placed (SkullBlockEntity.noteBlockSound), an identifier; "" =
+	// none.
+	noteSound string
 	// block_entity_data: the block entity a creative ctrl-pick copied, as an
 	// SNBT compound with its type under "id" (pickdata.go), "" = none.
 	beData string

@@ -10,6 +10,7 @@ package server
 // in our declared order, so one number works on every version.
 
 import (
+	"math"
 	"strings"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
@@ -160,12 +161,30 @@ func (h *hub) playNoteBlock(players map[int32]*tracked, dim, x, y, z int, state 
 	// sounds, and for redstone as much as for a fist — a skulk sensor hears a
 	// note block played by a repeater.
 	h.vib(dim, freqNoteBlockPlay, x, y, z, by)
-	if _, ok := noteInstrumentSounds[instr]; !ok {
-		return // custom_head: no skull sound source in v1
+	// NoteBlock.triggerEvent, on the server: the sound — the instrument's,
+	// or for a player head above it the head's note_block_sound
+	// (getCustomSoundId; a head without one plays nothing and the event is
+	// not sent). Tunable instruments pitch by the note; heads play at 1.
+	// The client's own triggerEvent only draws the particle: its
+	// playSeededSound plays nothing for a null player, so the note is heard
+	// from this sound alone.
+	sound, pitch := "", float32(1)
+	if instr == "custom_head" {
+		if h.skulls != nil {
+			sound = h.skulls.note(simPos{dim: dim, blockPos: blockPos{x, y + 1, z}})
+		}
+	} else {
+		sound = noteInstrumentSounds[instr]
+		if !noteHeadInstruments[instr] {
+			pitch = float32(math.Pow(2, float64(noteOf(state)-12)/12)) // getPitchFromNote
+		}
 	}
-	// Level.blockEvent(pos, this, 0, 0): the client plays the note and draws
-	// the particle itself, reading both out of the block state. Sending our
-	// own sound on top of it would play the note twice.
+	if sound == "" {
+		return
+	}
+	h.playSoundDim(players, dim, sound, sndRecord, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 3, pitch)
+	// Level.blockEvent(pos, this, 0, 0): the client draws the note
+	// particle (and a tunable note's colour) from the block state.
 	if id, ok := worldgen.BlockRegistryID("note_block"); ok {
 		h.toNearbyEv(players, dim, float64(x)+0.5, float64(z)+0.5, attachproto.BlockEvent{
 			X: int32(x), Y: int32(y), Z: int32(z), Action: 0, Param: 0, Block: int32(id)})

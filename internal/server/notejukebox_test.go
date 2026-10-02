@@ -69,12 +69,14 @@ func TestNoteBlockAndJukeboxFlow(t *testing.T) {
 		}
 	})
 
-	// The block event reached the player's queue. The note and the particle
-	// are the CLIENT's to make from it, which is why no sound is sent: vanilla
-	// only calls Level.blockEvent here, and sending our own would double it.
+	// The block event reached the player's queue (the client draws the
+	// particle from it), and so did the note itself: NoteBlock.triggerEvent
+	// runs on the server (ServerLevel.doBlockEvent) and broadcasts the sound —
+	// the client's own triggerEvent plays nothing, its playSeededSound being
+	// for the local player only. Records, volume 3, note 2's pitch.
 	deadline := time.After(hubTestWait)
-	gotEvent := false
-	for !gotEvent {
+	gotEvent, gotSound := false, false
+	for !gotEvent || !gotSound {
 		select {
 		case pkt := <-p.out:
 			switch ev := pkt.ev.(type) {
@@ -84,11 +86,14 @@ func TestNoteBlockAndJukeboxFlow(t *testing.T) {
 				}
 			case attachproto.Sound:
 				if ev.Name == "minecraft:block.note_block.basedrum" {
-					t.Fatal("the server must not play the note itself: the client does, from the event")
+					if ev.Category != sndRecord || ev.Volume != 3 || ev.Pitch < 0.56 || ev.Pitch > 0.57 {
+						t.Fatalf("note sound %+v, want records/3/2^(-10/12)", ev)
+					}
+					gotSound = true
 				}
 			}
 		case <-deadline:
-			t.Fatal("the note block's event never arrived")
+			t.Fatalf("the note block's event (%v) or sound (%v) never arrived", gotEvent, gotSound)
 		}
 	}
 
