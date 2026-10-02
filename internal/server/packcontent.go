@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"log"
-	"sort"
 	"strings"
 	"sync/atomic"
 
@@ -141,29 +140,4 @@ func (h *hub) applyPackContent(players map[int32]*tracked, pc *packContent) {
 	installPackContent(pc)
 	h.remapRecipeBooks(players, old, pc)
 	h.onPackRegistriesChanged(players, pc)
-}
-
-// onPackRegistriesChanged is where a reload's changed tags reach the
-// clients. Vanilla sends them with ClientboundUpdateTagsPacket during
-// PlayerList.reloadResources; here they reach a client only through the
-// gateway, which sends a client its tags in the configuration phase — so
-// this is the hook for the w→gw reconfiguration frame tachyne-common is
-// adding: emit it to every player with pc.tags.changedTags() (registry →
-// tag id → member ids, a vanilla tag that stopped loading as an empty list)
-// and the gateway re-runs configuration (or sends update_tags in play) with
-// those tags merged over its built-in ones. Until that frame exists the
-// changes apply to everything the engine decides (crafting, loot, commands,
-// worldgen) but a client's own tag-driven predictions (which items a
-// furnace slot takes, a tool's mining speed) keep vanilla's tags.
-func (h *hub) onPackRegistriesChanged(players map[int32]*tracked, pc *packContent) {
-	changed := pc.tags.changedTags()
-	if len(changed) == 0 {
-		return
-	}
-	regs := make([]string, 0, len(changed))
-	for reg, ids := range changed {
-		regs = append(regs, fmt.Sprintf("%s %d", reg, len(ids)))
-	}
-	sort.Strings(regs)
-	log.Printf("datapacks: tags changed (%s); clients keep their configured tags until a reconfiguration", strings.Join(regs, ", "))
 }

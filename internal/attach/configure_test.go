@@ -62,3 +62,73 @@ func TestWelcomeCarriesConfigAndDim(t *testing.T) {
 		t.Errorf("overworld %+v", ow)
 	}
 }
+
+// reconfRemote answers a finished configuration the way the engine does:
+// it moves the player, then sends MsgRejoin from the session's join state.
+type reconfRemote struct {
+	mockRemote
+	dim  int32
+	emit func(byte, []byte)
+	view chan int32
+}
+
+func (r *reconfRemote) Dim() int32 { return r.dim }
+func (r *reconfRemote) Configured(c proto.Configured, welcome func() proto.Welcome) {
+	r.dim = 2 // placed again in the End
+	b, _ := json.Marshal(proto.Rejoin{Welcome: welcome()})
+	r.emit(proto.MsgRejoin, b)
+	r.view <- c.View
+}
+
+// readUntil reads frames until one of type want arrives.
+func readUntil(t *testing.T, c net.Conn, want byte) []byte {
+	t.Helper()
+	for {
+		typ, payload, err := proto.ReadFrame(c)
+		if err != nil {
+			t.Fatalf("waiting for %#x: %v", want, err)
+		}
+		if typ == want {
+			return payload
+		}
+	}
+}
+
+// A finished configuration (MsgConfigured) reaches the remote with the
+// client's view distance and a join state read after the remote moved the
+// player — and the session forgets the chunks it sent, since the client
+// discarded its level: the same Want streams them again.
+func TestConfiguredRejoinsAndResendsChunks(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := world.New(1)
+	rec := &reconfRemote{view: make(chan int32, 1)}
+	go Serve(ln, Config{
+		World: w, Time: func() int64 { return 0 }, Token: "secret",
+		Join: func(id Identity, emit func(byte, []byte)) (Remote, error) {
+			rec.emit = emit
+			return rec, nil
+		},
+	})
+	t.Cleanup(func() { ln.Close() })
+	c := hello(t, ln.Addr(), "secret")
+	readUntil(t, c, proto.MsgWelcome)
+	proto.WriteJSON(c, proto.MsgWant, proto.Want{CX: 0, CZ: 0, Radius: 0})
+	readUntil(t, c, proto.MsgChunk)
+
+	proto.WriteJSON(c, proto.MsgConfigured, proto.Configured{View: 6})
+	var rj proto.Rejoin
+	if err := json.Unmarshal(readUntil(t, c, proto.MsgRejoin), &rj); err != nil {
+		t.Fatal(err)
+	}
+	if rj.Welcome.EID != 7 || rj.Welcome.Dim != 2 || rj.Welcome.Config != nil {
+		t.Errorf("rejoin welcome %+v", rj.Welcome)
+	}
+	if v := <-rec.view; v != 6 {
+		t.Errorf("view %d", v)
+	}
+	proto.WriteJSON(c, proto.MsgWant, proto.Want{CX: 0, CZ: 0, Radius: 0})
+	readUntil(t, c, proto.MsgChunk) // sent again: the session forgot it
+}

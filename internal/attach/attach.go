@@ -129,6 +129,18 @@ type Dimensioned interface {
 	Dim() int32
 }
 
+// Reconfigurable is the optional half of a Remote whose gateway can send
+// its client back to the configuration phase (FeatureReconfigure). The
+// world took the player out of the level when it sent
+// MsgStartConfiguration; on MsgConfigured the session forgets the chunks it
+// sent and Configured places the player again (PlayerList.placeNewPlayer):
+// it answers MsgRejoin with welcome() — the session's join state, read
+// after the remote has set where the player now stands — then sends what a
+// join sends.
+type Reconfigurable interface {
+	Configured(c proto.Configured, welcome func() proto.Welcome)
+}
+
 // Remote is a hub-attached player, as the attach layer sees it.
 type Remote interface {
 	EID() int32
@@ -274,17 +286,29 @@ func session(c net.Conn, cfg Config) {
 	if cfg.World != nil {
 		sections = cfg.World.Sections() // tall worlds report their real height
 	}
-	welcome := proto.Welcome{Spawn: cfg.Spawn, Time: cfg.Time(), MinY: proto.MinY, Sections: sections}
-	if cfg.TimeFrame != nil {
-		welcome.Clocks = cfg.TimeFrame().Clocks
-	}
-	if cfg.LoginFlags != nil {
-		welcome.NoRespawnScreen, welcome.LimitedCrafting, welcome.ReducedDebug = cfg.LoginFlags()
-	}
-	if cfg.ConfigData != nil {
-		welcome.Config = cfg.ConfigData()
-	}
 	var remote Remote
+	// mkWelcome is the state the gateway logs the client in with: at the
+	// session's start, and again when the client comes back from a
+	// reconfiguration (MsgRejoin, PlayerList.placeNewPlayer).
+	mkWelcome := func() proto.Welcome {
+		w := proto.Welcome{Spawn: cfg.Spawn, Time: cfg.Time(), MinY: proto.MinY, Sections: sections}
+		if cfg.TimeFrame != nil {
+			w.Clocks = cfg.TimeFrame().Clocks
+		}
+		if cfg.LoginFlags != nil {
+			w.NoRespawnScreen, w.LimitedCrafting, w.ReducedDebug = cfg.LoginFlags()
+		}
+		if remote != nil {
+			w.EID = remote.EID()
+			w.Spawn.X, w.Spawn.Y, w.Spawn.Z = remote.Spawn()
+			w.Gamemode = remote.Gamemode()
+			w.Death = remote.Death()
+			if d, ok := remote.(Dimensioned); ok {
+				w.Dim = d.Dim()
+			}
+		}
+		return w
+	}
 	// Welcome MUST be the session's first frame (gateways refuse otherwise),
 	// but Join emits frames synchronously (command tree, abilities) and its
 	// decode loop may start emitting immediately — so emissions are held back
@@ -322,13 +346,10 @@ func session(c net.Conn, cfg Config) {
 		}
 		remote = r
 		defer remote.Leave()
-		welcome.EID = remote.EID()
-		welcome.Spawn.X, welcome.Spawn.Y, welcome.Spawn.Z = remote.Spawn()
-		welcome.Gamemode = remote.Gamemode()
-		welcome.Death = remote.Death()
-		if d, ok := remote.(Dimensioned); ok {
-			welcome.Dim = d.Dim()
-		}
+	}
+	welcome := mkWelcome()
+	if cfg.ConfigData != nil {
+		welcome.Config = cfg.ConfigData()
 	}
 	send(frameJSON(proto.MsgWelcome, welcome))
 	preMu.Lock() // flush held frames; concurrent emits block until we're done
@@ -492,6 +513,17 @@ func session(c net.Conn, cfg Config) {
 					} else {
 						remote.Chat(ch.Text)
 					}
+				}
+			}
+		case proto.MsgConfigured:
+			// The client finished a reconfiguration and has discarded its
+			// level: every chunk goes again, and the remote places the
+			// player anew (it answers with MsgRejoin from mkWelcome).
+			if rc, ok := remote.(Reconfigurable); ok {
+				var cf proto.Configured
+				if jsonUnmarshal(payload, &cf) == nil {
+					clear(sent)
+					rc.Configured(cf, mkWelcome)
 				}
 			}
 		case proto.MsgChatSession:

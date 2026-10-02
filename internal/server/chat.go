@@ -352,6 +352,8 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		s.cmdStopwatch(p, fields[1:])
 	case "swing":
 		s.cmdSwing(p, fields[1:])
+	case "debugconfig":
+		s.cmdDebugConfig(p, fields[1:])
 	case "teammsg", "tm":
 		s.cmdTeamMsg(p, fields[1:])
 	case "execute":

@@ -1670,6 +1670,8 @@ func (h *hub) run() {
 				h.setChatSession(players, e)
 			case evCmdChat:
 				h.onCmdChat(players, e)
+			case evDebugConfig:
+				h.onDebugConfig(players, e)
 			case evSetTime:
 				h.setDayTime(e.t)
 			case evAnnounce:
@@ -2677,7 +2679,7 @@ func (h *hub) useOnEvent(players map[int32]*tracked, ev hubEvent) bool {
 // onJoin registers the newcomer and exchanges spawn packets with everyone else:
 // the newcomer learns of every existing player and vice-versa.
 func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
-	nt := &tracked{living: living{attrs: newPlayerAttributes()}, p: e.p, x: e.x, y: e.y, z: e.z, yaw: e.yaw, pitch: e.pitch, gamemode: e.gamemode, hudOn: true}
+	nt := &tracked{living: living{attrs: newPlayerAttributes()}, p: e.p, x: e.x, y: e.y, z: e.z, yaw: e.yaw, pitch: e.pitch, dim: e.dim, gamemode: e.gamemode, hudOn: true}
 	nt.loadUntil = h.tick.Load() + clientLoadTimeout // CLIENT_LOADED_TIMEOUT_TIME
 	if e.resume != nil {
 		// A migrated player: the handover snapshot is the source of truth (health,

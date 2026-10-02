@@ -50,7 +50,7 @@ var cmdPermission = map[string]int{
 	"ban": permAdmins, "ban-ip": permAdmins, "banlist": permAdmins, "deop": permAdmins,
 	"kick": permAdmins, "op": permAdmins, "pardon": permAdmins, "pardon-ip": permAdmins,
 	"setidletimeout": permAdmins, "tick": permAdmins, "transfer": permAdmins,
-	"whitelist": permAdmins,
+	"whitelist": permAdmins, "debugconfig": permAdmins,
 	// LEVEL_OWNERS
 	"save-all": permOwners, "save-off": permOwners, "save-on": permOwners, "stop": permOwners,
 }

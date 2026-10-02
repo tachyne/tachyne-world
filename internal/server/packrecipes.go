@@ -25,8 +25,9 @@ import (
 // transmute crafting recipes, brewing — are listed by /datapack as not
 // applied and leave vanilla's recipe of their id in place: a stonecutter's
 // and a smithing table's choices are drawn by the client from the recipe
-// lists the gateway sends at login, so changing them needs the
-// reconfiguration path (onPackRegistriesChanged).
+// lists the gateway sends at login, so changing them needs those lists sent
+// again (PlayerList.reloadResources' update_recipes), which no attach frame
+// carries yet — onPackRegistriesChanged sends the tags alone.
 //
 // Pack crafting recipes use the generated recipes' own form: ingredient
 // sets are indices into ingredientSets, continued past its end by the

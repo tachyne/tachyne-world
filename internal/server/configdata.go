@@ -35,9 +35,11 @@ func dimensionTable() []attachproto.DimensionInfo {
 }
 
 // configData is the configuration a session's client is given at login
-// (Welcome.Config).
+// (Welcome.Config): the dimension table, and the installed pack load's tags
+// so a client joining after a /reload has the tags everyone else was sent.
 func (s *Server) configData() *attachproto.ConfigData {
-	return &attachproto.ConfigData{Dimensions: dimensionTable()}
+	cd := currentConfigData()
+	return &cd
 }
 
 // Dim makes a remote player an attach.Dimensioned: the dimension the
