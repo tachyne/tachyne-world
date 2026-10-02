@@ -1608,7 +1608,9 @@ func (h *hub) run() {
 					// A hive placed from a Silk-Touched stack takes its bees and
 					// honey back (same FIFO reasoning as the box above).
 					if t := players[e.by]; t != nil {
-						h.restoreBeeHome(players, e.dim, blockPos{e.x, e.y, e.z}, heldStack(t).hiveID)
+						// Creative keeps the stack, and with it the bees: the
+						// hive gets a copy (as the box above does).
+						h.restoreBeeHome(players, e.dim, blockPos{e.x, e.y, e.z}, heldStack(t).hiveID, t.gamemode == gmCreative)
 					}
 				}
 				h.checkWitherBuild(players, e.by, e.dim, e.x, e.y, e.z, e.state)

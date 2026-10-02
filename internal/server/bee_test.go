@@ -311,7 +311,7 @@ func TestSilkTouchCarriesTheHive(t *testing.T) {
 	// Place it back somewhere else: the bees and honey come with it.
 	dst := blockPos{nest.x + 20, nest.y, nest.z}
 	h.world.SetBlock(dst.x, dst.y, dst.z, worldgen.BlockBase("bee_nest"))
-	h.restoreBeeHome(players, dimOverworld, dst, carried.hiveID)
+	h.restoreBeeHome(players, dimOverworld, dst, carried.hiveID, false)
 	if len(h.hives[simPos{blockPos: dst}]) != 2 {
 		t.Fatalf("restored hive holds %v, want the two carried bees", h.hives[simPos{blockPos: dst}])
 	}
