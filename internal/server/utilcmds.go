@@ -352,6 +352,10 @@ func (h *hub) applySwingCommand(players map[int32]*tracked, e evSwingCmd) {
 type evTeamMsg struct {
 	from int32
 	text string
+	// signed is the message argument's signature (signedcmd.go), nil when
+	// it is unsigned; selectors: the source may resolve selectors in it.
+	signed    *attachproto.SignedArgument
+	selectors bool
 }
 
 func (evTeamMsg) isHubEvent() {}
@@ -361,7 +365,9 @@ func (s *Server) cmdTeamMsg(p *player, args []string) {
 		p.tell("Usage: /teammsg <message>")
 		return
 	}
-	s.hub.post(evTeamMsg{from: p.eid, text: strings.Join(args, " ")})
+	text := strings.Join(args, " ")
+	s.hub.post(evTeamMsg{from: p.eid, text: text,
+		signed: p.signedArgument("message", text), selectors: s.isOp(p.name)})
 }
 
 // applyTeamMsg sends the line to the sender's team: "[Team] [name] text" to
@@ -383,12 +389,28 @@ func (h *hub) applyTeamMsg(players map[int32]*tracked, e evTeamMsg) {
 	if t := h.sb.Teams[team]; t != nil && t.Title != "" {
 		title = t.Title
 	}
+	text := h.resolveMessageSelectors(players, e.from, messageContent(e.text, e.signed), e.selectors)
+	// TeamMsgCommand.sendMessage: a signed message goes to the sender as
+	// team_msg_command_outgoing and to the team as team_msg_command_incoming,
+	// both naming the team.
+	signed := e.signed != nil && messageSource(from.p)
 	for _, t := range players {
-		switch {
-		case t == from:
-			t.p.trySendEv(chatEv(fmt.Sprintf("-> [%s] [%s] %s", title, from.p.name, e.text)))
-		case h.teamOf(t.p.name) == team:
-			t.p.trySendEv(chatEv(fmt.Sprintf("[%s] [%s] %s", title, from.p.name, e.text)))
+		mine := t == from
+		if !mine && h.teamOf(t.p.name) != team {
+			continue
+		}
+		if signed && t.p.playerChat {
+			ct := chatTypeTeamMsgIn
+			if mine {
+				ct = chatTypeTeamMsgOut
+			}
+			t.p.trySendEv(signedPlayerChat(from.p, e.signed, text, ct, title))
+			continue
+		}
+		if mine {
+			t.p.trySendEv(chatEv(fmt.Sprintf("-> [%s] [%s] %s", title, from.p.name, text)))
+		} else {
+			t.p.trySendEv(chatEv(fmt.Sprintf("[%s] [%s] %s", title, from.p.name, text)))
 		}
 	}
 }

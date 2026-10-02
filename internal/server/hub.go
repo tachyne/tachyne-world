@@ -1668,6 +1668,8 @@ func (h *hub) run() {
 				h.roomChatFrom(players, e.from.name, msg)
 			case evChatSession:
 				h.setChatSession(players, e)
+			case evCmdChat:
+				h.onCmdChat(players, e)
 			case evSetTime:
 				h.setDayTime(e.t)
 			case evAnnounce:

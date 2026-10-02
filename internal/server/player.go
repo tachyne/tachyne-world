@@ -37,6 +37,9 @@ type player struct {
 	chatSession atomic.Pointer[attachproto.ChatSession]
 	// dialogs: the session's gateway renders dialogs (FeatureDialog).
 	dialogs bool
+	// cmdSigned is the signing context of the command the session is
+	// running (signedcmd.go): set for the length of one dispatch.
+	cmdSigned atomic.Pointer[signedCmd]
 
 	x, y, z    float64        // current position (this goroutine's copy, for streaming)
 	yaw, pitch float32        // current look angles

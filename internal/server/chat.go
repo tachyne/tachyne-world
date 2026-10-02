@@ -149,8 +149,7 @@ func (s *Server) handleCommand(p *player, cmd string) {
 			break
 		}
 		if len(fields) > 1 { // SayCommand: the source's display name, which /execute as changes
-			s.hub.post(evChat{text: fmt.Sprintf("[%s] %s", sourceName(p), strings.Join(fields[1:], " "))})
-			setCmdResult(p, 1)
+			s.postCmdChat(p, false, "message", strings.Join(fields[1:], " "))
 		}
 	case "list":
 		s.hub.post(evList{p: p})
@@ -307,8 +306,7 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		s.info(p, fmt.Sprintf("Seed: [%d]", s.Seed))
 	case "me":
 		if len(fields) > 1 { // EmoteCommands: "* name action" to everyone
-			s.hub.post(evChat{text: fmt.Sprintf("* %s %s", sourceName(p), strings.Join(fields[1:], " "))})
-			setCmdResult(p, 1)
+			s.postCmdChat(p, true, "action", strings.Join(fields[1:], " "))
 		}
 	case "difficulty":
 		s.cmdDifficulty(p, fields[1:])

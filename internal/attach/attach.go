@@ -108,6 +108,15 @@ type SignedChatter interface {
 	ChatSession(proto.ChatSession)
 }
 
+// SignedCommander is the optional half of a Remote that takes a command
+// with signed message arguments (Command.Signed): the gateway checked each
+// signature against the player's message chain, and the engine relays a
+// message argument it names as signed player chat
+// (MessageArgument.resolveChatMessage).
+type SignedCommander interface {
+	SignedCommand(proto.Command)
+}
+
 // Remote is a hub-attached player, as the attach layer sees it.
 type Remote interface {
 	EID() int32
@@ -478,7 +487,11 @@ func session(c net.Conn, cfg Config) {
 			if remote != nil {
 				var cm proto.Command
 				if jsonUnmarshal(payload, &cm) == nil && cm.Cmd != "" {
-					remote.Command(cm.Cmd)
+					if sc, ok := remote.(SignedCommander); ok && len(cm.Signed) > 0 {
+						sc.SignedCommand(cm) // signed message arguments ride with the line
+					} else {
+						remote.Command(cm.Cmd)
+					}
 				}
 			}
 		case proto.MsgUseItem:
