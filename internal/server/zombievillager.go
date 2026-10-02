@@ -87,11 +87,11 @@ func (h *hub) zombieKilledVillager(players map[int32]*tracked, m, v *mob) {
 
 // mobKnockFrom shoves a mob away from a point (a bite's knockback).
 func (h *hub) mobKnockFrom(players map[int32]*tracked, v *mob, fx, fz float64) {
-	if dx, dz := v.x-fx, v.z-fz; dx != 0 || dz != 0 {
+	if dx, dz := v.x-fx, v.z-fz; (dx != 0 || dz != 0) && v.kbScale() > 0 {
+		// LivingEntity.knockback(0.4): half what it had, less the shove.
 		d := math.Hypot(dx, dz)
-		v.vx, v.vz = dx/d*0.4, dz/d*0.4
-		v.kb = 2
-		h.mobKnockVelocity(players, v)
+		kb := 0.4 * v.kbScale()
+		h.mobShove(players, v, 0.5, dx/d*kb, dz/d*kb, 0, 2)
 	}
 }
 

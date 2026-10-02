@@ -385,10 +385,9 @@ func (h *hub) reelBobber(players map[int32]*tracked, t *tracked, b *bobberEntity
 	switch {
 	case b.state == bobberHooked && h.mobs[b.hooked] != nil:
 		m := h.mobs[b.hooked]
-		if s := m.kbScale(); s > 0 { // vanilla pullEntity: velocity += (owner − hook) · 0.1
-			m.vx, m.vz, m.kb, m.reroute = (t.x-m.x)*0.1*s, (t.z-m.z)*0.1*s, 3, 0
-			h.mobKnockVelocity(players, m)
-		}
+		// FishingHook.pullEntity: deltaMovement += (owner − hook) · 0.1, per
+		// tick, whatever the mob's knockback resistance.
+		h.mobShove(players, m, 1, (t.x-b.x)*0.1, (t.z-b.z)*0.1, 0, 3)
 		h.toTracking(players, b.eid, b.dim, b.x, b.z, entityStatus(b.eid, entityStatusReelIn)) // FISHING_ROD_REEL_IN
 		wear = 5
 	case b.nibble > 0:

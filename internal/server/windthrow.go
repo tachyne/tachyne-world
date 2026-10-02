@@ -43,7 +43,8 @@ func (h *hub) windChargeShoveMob(players map[int32]*tracked, a *arrowEntity, m *
 	if d < 1e-6 || m.kbScale() <= 0 {
 		return
 	}
-	kbp := 0.5 * m.kbScale()
-	m.vx, m.vz, m.kb, m.reroute = a.vx/d*kbp, a.vz/d*kbp, 3, 0
-	h.mobKnockVelocity(players, m)
+	// The hit's default knockback: 0.4 along the charge's flight
+	// (calculateHorizontalHurtKnockbackDirection), halving what it had.
+	kbp := 0.4 * m.kbScale()
+	h.mobShove(players, m, 0.5, a.vx/d*kbp, a.vz/d*kbp, 0, 3)
 }
