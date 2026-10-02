@@ -65,8 +65,14 @@ func (s *Server) enablePlugins() error {
 		host.enabled = append(host.enabled, &enabledPlugin{p: p, ctx: ctx})
 		log.Printf("plugin %s enabled", p.Name())
 	}
-	if len(host.cmds) > 0 { // rebuild the tab-completion tree with plugin commands
-		s.commandTree = buildCommandTree(host.allCommandNames()...)
+	if len(host.cmds) > 0 { // rebuild the tab-completion trees with plugin commands
+		opOnly := map[string]bool{}
+		for name, c := range host.cmds {
+			if c.OpOnly {
+				opOnly[name] = true
+			}
+		}
+		s.setTreeCommands(host.allCommandNames(), opOnly)
 	}
 	return nil
 }

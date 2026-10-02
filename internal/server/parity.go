@@ -32,24 +32,41 @@ var commandNames = []string{
 	"function", "return", "schedule", "reload", "datapack",
 }
 
-// commandTreeBody is the Commands packet body sent at join.
-var commandTreeBody = buildCommandTree()
-
-// buildCommandTree composes the tree: the modelled grammars (commandtree.go)
-// for the commands worth describing, and a literal with one greedy argument
-// for everything else, including the plugin-registered names passed in.
+// buildCommandTree composes the whole tree, every command in it (what a
+// level-4 operator is sent).
 func buildCommandTree(extra ...string) []byte {
-	roots := modelledCommands()
+	return buildCommandTreeFor(permOwners, nil, extra...)
+}
+
+// buildCommandTreeFor composes the tree a permission level is sent: the
+// modelled grammars (commandtree.go) for the commands worth describing, and
+// a literal with one greedy argument for everything else, including the
+// plugin-registered names passed in — each only when the level may run it
+// (Commands.fillUsableCommands: a root node whose requires() the source
+// fails is left out). opOnly names the plugin commands for operators.
+func buildCommandTreeFor(level int, opOnly map[string]bool, extra ...string) []byte {
+	usable := func(name string) bool {
+		if need, ok := cmdPermission[name]; ok {
+			return level >= need
+		}
+		return !opOnly[name] || level >= permGamemasters
+	}
+	var roots []cmdNode
 	have := map[string]bool{}
-	for _, n := range roots {
+	for _, n := range modelledCommands() {
 		have[n.lit] = true
+		if usable(n.lit) {
+			roots = append(roots, n)
+		}
 	}
 	for _, name := range append(append([]string{}, commandNames...), extra...) {
 		if have[name] {
 			continue
 		}
 		have[name] = true
-		roots = append(roots, lit(name, true, argGreedy("args", true)))
+		if usable(name) {
+			roots = append(roots, lit(name, true, argGreedy("args", true)))
+		}
 	}
 	return encodeCommandTree(roots)
 }
