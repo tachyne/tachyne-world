@@ -43,11 +43,11 @@ import (
 //
 // Functions run through a seam the function runtime binds
 // (execRunFunctions and the rest); unbound, `if function` finds no
-// function. Not here: `if data`, `if slots`, and storing into block,
-// entity or storage NBT, which need /data's NBT access; item predicates
-// past a plain item id or `*`; and local (^) coordinates inside the
-// command after `run` measured from the eyes of an `anchored eyes` source
-// (the chain's own coordinates honour the anchor).
+// function. The NBT forms (`store … block|entity|storage`, `if data`) and
+// the slot conditions (`if items`, `if slots`) live in executedata.go, the
+// slot sources in slotsource.go and the item predicates in itempredicate.go.
+// Local (^) coordinates in the command after `run` are measured from the
+// source's anchor, its eyes after `anchored eyes` (execLocalEyes).
 
 // execForkLimit is the max_command_fork_count game rule's default.
 const execForkLimit = 65536
@@ -67,9 +67,6 @@ const (
 )
 
 const execIncomplete = "Unknown or incomplete command. See below for error"
-
-// execNeedsData refuses the NBT forms until /data's NBT access lands.
-const execNeedsData = "execute can't read or write block, entity or storage data yet: that needs /data, which this server does not have"
 
 // execCtx rides a stand-in player: who it answers to, who its executor
 // is, and what its command said and returned.
@@ -154,6 +151,13 @@ type execStore struct {
 	obj     string   // …and the objective
 	bossbar string   // a bossbar id ("" for a score)
 	max     bool     // the bossbar's max (else its value)
+
+	// A block, entity or storage store (executedata.go): the accessor,
+	// the path, the tag type and the scale.
+	data    *dataAccessor
+	path    *nbtPath
+	numType string
+	scale   float64
 }
 
 // execSource is one CommandSourceStack.
@@ -162,7 +166,8 @@ type execSource struct {
 	x, y, z    float64
 	yaw, pitch float32
 	dim        int
-	eyes       bool // anchored eyes
+	eyes       bool    // anchored eyes
+	eyeY       float64 // with eyes, how far above the position the executor's eyes are (set with display)
 	stores     []execStore
 
 	// Filled once the chain is done: the name the stand-in shows and the
@@ -239,18 +244,16 @@ func parseExecute(args []string) ([]execStep, string, string) {
 			switch next(1) {
 			case "score", "bossbar":
 				ok = take(4)
-			case "block", "entity", "storage":
-				return nil, "", execNeedsData
+			case "block": // result|success block <x y z> <path> <type> <scale>
+				ok = take(8)
+			case "entity", "storage": // result|success entity|storage <which> <path> <type> <scale>
+				ok = take(6)
 			default:
 				ok = false
 			}
 		case "if", "unless":
 			st.fork = true
-			n := execConditionArity(args[i:])
-			if next(0) == "data" {
-				return nil, "", execNeedsData
-			}
-			ok = take(n)
+			ok = take(execConditionArity(args[i:]))
 		default:
 			ok = false
 		}
@@ -293,6 +296,11 @@ func execConditionArity(a []string) int {
 			return 7
 		}
 		return 5
+	case "data", "slots": // data|slots block <x y z> <path|slots>, entity|storage <which> <path|slots>
+		if len(a) > 1 && a[1] == "block" {
+			return 6
+		}
+		return 4
 	}
 	return -1
 }
@@ -388,8 +396,9 @@ func (s *Server) cmdExecute(p *player, args []string) {
 	}
 	for i := range sources {
 		src := &sources[i]
+		line := execLocalEyes(run, src)
 		ctx, ok := s.runStandIn(p, src, forked, level, true, func(proxy *player) {
-			s.runAsSource(proxy, run, src.selfRef)
+			s.runAsSource(proxy, line, src.selfRef)
 		})
 		if !ok {
 			return
@@ -770,11 +779,14 @@ func (h *hub) evalSegment(players map[int32]*tracked, origin *player, first bool
 	}
 	for i := range sources {
 		s := &sources[i]
-		s.display, s.selfRef = sourceName(origin), "@s"
+		s.display, s.selfRef, s.eyeY = sourceName(origin), "@s", 0
 		if en, ok := h.execSelf(players, s.self); ok {
 			s.display = en.name()
 			if en.t != nil {
 				s.selfRef = en.t.p.name
+			}
+			if s.eyes {
+				s.eyeY = entityEye(en)
 			}
 		}
 	}
@@ -828,6 +840,10 @@ func (h *hub) applyStores(players map[int32]*tracked, stores []execStore, succes
 			if success {
 				v = 1
 			}
+		}
+		if st.data != nil { // storeData
+			h.execStoreData(players, st, v)
+			continue
 		}
 		if st.bossbar != "" { // CustomBossEvent.setValue / setMax
 			b := h.rules.Bossbars[st.bossbar]
@@ -1270,6 +1286,12 @@ func (h *hub) execRelation(players map[int32]*tracked, rel string, en cmdEntity)
 func (h *hub) execStoreStep(players map[int32]*tracked, s *execSource, a []string) ([]execSource, string) {
 	st := execStore{result: a[0] == "result"}
 	switch a[1] {
+	case "block", "entity", "storage":
+		ds, msg := h.execStoreDataStep(players, s, a)
+		if msg != "" {
+			return nil, msg
+		}
+		st = ds
 	case "score":
 		var holders []string
 		h.execWith(players, s, func(from *tracked) { holders = h.sbHolders(players, from.p.eid, a[2]) })
@@ -1297,7 +1319,7 @@ func (h *hub) execStoreStep(players map[int32]*tracked, s *execSource, a []strin
 		}
 		st.bossbar = id
 	default:
-		return nil, execNeedsData
+		return nil, execIncomplete
 	}
 	ns := *s
 	ns.stores = append(append([]execStore(nil), s.stores...), st)
@@ -1340,10 +1362,8 @@ func (h *hub) execTest(players map[int32]*tracked, st execStep, s *execSource) (
 		if msg != "" {
 			return false, 0, false, msg
 		}
-		if strings.HasPrefix(a[4], "#") {
-			return false, 0, false, fmt.Sprintf("Can't find tag '%s' of type 'minecraft:worldgen/biome'", nsID(a[4][1:]))
-		}
-		return nsID(w.BiomeAt3D(pos.x, pos.y, pos.z)) == nsID(a[4]), 0, false, ""
+		in, msg := execBiomeTest(w.BiomeAt3D(pos.x, pos.y, pos.z), a[4])
+		return in, 0, false, msg
 	case "dimension":
 		dim, ok := parseDimension(a[1])
 		if !ok {
@@ -1369,6 +1389,12 @@ func (h *hub) execTest(players map[int32]*tracked, st execStep, s *execSource) (
 		return false, 0, false, "Unknown function " + nsID(a[1])
 	case "items":
 		n, msg := h.execCountItems(players, s, a[1:])
+		return n > 0, n, true, msg
+	case "slots":
+		n, msg := h.execCountSlots(players, s, a[1:])
+		return n > 0, n, true, msg
+	case "data":
+		n, msg := h.execDataTest(players, s, a[1:])
 		return n > 0, n, true, msg
 	case "stopwatch":
 		id, ok := parseResourceID(a[1])
@@ -1507,84 +1533,4 @@ func (h *hub) execBlocks(s *execSource, startArg, endArg, destArg []string, mode
 		}
 	}
 	return true, count, ""
-}
-
-// execCountItems is `if items entity <targets>|block <pos> <slots>
-// <predicate>`: the items in the slots the predicate matches, counted.
-// Only players' slots are modelled among entities.
-func (h *hub) execCountItems(players map[int32]*tracked, s *execSource, a []string) (int, string) {
-	var targets []itemTarget
-	var rest []string
-	switch a[0] {
-	case "entity":
-		ens, msg := h.execSelect(players, s, a[1])
-		if msg != "" {
-			return 0, msg
-		}
-		if len(ens) == 0 {
-			return 0, "No entity was found"
-		}
-		for _, en := range ens {
-			if en.t != nil {
-				targets = append(targets, h.playerItemTarget(en.t))
-			}
-		}
-		rest = a[2:]
-	case "block":
-		pos, msg := h.execLoadedPos(s, a[1:4])
-		if msg != "" {
-			return 0, msg
-		}
-		tg, ok := h.blockItemTarget(s.dim, pos)
-		if !ok {
-			return 0, fmt.Sprintf("Source position %d, %d, %d is not a container", pos.x, pos.y, pos.z)
-		}
-		targets = append(targets, tg)
-		rest = a[4:]
-	default:
-		return 0, execIncomplete
-	}
-	if len(rest) != 2 {
-		return 0, execIncomplete
-	}
-	ids, ok := slotRanges[rest[0]]
-	if !ok {
-		return 0, fmt.Sprintf("Unknown slot '%s'", rest[0])
-	}
-	match, msg := parseItemPredicate(rest[1])
-	if msg != "" {
-		return 0, msg
-	}
-	n := 0
-	for _, tg := range targets {
-		for _, sl := range tg.slots(ids) {
-			if st := sl.get(); st.item != 0 && st.count > 0 && match(st) {
-				n += st.count
-			}
-		}
-	}
-	return n, ""
-}
-
-// parseItemPredicate is ItemPredicateArgument for what the engine can
-// test: `*` or an item id. Tags and component predicates are refused.
-func parseItemPredicate(arg string) (func(invStack) bool, string) {
-	base, comps := arg, ""
-	if i := strings.IndexByte(arg, '['); i >= 0 {
-		base, comps = arg[:i], arg[i:]
-	}
-	if comps != "" && comps != "[]" {
-		return nil, "Item predicate components can't be tested yet: " + comps
-	}
-	if base == "*" {
-		return func(invStack) bool { return true }, ""
-	}
-	if tag, ok := strings.CutPrefix(base, "#"); ok {
-		return nil, fmt.Sprintf("Unknown item tag '%s'", nsID(tag))
-	}
-	id, ok := itemByName[strings.TrimPrefix(base, "minecraft:")]
-	if !ok {
-		return nil, fmt.Sprintf("Unknown item '%s'", nsID(base))
-	}
-	return func(st invStack) bool { return st.item == id }, ""
 }
