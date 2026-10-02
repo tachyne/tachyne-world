@@ -157,7 +157,7 @@ func (g *Generator) PlaceJigsawPieces(pool, target string, x, y, z, maxDepth int
 
 // PlaceStructureNames are the structures PlaceStructurePieces can start.
 var PlaceStructureNames = func() []string {
-	out := []string{"igloo", "pillager_outpost", "ancient_city", "bastion_remnant", "trail_ruins", "trial_chambers"}
+	out := []string{"igloo", "pillager_outpost", "ancient_city", "bastion_remnant", "trail_ruins", "trial_chambers", "end_city"}
 	for _, v := range []string{"desert", "plains", "savanna", "snowy", "taiga"} {
 		out = append(out, "village_"+v)
 	}
@@ -199,6 +199,22 @@ func (g *Generator) PlaceStructurePieces(name string, x, z int) ([]PlacedPiece, 
 	case name == "trial_chambers":
 		y := -40 + int(hash01(g.seed, bx, bz, 0x7C03)*20) // uniform in [-40,-20]
 		p = g.AssembleTrialChamber(TrialChamber{X: bx, Y: y, Z: bz, Exists: true})
+	case name == "end_city":
+		// EndCityStructure: the lowest of the start's corners (five blocks
+		// out), turned at random; the outer islands' own surface in the End.
+		y := 1 << 30
+		for _, d := range [4][2]int{{0, 0}, {5, 0}, {0, 5}, {5, 5}} {
+			top := g.Height(bx+7+d[0], bz+7+d[1])
+			if g.end {
+				t, ok := g.endSurface(bx+7+d[0], bz+7+d[1])
+				if !ok {
+					return nil, false
+				}
+				top = t
+			}
+			y = min(y, top)
+		}
+		p = g.AssembleEndCity(EndCity{X: bx + 7, Y: y + 1, Z: bz + 7, Rot: int(hash01(g.seed, bx, bz, 0xEC03) * 4), Exists: true})
 	case strings.HasPrefix(name, "abandoned_camp_"):
 		biome := strings.TrimPrefix(name, "abandoned_camp_")
 		if !campBiomes[biome] {

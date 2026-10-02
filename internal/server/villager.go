@@ -131,13 +131,19 @@ func (h *hub) chunkInView(players map[int32]*tracked, dim int, cx, cz int32) boo
 // own spawn rolls (a cat's coat by the biome and the moon, a horse's coat,
 // a sheep's fleece, a farm animal's climate variant, a zombie's equipment).
 func (h *hub) spawnVillageMob(players map[int32]*tracked, v worldgen.Village, vm worldgen.VillageMob) {
+	h.spawnVillageMobIn(players, dimOverworld, v, vm)
+}
+
+// spawnVillageMobIn is spawnVillageMob in a dimension (/place structure
+// places a structure's entities wherever it is run).
+func (h *hub) spawnVillageMobIn(players map[int32]*tracked, dim int, v worldgen.Village, vm worldgen.VillageMob) {
 	etype, ok := entityByName[vm.Type]
 	if !ok {
 		return
 	}
 	switch vm.Type {
 	case "villager":
-		h.spawnTemplateVillager(players, v, vm)
+		h.spawnTemplateVillager(players, dim, v, vm)
 		return
 	case "armor_stand":
 		return // not a mob: the taiga armourer's stand is a block-entity stand-in here
@@ -145,13 +151,13 @@ func (h *hub) spawnVillageMob(players map[int32]*tracked, v worldgen.Village, vm
 	var m *mob
 	switch vm.Type {
 	case "zombie_villager":
-		m = h.spawnHostileYIn(players, etype, dimOverworld, vm.X, vm.Y, vm.Z)
+		m = h.spawnHostileYIn(players, etype, dim, vm.X, vm.Y, vm.Z)
 		if m != nil {
 			h.setTemplateVillagerData(m, vm)
 			h.sendVillagerData(players, m)
 		}
 	case "iron_golem":
-		m = h.spawnMobIn(players, etype, dimOverworld, vm.X, vm.Y, vm.Z)
+		m = h.spawnMobIn(players, etype, dim, vm.X, vm.Y, vm.Z)
 		if m != nil { // the village's own golem (PlayerCreated false)
 			m.health = 100
 			m.setKBResist(1) // IronGolem KNOCKBACK_RESISTANCE
@@ -159,7 +165,7 @@ func (h *hub) spawnVillageMob(players map[int32]*tracked, v worldgen.Village, vm
 			m.home = blockPos{v.X, v.Y, v.Z}
 		}
 	default:
-		m = h.spawnSpecies(players, etype, dimOverworld, vm.X, vm.Y, vm.Z)
+		m = h.spawnSpecies(players, etype, dim, vm.X, vm.Y, vm.Z)
 		if m != nil && vm.Age < 0 {
 			m.baby, m.growLeft = true, -vm.Age
 			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
@@ -194,8 +200,8 @@ func (h *hub) setTemplateVillagerData(m *mob, vm worldgen.VillageMob) {
 // villagers piece) as its template has it: unemployed, a nitwit, or a baby.
 // Nothing is handed to it: like vanilla's brain it claims a bed, a
 // workstation and a meeting bell itself (acquirepoi.go).
-func (h *hub) spawnTemplateVillager(players map[int32]*tracked, v worldgen.Village, vm worldgen.VillageMob) {
-	m := h.spawnMobIn(players, entityVillager, dimOverworld, vm.X, vm.Y, vm.Z)
+func (h *hub) spawnTemplateVillager(players map[int32]*tracked, dim int, v worldgen.Village, vm worldgen.VillageMob) {
+	m := h.spawnMobIn(players, entityVillager, dim, vm.X, vm.Y, vm.Z)
 	if m == nil {
 		return // plugin-cancelled spawn
 	}

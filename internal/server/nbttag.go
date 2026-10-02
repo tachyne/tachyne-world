@@ -633,3 +633,25 @@ func tagUUID(u [16]byte) *nbtList {
 	}
 	return l
 }
+
+// customDataSave is Entity.customData as a store keeps it: typed SNBT ("" for
+// none), which parseSNBTTyped reads back tag for tag.
+func customDataSave(d map[string]any) string {
+	if len(d) == 0 {
+		return ""
+	}
+	return tagString(d)
+}
+
+// customDataLoad is customDataSave's other half; a row that does not read
+// back as a compound loads as none.
+func customDataLoad(s string) map[string]any {
+	if s == "" {
+		return nil
+	}
+	v, err := parseSNBTTyped(s)
+	if m, ok := v.(map[string]any); err == nil && ok && len(m) > 0 {
+		return m
+	}
+	return nil
+}

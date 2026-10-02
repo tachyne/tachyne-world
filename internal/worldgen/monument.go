@@ -127,6 +127,11 @@ func (g *Generator) stampMonument(ch *Chunk, cx, cz int32) {
 	if !m.Exists {
 		return
 	}
+	g.stampMonumentAt(ch, cx, cz, m)
+}
+
+// stampMonumentAt stamps the part of one monument that lies in this chunk.
+func (g *Generator) stampMonumentAt(ch *Chunk, cx, cz int32, m Monument) {
 	s := &monStamp{
 		ch: ch, baseX: int(cx) * 16, baseZ: int(cz) * 16,
 		ox: m.X - monumentHalf, oy: m.Y, oz: m.Z - monumentHalf,

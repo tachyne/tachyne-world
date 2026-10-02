@@ -64,14 +64,20 @@ func (g *Generator) ShipwreckIn(wx, wz int) Shipwreck {
 		return Shipwreck{}
 	}
 	rot := int(hash01(g.seed, ox, oz, 0x5A04)*4) & 3
-	s := Shipwreck{X: x, Y: floor, Z: z, Tmpl: name, Rot: rot, Exists: true}
+	return shipwreckAt(t, x, floor, z, name, rot)
+}
+
+// shipwreckAt is a wreck of a template at an origin and a rotation, its
+// chests carrying the tables the template's markers set.
+func shipwreckAt(t *Template, x, y, z int, name string, rot int) Shipwreck {
+	s := Shipwreck{X: x, Y: y, Z: z, Tmpl: name, Rot: rot, Exists: true}
 	for i, c := range t.Chests {
 		rx, ry, rz := t.rotatePos(c[0], c[1], c[2], rot)
 		tbl := "chests/shipwreck_supply"
 		if i < len(t.ChestLoot) && t.ChestLoot[i] != "" {
 			tbl = t.ChestLoot[i]
 		}
-		s.Chests = append(s.Chests, ShipChest{x + rx, floor + ry, z + rz, tbl})
+		s.Chests = append(s.Chests, ShipChest{x + rx, y + ry, z + rz, tbl})
 	}
 	return s
 }
@@ -148,16 +154,7 @@ func (g *Generator) BeachedShipwreckIn(wx, wz int) Shipwreck {
 			}
 		}
 		y := low - t.Size[1]/2 - int(hash01(g.seed, ox, oz, 0x5B05)*3)
-		s := Shipwreck{X: x, Y: y, Z: z, Tmpl: name, Rot: rot, Exists: true}
-		for j, c := range t.Chests {
-			rx, ry, rz := t.rotatePos(c[0], c[1], c[2], rot)
-			tbl := "chests/shipwreck_supply"
-			if j < len(t.ChestLoot) && t.ChestLoot[j] != "" {
-				tbl = t.ChestLoot[j]
-			}
-			s.Chests = append(s.Chests, ShipChest{x + rx, y + ry, z + rz, tbl})
-		}
-		return s
+		return shipwreckAt(t, x, y, z, name, rot)
 	}
 	return Shipwreck{}
 }

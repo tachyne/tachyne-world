@@ -76,6 +76,13 @@ func (g *Generator) ruinedPortalAt(ox, oz int) RuinedPortal {
 	}
 	x := ox + 16 + int(hash01(g.seed, ox, oz, 0x9F02)*float64(portalCell-32))
 	z := oz + 16 + int(hash01(g.seed, ox, oz, 0x9F03)*float64(portalCell-32))
+	return g.ruinedPortalFrom(ox, oz, x, z, nil)
+}
+
+// ruinedPortalFrom lays a portal out at (x,z), its rolls keyed on (ox,oz):
+// the setups are the biome's, or forced (/place structure names the
+// variant, and a forced portal is not refused over water).
+func (g *Generator) ruinedPortalFrom(ox, oz, x, z int, forced []portalSetup) RuinedPortal {
 	name := ruinedPortalStd[int(hash01(g.seed, ox, oz, 0x9F04)*float64(len(ruinedPortalStd)))]
 	if hash01(g.seed, ox, oz, 0x9F05) < 0.05 { // rare giant portal
 		name = ruinedPortalGiant[int(hash01(g.seed, ox, oz, 0x9F06)*float64(len(ruinedPortalGiant)))]
@@ -101,8 +108,11 @@ func (g *Generator) ruinedPortalAt(ox, oz int) RuinedPortal {
 	centreX, centreZ := minX+(maxX-minX+1)/2, minZ+(maxZ-minZ+1)/2
 	y := g.Height(centreX, centreZ)
 	setups := portalSetupsFor(g.BiomeName(centreX, centreZ))
+	if forced != nil {
+		setups = forced
+	}
 	setup := pickPortalSetup(setups, hash01(g.seed, ox, oz, 0x9F09))
-	if y <= SeaLevel && setup.placement != plOceanFloor { // only the ocean's and the swamp's stand under water
+	if forced == nil && y <= SeaLevel && setup.placement != plOceanFloor { // only the ocean's and the swamp's stand under water
 		return RuinedPortal{}
 	}
 	// Vanilla mossiness → integrity in roughly [0.7, 0.9]: a moderately broken
@@ -168,6 +178,12 @@ func (g *Generator) RuinedPortalNetherIn(wx, wz int) RuinedPortal {
 	}
 	x := ox + 16 + int(hash01(g.seed, ox, oz, 0x9F12)*float64(portalCell-32))
 	z := oz + 16 + int(hash01(g.seed, ox, oz, 0x9F13)*float64(portalCell-32))
+	return g.ruinedPortalNetherFrom(ox, oz, x, z)
+}
+
+// ruinedPortalNetherFrom lays the Nether variant out at (x,z), its rolls
+// keyed on (ox,oz).
+func (g *Generator) ruinedPortalNetherFrom(ox, oz, x, z int) RuinedPortal {
 	y, ok := g.netherFloorOK(x, z)
 	if !ok {
 		return RuinedPortal{}

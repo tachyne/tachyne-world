@@ -82,6 +82,16 @@ func (s *Server) cmdSummon(p *player, args []string) {
 			return
 		}
 		e.nbt = m
+		if _, has := m["data"]; has { // Entity.customData keeps its tag types
+			tv, err := parseSNBTTyped(strings.Join(rest, " "))
+			tm, _ := tv.(map[string]any)
+			d, isMap := tm["data"].(map[string]any)
+			if err != nil || !isMap {
+				p.tell("Invalid NBT: data must be a compound")
+				return
+			}
+			e.data = d
+		}
 	}
 	if !inSpawnableBounds(x, y, z) {
 		p.tell("Invalid position for summon")
@@ -107,7 +117,7 @@ var summonIgnoredNBT = keySet("id", "Pos")
 // tags, rotation and motion, LivingEntity's health, Mob's NoAI and
 // persistence.
 var summonMobNBT = keySet("CustomName", "CustomNameVisible", "NoAI", "Silent", "Invulnerable",
-	"PersistenceRequired", "Rotation", "Motion", "Tags", "Health")
+	"PersistenceRequired", "Rotation", "Motion", "Tags", "Health", "data")
 
 func keySet(keys ...string) map[string]bool {
 	m := make(map[string]bool, len(keys))
@@ -301,6 +311,9 @@ func (h *hub) summonAt(players map[int32]*tracked, e evSummon) {
 			return
 		}
 		h.applySummonNBT(players, m, e.nbt)
+		if len(e.data) > 0 {
+			m.custom = tagCopy(e.data).(map[string]any)
+		}
 		if hasRot {
 			m.yaw, m.headYaw = yaw, yaw
 			h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, yaw, pitch, false))

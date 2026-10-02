@@ -83,6 +83,8 @@ type savedInv struct {
 
 	// Scoreboard tags (/tag): vanilla keeps them in the player's data.
 	Tags []string `json:"tags,omitempty"`
+	// Data is Entity.customData, the "data" compound, as typed SNBT.
+	Data string `json:"data,omitempty"`
 	// Attributes: the base values and permanent modifiers (AttributeMap.save).
 	Attributes []savedAttribute `json:"attributes,omitempty"`
 	// LocatorBarIcon is the icon /waypoint gave the player's waypoint.
@@ -236,6 +238,7 @@ func (s *invStore) loadInto(t *tracked, name string) {
 	t.wardenWarn, t.wardenCool, t.wardenSince = saved.WardenWarn, saved.WardenCool, saved.WardenSince
 	t.seenCredits = saved.SeenCredits
 	t.tags = tagSet(saved.Tags)
+	t.custom = customDataLoad(saved.Data)
 	restoreSavedEffects(t, saved.Effects)
 	t.shoulders = saved.Shoulders
 	restoreSavedAttributes(t, saved.Attributes)
@@ -302,7 +305,7 @@ func (s *invStore) record(name string, t *tracked) {
 	snap := &savedInv{Offhand: packStack(t.offhand),
 		XPLevel: int32(t.xpLevel), XPPoints: int32(t.xpPoints), EnchSeed: t.enchSeed,
 		WardenWarn: t.wardenWarn, WardenCool: t.wardenCool, WardenSince: t.wardenSince, SeenCredits: t.seenCredits,
-		Effects: savedEffectsOf(t), Tags: sortedTags(t.tags), Shoulders: t.shoulders, Attributes: savedAttributesOf(t),
+		Effects: savedEffectsOf(t), Tags: sortedTags(t.tags), Data: customDataSave(t.custom), Shoulders: t.shoulders, Attributes: savedAttributesOf(t),
 		LocatorBarIcon: t.wpIcon.save(),
 		X:              t.x, Y: t.y, Z: t.z, Yaw: t.yaw, Pitch: t.pitch, Dim: int32(t.dim), HasPos: true}
 	if old := s.m[name]; old != nil && old.HasDeath { // the death location outlives the loadout

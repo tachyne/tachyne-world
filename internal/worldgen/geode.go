@@ -92,7 +92,15 @@ func (g *Generator) planGeode(cx, cz int32) *geodePlan {
 	}
 	x0, z0 := ox+r.Intn(16), oz+r.Intn(16)
 	y0 := oreUniform(oreAboveBottom(6), oreAbs(30)).sample(r, g.Ceiling())
-	view := &owRegion{g: g, baseX: ox, baseZ: oz, cols: map[[2]int]column{}, capture: map[[3]int]uint32{}}
+	return g.geodeAt(r, cx, cz, x0, y0, z0, true, nil)
+}
+
+// geodeAt is GeodeFeature.place at (x0, y0, z0) on r's stream, against the
+// terrain: the plan of what it writes, or nil when it does not place. A
+// guarded geode (generation's) is also left out where a player built or dug.
+// under (nil: the terrain) is what the geode sees beneath its own writes.
+func (g *Generator) geodeAt(r TreeRNG, cx, cz int32, x0, y0, z0 int, guarded bool, under func(x, y, z int) uint32) *geodePlan {
+	view := &owRegion{g: g, baseX: int(cx) * 16, baseZ: int(cz) * 16, cols: map[[2]int]column{}, capture: map[[3]int]uint32{}, under: under}
 
 	numPoints := 3 + r.Intn(2) // distribution_points 3..4
 	adj := float64(numPoints) / geodeWallMax
@@ -210,7 +218,7 @@ func (g *Generator) planGeode(cx, cz int32) *geodePlan {
 			}
 		}
 	}
-	if len(p.cells) == 0 || g.touchedIn(p.x0, p.y0, p.z0, p.x1, p.y1, p.z1) {
+	if len(p.cells) == 0 || (guarded && g.touchedIn(p.x0, p.y0, p.z0, p.x1, p.y1, p.z1)) {
 		return nil // a player built or dug where it would stand
 	}
 	return p
