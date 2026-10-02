@@ -22,6 +22,15 @@ type PlacedPiece struct {
 	Pool            string    // the pool it was drawn from ("" for a start piece)
 	ax, ay, az      int       // where its connecting jigsaw landed (the source's target cell)
 	x1, y1, z1      int       // exclusive max corner (world)
+	// gld is PoolElementStructurePiece.groundLevelDelta: the piece's ground
+	// is OY+gld (the Beardifier's groundY). A start piece's is 1; a rigid
+	// child's is its source's less the connection's deltaY, so a rigid
+	// chain shares one ground; a terrain-matching child's is 1.
+	gld int
+	// junctions are the piece's JigsawJunctions: each connection's cell
+	// beside it and the ground there (x, ground y, z), which the Beardifier
+	// beards at 0.4.
+	junctions [][3]int
 }
 
 // jigsawSpot is a jigsaw whose target pool placed nothing — every template
@@ -179,7 +188,7 @@ func (g *Generator) assembleJigsawSpots(startPool string, sx, sy, sz int, prng *
 		sy = g.SurfaceWG(sx+sw/2, sz+sd/2) - 1
 	}
 	first := &PlacedPiece{Tmpl: start, OX: sx, OY: sy, OZ: sz, Rot: 0, Proc: sp.procFor(startLoc),
-		TerrainMatch: terrain && sp.terrainMatching(startLoc), x1: sx + sw, y1: sy + sh, z1: sz + sd}
+		TerrainMatch: terrain && sp.terrainMatching(startLoc), x1: sx + sw, y1: sy + sh, z1: sz + sd, gld: 1}
 	return g.growJigsaw(first, prng, maxDepth, terrain, alias, spots)
 }
 
@@ -308,6 +317,26 @@ func (g *Generator) growJigsaw(first *PlacedPiece, prng *jigsawRNG, maxDepth int
 					np := &PlacedPiece{Tmpl: cand, OX: ox, OY: oy, OZ: oz, Rot: rot, Proc: pool.procFor(loc),
 						TerrainMatch: terrain && pool.terrainMatching(loc), Pool: name,
 						ax: tx, ay: oy + cry, az: tz, x1: nx1, y1: ny1, z1: nz1}
+					// JigsawPlacement's ground level and junctions: the
+					// child's groundLevelDelta, and a JigsawJunction on
+					// each side at the ground of the connection.
+					srcLocalY := syp - cur.piece.OY
+					deltaY := srcLocalY - cry + dirDelta[sFront][1]
+					srcRigid, tgtRigid := !cur.piece.TerrainMatch, !np.TerrainMatch
+					np.gld = 1
+					if tgtRigid {
+						np.gld = cur.piece.gld - deltaY
+					}
+					junctionY := syp
+					switch {
+					case srcRigid:
+					case tgtRigid:
+						junctionY = oy + cry
+					default:
+						junctionY = g.SurfaceWG(sxp, szp) + deltaY/2
+					}
+					cur.piece.junctions = append(cur.piece.junctions, [3]int{tx, junctionY - srcLocalY + cur.piece.gld, tz})
+					np.junctions = append(np.junctions, [3]int{sxp, junctionY - cry + np.gld, szp})
 					pieces = append(pieces, np)
 					for _, nj := range cand.Jigsaws {
 						if nj.Pos == cj.Pos {
@@ -346,6 +375,13 @@ func (g *Generator) StampPieces(ch *Chunk, cx, cz int32, pieces []PlacedPiece) [
 // stampPiecesExcept is StampPieces leaving out the pieces skip names (by
 // index): the village lamps that gave way to decor features.
 func (g *Generator) stampPiecesExcept(ch *Chunk, cx, cz int32, pieces []PlacedPiece, skip map[int]bool) [][3]int {
+	return g.stampPiecesBeard(ch, cx, cz, pieces, skip, true)
+}
+
+// stampPiecesBeard is stampPiecesExcept with the old dirt beard under the
+// rigid pieces switched on or off: a structure the terrain adaptation
+// (terrainadapt.go) has met the ground for needs none.
+func (g *Generator) stampPiecesBeard(ch *Chunk, cx, cz int32, pieces []PlacedPiece, skip map[int]bool, beard bool) [][3]int {
 	var chests [][3]int
 	for i := range pieces {
 		if skip[i] {
@@ -370,7 +406,7 @@ func (g *Generator) stampPiecesExcept(ch *Chunk, cx, cz int32, pieces []PlacedPi
 		}
 		chests = append(chests, p.Tmpl.StampTemplateProcSus(ch, cx, cz, p.OX, p.OY, p.OZ, p.Rot, processors[p.Proc], p.SkipAir, sus)...)
 		g.stampJigsawFinals(ch, cx, cz, p)
-		if p.Beard {
+		if p.Beard && beard {
 			beardUnder(ch, cx, cz, p)
 		}
 	}

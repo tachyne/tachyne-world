@@ -170,8 +170,14 @@ func TestAdaptSkipsTouchedStructures(t *testing.T) {
 			}
 		}
 	})
+	own := map[fbox]bool{} // the outpost's own pieces (a village or camp nearby adapts on its own)
+	for _, p := range g.AssembleOutpost(op) {
+		if p.Tmpl != nil {
+			own[fbox{p.OX, p.OY, p.OZ, p.x1 - 1, p.y1 - 1, p.z1 - 1}] = true
+		}
+	}
 	for _, r := range g.adaptRigids(cx, cz) {
-		if r.kind == adaptBeardThin {
+		if r.kind == adaptBeardThin && own[r.box] {
 			t.Errorf("the touched outpost still adapts: %v", r.box)
 		}
 	}

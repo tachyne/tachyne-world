@@ -54,6 +54,9 @@ const (
 	oreTargetOres oreTarget = iota
 	// oreTargetBaseStone: #base_stone_overworld takes the one block.
 	oreTargetBaseStone
+	// oreTargetNetherrack: netherrack alone takes the one block (the
+	// nether's OreFeatures: BlockMatchTest(NETHERRACK)).
+	oreTargetNetherrack
 )
 
 // oreCfg is one configured ore feature.
@@ -69,6 +72,12 @@ type oreCfg struct {
 func (c oreCfg) replace(s uint32, y int) (uint32, bool) {
 	if c.target == oreTargetBaseStone {
 		if baseStoneOverworld(s) {
+			return c.stone, true
+		}
+		return 0, false
+	}
+	if c.target == oreTargetNetherrack {
+		if s == Netherrack {
 			return c.stone, true
 		}
 		return 0, false
@@ -93,6 +102,10 @@ func oreOf(stone, deepslate uint32, size int, discard float64) oreCfg {
 
 func blobOf(block uint32, size int) oreCfg {
 	return oreCfg{stone: block, deepslate: block, target: oreTargetBaseStone, size: size}
+}
+
+func netherrackOre(block uint32, size int) oreCfg {
+	return oreCfg{stone: block, deepslate: block, target: oreTargetNetherrack, size: size}
 }
 
 // oreAnchor is a VerticalAnchor: absolute, above_bottom or below_top.

@@ -110,6 +110,7 @@ func (g *Generator) generateNetherChunk(cx, cz int32) *Chunk {
 			}
 		}
 	}
+	g.adaptNetherTerrain(ch, cx, cz) // the fossils' beard_thin, before anything stamps (terrainadapt.go)
 	g.stampNetherPortals(ch, cx, cz) // ruined portals stand on the cavern floors too
 	g.stampBastions(ch, cx, cz)
 	g.stampFortress(ch, cx, cz)

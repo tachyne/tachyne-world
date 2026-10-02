@@ -25,38 +25,72 @@ func netherY(vanillaY int) int { return vanillaY - vanillaNetherLava + NetherLav
 // baseStoneNether is #base_stone_nether: what the ores replace.
 func baseStoneNether(s uint32) bool { return s == Netherrack || s == Basalt || s == Blackstone }
 
-// netherOreSpec is one nether ore: veins per chunk, blocks per vein, the
-// height band (engine y), and whether the band is a triangle.
+// netherOreSpec is one of the nether's scattered ores (ancient debris):
+// attempts per chunk, blocks per attempt, the height band (engine y), and
+// whether the band is a triangle.
 type netherOreSpec struct {
 	ore            uint32
 	attempts, size int
 	minY, maxY     int
 	triangle       bool
-	scattered      bool   // ScatteredOreFeature: single blocks, never beside air
-	biome          string // "" = every nether biome
 }
 
 func netherOreSpecs() []netherOreSpec {
 	top := NetherCeiling
 	return []netherOreSpec{
-		{Gravel, 2, 33, netherY(5), netherY(41), false, false, ""},
-		{Blackstone, 2, 33, netherY(5), netherY(31), false, false, ""},
-		{NetherGoldOre, 10, 10, MinY + 10, top - 10, false, false, ""},
-		{NetherQuartzOre, 16, 14, MinY + 10, top - 10, false, false, ""},
-		{NetherGoldOre, 20, 10, MinY + 10, top - 10, false, false, "minecraft:basalt_deltas"},   // ORE_GOLD_DELTAS
-		{NetherQuartzOre, 32, 14, MinY + 10, top - 10, false, false, "minecraft:basalt_deltas"}, // ORE_QUARTZ_DELTAS
-		{MagmaBlock, 4, 33, netherY(27), netherY(36), false, false, ""},
-		{SoulSand, 12, 12, MinY, netherY(31), false, false, ""},
-		{AncientDebris, 1, 3, netherY(8), netherY(24), true, true, ""}, // ORE_ANCIENT_DEBRIS_LARGE
-		{AncientDebris, 1, 2, MinY + 8, top - 8, false, true, ""},      // ORE_ANCIENT_DEBRIS_SMALL
+		{AncientDebris, 1, 3, netherY(8), netherY(24), true}, // ORE_ANCIENT_DEBRIS_LARGE
+		{AncientDebris, 1, 2, MinY + 8, top - 8, false},      // ORE_ANCIENT_DEBRIS_SMALL
 	}
 }
 
-// placeNetherOres stamps a chunk's nether veins, chunk-local (the overworld
-// ores are vanilla's OreFeature ellipsoids now; these are still walks).
+// The nether's blob ores: vanilla 26.3's step-7 placements, each an
+// OreFeature of its size replacing netherrack only (BlockMatchTest, no air
+// discard), with its count, height band and biome filter — ore_magma
+// everywhere, ore_soul_sand in the soul sand valley, gravel, blackstone,
+// gold and quartz everywhere but the basalt deltas, which list their own
+// richer gold and quartz instead. Placed through the overworld's oreBlob.
+var (
+	netherNotDeltas = biomeSet("nether_wastes", "soul_sand_valley", "crimson_forest", "warped_forest")
+	netherDeltas    = biomeSet("basalt_deltas")
+	netherOreBand   = oreUniform(oreAboveBottom(10), oreAbs(NetherCeiling-10)) // above_bottom 10 .. below_top 10
+
+	netherOrePlacements = []orePlacement{
+		{name: "ore_magma", cfg: netherrackOre(MagmaBlock, 33), count: 4,
+			height: oreUniform(oreAbs(netherY(27)), oreAbs(netherY(36))), salt: 0x4E_01},
+		{name: "ore_soul_sand", cfg: netherrackOre(SoulSand, 12), count: 12,
+			height: oreUniform(oreAboveBottom(0), oreAbs(netherY(31))), biomes: biomeSet("soul_sand_valley"), salt: 0x4E_02},
+		{name: "ore_gravel_nether", cfg: netherrackOre(Gravel, 33), count: 2,
+			height: oreUniform(oreAbs(netherY(5)), oreAbs(netherY(41))), biomes: netherNotDeltas, salt: 0x4E_03},
+		{name: "ore_blackstone", cfg: netherrackOre(Blackstone, 33), count: 2,
+			height: oreUniform(oreAbs(netherY(5)), oreAbs(netherY(31))), biomes: netherNotDeltas, salt: 0x4E_04},
+		{name: "ore_gold_nether", cfg: netherrackOre(NetherGoldOre, 10), count: 10, height: netherOreBand, biomes: netherNotDeltas, salt: 0x4E_05},
+		{name: "ore_quartz_nether", cfg: netherrackOre(NetherQuartzOre, 14), count: 16, height: netherOreBand, biomes: netherNotDeltas, salt: 0x4E_06},
+		{name: "ore_gold_deltas", cfg: netherrackOre(NetherGoldOre, 10), count: 20, height: netherOreBand, biomes: netherDeltas, salt: 0x4E_07},
+		{name: "ore_quartz_deltas", cfg: netherrackOre(NetherQuartzOre, 14), count: 32, height: netherOreBand, biomes: netherDeltas, salt: 0x4E_08},
+	}
+)
+
+// placeNetherOres runs the nether's ores into this chunk: the blob ores as
+// OreFeature ellipsoids from the 3×3 origin chunks, each origin's placement
+// on its own stream (as the overworld's, placeOres), a blob with a player's
+// build in its box left out; then ancient debris, scattered and never
+// beside air, chunk-local.
 func (g *Generator) placeNetherOres(ch *Chunk, cx, cz int32) {
+	// oreBlob's region: the chunk being written. The nether's ores have no
+	// air discard, so the region is never asked about a neighbour's cells.
+	reg := &owRegion{g: g, ch: ch, baseX: int(cx) * 16, baseZ: int(cz) * 16, cols: map[[2]int]column{}}
+	guard := g.newBuildIndex(cx, cz, 2)
+	top := MinY + len(ch.Sections)*16
+	for i := range netherOrePlacements {
+		p := &netherOrePlacements[i]
+		for dcx := int32(-1); dcx <= 1; dcx++ {
+			for dcz := int32(-1); dcz <= 1; dcz++ {
+				g.runNetherOrePlacement(reg, guard, p, int(cx+dcx)*16, int(cz+dcz)*16, top)
+			}
+		}
+	}
+
 	rng := rand.New(rand.NewSource(oreSeed(g.seed^0x4E7A, cx, cz)))
-	biome := g.netherBiome(int(cx)*16+8, int(cz)*16+8)
 	maxY := MinY + len(ch.Sections)*16 - 1
 	at := func(lx, y, lz int) uint32 {
 		if y < MinY || y > maxY {
@@ -65,9 +99,6 @@ func (g *Generator) placeNetherOres(ch *Chunk, cx, cz int32) {
 		return sectionBlockAt(ch, lx, y, lz)
 	}
 	for _, spec := range netherOreSpecs() {
-		if spec.biome != "" && spec.biome != biome {
-			continue
-		}
 		for a := 0; a < spec.attempts; a++ {
 			lx, lz := rng.Intn(16), rng.Intn(16)
 			span := spec.maxY - spec.minY + 1
@@ -76,49 +107,51 @@ func (g *Generator) placeNetherOres(ch *Chunk, cx, cz int32) {
 				y = spec.minY + (rng.Intn(span)+rng.Intn(span))/2
 			}
 			y = clampInt(y, MinY+1, maxY)
-			if spec.scattered { // ScatteredOreFeature: up to size blocks about the origin, none touching air
-				tries := rng.Intn(spec.size + 1)
-				for i := 0; i < tries; i++ {
-					d := i
-					if d > 7 {
-						d = 7
+			// ScatteredOreFeature: up to size blocks about the origin, none
+			// touching air.
+			tries := rng.Intn(spec.size + 1)
+			for i := 0; i < tries; i++ {
+				d := i
+				if d > 7 {
+					d = 7
+				}
+				off := func() int { return int(roundF((rng.Float32() - rng.Float32()) * float32(d))) }
+				px, py, pz := lx+off(), y+off(), lz+off()
+				if px < 0 || px > 15 || pz < 0 || pz > 15 || py <= MinY || py >= maxY || !baseStoneNether(at(px, py, pz)) {
+					continue
+				}
+				exposed := false
+				for _, o := range [6][3]int{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}} {
+					nx, nz := px+o[0], pz+o[2]
+					if nx < 0 || nx > 15 || nz < 0 || nz > 15 {
+						continue // the neighbour chunk's cells are unknown; assume rock
 					}
-					off := func() int { return int(roundF((rng.Float32() - rng.Float32()) * float32(d))) }
-					px, py, pz := lx+off(), y+off(), lz+off()
-					if px < 0 || px > 15 || pz < 0 || pz > 15 || py <= MinY || py >= maxY || !baseStoneNether(at(px, py, pz)) {
-						continue
-					}
-					exposed := false
-					for _, o := range [6][3]int{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}} {
-						nx, nz := px+o[0], pz+o[2]
-						if nx < 0 || nx > 15 || nz < 0 || nz > 15 {
-							continue // the neighbour chunk's cells are unknown; assume rock
-						}
-						if at(nx, py+o[1], nz) == Air {
-							exposed = true
-							break
-						}
-					}
-					if !exposed {
-						setSectionBlock(ch, px, py, pz, spec.ore, true)
+					if at(nx, py+o[1], nz) == Air {
+						exposed = true
+						break
 					}
 				}
-				continue
-			}
-			for i := 0; i < spec.size; i++ { // the engine's vein walk
-				if baseStoneNether(at(lx, y, lz)) {
-					setSectionBlock(ch, lx, y, lz, spec.ore, true)
-				}
-				switch rng.Intn(3) {
-				case 0:
-					lx = clampInt(lx+rng.Intn(3)-1, 0, 15)
-				case 1:
-					lz = clampInt(lz+rng.Intn(3)-1, 0, 15)
-				default:
-					y = clampInt(y+rng.Intn(3)-1, MinY+1, maxY)
+				if !exposed {
+					setSectionBlock(ch, px, py, pz, spec.ore, true)
 				}
 			}
 		}
+	}
+}
+
+// runNetherOrePlacement draws origin chunk (ox, oz)'s blobs of one nether
+// placement: count, in_square, the height band, then the biome filter at
+// the origin.
+func (g *Generator) runNetherOrePlacement(reg *owRegion, guard *buildIndex, p *orePlacement, ox, oz, top int) {
+	r := newTreeRNG(g.seed^p.salt, ox, oz)
+	for a := 0; a < p.count; a++ {
+		x, z := ox+r.Intn(16), oz+r.Intn(16)
+		y := p.height.sample(r, top)
+		if p.biomes != nil && !p.biomes[g.netherBiome(x, z)] {
+			continue
+		}
+		key := uint64(int64(ox))*0x9E3779B97F4A7C15 ^ uint64(int64(oz))*0xC2B2AE3D27D4EB4F ^ uint64(a)*0x165667B19E3779F9
+		oreBlob(reg, guard, p.cfg, r, x, y, z, top, g.seed^p.salt, key)
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"github.com/tachyne/tachyne-common/protocol"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Guardian + Elder Guardian behaviour, ported from Guardian.GuardianAttackGoal
@@ -250,12 +251,52 @@ func (h *hub) populateMonuments(players map[int32]*tracked) {
 				h.spawnHostileYIn(players, entityElderGuardian, dimOverworld, float64(mn.X)+off[0], cy, float64(mn.Z)+off[1])
 			}
 		}
-		for i := 0; i < 8; i++ {
+		if rooms := g.MonumentRooms(mn); len(rooms) > 0 {
+			// The eight in the rooms, spread over the plan's order, each in
+			// the room's water nearest its middle.
+			for i := 0; i < 8; i++ {
+				if p, ok := h.roomWater(rooms[i*len(rooms)/8%len(rooms)]); ok {
+					h.spawnHostileYIn(players, entityGuardian, dimOverworld, float64(p.x)+0.5, float64(p.y), float64(p.z)+0.5)
+				}
+			}
+			continue
+		}
+		for i := 0; i < 8; i++ { // a monument that keeps the old open hall
 			ox := float64((i%4)*3 - 4)
 			oz := float64((i/4)*6 - 3)
 			h.spawnHostileYIn(players, entityGuardian, dimOverworld, float64(mn.X)+ox, cy, float64(mn.Z)+oz)
 		}
 	}
+}
+
+// roomWater is the water cell of an overworld room box nearest its middle
+// (a guardian's IN_WATER spawn placement), searched outward ring by ring
+// at each height from the middle up; false when the room holds none.
+func (h *hub) roomWater(r [6]int) (blockPos, bool) {
+	cx, cy, cz := (r[0]+r[3])/2, (r[1]+r[4])/2, (r[2]+r[5])/2
+	var ys []int
+	for off := 0; off <= r[4]-r[1]; off++ { // the middle height, then one up, one down, …
+		for _, y := range [2]int{cy + off, cy - off} {
+			if y >= r[1] && y <= r[4] && (off > 0 || len(ys) == 0) {
+				ys = append(ys, y)
+			}
+		}
+	}
+	for _, y := range ys {
+		for rad := 0; rad <= max(r[3]-r[0], r[5]-r[2]); rad++ {
+			for x := cx - rad; x <= cx+rad; x++ {
+				for z := cz - rad; z <= cz+rad; z++ {
+					if max(abs(x-cx), abs(z-cz)) != rad || x < r[0] || x > r[3] || z < r[2] || z > r[5] {
+						continue
+					}
+					if worldgen.IsWater(h.world.At(x, y, z)) {
+						return blockPos{x, y, z}, true
+					}
+				}
+			}
+		}
+	}
+	return blockPos{}, false
 }
 
 // populateMansions seeds a woodland mansion's illagers (evokers, vindicators and
