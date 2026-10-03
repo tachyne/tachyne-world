@@ -23,7 +23,7 @@ const (
 
 	gameEventChangeGameMode = 3 // change game mode (value = mode)
 
-	viewRadius = 6 // chunk interest radius (broadcast culling + session Want cap)
+	viewRadius = 10 // chunk interest radius (broadcast culling + session Want cap): vanilla's view-distance default
 )
 
 // appendBlockEntities lists a chunk's block entities (beds, chests, signs, …) so
