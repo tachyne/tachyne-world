@@ -120,7 +120,7 @@ func (r *remotePlayer) Configured(c attachproto.Configured, welcome func() attac
 	p.setHubPos(p.x, p.z) // the chunk stream opens where they stand
 	r.x, r.y, r.z, r.gm = st.x, st.y, st.z, int32(st.gamemode)
 	r.emitEvNow(attachproto.Rejoin{Welcome: welcome()})
-	r.emitEvNow(attachproto.CommandTree{Data: r.s.commandTreeBytes()})
+	r.emitEvNow(attachproto.CommandTree{Data: r.s.commandTreeFor(r.s.opLevel(p.name))}) // the tree for its level
 	r.emitEvNow(abilitiesFor(st.gamemode))
 	r.emitEvNow(opLevelEvent(p.eid, r.s.opLevel(p.name)))
 	r.emitEvNow(teleportEv(p.x, p.y, p.z, p.yaw, p.pitch))
