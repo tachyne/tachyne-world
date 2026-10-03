@@ -312,7 +312,13 @@ func (w *vtWorld) buildTerrain(cx, cz int32) *Chunk {
 		}
 		return ch
 	}
-	nc := w.gen.fillChunk(ch, cx, cz, nil)
+	var beard vdSampler
+	if bs, ok := w.place.(VanillaBeards); ok {
+		if b := newVTBeardifier(bs.BeardsFor(cx, cz)); b != nil {
+			beard = b
+		}
+	}
+	nc := w.gen.fillChunk(ch, cx, cz, beard)
 	surfaceBiome := func(x, y, z int) string { return w.biomeAt(x, y, z, true) }
 	w.mat.buildSurface(ch, cx, cz, nc, surfaceBiome)
 	if w.carvers {

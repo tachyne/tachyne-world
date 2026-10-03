@@ -164,6 +164,41 @@ type VanillaPlacement interface {
 	Decorate(ch *Chunk, cx, cz int32)
 }
 
+// TerrainAdjustment is a structure's terrain_adaptation (the Beardifier's
+// kinds).
+type TerrainAdjustment uint8
+
+const (
+	AdjustNone TerrainAdjustment = iota
+	AdjustBury
+	AdjustBeardThin
+	AdjustBeardBox
+	AdjustEncapsulate
+)
+
+// VanillaBeardPiece is a structure piece the terrain shapes itself to
+// (Beardifier.Rigid): its bounding box (inclusive), its structure's
+// adjustment, and the ground level delta of a rigid jigsaw piece (0 for
+// any other piece).
+type VanillaBeardPiece struct {
+	MinX, MinY, MinZ, MaxX, MaxY, MaxZ int
+	Adjust                             TerrainAdjustment
+	GroundLevelDelta                   int
+}
+
+// VanillaJunction is a jigsaw junction the terrain is bearded to.
+type VanillaJunction struct{ X, GroundY, Z int }
+
+// VanillaBeards is what a placement pass that knows its structure starts
+// gives the noise stage (optional; checked with a type assertion): for a
+// chunk, the pieces and junctions Beardifier.forStructuresInChunk collects
+// — the pieces of every start with an adjustment that are within 12 blocks
+// of the chunk (rigid pool pieces and every non-pool piece), and the
+// junctions of its pool pieces within 12 of the chunk's columns.
+type VanillaBeards interface {
+	BeardsFor(cx, cz int32) ([]VanillaBeardPiece, []VanillaJunction)
+}
+
 // VanillaGenContext is what a vanilla part is built from.
 type VanillaGenContext struct {
 	Seed    int64
