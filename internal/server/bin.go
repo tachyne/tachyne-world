@@ -1281,12 +1281,15 @@ func brewCanPlace(b *bin, slot int, item int32) bool {
 	case 4:
 		return item == itemBlazePowder // #minecraft:brewing_fuel
 	}
-	isBottle := item == itemPotion || item == itemSplashPotion || item == itemLingerPotion || item == itemGlassBottle
+	isBottle := item == itemPotion || item == itemSplashPotion || item == itemLingerPotion || item == itemGlassBottle || packBrewInput(item)
 	return isBottle && (b.slots[slot].item == 0 || b.slots[slot].count == 0)
 }
 
 // brewIsIngredient: anything some mix starts from (PotionBrewing.isIngredient).
 func brewIsIngredient(item int32) bool {
+	if packBrewReagent(item) {
+		return true
+	}
 	if _, ok := brewContainerMixes[item]; ok {
 		return true
 	}

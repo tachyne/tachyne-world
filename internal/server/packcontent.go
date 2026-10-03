@@ -8,6 +8,8 @@ import (
 	"sync/atomic"
 
 	"github.com/tachyne/tachyne-world/internal/worldgen"
+
+	attachproto "github.com/tachyne/tachyne-common/attach"
 )
 
 // packContent is what a data pack load applies beyond functions, as
@@ -149,4 +151,36 @@ func (h *hub) applyPackContent(players map[int32]*tracked, pc *packContent) {
 	installPackContent(pc)
 	h.remapRecipeBooks(players, old, pc)
 	h.onPackRegistriesChanged(players, old, pc)
+	h.onPackRecipesChanged(players, old, pc)
+}
+
+// onPackRecipesChanged sends the clients the recipe data a load changed
+// (reloadResources' update_recipes): the stonecutter's rows and the
+// smithing table's item sets, to every Java session — a nil half is
+// vanilla's, which a load that drops a pack's recipes goes back to.
+func (h *hub) onPackRecipesChanged(players map[int32]*tracked, old, pc *packContent) {
+	before, after := packUpdateRecipes(old), packUpdateRecipes(pc)
+	b1, _ := json.Marshal(before)
+	b2, _ := json.Marshal(after)
+	if string(b1) == string(b2) {
+		return
+	}
+	upd := attachproto.UpdateRecipes{}
+	if after != nil {
+		upd = *after
+	}
+	for _, t := range players {
+		if !t.p.bedrock && t.p.exec == nil {
+			t.p.trySendEv(upd)
+		}
+	}
+	// A menu open on the old list is closed by the client's own recipe
+	// refresh; the engine forgets the selection so a take cannot cut by the
+	// old list's index.
+	for _, t := range players {
+		if t.winKind == winStonecut {
+			t.stoneSel = -1
+			h.sendStonecutWindow(t)
+		}
+	}
 }

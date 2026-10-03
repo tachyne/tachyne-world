@@ -38,7 +38,7 @@ func grid2(names ...string) []invStack {
 // shapeless recipe (an item tag of the pack's own among its ingredients)
 // crafted in the grid, a smelting recipe cooked in a furnace, a vanilla
 // crafting and a vanilla smelting recipe removed by files that cannot be
-// made, a stonecutting recipe listed as not applied, /recipe give for the
+// made, a special recipe listed as not applied, /recipe give for the
 // pack's ids, and a player's book carried across a reload that renumbers
 // the pack's entries — kept by name while the pack is disabled, and back
 // when it returns.
@@ -49,6 +49,7 @@ func TestDataPackRecipesApplyOnReload(t *testing.T) {
 		"data/test/recipe/glass_mix.json":                              `{"type":"minecraft:crafting_shapeless","ingredients":["minecraft:sand","#minecraft:planks","#test:gravelish"],"result":"minecraft:glass"}`,
 		"data/test/recipe/dirt_smelt.json":                             `{"type":"minecraft:smelting","ingredient":"minecraft:dirt","result":{"id":"minecraft:emerald"},"cookingtime":10,"experience":5,"category":"blocks"}`,
 		"data/test/recipe/cut.json":                                    `{"type":"minecraft:stonecutting","ingredient":"minecraft:dirt","result":{"id":"minecraft:diamond","count":2}}`,
+		"data/test/recipe/pot.json":                                    `{"type":"minecraft:crafting_decorated_pot","category":"misc"}`,
 		"data/minecraft/recipe/crafting_table.json":                    `{"type":"minecraft:crafting_shaped","pattern":["#"],"key":{"#":"minecraft:air"},"result":"minecraft:crafting_table"}`,
 		"data/minecraft/recipe/iron_ingot_from_smelting_raw_iron.json": `not json`,
 	})
@@ -109,7 +110,7 @@ func TestDataPackRecipesApplyOnReload(t *testing.T) {
 		"Unlocked 1 recipe(s) for alice",
 		"Unknown recipe: minecraft:crafting_table",
 		"Unknown recipe: test:cut",
-		"[file/fp (world)] also carries recipe (minecraft:stonecutting): this server does not apply that data",
+		"[file/fp (world)] also carries recipe (minecraft:crafting_decorated_pot): this server does not apply that data",
 	} {
 		if !hasLine(a, want) {
 			t.Errorf("missing %q in %q", want, a)

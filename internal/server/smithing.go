@@ -46,13 +46,18 @@ func (h *hub) openSmithing(t *tracked, x, y, z int) {
 // smithResult computes the current result: transform first, then trim.
 func (h *hub) smithResult(t *tracked) invStack {
 	tmpl, base, add := t.extraSlot, t.anvil[0], t.anvil[1]
-	if tmpl.item == 0 || tmpl.count <= 0 || base.item == 0 || base.count <= 0 ||
-		add.item == 0 || add.count <= 0 {
+	if base.item == 0 || base.count <= 0 {
+		return invStack{}
+	}
+	if res, ok := packSmithResult(tmpl, base, add); ok { // a data pack's recipe first
+		return res
+	}
+	if tmpl.item == 0 || tmpl.count <= 0 || add.item == 0 || add.count <= 0 {
 		return invStack{}
 	}
 	if tmpl.item == protocol.SmithingUpgradeTemplate {
 		out, ok := protocol.SmithingTransform[base.item]
-		if !ok || add.item != int32(itemByName["netherite_ingot"]) {
+		if !ok || add.item != int32(itemByName["netherite_ingot"]) || !vanillaSmithAllowed(tmpl.item, base.item, false) {
 			return invStack{}
 		}
 		res := base // components carried: dmg, ench, name, trim (vanilla)
@@ -62,7 +67,7 @@ func (h *hub) smithResult(t *tracked) invStack {
 	}
 	pat, isTrim := protocol.SmithingTrimTemplate[tmpl.item]
 	mat, isMat := protocol.SmithingTrimMaterial[add.item]
-	if !isTrim || !isMat || !smithTrimmable[base.item] {
+	if !isTrim || !isMat || !smithTrimmable[base.item] || !vanillaSmithAllowed(tmpl.item, base.item, true) {
 		return invStack{}
 	}
 	res := base

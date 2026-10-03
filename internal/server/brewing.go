@@ -228,7 +228,13 @@ func init() {
 // come first (gunpowder turns any potion into its splash form, whatever the
 // kind); then the kind mixes, which apply in any container.
 func brewOne(bottle invStack, ingredient int32) (invStack, bool) {
+	if out, ok := packBrewOne(bottle, ingredient); ok { // a data pack's recipe first
+		return out, true
+	}
 	if bottle.item != itemPotion && bottle.item != itemSplashPotion && bottle.item != itemLingerPotion {
+		return invStack{}, false
+	}
+	if !vanillaBrewAllowed(bottle, ingredient) {
 		return invStack{}, false
 	}
 	if to, ok := brewContainerMixes[ingredient][bottle.item]; ok {

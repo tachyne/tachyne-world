@@ -71,6 +71,10 @@ type Config struct {
 	// nil = the built-in data and the default three dimensions.
 	ConfigData func() *proto.ConfigData
 
+	// Recipes is the world's synchronized recipe data a Welcome carries
+	// (nil func or nil result: the gateway's own vanilla tables).
+	Recipes func() *proto.UpdateRecipes
+
 	// Status answers a Hello{Purpose:"status"} with the server-list roster.
 	// nil = report an empty server (solo/test).
 	Status func() proto.Status
@@ -350,6 +354,9 @@ func session(c net.Conn, cfg Config) {
 	welcome := mkWelcome()
 	if cfg.ConfigData != nil {
 		welcome.Config = cfg.ConfigData()
+	}
+	if cfg.Recipes != nil {
+		welcome.Recipes = cfg.Recipes()
 	}
 	send(frameJSON(proto.MsgWelcome, welcome))
 	preMu.Lock() // flush held frames; concurrent emits block until we're done

@@ -499,6 +499,8 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgRejoin, ev)
 	case attachproto.UpdateTags:
 		send(attachproto.MsgUpdateTags, ev)
+	case attachproto.UpdateRecipes:
+		send(attachproto.MsgUpdateRecipes, ev)
 	case attachproto.ClearDialog:
 		send(attachproto.MsgClearDialog, ev)
 	case attachproto.AdvTree:
