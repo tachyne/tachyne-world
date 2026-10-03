@@ -77,10 +77,10 @@ func TestNativeGeneratorUnchanged(t *testing.T) {
 	}
 }
 
-// A vanilla world through GenerateChunk: the chunk is the terrain the
-// surface test checks (filled, surfaced, carved), BlockAt and Height agree
-// with it, biomes come from the biome source, and the native world of the
-// same seed is not touched.
+// A vanilla world through GenerateChunk: its terrain is what the surface
+// test checks (filled, surfaced, carved), BlockAt and Height agree with it
+// (both read the terrain before features), biomes come from the biome
+// source, and the native world of the same seed is not touched.
 func TestVanillaGeneratorGenerates(t *testing.T) {
 	g := NewGenerator(1)
 	if err := g.SetGenerator(GeneratorVanilla, PresetNormal); err != nil {
@@ -89,7 +89,8 @@ func TestVanillaGeneratorGenerates(t *testing.T) {
 	if g.GeneratorMode() != GeneratorVanilla || g.CaveMode() != CavesVanilla {
 		t.Fatalf("mode %v caves %v", g.GeneratorMode(), g.CaveMode())
 	}
-	ch := g.GenerateChunk(0, 0)
+	full := g.GenerateChunk(0, 0)
+	ch := g.vw.terrainChunk(0, 0) // before features: what BlockAt and Height read
 	for x := 0; x < 16; x++ {
 		for z := 0; z < 16; z++ {
 			for y := MinY; y < 320; y += 7 {
@@ -111,7 +112,7 @@ func TestVanillaGeneratorGenerates(t *testing.T) {
 	if ch.getGen(0, MinY, 0) != Bedrock {
 		t.Error("no bedrock floor")
 	}
-	for _, b := range ch.Biomes {
+	for _, b := range full.Biomes {
 		if b == "" {
 			t.Fatal("a section has no biome")
 		}
