@@ -252,6 +252,11 @@ func parseExecute(args []string) ([]execStep, string, string) {
 				return nil, "", execNeedsData
 			}
 			ok = take(n)
+			if ok {
+				if msg := execConditionParseCheck(st.args); msg != "" {
+					return nil, "", msg
+				}
+			}
 		default:
 			ok = false
 		}
@@ -265,6 +270,27 @@ func parseExecute(args []string) ([]execStep, string, string) {
 		return nil, "", execIncomplete
 	}
 	return steps, "", ""
+}
+
+// execConditionParseCheck is the lookups a condition's arguments make
+// while the command is parsed, not run: ResourceOrTagArgument resolves a
+// biome tag and ResourceOrIdArgument a predicate (by id or inline) in
+// parse, so an unknown one fails the whole command even under a fork,
+// whose run-time failures are silent.
+func execConditionParseCheck(a []string) string {
+	switch a[0] {
+	case "biome":
+		if tag, ok := strings.CutPrefix(a[4], "#"); ok {
+			if _, found := biomeTagMembers(nsID(tag)); !found {
+				return fmt.Sprintf("Can't find tag '%s' of type 'minecraft:worldgen/biome'", nsID(tag))
+			}
+		}
+	case "predicate":
+		if _, msg := predicateFor(a[1]); msg != "" {
+			return msg
+		}
+	}
+	return ""
 }
 
 // execConditionArity is how many words a condition takes, its kind
