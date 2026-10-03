@@ -276,49 +276,41 @@ func vpFiddle(r int64) float64 {
 	return (u - 0.5) * 0.9
 }
 
-// vpHeightCache wraps a VanillaTerrain with a per-chunk cache of its two
-// WG heightmaps: the terrain computes a column's base height from the
-// noise each time it is asked, and placement asks for the same columns
-// over and over (every ore probes the columns round it, every chunk
-// replays its neighbours).
+// vpHeightCache wraps a VanillaTerrain with a cache of its two WG
+// heightmaps by column: the terrain computes a column's base height from
+// the noise each time it is asked, and placement asks for the same
+// columns over and over (every ore probes the columns round it, every
+// chunk replays its neighbours, every structure start reads its corners).
 type vpHeightCache struct {
 	VanillaTerrain
 	mu    sync.Mutex
-	cache map[[2]int32]*vpColHeights
-}
-
-type vpColHeights struct {
-	once         sync.Once
-	surface, sea [256]int16
+	cache map[[3]int32]int16
 }
 
 func newVPHeightCache(t VanillaTerrain) *vpHeightCache {
-	return &vpHeightCache{VanillaTerrain: t, cache: map[[2]int32]*vpColHeights{}}
+	return &vpHeightCache{VanillaTerrain: t, cache: map[[3]int32]int16{}}
 }
 
-// Height is the terrain's WG height, computed once per chunk.
+// Height is the terrain's WG height, computed once per column and kind.
 func (c *vpHeightCache) Height(kind HeightmapType, x, z int) int {
-	k := [2]int32{int32(x >> 4), int32(z >> 4)}
+	if kind == HeightOceanFloor {
+		kind = HeightOceanFloorWG
+	} else if kind != HeightOceanFloorWG {
+		kind = HeightWorldSurfaceWG
+	}
+	k := [3]int32{int32(x), int32(z), int32(kind)}
 	c.mu.Lock()
-	h := c.cache[k]
-	if h == nil {
-		if len(c.cache) >= 16384 {
-			c.cache = map[[2]int32]*vpColHeights{}
-		}
-		h = &vpColHeights{}
-		c.cache[k] = h
-	}
+	h, ok := c.cache[k]
 	c.mu.Unlock()
-	h.once.Do(func() {
-		for i := 0; i < 256; i++ {
-			cx, cz := int(k[0])<<4|i&15, int(k[1])<<4|i>>4
-			h.surface[i] = int16(c.VanillaTerrain.Height(HeightWorldSurfaceWG, cx, cz))
-			h.sea[i] = int16(c.VanillaTerrain.Height(HeightOceanFloorWG, cx, cz))
-		}
-	})
-	i := (z&15)<<4 | x&15
-	if kind == HeightOceanFloorWG || kind == HeightOceanFloor {
-		return int(h.sea[i])
+	if ok {
+		return int(h)
 	}
-	return int(h.surface[i])
+	v := c.VanillaTerrain.Height(kind, x, z)
+	c.mu.Lock()
+	if len(c.cache) >= 1<<20 {
+		c.cache = map[[3]int32]int16{}
+	}
+	c.cache[k] = int16(v)
+	c.mu.Unlock()
+	return v
 }

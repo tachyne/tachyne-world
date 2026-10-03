@@ -51,8 +51,7 @@ type vanillaStructs struct {
 	seaLevel int
 
 	ringsOnce sync.Once
-	rings     map[string]map[[2]int32]bool
-	ringList  map[string][][2]int32
+	rings     map[string][]*vpRing
 }
 
 // newVanillaStructs builds the placement for a dimension ("overworld",
@@ -141,8 +140,12 @@ func vpFloorDiv(a, b int32) int32 {
 // exclusion.
 func (v *vanillaStructs) isPlacementChunk(s *vpSet, cx, cz int32) bool {
 	if s.Type == "concentric_rings" {
-		v.ringsOnce.Do(v.buildRings)
-		return v.rings[s.Name][[2]int32{cx, cz}]
+		for _, p := range v.ringsNear(s, cx, cz, 0) {
+			if p == [2]int32{cx, cz} {
+				return true
+			}
+		}
+		return false
 	}
 	px, pz := v.potentialChunk(s, cx, cz)
 	return px == cx && pz == cz
@@ -190,45 +193,42 @@ func vpReduce(method string, seed int64, salt, cx, cz int32, p float32) bool {
 	return r.nextFloat() < p
 }
 
-// buildRings is ChunkGeneratorStructureState.generateRingPositions for
-// every concentric-rings set: count positions in rings of growing radius,
-// each moved to a preferred biome near it when one is found.
+// vpRing is one stronghold ring position before its biome search: the
+// position the ring puts it at, and the seed of the search's own random
+// (the ring stream's fork).
+type vpRing struct {
+	ix, iz   int32
+	forkSeed int64
+	once     sync.Once
+	pos      [2]int32
+}
+
+// buildRings lays out every concentric-rings set's positions
+// (ChunkGeneratorStructureState.generateRingPositions): the ring stream
+// alone decides where each one starts and the seed of its biome search,
+// so the searches — the costly part — run only for the positions a query
+// comes near (ringAt).
 func (v *vanillaStructs) buildRings() {
-	v.rings = map[string]map[[2]int32]bool{}
-	v.ringList = map[string][][2]int32{}
+	v.rings = map[string][]*vpRing{}
 	for _, s := range v.sets {
-		if s.Type != "concentric_rings" {
+		if s.Type != "concentric_rings" || s.Count == 0 {
 			continue
 		}
-		list := v.ringPositions(s, v.seed)
-		v.ringList[s.Name] = list
-		m := map[[2]int32]bool{}
-		for _, p := range list {
-			m[p] = true
-		}
-		v.rings[s.Name] = m
+		v.rings[s.Name] = vpRingLayout(s, v.seed)
 	}
 }
 
-func (v *vanillaStructs) ringPositions(s *vpSet, ringSeed int64) [][2]int32 {
-	if s.Count == 0 {
-		return nil
-	}
+func vpRingLayout(s *vpSet, ringSeed int64) []*vpRing {
 	dist, count, spread := s.Distance, s.Count, s.Spread
 	r := newVWLegacySource(ringSeed)
 	angle := r.nextDouble() * math.Pi * 2
 	inCircle, circle := 0, 0
-	out := make([][2]int32, 0, count)
+	out := make([]*vpRing, 0, count)
 	for i := 0; i < count; i++ {
 		d := float64(4*dist+dist*circle*6) + (r.nextDouble()-0.5)*(float64(dist)*2.5)
-		ix := int(javaRound(math.Cos(angle) * d))
-		iz := int(javaRound(math.Sin(angle) * d))
-		search := r.fork()
-		pos := [2]int32{int32(ix), int32(iz)}
-		if bx, bz, ok := v.findBiomeHorizontal(ix<<4+8, 0, iz<<4+8, 112, s.Preferred, search); ok {
-			pos = [2]int32{int32(bx >> 4), int32(bz >> 4)}
-		}
-		out = append(out, pos)
+		ix := int32(javaRound(math.Cos(angle) * d))
+		iz := int32(javaRound(math.Sin(angle) * d))
+		out = append(out, &vpRing{ix: ix, iz: iz, forkSeed: r.nextLong()})
 		angle += math.Pi * 2 / float64(spread)
 		if inCircle++; inCircle == spread {
 			circle++
@@ -236,6 +236,41 @@ func (v *vanillaStructs) ringPositions(s *vpSet, ringSeed int64) [][2]int32 {
 			spread += 2 * spread / (circle + 1)
 			spread = min(spread, count-i)
 			angle += r.nextDouble() * math.Pi * 2
+		}
+	}
+	return out
+}
+
+// ringAt is one ring position after its biome search (run once).
+func (v *vanillaStructs) ringAt(s *vpSet, p *vpRing) [2]int32 {
+	p.once.Do(func() {
+		p.pos = [2]int32{p.ix, p.iz}
+		search := newVWLegacySource(p.forkSeed)
+		if bx, bz, ok := v.findBiomeHorizontal(int(p.ix)<<4+8, 0, int(p.iz)<<4+8, 112, s.Preferred, search); ok {
+			p.pos = [2]int32{int32(bx >> 4), int32(bz >> 4)}
+		}
+	})
+	return p.pos
+}
+
+// ringPositions is every ring position of a set, searched (tests, /locate).
+func (v *vanillaStructs) ringPositions(s *vpSet, ringSeed int64) [][2]int32 {
+	var out [][2]int32
+	for _, p := range vpRingLayout(s, ringSeed) {
+		out = append(out, v.ringAt(s, p))
+	}
+	return out
+}
+
+// ringsNear is the searched ring positions of a set whose unsearched
+// position lies within reach chunks of (cx, cz) — a search moves a
+// position at most 112 blocks, seven chunks.
+func (v *vanillaStructs) ringsNear(s *vpSet, cx, cz, reach int32) [][2]int32 {
+	v.ringsOnce.Do(v.buildRings)
+	var out [][2]int32
+	for _, p := range v.rings[s.Name] {
+		if dx, dz := p.ix-cx, p.iz-cz; dx >= -reach-7 && dx <= reach+7 && dz >= -reach-7 && dz <= reach+7 {
+			out = append(out, v.ringAt(s, p))
 		}
 	}
 	return out
@@ -274,11 +309,19 @@ func (v *vanillaStructs) findBiomeHorizontal(x, y, z, radius int, allowed map[st
 	return rx, rz, ok
 }
 
-// RingPositions is the stronghold rings' chunk positions (nil for a
-// dimension without them).
+// RingPositions is every searched ring position of a set (nil for a
+// dimension without it).
 func (v *vanillaStructs) RingPositions(set string) [][2]int32 {
+	s := v.set(set)
+	if s == nil || s.Type != "concentric_rings" {
+		return nil
+	}
 	v.ringsOnce.Do(v.buildRings)
-	return v.ringList[set]
+	var out [][2]int32
+	for _, p := range v.rings[set] {
+		out = append(out, v.ringAt(s, p))
+	}
+	return out
 }
 
 // StartsIn is ChunkGenerator.createStructures for one chunk: every set's

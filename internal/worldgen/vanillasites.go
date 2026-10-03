@@ -301,7 +301,12 @@ func (g *Generator) vanillaMineshaftAt(vp *vanillaPlacer, cx, cz int) Mineshaft 
 // engine's stronghold cell holding (wx, wz).
 func (g *Generator) vanillaStronghold(vp *vanillaPlacer, wx, wz int) Stronghold {
 	ox, oz := cellOrigin(wx, strongholdCell), cellOrigin(wz, strongholdCell)
-	for _, c := range vp.structs.RingPositions("strongholds") {
+	set := vp.structs.set("strongholds")
+	if set == nil {
+		return Stronghold{}
+	}
+	half := int32(strongholdCell / 32)
+	for _, c := range vp.structs.ringsNear(set, int32((ox+strongholdCell/2)>>4), int32((oz+strongholdCell/2)>>4), half) {
 		bx, bz := int(c[0])*16, int(c[1])*16
 		if cellOrigin(bx, strongholdCell) != ox || cellOrigin(bz, strongholdCell) != oz {
 			continue
