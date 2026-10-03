@@ -22,8 +22,7 @@ import (
 // /item modify runs an item modifier (itemmodify.go) over every non-empty
 // slot of the range, and the same modifier may follow a from source.
 //
-// Not here yet: slot sources other than a plain range, and mobs as targets
-// or sources (the command refuses rather than skip them). Block targets are the storage blocks: chests,
+// Entities are players and mobs (mobslots.go). Block targets are the storage blocks: chests,
 // barrels, shulker boxes, furnaces, dispensers, droppers, hoppers, brewing
 // stands and crafters.
 
@@ -242,6 +241,18 @@ func crafterCanPlace(b *bin, slot int, _ invStack) bool {
 	return true
 }
 
+// entityItemTarget is an entity's slots: a player's, a mob's, and none for
+// any other entity (Entity.getSlot is null).
+func (h *hub) entityItemTarget(en cmdEntity) itemTarget {
+	switch {
+	case en.t != nil:
+		return h.playerItemTarget(en.t)
+	case en.m != nil:
+		return h.mobItemTarget(en.m)
+	}
+	return itemTarget{name: en.name(), slotAt: func(int) *slotAccess { return nil }, changed: func(map[int32]*tracked) {}}
+}
+
 // playerItemTarget is Player.getSlot over the engine's player model.
 func (h *hub) playerItemTarget(t *tracked) itemTarget {
 	armorFits := func(slot int) func(invStack) bool { // chest, legs, feet take only their own piece
@@ -347,16 +358,13 @@ func (h *hub) itemHolder(players map[int32]*tracked, t *tracked, args []string, 
 		}
 		return []itemTarget{tg}, args[4:], ""
 	case "entity":
-		if len(h.commandMobs(players, t.p.eid, args[1])) > 0 {
-			return nil, nil, "Only players' slots can be set or read by /item for now"
-		}
-		ps := h.commandTargets(players, t.p.eid, args[1])
-		if len(ps) == 0 {
+		ens := h.commandEntities(players, t.p.eid, args[1])
+		if len(ens) == 0 {
 			return nil, nil, "No entity was found"
 		}
-		out := make([]itemTarget, len(ps))
-		for i, pt := range ps {
-			out[i] = h.playerItemTarget(pt)
+		out := make([]itemTarget, len(ens))
+		for i, en := range ens {
+			out[i] = h.entityItemTarget(en)
 		}
 		return out, args[2:], ""
 	}

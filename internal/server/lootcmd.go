@@ -370,15 +370,12 @@ func (h *hub) lootTarget(players map[int32]*tracked, t *tracked, tg []string, dr
 			}
 			its, rest = []itemTarget{it}, tg[5:]
 		} else {
-			if len(h.commandMobs(players, t.p.eid, tg[2])) > 0 {
-				return "Only players' slots can be set by /loot for now"
-			}
-			ps := h.commandTargets(players, t.p.eid, tg[2])
-			if len(ps) == 0 {
+			ens := h.commandEntities(players, t.p.eid, tg[2])
+			if len(ens) == 0 {
 				return "No entity was found"
 			}
-			for _, p := range ps {
-				its = append(its, h.playerItemTarget(p))
+			for _, en := range ens {
+				its = append(its, h.entityItemTarget(en))
 			}
 			rest = tg[3:]
 		}
