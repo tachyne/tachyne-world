@@ -328,3 +328,53 @@ func TestVanillaRingsAndNetherOrderMatchServer(t *testing.T) {
 		}
 	}
 }
+
+// TestVanillaLocateMatchesServer runs /locate the way a 26.3 server ran it
+// for seed 1 (testdata/vanilla_locate_seed1.txt: `execute positioned X 64
+// Z run locate structure <id>` for every overworld structure from four
+// origins) and wants the same start chunks. It needs the whole vanilla
+// generator — the terrain core's heights and the vanilla biome source —
+// and skips in a tree without them.
+func TestVanillaLocateMatchesServer(t *testing.T) {
+	g := NewGenerator(1)
+	sg, ok := any(g).(interface {
+		SetGenerator(GeneratorMode, WorldPreset) error
+	})
+	if !ok || vanillaBiomesCtor == nil {
+		t.Skip("the vanilla terrain core or biome source is not in this tree")
+	}
+	if err := sg.SetGenerator(GeneratorVanilla, PresetNormal); err != nil {
+		t.Fatal(err)
+	}
+	vp := g.vanillaPlacerOf()
+	if vp == nil {
+		t.Fatal("no vanilla placement for the overworld")
+	}
+	f, err := os.Open("testdata/vanilla_locate_seed1.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	sc := bufio.NewScanner(f)
+	n, bad := 0, 0
+	for sc.Scan() {
+		fs := strings.Fields(sc.Text())
+		if len(fs) < 4 || fs[0] != "LOC" {
+			continue
+		}
+		id := vpShort(fs[1])
+		ox, oz := int(atoi64(t, fs[2])), int(atoi64(t, fs[3]))
+		x, z, _, found := vp.structs.Locate(map[string]bool{id: true}, ox, 64, oz, 100)
+		got := "NONE"
+		if found {
+			got = strconv.Itoa(x) + " " + strconv.Itoa(z)
+		}
+		want := strings.Join(fs[4:], " ")
+		n++
+		if got != want {
+			bad++
+			t.Errorf("locate %s from %d,%d: got %s, server %s", id, ox, oz, got, want)
+		}
+	}
+	t.Logf("%d of %d locates match the server", n-bad, n)
+}

@@ -738,3 +738,88 @@ func (v *vanillaStructs) netherFossilStart(st *vpStructure, r *vwRandom, minX, m
 	}
 	return x, y, z, -1, true
 }
+
+// Locate is ChunkGenerator.findNearestMapStructure as /locate runs it (no
+// references): the stronghold rings by distance to their chunk's centre
+// at y=32; the random-spread sets ring by ring of grid cells outward from
+// the origin's chunk, each set's first start in ring order, the nearest of
+// those once any set has one. The result is the start chunk's locate
+// position (its corner plus the set's locate offset).
+func (v *vanillaStructs) Locate(wanted map[string]bool, x, y, z, maxRadius int) (lx, lz int, name string, ok bool) {
+	dist := func(px, py, pz int) float64 {
+		dx, dy, dz := float64(px-x), float64(py-y), float64(pz-z)
+		return dx*dx + dy*dy + dz*dz
+	}
+	startOf := func(s *vpSet, cx, cz int32) (VanillaStart, bool) {
+		st, ok := v.SetStartIn(s, cx, cz)
+		return st, ok && wanted[st.Structure]
+	}
+	best := math.MaxFloat64
+	var spread []*vpSet
+	for _, s := range v.sets {
+		has := false
+		for _, e := range s.Structures {
+			if wanted[e.Name] && v.anyPossible(v.d.Structures[e.Name]) {
+				has = true
+			}
+		}
+		if !has {
+			continue
+		}
+		if s.Type == "concentric_rings" {
+			v.ringsOnce.Do(v.buildRings)
+			found := false
+			closest := math.MaxFloat64
+			var fx, fz int
+			var fn string
+			for _, p := range v.rings[s.Name] {
+				c := v.ringAt(s, p)
+				d := dist(int(c[0])*16+8, 32, int(c[1])*16+8)
+				if found && d >= closest {
+					continue
+				}
+				if st, hit := startOf(s, c[0], c[1]); hit {
+					found, closest = true, d
+					fx, fz, fn = int(c[0])*16+s.Locate[0], int(c[1])*16+s.Locate[2], st.Structure
+				}
+			}
+			if found {
+				if d := dist(fx, s.Locate[1], fz); d < best {
+					best, lx, lz, name, ok = d, fx, fz, fn, true
+				}
+			}
+			continue
+		}
+		spread = append(spread, s)
+	}
+	if len(spread) == 0 {
+		return
+	}
+	ocx, ocz := int32(x>>4), int32(z>>4)
+	for r := int32(0); r <= int32(maxRadius); r++ {
+		found := false
+		for _, s := range spread {
+		ring:
+			for dx := -r; dx <= r; dx++ {
+				for dz := -r; dz <= r; dz++ {
+					if dx != -r && dx != r && dz != -r && dz != r {
+						continue
+					}
+					pcx, pcz := v.potentialChunk(s, ocx+s.Spacing*dx, ocz+s.Spacing*dz)
+					if st, hit := startOf(s, pcx, pcz); hit {
+						found = true
+						px, py, pz := int(pcx)*16+s.Locate[0], s.Locate[1], int(pcz)*16+s.Locate[2]
+						if d := dist(px, py, pz); d < best {
+							best, lx, lz, name, ok = d, px, pz, st.Structure, true
+						}
+						break ring
+					}
+				}
+			}
+		}
+		if found {
+			return lx, lz, name, true
+		}
+	}
+	return lx, lz, name, ok
+}
