@@ -14,7 +14,8 @@ import (
 //	      | replace block <pos> <slot> [<count>] | replace entity <targets> <slot> [<count>]
 //	      loot <table> | kill <target> | mine <pos> [<tool>|mainhand|offhand]
 //
-// The tables are the engine's baked ones: the chest, barrel, dispenser,
+// The tables are the enabled data packs' (packloot.go), then the engine's
+// baked ones: the chest, barrel, dispenser,
 // archaeology, equipment and gameplay tables for "loot"; each mob's death
 // table for "kill" (rolled as a magic kill by the caller, with the caller's
 // Looting); each block's table for "mine" (with the tool's Silk Touch and
@@ -188,7 +189,7 @@ func (h *hub) lootSource(players map[int32]*tracked, t *tracked, src []string) (
 		name := strings.TrimPrefix(src[1], "minecraft:")
 		tbl, ok := lootForChest(name)
 		if !ok {
-			return lootRoll{}, fmt.Sprintf("The loot table minecraft:%s is not available on this server", name)
+			return lootRoll{}, fmt.Sprintf("The loot table %s is not available on this server", nsID(name))
 		}
 		fx, fy, fz := floorInt(t.x), floorInt(t.y), floorInt(t.z)
 		ctx := &lootCtx{rng: h.rng.Intn, randf: h.rng.Float64, pos: blockPos{fx, fy, fz}, located: true,

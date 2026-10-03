@@ -91,3 +91,61 @@ func TestSignedChatFramesReachTheEngine(t *testing.T) {
 		t.Fatal("the plain chat never reached the engine")
 	}
 }
+
+// commandRemote records the commands that reach the engine.
+type commandRemote struct {
+	mockRemote
+	plain  chan string
+	signed chan proto.Command
+}
+
+func (r *commandRemote) Command(cmd string)             { r.plain <- cmd }
+func (r *commandRemote) SignedCommand(cm proto.Command) { r.signed <- cm }
+
+// A command with signed message arguments reaches the engine with them;
+// one without goes the plain way.
+func TestSignedCommandReachesTheEngine(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := &commandRemote{plain: make(chan string, 2), signed: make(chan proto.Command, 2)}
+	w := world.New(1)
+	go Serve(ln, Config{
+		World: w, Time: func() int64 { return 0 }, Token: "secret",
+		Join: func(id Identity, emit func(byte, []byte)) (Remote, error) { return rec, nil },
+	})
+	t.Cleanup(func() { ln.Close() })
+	c, err := net.Dial("tcp", ln.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { c.Close() })
+	c.SetDeadline(time.Now().Add(30 * time.Second))
+	proto.WriteJSON(c, proto.MsgHello, proto.Hello{
+		Token: "secret", Gateway: "gw-java-776/0", Name: "EdgeZA", Edition: "java",
+		UUID: "430803e4-3068-442f-9f47-e0fd6ee57e3c", Features: []string{proto.FeaturePlayerChat},
+	})
+	sig := make([]byte, 256)
+	sig[1] = 9
+	proto.WriteJSON(c, proto.MsgCommand, proto.Command{Cmd: "say hi there", Signed: []proto.SignedArgument{
+		{Name: "message", Content: "hi there", Chat: proto.SignedChat{Index: 2, Signature: sig, Timestamp: 3, Salt: 4}}}})
+	proto.WriteJSON(c, proto.MsgCommand, proto.Command{Cmd: "list"})
+	select {
+	case cm := <-rec.signed:
+		if cm.Cmd != "say hi there" || len(cm.Signed) != 1 || cm.Signed[0].Name != "message" || cm.Signed[0].Content != "hi there" ||
+			cm.Signed[0].Chat.Index != 2 || len(cm.Signed[0].Chat.Signature) != 256 || cm.Signed[0].Chat.Signature[1] != 9 {
+			t.Fatalf("signed command %+v", cm)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("the signed command never reached the engine")
+	}
+	select {
+	case cmd := <-rec.plain:
+		if cmd != "list" {
+			t.Fatalf("plain command %q", cmd)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the plain command never reached the engine")
+	}
+}

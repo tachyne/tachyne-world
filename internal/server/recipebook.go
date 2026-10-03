@@ -61,9 +61,11 @@ func (h *hub) placeRecipe(players map[int32]*tracked, t *tracked, e evCraftReque
 		set  uint16
 	}
 	var need []needCell
+	r, ok := bookCraft(e.recipeID) // generated or a data pack's
 	switch {
-	case int(e.recipeID) < len(shapedRecipes):
-		r := &shapedRecipes[e.recipeID]
+	case !ok:
+		return
+	case r.shaped:
 		if int(r.W) > w || int(r.H) > w {
 			return // 3x3 recipe requested in the 2x2 player grid
 		}
@@ -74,16 +76,13 @@ func (h *hub) placeRecipe(players map[int32]*tracked, t *tracked, e evCraftReque
 				}
 			}
 		}
-	case int(e.recipeID) < len(shapedRecipes)+len(shapelessRecipes):
-		r := &shapelessRecipes[int(e.recipeID)-len(shapedRecipes)]
+	default:
 		if len(r.Ingredients) > w*w {
 			return
 		}
 		for i, set := range r.Ingredients {
 			need = append(need, needCell{i, set})
 		}
-	default:
-		return
 	}
 
 	h.reclaimCraft(players, t) // return whatever's in the grid first
@@ -150,11 +149,10 @@ func cookStationItem(kind int8) int32 {
 // not the one the entry belongs to (a blasting entry clicked in a smoker), or
 // when the input already holds something else.
 func (h *hub) placeCookRecipe(t *tracked, id int32) {
-	n := int(id - cookBookFirstID)
-	if n < 0 || n >= len(cookBookRecipes) {
+	r, ok := bookCook(id) // generated or a data pack's
+	if !ok {
 		return
 	}
-	r := cookBookRecipes[n]
 	f := h.furnaces[t.winPos]
 	if f == nil || r.Station != cookStationItem(f.kind) {
 		return
@@ -224,12 +222,12 @@ func assignIngredients(need []uint16, order []int32, supply map[int32]int) []int
 // ghostRecipeFor is the display of a book recipe, for place_ghost_recipe.
 func ghostRecipeFor(window, id int32) attachproto.GhostRecipe {
 	g := attachproto.GhostRecipe{Window: window}
+	r, ok := bookCraft(id)
 	switch {
-	case int(id) < len(shapedRecipes):
-		r := &shapedRecipes[id]
+	case !ok:
+	case r.shaped:
 		g.Shaped = &attachproto.ShapedRecipe{ID: id, W: int32(r.W), H: int32(r.H), Cells: representatives(r.Cells), Result: r.Result, Count: int32(r.Count)}
-	case int(id) < len(shapedRecipes)+len(shapelessRecipes):
-		r := &shapelessRecipes[int(id)-len(shapedRecipes)]
+	default:
 		g.Shapeless = &attachproto.ShapelessRecipe{ID: id, Ingredients: representatives(r.Ingredients), Result: r.Result, Count: int32(r.Count)}
 	}
 	return g

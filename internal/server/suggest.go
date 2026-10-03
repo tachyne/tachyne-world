@@ -1,6 +1,7 @@
 package server
 
 import (
+	"slices"
 	"sort"
 	"strings"
 
@@ -345,12 +346,21 @@ func nsNames(in []string) []string {
 	return out
 }
 
-// biomeIDs is the biome registry's entries.
+// biomeIDs is the canonical biome registry's entries: the shared list
+// every client is sent, then the biomes 26.x added (sulfur caves, dappled
+// forest), which the 1.21.5 list lacks — without them vanilla's
+// #is_overworld and every tag naming it failed to load.
 func biomeIDs() []string {
+	var out []string
 	for _, r := range protocol.SyncedRegistries {
 		if r.ID == "minecraft:worldgen/biome" {
-			return append([]string(nil), r.Entries...)
+			out = append(out, r.Entries...)
 		}
 	}
-	return nil
+	for _, b := range worldgen.BiomeNames() {
+		if !slices.Contains(out, b) {
+			out = append(out, b)
+		}
+	}
+	return out
 }

@@ -260,7 +260,8 @@ func TestFunctionTagsResolve(t *testing.T) {
 	}
 }
 
-// The top pack's file wins; a pack's other data is listed as unapplied.
+// The top pack's file wins; the data a pack carries that is not applied is
+// listed.
 func TestLibraryPackOrderAndUnappliedData(t *testing.T) {
 	dir := t.TempDir()
 	writePack(t, dir, "low", "", map[string]string{
@@ -288,7 +289,8 @@ func TestLibraryPackOrderAndUnappliedData(t *testing.T) {
 	if lib.function("test:broken") != nil || lib.function("Bad:upper") != nil {
 		t.Error("a bad function loaded")
 	}
-	want := []string{"advancement", "loot_table", "recipe", "tags/block", "worldgen/biome"}
+	// Recipes, loot tables and block tags are applied now (packcontent.go).
+	want := []string{"advancement", "worldgen/biome"}
 	if got := lib.unapplied["file/low"]; !reflect.DeepEqual(got, want) {
 		t.Errorf("unapplied %v, want %v", got, want)
 	}

@@ -37,6 +37,16 @@ type player struct {
 	chatSession atomic.Pointer[attachproto.ChatSession]
 	// dialogs: the session's gateway renders dialogs (FeatureDialog).
 	dialogs bool
+	// reconfigure: the session's gateway can send the client back to the
+	// configuration phase (attach FeatureReconfigure, reconfigure.go).
+	// configuring is set while it is there (out of the level), and rejoin
+	// is where it left, for placing it again.
+	reconfigure bool
+	configuring atomic.Bool
+	rejoin      atomic.Pointer[rejoinState]
+	// cmdSigned is the signing context of the command the session is
+	// running (signedcmd.go): set for the length of one dispatch.
+	cmdSigned atomic.Pointer[signedCmd]
 
 	x, y, z    float64        // current position (this goroutine's copy, for streaming)
 	yaw, pitch float32        // current look angles
@@ -197,6 +207,10 @@ func isLifecycleFrame(ev any) bool {
 	switch e := ev.(type) {
 	case attachproto.EntityAdd, attachproto.EntityRemove,
 		attachproto.PlayerInfo, attachproto.PlayerInfoMode, attachproto.PlayerGone:
+		return true
+	case attachproto.StartConfiguration, attachproto.Rejoin, attachproto.UpdateTags:
+		// One-shot phase changes and the tag set: nothing re-sends them, and
+		// a lost start or rejoin strands the client between phases.
 		return true
 	case attachproto.ShowDialog, attachproto.ClearDialog:
 		// A dialog opens or closes once; nothing re-sends it.

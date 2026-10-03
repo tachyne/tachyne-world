@@ -66,9 +66,22 @@ func furnaceKindOf(state uint32) (int8, bool) {
 	return 0, false
 }
 
-// cookerRecipe resolves an input item against the kind's recipe table.
+// cookerRecipe resolves an input item against the kind's recipe table
+// (cookFurnace, cookBlast, cookSmoker or cookCampfire): a data pack's
+// recipe first, then the generated one unless a pack took it away.
 func cookerRecipe(kind int8, item int32) (cookEntry, bool) {
+	if pr := currentPack().recipeSet(); pr != nil && kind >= 0 && int(kind) < len(pr.cook) {
+		if e, ok := pr.cook[kind][item]; ok {
+			return e, true
+		}
+		if pr.cookRemoved[kind][item] {
+			return cookEntry{}, false
+		}
+	}
 	switch kind {
+	case cookCampfire:
+		e, ok := campfireResult[item]
+		return e, ok
 	case cookBlast:
 		e, ok := blastResult[item]
 		return e, ok
@@ -386,7 +399,14 @@ func (h *hub) sendFurnaceWindow(t *tracked, f *furnace) {
 // `experience` field, baked into the cook tables (ancient debris pays 2,
 // cactus 1, iron 0.7, food 0.35 and so on). The old flat approximation paid
 // the same for all of them.
-func smeltXP(output int32) float64 { return smeltXPByOutput[output] }
+func smeltXP(output int32) float64 {
+	if pr := currentPack().recipeSet(); pr != nil {
+		if xp, ok := pr.xpByOutput[output]; ok && xp > smeltXPByOutput[output] {
+			return xp // a data pack's recipe banks more for this result
+		}
+	}
+	return smeltXPByOutput[output]
+}
 
 // smeltXPByOutput indexes the cook tables by RESULT once at init. Vanilla
 // banks the experience of the recipe that produced the item; the engine

@@ -19,13 +19,18 @@ func (s *Server) cmdMsg(p *player, args []string) {
 		return
 	}
 	text := strings.Join(args[1:], " ")
-	s.hub.post(evWhisper{from: p, to: args[0], text: text})
+	s.hub.post(evWhisper{from: p, to: args[0], text: text,
+		signed: p.signedArgument("message", text), selectors: s.isOp(p.name)})
 }
 
 type evWhisper struct {
 	from *player
 	to   string
 	text string
+	// signed is the message argument's signature (signedcmd.go), nil when
+	// it is unsigned; selectors: the source may resolve selectors in it.
+	signed    *attachproto.SignedArgument
+	selectors bool
 }
 
 func (evWhisper) isHubEvent() {}
@@ -48,9 +53,21 @@ func (h *hub) onWhisper(players map[int32]*tracked, e evWhisper) {
 		e.from.trySendEv(chatEv("No player was found"))
 		return
 	}
+	text := h.resolveMessageSelectors(players, e.from.eid, messageContent(e.text, e.signed), e.selectors)
+	signed := e.signed != nil && messageSource(e.from)
 	for _, t := range targets {
-		t.p.trySendEv(chatEv(fmt.Sprintf("%s whispers to you: %s", sourceName(e.from), e.text)))
-		e.from.trySendEv(chatEv(fmt.Sprintf("You whisper to %s: %s", t.p.name, e.text)))
+		// MsgCommand.sendMessage: the source sees it as msg_command_outgoing
+		// naming the target, then the target hears msg_command_incoming.
+		if signed && e.from.playerChat {
+			e.from.trySendEv(signedPlayerChat(e.from, e.signed, text, chatTypeMsgOut, t.p.name))
+		} else {
+			e.from.trySendEv(chatEv(fmt.Sprintf("You whisper to %s: %s", t.p.name, text)))
+		}
+		if signed && t.p.playerChat {
+			t.p.trySendEv(signedPlayerChat(e.from, e.signed, text, chatTypeMsgIn, ""))
+		} else {
+			t.p.trySendEv(chatEv(fmt.Sprintf("%s whispers to you: %s", sourceName(e.from), text)))
+		}
 	}
 	setCmdResult(e.from, len(targets)) // MsgCommand returns the target count
 }

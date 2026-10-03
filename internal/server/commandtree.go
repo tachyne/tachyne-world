@@ -38,6 +38,7 @@ const (
 	parserItemStack = 14
 	parserTeamColor = 16 // minecraft:team_color
 	parserHexColor  = 17 // minecraft:hex_color
+	parserMessage   = 20 // minecraft:message: the rest of the line, signed by a secure-chat client
 	parserNBT       = 21 // minecraft:nbt_compound_tag
 	parserResLoc    = 36 // minecraft:resource_location: any namespaced id
 
@@ -91,6 +92,14 @@ func argGreedy(name string, exec bool, kids ...cmdNode) cmdNode {
 	n := argN(name, parserString, protocol.AppendVarInt(nil, stringPropGreedy), exec, kids...)
 	n.suggest = true
 	return n
+}
+
+// argMessage is minecraft:message (MessageArgument): the rest of the line,
+// selectors resolved in it. A secure-chat client signs it as a chat message
+// and its gateway forwards the signature with the command (signedcmd.go).
+// The client completes it itself; nothing asks the world.
+func argMessage(name string, exec bool, kids ...cmdNode) cmdNode {
+	return argN(name, parserMessage, nil, exec, kids...)
 }
 func argInt(name string, min, max int32, exec bool, kids ...cmdNode) cmdNode {
 	// brigadier:integer properties: a flags byte (0x01 has min, 0x02 has max)
@@ -248,11 +257,11 @@ func modelledCommands() []cmdNode {
 				lit("to", false, argGreedy("targetDimension destination", true))))),
 		lit("seed", true),
 		lit("enchant", false, argEntity("targets", 0, false, argWord("enchantment", true, argInt("level", 0, 255, true)))),
-		lit("me", false, argGreedy("action", true)),
+		lit("me", false, argMessage("action", true)),
 		lit("whitelist", false, append(lits("on", "off", "list"),
 			lit("add", false, argProfile("player", true)),
 			lit("remove", false, argProfile("player", true)))...),
-		lit("say", false, argGreedy("message", true)),
+		lit("say", false, argMessage("message", true)),
 		lit("title", true, argEntity("targets", 0, false,
 			lit("title", false, argGreedy("text", true)),
 			lit("subtitle", false, argGreedy("text", true)),
@@ -264,9 +273,11 @@ func modelledCommands() []cmdNode {
 		lit("bug", false, argGreedy("what went wrong", true),
 			lit("re", false, argGreedy("what you want to add", true)),
 			lit("list", false)),
-		lit("msg", false, argEntity("target", entitySingle|entityPlayers, false, argGreedy("message", true))),
-		lit("tell", false, argEntity("target", entitySingle|entityPlayers, false, argGreedy("message", true))),
-		lit("w", false, argEntity("target", entitySingle|entityPlayers, false, argGreedy("message", true))),
+		// MsgCommand: <targets> is EntityArgument.players() — any number of
+		// players — and tell/w are its aliases.
+		lit("msg", false, argEntity("targets", entityPlayers, false, argMessage("message", true))),
+		lit("tell", false, argEntity("targets", entityPlayers, false, argMessage("message", true))),
+		lit("w", false, argEntity("targets", entityPlayers, false, argMessage("message", true))),
 		lit("kick", false, argProfile("player", true, argGreedy("reason", true))),
 		lit("ban", false, argProfile("player", true, argGreedy("reason", true))),
 		lit("pardon", false, argProfile("player", true)),
@@ -322,8 +333,8 @@ func modelledCommands() []cmdNode {
 			lit("query", false, argGreedy("id", true)),
 			lit("restart", false, argGreedy("id", true)),
 			lit("remove", false, argGreedy("id", true))),
-		lit("teammsg", false, argGreedy("message", true)),
-		lit("tm", false, argGreedy("message", true)),
+		lit("teammsg", false, argMessage("message", true)),
+		lit("tm", false, argMessage("message", true)),
 	}
 }
 

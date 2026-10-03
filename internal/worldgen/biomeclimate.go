@@ -1,5 +1,7 @@
 package worldgen
 
+import "sort"
+
 // BiomeClimate is a biome's Biome.ClimateSettings as the weather reads it:
 // the base temperature, whether it has the FROZEN temperature modifier and
 // whether storms bring it any precipitation at all (hasPrecipitation).
@@ -10,6 +12,18 @@ func BiomeClimate(biome string) (temp float64, frozen, precip bool) {
 		t = 0.8
 	}
 	return t, frozenModifier[biome], !noPrecipitation[biome]
+}
+
+// BiomeNames is every biome the canonical version's reports carry, sorted:
+// the 1.21.5 registry the clients are first sent plus what 26.x added
+// (sulfur caves, dappled forest).
+func BiomeNames() []string {
+	out := make([]string, 0, len(biomeTemperature))
+	for b := range biomeTemperature {
+		out = append(out, b)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // noPrecipitation is every biome with has_precipitation false.

@@ -250,6 +250,7 @@ type tracked struct {
 	rbKnown        map[int32]bool    // recipe book: unlocked display ids
 	rbHighlight    map[int32]bool    // recipe book: "new" badges not yet viewed
 	rbTaken        map[int32]bool    // recipe book: taken by /recipe take — the ingredient poll leaves them out until given back
+	rbDormant      map[string]bool   // recipe book: known recipes the current data packs lack, by name (back on a reload that has them)
 	rbSettings     attachproto.RecipeSettings
 	migrating      string // non-empty (migID) while a handover to a neighbour is in flight
 	x, y, z        float64
@@ -1671,6 +1672,10 @@ func (h *hub) run() {
 				h.roomChatFrom(players, e.from.name, msg)
 			case evChatSession:
 				h.setChatSession(players, e)
+			case evCmdChat:
+				h.onCmdChat(players, e)
+			case evDebugConfig:
+				h.onDebugConfig(players, e)
 			case evSetTime:
 				h.setDayTime(e.t)
 			case evAnnounce:
@@ -2678,7 +2683,7 @@ func (h *hub) useOnEvent(players map[int32]*tracked, ev hubEvent) bool {
 // onJoin registers the newcomer and exchanges spawn packets with everyone else:
 // the newcomer learns of every existing player and vice-versa.
 func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
-	nt := &tracked{living: living{attrs: newPlayerAttributes()}, p: e.p, x: e.x, y: e.y, z: e.z, yaw: e.yaw, pitch: e.pitch, gamemode: e.gamemode, hudOn: true}
+	nt := &tracked{living: living{attrs: newPlayerAttributes()}, p: e.p, x: e.x, y: e.y, z: e.z, yaw: e.yaw, pitch: e.pitch, dim: e.dim, gamemode: e.gamemode, hudOn: true}
 	nt.loadUntil = h.tick.Load() + clientLoadTimeout // CLIENT_LOADED_TIMEOUT_TIME
 	if e.resume != nil {
 		// A migrated player: the handover snapshot is the source of truth (health,

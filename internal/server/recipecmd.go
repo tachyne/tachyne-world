@@ -34,10 +34,7 @@ func (s *Server) cmdRecipe(p *player, args []string) {
 	}
 	e := evRecipeCmd{by: p.eid, give: args[0] == "give", target: args[1]}
 	if args[2] == "*" {
-		e.ids = make([]int32, len(recipeNames))
-		for i := range recipeNames {
-			e.ids[i] = int32(i)
-		}
+		e.ids = allBookIDs()
 	} else {
 		ids := recipeIDsByName(strings.TrimPrefix(args[2], "minecraft:"))
 		if len(ids) == 0 {
@@ -50,15 +47,25 @@ func (s *Server) cmdRecipe(p *player, args []string) {
 }
 
 // recipeIDsByName resolves a recipe name to its book entries: a crafting
-// recipe or a saved cook/ key is one entry, a vanilla cooking recipe one per
-// input item.
+// recipe or a saved cook/ key is one entry, a cooking recipe one per input
+// item. A data pack's recipes ("ns:path", or a vanilla name it redefines)
+// come first; a vanilla recipe a pack removed is unknown.
 func recipeIDsByName(name string) []int32 {
-	if id, ok := recipeIDByName[name]; ok {
+	pc := currentPack()
+	if pr := pc.recipeSet(); pr != nil {
+		if ids, ok := pr.idsByName[name]; ok {
+			return append([]int32(nil), ids...)
+		}
+		if pr.removed[name] {
+			return nil
+		}
+	}
+	if id, ok := recipeIDIn(pc, name); ok {
 		return []int32{id}
 	}
 	var ids []int32
 	for _, k := range cookRecipeKeys[name] {
-		if id, ok := recipeIDByName[k]; ok {
+		if id, ok := recipeIDByName[k]; ok && (pc.recipeSet() == nil || !pc.recipeSet().removedBook[id]) {
 			ids = append(ids, id)
 		}
 	}

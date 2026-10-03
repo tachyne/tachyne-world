@@ -55,7 +55,7 @@ func parseFillBiome(p *player, args []string) (fillBiomeReq, string) {
 		f := args[8]
 		if tag, isTag := strings.CutPrefix(f, "#"); isTag {
 			id, ok := parseResourceID(tag)
-			members, found := biomeTags[id]
+			members, found := biomeTagMembers(id) // vanilla's or a data pack's
 			if !ok || !found {
 				return fillBiomeReq{}, fmt.Sprintf("Can't find tag '%s' of type 'minecraft:worldgen/biome'", nsID(tag))
 			}

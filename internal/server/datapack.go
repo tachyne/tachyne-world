@@ -23,9 +23,11 @@ import (
 //
 // Of a pack's data the engine loads what it can use: functions
 // (data/<ns>/function/**.mcfunction) and function tags
-// (data/<ns>/tags/function/**.json). Every other registry a pack carries —
-// recipes, loot tables, advancements, worldgen — is listed but not applied;
-// /datapack list says so.
+// (data/<ns>/tags/function/**.json) here, and the item, block, entity,
+// fluid and biome tags, recipes, loot tables, predicates and item modifiers
+// through packcontent.go. Every other registry a pack carries —
+// advancements, worldgen, the recipe types the server does not take from a
+// pack — is listed but not applied; /datapack list says so.
 
 const (
 	// The 26.3 data pack format (version.json pack_version.data_major/minor).
@@ -580,6 +582,7 @@ type functionLibrary struct {
 	functions map[string]*mcFunction
 	tags      map[string][]*mcFunction
 	unapplied map[string][]string // pack id → the data kinds it carries that are not loaded
+	content   *packContent        // tags, recipes, loot tables, predicates, item modifiers
 }
 
 const (
@@ -631,6 +634,7 @@ func buildLibrary(packs []*dataPack) *functionLibrary {
 	lib := &functionLibrary{packs: packs, functions: map[string]*mcFunction{}, tags: map[string][]*mcFunction{}, unapplied: map[string][]string{}}
 	fnFiles := map[string]packFile{}
 	tagFiles := map[string][]packFile{}
+	data := newPackDataFiles()
 	for _, p := range packs {
 		fsys, closeFn, err := openPack(p)
 		if err != nil {
@@ -672,7 +676,10 @@ func buildLibrary(packs []*dataPack) *functionLibrary {
 						tagFiles[ns+":"+id] = append(tagFiles[ns+":"+id], packFile{pack: p.id, data: data})
 					}
 				default:
-					kinds[dataKind(rest)] = true
+					read := func() ([]byte, error) { return fs.ReadFile(fsys, name) }
+					if !data.take(p.id, ns, rest, read) {
+						kinds[dataKind(rest)] = true
+					}
 				}
 				return nil
 			})
@@ -696,6 +703,19 @@ func buildLibrary(packs []*dataPack) *functionLibrary {
 		lib.functions[id] = fn
 	}
 	lib.tags = buildFunctionTags(tagFiles, lib.functions)
+	notApplied := map[string]map[string]bool{}
+	lib.content = buildPackContent(data, notApplied)
+	for pack, kinds := range notApplied {
+		for _, k := range lib.unapplied[pack] {
+			kinds[k] = true
+		}
+		list := make([]string, 0, len(kinds))
+		for k := range kinds {
+			list = append(list, k)
+		}
+		sort.Strings(list)
+		lib.unapplied[pack] = list
+	}
 	return lib
 }
 

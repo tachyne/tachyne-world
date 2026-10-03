@@ -490,6 +490,12 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgDeleteChat, ev)
 	case attachproto.ShowDialog:
 		send(attachproto.MsgShowDialog, ev)
+	case attachproto.StartConfiguration:
+		send(attachproto.MsgStartConfiguration, ev)
+	case attachproto.Rejoin:
+		send(attachproto.MsgRejoin, ev)
+	case attachproto.UpdateTags:
+		send(attachproto.MsgUpdateTags, ev)
 	case attachproto.ClearDialog:
 		send(attachproto.MsgClearDialog, ev)
 	case attachproto.AdvTree:
@@ -645,6 +651,7 @@ func (s *Server) adoptIdentity(p *player, id attach.Identity) {
 	p.ip = id.IP
 	p.playerChat = id.HasFeature(attachproto.FeaturePlayerChat)
 	p.dialogs = id.HasFeature(attachproto.FeatureDialog)
+	p.reconfigure = id.HasFeature(attachproto.FeatureReconfigure)
 	for _, pr := range id.Props {
 		p.props = append(p.props, skinProperty{Name: pr.Name, Value: pr.Value, Signature: pr.Signature})
 	}

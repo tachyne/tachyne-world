@@ -27,8 +27,12 @@ func init() {
 	}
 }
 
-// lootForChest finds a baked chest table by name ("chests/simple_dungeon").
+// lootForChest finds a chest/gameplay table by name ("chests/simple_dungeon",
+// a pack's "ns:path"): a data pack's, else the baked one.
 func lootForChest(name string) (*lootTable, bool) {
+	if t, ok := packLootTable(name); ok {
+		return t, true
+	}
 	if t, ok := chestLoot[name]; ok {
 		return &t, true
 	}

@@ -649,12 +649,13 @@ func (s *Server) Serve() error {
 				f := s.hub.loginFlags.Load()
 				return f&loginNoRespawnScreen != 0, f&loginLimitedCrafting != 0, f&loginReducedDebug != 0
 			},
-			Token:  s.AttachToken,
-			Spawn:  attachproto.Pos{X: 0.5, Y: s.world.SurfaceY(0, 0), Z: 0.5},
-			Join:   s.JoinRemote,
-			Resume: s.ResumeRemote,
-			Status: s.statusRoster,
-			Owned:  func(dim, cx, cz int32) bool { return s.hub.serveChunk(cx, cz) }, // stream neighbour border chunks too (seamless overlap)
+			ConfigData: s.configData,
+			Token:      s.AttachToken,
+			Spawn:      attachproto.Pos{X: 0.5, Y: s.world.SurfaceY(0, 0), Z: 0.5},
+			Join:       s.JoinRemote,
+			Resume:     s.ResumeRemote,
+			Status:     s.statusRoster,
+			Owned:      func(dim, cx, cz int32) bool { return s.hub.serveChunk(cx, cz) }, // stream neighbour border chunks too (seamless overlap)
 			ChunkGate: func(r attach.Remote) func(dim, cx, cz int32) bool {
 				if rp, ok := r.(*remotePlayer); ok && rp.p.loadedOnly.Load() {
 					return s.hub.heldLoaded

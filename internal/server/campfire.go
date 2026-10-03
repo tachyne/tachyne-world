@@ -147,7 +147,7 @@ func (h *hub) loadCampfires() {
 			if name == "" || id == 0 {
 				continue
 			}
-			if rec, ok := campfireResult[id]; ok {
+			if rec, ok := campfireRecipe(id); ok {
 				cf.items[i], cf.total[i] = id, rec.Cook
 			}
 		}
@@ -176,7 +176,7 @@ func (h *hub) onCampfireAdd(players map[int32]*tracked, e evCampfireAdd) {
 		return
 	}
 	held := usedStack(t)
-	rec, ok := campfireResult[held.item]
+	rec, ok := campfireRecipe(held.item)
 	if !ok || held.count <= 0 {
 		return
 	}
@@ -257,7 +257,7 @@ func (h *hub) campfireTick(players map[int32]*tracked) {
 				continue
 			}
 			if cf.prog[i]++; cf.prog[i] >= cf.total[i] {
-				if rec, ok := campfireResult[cf.items[i]]; ok {
+				if rec, ok := campfireRecipe(cf.items[i]); ok {
 					h.spawnItemIn(players, pos.dim, rec.Out, 1,
 						float64(pos.x)+0.5, float64(pos.y)+1, float64(pos.z)+0.5)
 				}
