@@ -124,6 +124,9 @@ func (ig *Igloo) setChest() {
 
 // IglooIn returns the igloo owning (wx,wz)'s cell, on snowy land.
 func (g *Generator) IglooIn(wx, wz int) Igloo {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaIgloo(vp, wx, wz) // vanillasites.go
+	}
 	ox, oz := cellOrigin(wx, iglooCell), cellOrigin(wz, iglooCell)
 	if hash01(g.seed, ox, oz, 0x1600) >= iglooOdds {
 		return Igloo{}

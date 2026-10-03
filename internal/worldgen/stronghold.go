@@ -453,6 +453,9 @@ func (g *Generator) strongholdPieces(cx, cz int) []*shPiece {
 // StrongholdIn rolls the stronghold for the cell containing (wx,wz). The cell
 // around the origin never generates one (vanilla: the first ring is ~1500+).
 func (g *Generator) StrongholdIn(wx, wz int) Stronghold {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaStronghold(vp, wx, wz) // vanillasites.go
+	}
 	ox, oz := cellOrigin(wx, strongholdCell), cellOrigin(wz, strongholdCell)
 	if ox == cellOrigin(0, strongholdCell) && oz == cellOrigin(0, strongholdCell) {
 		return Stronghold{}

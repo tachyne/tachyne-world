@@ -32,6 +32,9 @@ type Monument struct {
 // MonumentIn returns the monument owning (wx,wz)'s cell, if the site is deep
 // ocean floor.
 func (g *Generator) MonumentIn(wx, wz int) Monument {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaMonument(vp, wx, wz) // vanillasites.go
+	}
 	ox, oz := cellOrigin(wx, monumentCell), cellOrigin(wz, monumentCell)
 	if hash01(g.seed, ox, oz, 0x0C00) >= monumentOdds {
 		return Monument{}

@@ -23,6 +23,9 @@ type AncientCity struct {
 
 // AncientCityIn returns the city owning (wx,wz)'s cell, where deep_dark lives.
 func (g *Generator) AncientCityIn(wx, wz int) AncientCity {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaAncientCity(vp, wx, wz) // vanillasites.go
+	}
 	ox, oz := cellOrigin(wx, ancientCityCell), cellOrigin(wz, ancientCityCell)
 	if hash01(g.seed, ox, oz, 0xAC00) >= ancientCityOdds {
 		return AncientCity{}

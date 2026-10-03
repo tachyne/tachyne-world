@@ -51,6 +51,9 @@ func villageVariant(biome string) string {
 
 // VillageIn rolls the village for the cell containing (wx,wz).
 func (g *Generator) VillageIn(wx, wz int) Village {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaVillage(vp, wx, wz) // vanillasites.go
+	}
 	ox, oz := cellOrigin(wx, villageCell), cellOrigin(wz, villageCell)
 	if hash01(g.seed, ox, oz, 0x71A6E) >= villageOdds {
 		return Village{}

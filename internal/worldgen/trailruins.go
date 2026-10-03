@@ -33,6 +33,9 @@ type TrailRuins struct {
 // TrailRuinsIn returns the site owning (wx,wz)'s cell, if it fell on a
 // trail-ruins biome above the sea.
 func (g *Generator) TrailRuinsIn(wx, wz int) TrailRuins {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaTrailRuins(vp, wx, wz) // vanillasites.go
+	}
 	if g.nether || g.end {
 		return TrailRuins{}
 	}

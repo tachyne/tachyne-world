@@ -375,6 +375,9 @@ type Fortress struct {
 
 // FortressIn returns the fortress owning (wx,wz)'s cell.
 func (g *Generator) FortressIn(wx, wz int) Fortress {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaFortress(vp, wx, wz) // vanillasites.go
+	}
 	ox, oz := cellOrigin(wx, fortressCell), cellOrigin(wz, fortressCell)
 	if hash01(g.seed, ox, oz, 0xF0A7) >= fortressOdds {
 		return Fortress{}

@@ -41,6 +41,9 @@ type AbandonedCamp struct {
 // AbandonedCampIn returns the camp owning (wx,wz)'s cell, if its site falls
 // on dry land in a camp biome.
 func (g *Generator) AbandonedCampIn(wx, wz int) AbandonedCamp {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaAbandonedCamp(vp, wx, wz) // vanillasites.go
+	}
 	if g.nether || g.end {
 		return AbandonedCamp{}
 	}

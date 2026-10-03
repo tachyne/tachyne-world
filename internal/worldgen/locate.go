@@ -189,6 +189,11 @@ func (g *Generator) LocateStructure(name string, wx, wz, radius int) (x, z int, 
 	if !known {
 		return 0, 0, false
 	}
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		if c := vp.locateCell(name); c > 0 {
+			l.cell = c // a vanilla world's sites lie on the set's own grid
+		}
+	}
 	bestD := radius*radius + 1
 	cells := radius/l.cell + 1
 	ox, oz := cellOrigin(wx, l.cell), cellOrigin(wz, l.cell)

@@ -498,6 +498,9 @@ func jigsawFinalState(final string) (uint32, bool) {
 // empty cell above the terrain OR the water on it — generated water fills to
 // sea level, so a column under the sea surfaces at SeaLevel.
 func (g *Generator) SurfaceWG(x, z int) int {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return vp.surface(x, z) // vanillasites.go: getFirstFreeHeight's noise-only column
+	}
 	if h := g.Height(x, z); h > SeaLevel {
 		return h
 	}

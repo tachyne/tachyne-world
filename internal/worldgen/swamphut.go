@@ -25,6 +25,9 @@ var (
 // SwampHutIn returns the hut whose cell contains (wx,wz), if its site is
 // swamp.
 func (g *Generator) SwampHutIn(wx, wz int) SwampHut {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaSwampHut(vp, wx, wz) // vanillasites.go
+	}
 	if g.nether || g.end {
 		return SwampHut{}
 	}

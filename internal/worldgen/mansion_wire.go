@@ -20,6 +20,9 @@ type Mansion struct {
 
 // MansionIn returns the mansion owning (wx,wz)'s cell, on flat dark-forest land.
 func (g *Generator) MansionIn(wx, wz int) Mansion {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaMansion(vp, wx, wz) // vanillasites.go
+	}
 	ox, oz := cellOrigin(wx, mansionCell), cellOrigin(wz, mansionCell)
 	if hash01(g.seed, ox, oz, 0x3A00) >= mansionOdds {
 		return Mansion{}
