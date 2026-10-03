@@ -119,8 +119,13 @@ type BastionMob struct {
 
 // BastionMobs returns the bastion's baked entity positions.
 func (g *Generator) BastionMobs(b Bastion) []BastionMob {
+	return BastionPieceMobs(g.AssembleBastion(b))
+}
+
+// BastionPieceMobs is BastionMobs over a bastion's pieces.
+func BastionPieceMobs(pieces []PlacedPiece) []BastionMob {
 	var out []BastionMob
-	for _, pc := range g.AssembleBastion(b) {
+	for _, pc := range pieces {
 		for _, m := range pc.Tmpl.Mobs {
 			rx, ry, rz := pc.Tmpl.rotatePos(m.Pos[0], m.Pos[1], m.Pos[2], pc.Rot)
 			out = append(out, BastionMob{pc.OX + rx, pc.OY + ry, pc.OZ + rz, m.Type, pc.Tmpl.name})

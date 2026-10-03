@@ -507,6 +507,7 @@ type evSummon struct {
 	dim     int
 	by      int32          // the caller (feedback); 0 = none
 	nbt     map[string]any // the summon's NBT, nil when none was given
+	data    map[string]any // its "data" compound, types kept (Entity.customData)
 	yaw     float32
 }
 type evSetRule struct {

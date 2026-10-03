@@ -98,7 +98,7 @@ func (s *Server) cmdOp(p *player, args []string, grant bool) {
 	s.onHub(func(players map[int32]*tracked) {
 		for _, t := range players {
 			if strings.EqualFold(t.p.name, name) {
-				t.p.trySendEv(opLevelEvent(t.p.eid, lvl))
+				s.sendPermissionLevel(t.p, lvl)
 			}
 		}
 	})

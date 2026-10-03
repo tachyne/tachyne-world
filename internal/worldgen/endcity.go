@@ -398,8 +398,13 @@ type EndCityMob struct {
 
 // EndCityMobs returns the city's sentry and elytra markers.
 func (g *Generator) EndCityMobs(c EndCity) []EndCityMob {
+	return EndCityPieceMobs(g.AssembleEndCity(c))
+}
+
+// EndCityPieceMobs is EndCityMobs over a city's pieces.
+func EndCityPieceMobs(pieces []PlacedPiece) []EndCityMob {
 	var out []EndCityMob
-	for _, pc := range g.AssembleEndCity(c) {
+	for _, pc := range pieces {
 		for _, m := range pc.Tmpl.Mobs {
 			rx, ry, rz := pc.Tmpl.rotatePos(m.Pos[0], m.Pos[1], m.Pos[2], pc.Rot)
 			out = append(out, EndCityMob{pc.OX + rx, pc.OY + ry, pc.OZ + rz, m.Type, pc.Rot})

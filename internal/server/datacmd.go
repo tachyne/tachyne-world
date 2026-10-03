@@ -143,10 +143,21 @@ type dataReq struct {
 	end       int
 	hasStart  bool
 	hasEnd    bool
+	compute   *dataCompute // modify … compute <context> float|integer <provider>
+}
+
+// dataCompute is `compute default|block <pos>|entity <target>
+// float|integer <provider>` (LootContextSources): the value a number
+// provider gives in a loot context, as a float or an int tag.
+type dataCompute struct {
+	hasPos bool
+	pos    blockPos
+	target string
+	prov   computeProvider
 }
 
 const dataUsage = "Usage: /data get <target> [<path> [<scale>]] | merge <target> <nbt> | remove <target> <path> | " +
-	"modify <target> <path> append|prepend|insert <index>|set|merge value <nbt>|from <source> [<path>]|string <source> [<path> [<start> [<end>]]]" +
+	"modify <target> <path> append|prepend|insert <index>|set|merge value <nbt>|from <source> [<path>]|string <source> [<path> [<start> [<end>]]]|compute default|block <pos>|entity <target> float|integer <provider>" +
 	" — a target is entity <target>, block <pos> or storage <id>"
 
 // parseDataTarget reads an accessor at the start of args and returns the
@@ -289,7 +300,11 @@ func parseData(p *player, args []string) (dataReq, string) {
 			}
 			r.hasStart, r.hasEnd = len(after) >= 2, len(after) >= 3
 		case "compute":
-			return dataReq{}, "/data modify … compute is not supported on this server"
+			c, msg := parseDataCompute(p, rest[i+1:])
+			if msg != "" {
+				return dataReq{}, msg
+			}
+			r.compute = c
 		default:
 			return dataReq{}, dataUsage
 		}
@@ -297,6 +312,70 @@ func parseData(p *player, args []string) (dataReq, string) {
 		return dataReq{}, dataUsage
 	}
 	return r, ""
+}
+
+// parseDataCompute reads `default|block <pos>|entity <target>
+// float|integer <provider>`, the provider running to the end of the line.
+func parseDataCompute(p *player, a []string) (*dataCompute, string) {
+	c := &dataCompute{}
+	switch {
+	case len(a) >= 1 && a[0] == "default":
+		a = a[1:]
+	case len(a) >= 4 && a[0] == "block":
+		x, y, z, ok := parsePosition(a[1:4], p.x, p.y, p.z, p.yaw, p.pitch)
+		if !ok {
+			return nil, dataUsage
+		}
+		c.hasPos, c.pos, a = true, blockPos{floorInt(x), floorInt(y), floorInt(z)}, a[4:]
+	case len(a) >= 2 && a[0] == "entity":
+		c.target, a = a[1], a[2:]
+	default:
+		return nil, dataUsage
+	}
+	if len(a) < 2 || (a[0] != "float" && a[0] != "integer") {
+		return nil, dataUsage
+	}
+	prov, tail, msg := parseComputeProvider(strings.Join(a[1:], " "), a[0] == "float")
+	if msg != "" {
+		return nil, msg
+	}
+	if tail != "" {
+		return nil, "Incorrect argument for command"
+	}
+	c.prov = prov
+	return c, ""
+}
+
+// dataComputeValue runs the provider in its loot context (the source as
+// this, and the block or the target entity) and gives the tag it
+// becomes: ContextFloatProvider.getFloat as a float, getInt as an int.
+func (h *hub) dataComputeValue(players map[int32]*tracked, by int32, c *dataCompute) (any, string) {
+	t := players[by]
+	if t == nil {
+		return nil, "No entity was found"
+	}
+	ctx := &computeCtx{h: h, this: t}
+	if c.hasPos { // BlockPosArgument.getLoadedBlockPos
+		if !h.hasDim(t.dim) || !h.cloneLoaded(t.dim, c.pos, c.pos) {
+			return nil, "That position is not loaded"
+		}
+		if !h.inWorldYIn(t.dim, c.pos.y) {
+			return nil, "That position is out of this world!"
+		}
+		ctx.hasBS, ctx.state = true, h.worldFor(t.dim).At(c.pos.x, c.pos.y, c.pos.z)
+	}
+	if c.target != "" {
+		var fail string
+		en, ok := h.singleEntity(players, by, c.target, func(m string) { fail = m })
+		if !ok {
+			return nil, fail
+		}
+		ctx.target = &en
+	}
+	if c.prov.float != nil {
+		return nbtFloat(c.prov.float.getFloat(ctx)), ""
+	}
+	return nbtInt(c.prov.int.getInt(ctx)), ""
 }
 
 // parseCompoundArg is CompoundTagArgument: one typed SNBT compound.
@@ -491,6 +570,13 @@ func (h *hub) runData(players map[int32]*tracked, r dataReq) string {
 	// modify: the source tags first (a source that finds nothing fails
 	// before the target is touched), then the operation on a copy.
 	src := r.values
+	if r.compute != nil {
+		v, msg := h.dataComputeValue(players, r.by, r.compute)
+		if msg != "" {
+			return msg
+		}
+		src = []any{v}
+	}
 	if r.source != nil {
 		sa, msg := h.dataAccess(players, r.by, *r.source)
 		if msg != "" {

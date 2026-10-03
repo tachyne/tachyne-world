@@ -296,17 +296,43 @@ type Server struct {
 	hub   *hub
 	modes *modeStore
 
-	// commandTree is the tab-completion tree including plugin commands,
-	// built once after the plugin enable phase (nil = static built-ins only).
-	commandTree []byte
+	// treeExtra are the plugin command names the tab-completion tree adds,
+	// set once after the plugin enable phase, and treeOpOnly the ones
+	// among them only operators may run.
+	treeExtra  []string
+	treeOpOnly map[string]bool
+	// trees caches the tree each permission level is sent (commandTreeFor).
+	treeMu sync.Mutex
+	trees  [permOwners + 1][]byte
 }
 
-// commandTreeBytes picks the completion tree sessions send at join.
-func (s *Server) commandTreeBytes() []byte {
-	if s.commandTree != nil {
-		return s.commandTree
+// commandTreeFor is the tree a player of a permission level is sent
+// (Commands.sendCommands: only the commands it may use).
+func (s *Server) commandTreeFor(level int) []byte {
+	level = min(max(level, permAll), permOwners)
+	s.treeMu.Lock()
+	defer s.treeMu.Unlock()
+	if s.trees[level] == nil {
+		s.trees[level] = buildCommandTreeFor(level, s.treeOpOnly, s.treeExtra...)
 	}
-	return commandTreeBody
+	return s.trees[level]
+}
+
+// setTreeCommands sets the plugin commands the tree carries and drops the
+// cached trees.
+func (s *Server) setTreeCommands(extra []string, opOnly map[string]bool) {
+	s.treeMu.Lock()
+	defer s.treeMu.Unlock()
+	s.treeExtra, s.treeOpOnly = extra, opOnly
+	s.trees = [permOwners + 1][]byte{}
+}
+
+// sendPermissionLevel is PlayerList.sendPlayerPermissionLevel: the entity
+// event carrying the level, then the command tree that level may use.
+func (s *Server) sendPermissionLevel(p *player, level int) {
+	// Neither heals itself if dropped, so both go the reliable way.
+	p.sendEvReliable(opLevelEvent(p.eid, level))
+	p.sendEvReliable(attachproto.CommandTree{Data: s.commandTreeFor(level)})
 }
 
 // roleOp is the tachyne-access role that makes a player an operator.

@@ -10,11 +10,18 @@ import (
 )
 
 // /place feature|jigsaw|structure|template (PlaceCommand). The generator lays
-// the blocks out (worldgen/placecmd.go) and they go into the live world as
-// edits: StructureTemplate.placeInWorld with UPDATE_CLIENTS, so the viewers
-// see them and no neighbour updates run. Features are the trees and huge
-// mushrooms the engine grows; structures are the jigsaw-built ones and the
-// igloo; jigsaws and templates are every pool and template the engine has.
+// the blocks out (worldgen/placecmd.go, placestructs.go, placefeatures.go)
+// and they go into the live world as edits: StructureTemplate.placeInWorld
+// with UPDATE_CLIENTS, so the viewers see them and no neighbour updates
+// run. Features are the trees and huge mushrooms the engine grows and the
+// ores, disks, springs, monster room, amethyst geode and sculk it decorates
+// with; structures are the jigsaw-built ones, the igloo and the End city,
+// and the code-built ones (temples, huts, wrecks, buried treasure, ruined
+// portals, ocean ruins, the mansion, the monument, the fortress, the
+// stronghold and mineshafts) — with their loot, their spawners' mobs and
+// the entities their generation places; jigsaws and templates are every
+// pool and template the engine has. Not here: the nether fossil, the Nether
+// ores, flower and vegetation patches.
 
 const placeUsage = "Usage: /place feature <feature> [<pos>] | jigsaw <pool> <target> <max_depth> [<position>] | " +
 	"structure <structure> [<pos>] | template <template> [<pos> [<rotation> [<mirror> [<integrity> [<seed> [strict]]]]]]"
@@ -45,6 +52,10 @@ var vanillaStructures = keySet(
 	"ruined_portal_jungle", "ruined_portal_mountain", "ruined_portal_nether", "ruined_portal_ocean", "ruined_portal_swamp",
 	"shipwreck", "shipwreck_beached", "stronghold", "swamp_hut", "trail_ruins", "trial_chambers", "village_desert",
 	"village_plains", "village_savanna", "village_snowy", "village_taiga")
+
+// placeFeatureNames are the configured features /place grows through
+// worldgen.PlaceFeatureStamp.
+var placeFeatureNames = keySet(worldgen.PlaceFeatureNames()...)
 
 var templateRotations = map[string]int{"none": 0, "clockwise_90": 1, "180": 2, "counterclockwise_90": 3}
 var templateMirrors = map[string]int{"none": worldgen.MirrorNone, "left_right": worldgen.MirrorLeftRight, "front_back": worldgen.MirrorFrontBack}
@@ -189,17 +200,22 @@ func (h *hub) runPlace(players map[int32]*tracked, r placeReq) string {
 	case "feature":
 		_, tree := worldgen.TreeFeatures[name]
 		mushroom := name == "huge_brown_mushroom" || name == "huge_red_mushroom"
-		if !tree && !mushroom || !strings.HasPrefix(r.id, "minecraft:") {
-			return fmt.Sprintf("Can't find element '%s' in registry 'minecraft:worldgen/configured_feature'", r.id)
+		stamped := placeFeatureNames[name]
+		if !tree && !mushroom && !stamped || !strings.HasPrefix(r.id, "minecraft:") {
+			return fmt.Sprintf("Can't find element '%s' in registry 'minecraft:worldgen/feature'", r.id)
 		}
 		if !loaded(r.pos.x-16, r.pos.z-16, r.pos.x+16, r.pos.z+16) {
 			return "That position is not loaded"
 		}
 		ok := false
-		if tree {
+		switch {
+		case tree:
 			ok = h.placeLiveTree(players, dim, r.pos.x, r.pos.y, r.pos.z, name)
-		} else {
+		case mushroom:
 			ok = h.growHugeMushroom(players, dim, r.pos.x, r.pos.y, r.pos.z, name == "huge_brown_mushroom")
+		default:
+			fs, _ := w.Gen().PlaceFeatureStamp(name, r.pos.x, r.pos.y, r.pos.z, h.rng.Int63(), w.At)
+			ok = h.placeFeatureStamp(players, dim, fs) > 0 // Feature.place: whether it set anything
 		}
 		if !ok {
 			return "Failed to place feature"
@@ -222,19 +238,28 @@ func (h *hub) runPlace(players map[int32]*tracked, r placeReq) string {
 		if !vanillaStructures[name] || !strings.HasPrefix(r.id, "minecraft:") {
 			return fmt.Sprintf("There is no structure with type \"%s\"", r.id)
 		}
-		pieces, ok := w.Gen().PlaceStructurePieces(name, r.pos.x, r.pos.z)
-		if !ok {
+		if pieces, ok := w.Gen().PlaceStructurePieces(name, r.pos.x, r.pos.z); ok {
+			x0, z0, x1, z1, _ := worldgen.PiecesBounds(pieces)
+			if !loaded(x0, z0, x1, z1) {
+				return "That position is not loaded"
+			}
+			fallback := ""
+			switch name {
+			case "igloo":
+				fallback = "chests/igloo_chest" // IglooPieces sets the laboratory chest's table itself
+			case "end_city":
+				fallback = "chests/end_city_treasure"
+			}
+			h.placePieces(players, dim, pieces, fallback)
+			h.placePieceMobs(players, dim, name, pieces)
+		} else if st, ok := w.Gen().PlaceStructureStamp(name, r.pos.x, r.pos.z); ok {
+			if !loaded(st.X0, st.Z0, st.X1, st.Z1) {
+				return "That position is not loaded"
+			}
+			h.placeStamp(players, dim, st)
+		} else {
 			return "Failed to place structure"
 		}
-		x0, z0, x1, z1, _ := worldgen.PiecesBounds(pieces)
-		if !loaded(x0, z0, x1, z1) {
-			return "That position is not loaded"
-		}
-		fallback := ""
-		if name == "igloo" {
-			fallback = "chests/igloo_chest" // IglooPieces sets the laboratory chest's table itself
-		}
-		h.placePieces(players, dim, pieces, fallback)
 		h.cmdOK(players, r.by)(fmt.Sprintf("Generated structure \"%s\" at %s", r.id, at))
 	case "template":
 		tm := worldgen.TemplateByName(name)
@@ -277,19 +302,29 @@ func (r *legacyRandom) nextFloat() float32 {
 // holds there now, and the cells that came out different are written as
 // edits. fallback is the loot table for a chest its template leaves to code.
 func (h *hub) placePieces(players map[int32]*tracked, dim int, pieces []worldgen.PlacedPiece, fallback string) int {
-	w := h.worldFor(dim)
-	g := w.Gen()
+	g := h.worldFor(dim).Gen()
 	x0, z0, x1, z1, ok := worldgen.PiecesBounds(pieces)
 	if !ok {
 		return 0
 	}
+	cells := h.stampCells(dim, x0, z0, x1, z1, func(ch *worldgen.Chunk, cx, cz int32) { g.StampPieces(ch, cx, cz, pieces) })
+	n := h.placeEdits(players, dim, cells)
+	h.stockLootChests(dim, g.PieceLootChests(pieces), fallback)
+	return n
+}
+
+// stampCells runs a stamp over every chunk the columns x0..x1, z0..z1
+// reach, each stamped as the generator would stamp it over what the world
+// holds there now, and gives the cells that came out different.
+func (h *hub) stampCells(dim, x0, z0, x1, z1 int, stamp func(ch *worldgen.Chunk, cx, cz int32)) []worldgen.TemplateCell {
+	w := h.worldFor(dim)
 	var cells []worldgen.TemplateCell
 	for cx := int32(x0 >> 4); cx <= int32(x1>>4); cx++ {
 		for cz := int32(z0 >> 4); cz <= int32(z1>>4); cz++ {
 			ch := w.Chunk(cx, cz) // a copy: the generated base with the edits over it
 			before := make([][4096]uint32, len(ch.Sections))
 			copy(before, ch.Sections)
-			g.StampPieces(ch, cx, cz, pieces)
+			stamp(ch, cx, cz)
 			for s := range ch.Sections {
 				for i, st := range ch.Sections[s] {
 					if st == before[s][i] {
@@ -302,9 +337,150 @@ func (h *hub) placePieces(players map[int32]*tracked, dim int, pieces []worldgen
 			}
 		}
 	}
-	n := h.placeEdits(players, dim, cells)
-	h.stockLootChests(dim, g.PieceLootChests(pieces), fallback)
+	return cells
+}
+
+// placeStamp lays a code-built structure into the live world (placePieces
+// for a worldgen.StructureStamp): its blocks, its loot containers and chest
+// minecarts, its spawners' mobs, and the mobs its generation places.
+func (h *hub) placeStamp(players map[int32]*tracked, dim int, st worldgen.StructureStamp) int {
+	n := h.placeEdits(players, dim, h.stampCells(dim, st.X0, st.Z0, st.X1, st.Z1, st.Stamp))
+	h.stockLootChests(dim, st.Chests, "")
+	h.stockLootBins(dim, st.Bins)
+	for _, c := range st.Carts {
+		h.spawnStructureCart(players, dim, c.X, c.Y, c.Z, strings.TrimPrefix(c.Table, "minecraft:"))
+	}
+	w := h.worldFor(dim)
+	spawner := worldgen.BlockBase("spawner")
+	for _, sp := range st.Spawners { // the cage's SpawnData, as the piece sets it
+		if w.At(sp.X, sp.Y, sp.Z) == spawner {
+			h.setSpawnerEntity(simPos{dim: dim, blockPos: blockPos{sp.X, sp.Y, sp.Z}}, sp.Entity)
+		}
+	}
+	for _, m := range st.Mobs {
+		h.placeStructureMob(players, dim, m)
+	}
 	return n
+}
+
+// placeFeatureStamp lays a configured feature into the live world: its
+// blocks, its loot chests and its spawner's mob. The count is the blocks it
+// changed.
+func (h *hub) placeFeatureStamp(players map[int32]*tracked, dim int, fs worldgen.FeatureStamp) int {
+	if fs.Stamp == nil {
+		return 0
+	}
+	n := h.placeEdits(players, dim, h.stampCells(dim, fs.X0, fs.Z0, fs.X1, fs.Z1, fs.Stamp))
+	if n == 0 {
+		return 0
+	}
+	h.stockLootChests(dim, fs.Chests, "")
+	w := h.worldFor(dim)
+	spawner := worldgen.BlockBase("spawner")
+	for _, sp := range fs.Spawners {
+		if w.At(sp.X, sp.Y, sp.Z) == spawner {
+			h.setSpawnerEntity(simPos{dim: dim, blockPos: blockPos{sp.X, sp.Y, sp.Z}}, sp.Entity)
+		}
+	}
+	return n
+}
+
+// stockLootBins gives each placed dispenser its table, filled at once (a
+// jungle temple's arrow traps).
+func (h *hub) stockLootBins(dim int, bins []worldgen.LootChest) {
+	w := h.worldFor(dim)
+	for _, lb := range bins {
+		state := w.At(lb.X, lb.Y, lb.Z)
+		if !isDispenser(state) {
+			continue
+		}
+		pos := simPos{dim: dim, blockPos: blockPos{lb.X, lb.Y, lb.Z}}
+		b := h.binAt(pos, state)
+		for i := range b.slots {
+			b.slots[i] = invStack{}
+		}
+		h.fillSlots(b.slots, strings.TrimPrefix(lb.Table, "minecraft:"), pos.blockPos)
+	}
+}
+
+// placeStructureMob places one mob a code-built structure's generation
+// places: a swamp hut's witch and black cat (both persistent), a
+// monument's elder guardians, an ocean ruin's persistent drowned, a
+// mansion's illagers.
+func (h *hub) placeStructureMob(players map[int32]*tracked, dim int, sm worldgen.StructureMob) {
+	x, y, z := float64(sm.X)+0.5, float64(sm.Y), float64(sm.Z)+0.5
+	switch sm.Entity {
+	case "witch":
+		if m := h.spawnSpecies(players, entityWitch, dim, x, y, z); m != nil {
+			m.persistent = true
+		}
+	case "cat":
+		if m := h.spawnSpecies(players, entityCat, dim, x, y, z); m != nil {
+			m.persistent = true
+			// Cat.finalizeSpawn: in a swamp hut, all black.
+			m.variant, m.variantSet = catVariantID[catAllBlack], true
+			if vm := variantMeta(m); vm != nil {
+				h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(vm))
+			}
+		}
+	case "elder_guardian":
+		h.spawnHostileYIn(players, entityElderGuardian, dim, x, y, z)
+	case "drowned":
+		if m := h.spawnHostileYIn(players, entityDrowned, dim, x, y, z); m != nil {
+			m.persistent = true
+			h.rollDrownedNautilus(players, m, true)
+		}
+	case "evoker", "vindicator", "allay":
+		if et, ok := entityByName[sm.Entity]; ok {
+			h.spawnMobIn(players, et, dim, x, y, z)
+		}
+	}
+}
+
+// placePieceMobs places the entities a jigsaw structure's templates carry,
+// as StructureTemplate.placeEntities does when the pieces are placed: a
+// village's villagers, golem, cats and animals, an igloo's villager and
+// zombie villager, an outpost's caged golem and allays, a bastion's
+// garrison, an End city's shulkers and the ship's elytra frame.
+func (h *hub) placePieceMobs(players map[int32]*tracked, dim int, name string, pieces []worldgen.PlacedPiece) {
+	switch name {
+	case "bastion_remnant":
+		for _, s := range worldgen.BastionPieceMobs(pieces) {
+			et, ok := bastionMobTypes[s.Type]
+			if !ok {
+				continue
+			}
+			h.structureSpawn.on, h.structureSpawn.hand = true, bastionPieceHand[s.Piece]
+			h.spawnSpecies(players, et, dim, float64(s.X)+0.5, float64(s.Y), float64(s.Z)+0.5)
+			h.structureSpawn.on, h.structureSpawn.hand = false, 0
+		}
+		return
+	case "end_city":
+		for _, m := range worldgen.EndCityPieceMobs(pieces) {
+			switch m.Type {
+			case "shulker":
+				h.spawnSpecies(players, entityShulker, dim, float64(m.X)+0.5, float64(m.Y), float64(m.Z)+0.5)
+			case "elytra_frame":
+				f := &itemFrame{eid: h.allocEID(), x: m.X, y: m.Y, z: m.Z, dim: dim,
+					dir: endCityFrameDir[m.Rot&3], held: invStack{item: itemByName["elytra"], count: 1}}
+				h.itemFrames[f.eid] = f
+				h.showFrame(players, f)
+			}
+		}
+		return
+	}
+	if len(pieces) == 0 {
+		return
+	}
+	// The village's centre is a golem's home.
+	home := worldgen.Village{X: pieces[0].OX, Y: pieces[0].OY, Z: pieces[0].OZ, Exists: true}
+	for _, vm := range worldgen.PieceMobs(pieces) {
+		switch vm.Type {
+		case "cushion", "armor_stand": // not mobs
+			continue
+		}
+		h.spawnVillageMobIn(players, dim, home, vm)
+	}
 }
 
 // placeBroadcastMax is how many placed blocks go out as single block

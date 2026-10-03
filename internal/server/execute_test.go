@@ -170,7 +170,8 @@ func TestExecuteConditions(t *testing.T) {
 		{"execute if block 0 5000 0 stone", "That position is out of this world!"},
 		{"execute if predicate foo:bar", "Can't find element 'foo:bar' in registry 'minecraft:predicate'"},
 		{"execute if function foo:bar", execIncomplete},
-		{"execute if data entity @s Pos", execNeedsData},
+		{"execute if data entity @s Pos", "Test passed. Count: 1"},
+		{"execute unless data entity @s NoSuchKey", "Test passed"},
 		{"execute as @a", execIncomplete},
 		{"execute if blocks 0 0 0 40 40 40 0 0 0 all", "Too many blocks in the specified area (maximum 32768, but specified 68921)"},
 	}
@@ -285,15 +286,12 @@ func TestExecuteStore(t *testing.T) {
 			t.Errorf("bossbar %+v, want value 3 of 50", b)
 		}
 	})
-	for _, cmd := range []string{
-		"execute store result entity @s Health float 1 run say x",
-		"execute store success block 0 0 0 Items byte 1 run say x",
-		"execute store result storage foo:bar x int 1 run say x",
-	} {
-		if got := run(cmd); !hasLine(got, execNeedsData) {
-			t.Errorf("%s: %q", cmd, got)
+	run("execute store result storage foo:bar x int 1 if entity @a")
+	onHub(t, h, func() {
+		if v := h.storage().get("foo:bar")["x"]; v != nbtInt(3) {
+			t.Errorf("store into storage: x = %#v, want 3", v)
 		}
-	}
+	})
 	if got := run("execute store result score alice nothing run say x"); !hasLine(got, "Unknown scoreboard objective 'nothing'") {
 		t.Errorf("store into a missing objective: %q", got)
 	}

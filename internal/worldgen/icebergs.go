@@ -29,6 +29,9 @@ type owRegion struct {
 	// the chunk, and ch is not touched (it may be nil). Every chunk pass
 	// then sees the same features the same way (blueice in surfacefeatures.go).
 	capture map[[3]int]uint32
+	// under, when set on a scratch view, is what lies beneath the capture
+	// instead of pure terrain: the live world, for /place feature.
+	under func(x, y, z int) uint32
 }
 
 const regionSpan = 48 // 16 + 16 either side
@@ -49,6 +52,9 @@ func (r *owRegion) read(x, y, z int) uint32 {
 	if r.capture != nil {
 		if s, ok := r.capture[[3]int{x, y, z}]; ok {
 			return s
+		}
+		if r.under != nil {
+			return r.under(x, y, z)
 		}
 	} else if lx >= 0 && lx < 16 && lz >= 0 && lz < 16 {
 		return sectionBlockAt(r.ch, lx, y, lz)

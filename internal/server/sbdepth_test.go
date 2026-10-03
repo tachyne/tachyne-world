@@ -238,3 +238,31 @@ func TestTeamCollisionRuleStopsPushing(t *testing.T) {
 		}
 	}
 }
+
+// /scoreboard players display name: the score is sent again carrying its
+// display name (ScoreAccess.display), unchanged names stay silent, and a
+// cleared name sends the score without one.
+func TestScoreboardDisplayNameRidesScoreFrame(t *testing.T) {
+	h := newTestHub(world.New(1))
+	pl := testTracked()
+	players := map[int32]*tracked{1: pl}
+	sb := func(args ...string) { h.cmdScoreboard(players, evScoreboardCmd{p: pl.p, args: args}) }
+	sb("objectives", "add", "a", "dummy")
+	sb("players", "set", "alice", "a", "5")
+	drainSB(pl)
+	sb("players", "display", "name", "alice", "a", `"Ally"`)
+	_, scores, _, _ := drainSB(pl)
+	if len(scores) != 1 || scores[0].Owner != "alice" || scores[0].Value != 5 ||
+		scores[0].Display == nil || scores[0].Display.Text != "Ally" {
+		t.Fatalf("display name frames: %+v", scores)
+	}
+	sb("players", "display", "name", "alice", "a", `"Ally"`)
+	if _, again, _, _ := drainSB(pl); len(again) != 0 {
+		t.Errorf("an unchanged display name was sent again: %+v", again)
+	}
+	sb("players", "display", "name", "alice", "a")
+	_, cleared, _, _ := drainSB(pl)
+	if len(cleared) != 1 || cleared[0].Display != nil {
+		t.Errorf("a cleared display name: %+v", cleared)
+	}
+}

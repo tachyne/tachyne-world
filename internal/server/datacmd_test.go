@@ -3,6 +3,8 @@ package server
 import (
 	"strings"
 	"testing"
+
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 func mustTyped(t *testing.T, s string) any {
@@ -300,6 +302,54 @@ func TestCommandDataEntity(t *testing.T) {
 		}
 		if named.custom["q"] != nbtInt(1) {
 			t.Errorf("custom data = %#v", named.custom)
+		}
+	})
+}
+
+// /data modify … compute: a number provider's value in a loot context,
+// stored as a float or an int tag; an exception reads as 0 (getInt), and the
+// block and entity contexts are resolved as /compute resolves them.
+func TestCommandDataModifyCompute(t *testing.T) {
+	s, h, ps, logs := feedbackServer(t)
+	alice := ps["alice"]
+	onHub(t, h, func() { h.world.SetBlock(3, 200, 3, worldgen.BlockBase("smoker")) })
+	for _, line := range []string{
+		`data modify storage t:c f set compute default float {type:div,left:5,right:2}`,
+		`data modify storage t:c i set compute default integer {type:add,inputs:[2,3]}`,
+		`data modify storage t:c bad set compute default integer {type:"minecraft:div",left:1,right:0}`,
+		`data modify storage t:c id set compute default integer minecraft:brewing/uses_default`,
+		`data modify storage t:c sm set compute block 3 200 3 integer cooking/time_coal`,
+		`data modify storage t:c list append compute default integer {type:add,inputs:[1,1]}`,
+		`data modify storage t:c e set compute entity @e[type=pig] integer {type:add,inputs:[1,1]}`,
+		`data modify storage t:c x set compute default integer minecraft:nope`,
+	} {
+		s.handleCommand(alice, line)
+	}
+	settle(t, h, logs, "DC1")
+	a := linesBetween(logs["alice"], "", "DC1")
+	for _, want := range []string{
+		"Modified storage t:c",
+		"No entity was found",
+		"Can't find element 'minecraft:nope' in registry 'minecraft:context_int_provider'",
+	} {
+		if !hasLine(a, want) {
+			t.Errorf("no %q in %q", want, a)
+		}
+	}
+	onHub(t, h, func() {
+		got := h.storage().get("t:c")
+		for k, want := range map[string]any{
+			"f": nbtFloat(2.5), "i": nbtInt(5), "bad": nbtInt(0), "id": nbtInt(20), "sm": nbtInt(800),
+		} {
+			if got[k] != want {
+				t.Errorf("%s = %#v, want %#v", k, got[k], want)
+			}
+		}
+		if l, ok := got["list"].(*nbtList); !ok || len(l.elems) != 1 || l.elems[0] != nbtInt(2) {
+			t.Errorf("append compute: %#v", got["list"])
+		}
+		if _, made := got["e"]; made {
+			t.Error("a compute whose entity was not found still wrote")
 		}
 	})
 }

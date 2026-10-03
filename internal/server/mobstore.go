@@ -105,6 +105,7 @@ type savedMob struct {
 	Stew        int8     `json:"stew,omitempty"`        // brown mooshroom's stored stew flower
 	CustomName  string   `json:"name,omitempty"`        // name tag; also makes the mob persistent
 	Tags        []string `json:"tags,omitempty"`        // scoreboard tags (/tag)
+	Data        string   `json:"data,omitempty"`        // Entity.customData (/data, /summon): typed SNBT
 	FromBucket  bool     `json:"bucket,omitempty"`      // released from a mob bucket: persistent
 	Variant     int32    `json:"variant,omitempty"`     // species variant + 1 (0 = unset; rows without one re-roll on load)
 	Persistent  bool     `json:"persist,omitempty"`     // picked up gear: persistenceRequired
@@ -809,6 +810,7 @@ func toSavedMob(m *mob) savedMob {
 		Oxidation:  m.oxidation, Waxed: m.waxed,
 		Trident: m.trident, CanPickup: m.canPickup,
 		Saddled: m.saddled, SaddleSt: packStack(m.saddleSt), ArmorSt: packStack(m.armorSt),
+		Data:    customDataSave(m.custom),
 		Chested: m.chested, Strength: m.strength, Held: m.held, Harness: m.harness,
 		Carry: packStack(m.carry), DupCD: m.dupCD, SniffCD: m.sniffCD, Hoard: packHoard(m),
 		LeashPos: leashSavePos(m),

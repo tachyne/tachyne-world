@@ -91,6 +91,12 @@ func (g *Generator) OceanRuinsIn(wx, wz int) OceanRuins {
 	if g.Height(x, z) >= SeaLevel-1 {
 		return OceanRuins{} // dry (or barely wet) ground: no ruin
 	}
+	return g.oceanRuinSite(x, z, warm)
+}
+
+// oceanRuinSite lays a ruin site out from (x,z): the large or small piece,
+// and a large one's cluster.
+func (g *Generator) oceanRuinSite(x, z int, warm bool) OceanRuins {
 	r := newJigsawRNG(g.seed, x^0x0CEA0000, z)
 	site := OceanRuins{X: x, Z: z, Warm: warm, Exists: true}
 	rot := r.intn(4)

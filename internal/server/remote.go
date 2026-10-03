@@ -53,7 +53,7 @@ func (s *Server) JoinRemote(id attach.Identity, emit func(typ byte, payload []by
 	mode := s.modes.pin(p.key()) // a later /defaultgamemode is for new players only
 	// Join-time extras the TCP path sends in handlePlay: tab-completion tree
 	// and the mode's abilities (creative flight).
-	r.emitEvNow(attachproto.CommandTree{Data: r.s.commandTreeBytes()})
+	r.emitEvNow(attachproto.CommandTree{Data: r.s.commandTreeFor(s.opLevel(p.name))})
 	r.emitEvNow(abilitiesFor(mode))
 	r.emitEvNow(opLevelEvent(p.eid, s.opLevel(p.name)))
 	s.hub.post(evJoin{p: p, x: x, y: y, z: z, yaw: yaw, pitch: pitch, gamemode: mode})
@@ -110,7 +110,7 @@ func (s *Server) ResumeRemote(id attach.Identity, token string, emit func(typ by
 	r := &remotePlayer{s: s, p: p, emit: emit, x: ps.X, y: ps.Y, z: ps.Z, gm: ps.Gamemode}
 	go r.decodeLoop()
 	mode := int(ps.Gamemode)
-	r.emitEvNow(attachproto.CommandTree{Data: r.s.commandTreeBytes()})
+	r.emitEvNow(attachproto.CommandTree{Data: r.s.commandTreeFor(s.opLevel(p.name))})
 	r.emitEvNow(abilitiesFor(mode))
 	r.emitEvNow(opLevelEvent(p.eid, s.opLevel(p.name)))
 	psCopy := ps

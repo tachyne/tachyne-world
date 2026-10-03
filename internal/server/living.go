@@ -24,8 +24,8 @@ type living struct {
 	// locator bar (/waypoint modify).
 	wpIcon waypointIcon
 	// custom is Entity.customData: the free-form "data" compound /data
-	// merges into an entity (typed tags, nbttag.go). Kept while the entity
-	// lives; not yet written with the saved player or mob.
+	// merges into an entity (typed tags, nbttag.go), saved with the player
+	// or the mob as typed SNBT (customDataSave).
 	custom map[string]any
 }
 

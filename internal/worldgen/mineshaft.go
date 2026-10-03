@@ -565,31 +565,37 @@ const MineshaftCartTable = msCartTable
 func (g *Generator) stampMineshafts(ch *Chunk, cx, cz int32) {
 	s := newChunkStamp(g, ch, cx, cz)
 	for _, m := range g.MineshaftsNear(int(cx)*16+8, int(cz)*16+8) {
-		wood := msNormal
-		if m.Mesa {
-			wood = msMesa
-		}
-		ms := &msStamp{pstamp: s, wood: wood}
-		logLo, logHi := BlockRange(wood.log)
-		plLo, plHi := BlockRange(wood.planks)
-		fLo, fHi := BlockRange(wood.fence)
-		chLo, chHi := BlockRange("iron_chain")
-		s.keep = func(st uint32) bool {
-			return inRange(st, logLo, logHi) || inRange(st, plLo, plHi) || inRange(st, fLo, fHi) || inRange(st, chLo, chHi)
-		}
-		for _, p := range m.pieces {
-			if !p.box.intersects(s.cb) {
-				continue
-			}
-			s.p, s.salt = &p.opiece, p.salt
-			if ms.invalid(p) {
-				continue
-			}
-			ms.draw(p)
-		}
+		g.stampMineshaftIn(s, m)
 	}
 	s.keep = nil
 	s.reshape()
+}
+
+// stampMineshaftIn draws one mineshaft's pieces crossing the stamp's chunk
+// (the caller clears keep and reshapes once every one is drawn).
+func (g *Generator) stampMineshaftIn(s *pstamp, m Mineshaft) {
+	wood := msNormal
+	if m.Mesa {
+		wood = msMesa
+	}
+	ms := &msStamp{pstamp: s, wood: wood}
+	logLo, logHi := BlockRange(wood.log)
+	plLo, plHi := BlockRange(wood.planks)
+	fLo, fHi := BlockRange(wood.fence)
+	chLo, chHi := BlockRange("iron_chain")
+	s.keep = func(st uint32) bool {
+		return inRange(st, logLo, logHi) || inRange(st, plLo, plHi) || inRange(st, fLo, fHi) || inRange(st, chLo, chHi)
+	}
+	for _, p := range m.pieces {
+		if !p.box.intersects(s.cb) {
+			continue
+		}
+		s.p, s.salt = &p.opiece, p.salt
+		if ms.invalid(p) {
+			continue
+		}
+		ms.draw(p)
+	}
 }
 
 type msStamp struct {

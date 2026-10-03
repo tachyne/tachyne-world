@@ -69,7 +69,7 @@ func TestCommandPlaceFeature(t *testing.T) {
 	a := linesBetween(logs["alice"], "", "F1")
 	for _, want := range []string{
 		`Placed "minecraft:oak" at 5, 200, 5`,
-		"Can't find element 'minecraft:nope' in registry 'minecraft:worldgen/configured_feature'",
+		"Can't find element 'minecraft:nope' in registry 'minecraft:worldgen/feature'",
 	} {
 		if !hasLine(a, want) {
 			t.Errorf("missing %q in\n%s", want, strings.Join(a, "\n"))
@@ -88,7 +88,7 @@ func TestCommandPlaceStructureAndJigsaw(t *testing.T) {
 	s, h, ps, logs := feedbackServer(t)
 	alice := ps["alice"]
 	s.handleCommand(alice, "place structure minecraft:igloo 3 ~ 3")
-	s.handleCommand(alice, "place structure minecraft:mansion")
+	s.handleCommand(alice, "place structure minecraft:nether_fossil") // not built on demand
 	s.handleCommand(alice, "place structure minecraft:nope")
 	s.handleCommand(alice, "place jigsaw minecraft:trial_chambers/chamber/entrance_cap minecraft:entrance_cap 1 0 200 0")
 	s.handleCommand(alice, "place jigsaw minecraft:nope minecraft:x 1")
