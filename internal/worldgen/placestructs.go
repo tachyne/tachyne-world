@@ -347,7 +347,7 @@ func (g *Generator) PlaceStructureStamp(name string, x, z int) (StructureStamp, 
 // lowestGround is SinglePieceStructure.getLowestY: the lowest surface of a
 // footprint's four corners from (x,z).
 func (g *Generator) lowestGround(x, z, w, d int) int {
-	return min(g.Height(x, z), g.Height(x+w-1, z), g.Height(x, z+d-1), g.Height(x+w-1, z+d-1))
+	return min(min(g.Height(x, z), g.Height(x+w-1, z)), min(g.Height(x, z+d-1), g.Height(x+w-1, z+d-1))) // the package's min takes two
 }
 
 // scatteredStamp stamps one scattered piece wherever its footprint reaches.
