@@ -137,7 +137,10 @@ func (s *Server) placeStandingOrWall(p *player, standingDef, wallDef uint32, tx,
 		return false
 	}
 	state = waterlogPlaced(w, tx, ty, tz, state) // a sign placed under water keeps it
-	s.putBlock(p, tx, ty, tz, state, true, seq)
+	// A block item's placement: the hub applies what the stack carries — a
+	// banner's or head's name, a head's profile and note sound, a copied
+	// sign's text (onBlock's placed branch).
+	s.putPlaced(p, tx, ty, tz, state, true, seq)
 	return true
 }
 
@@ -219,7 +222,7 @@ func (s *Server) placeHangingSign(p *player, ceilingDef, wallDef uint32, tx, ty,
 		return false
 	}
 	state = waterlogPlaced(w, tx, ty, tz, state) // a sign placed under water keeps it
-	s.putBlock(p, tx, ty, tz, state, true, seq)
+	s.putPlaced(p, tx, ty, tz, state, true, seq)
 	s.hub.post(evSignPlaced{eid: p.eid, x: tx, y: ty, z: tz, dim: p.dim, hanging: true})
 	return true
 }
@@ -369,17 +372,28 @@ func (h *hub) signEditorFree(players map[int32]*tracked, key string, eid int32, 
 // eye to the sign's box.
 const signEditSlack = 4.0
 
-// onSignPlaced registers the fresh (blank) sign and opens the editor on its
-// front side for the placer — vanilla SignItem.updateCustomBlockEntityTag.
+// onSignPlaced registers the fresh sign and opens the editor on its front
+// side for the placer — vanilla SignBlock.setPlacedBy. A sign placed from a
+// stack that carried text (a creative ctrl-pick: sign_text_front / back,
+// waxed) already holds it: the placement's evBlock, one event ahead,
+// loaded it. The editor then opens on that text, and not at all on a waxed
+// sign (setPlacedBy: !isWaxed, and every line plain text, which the
+// engine's always are).
 func (h *hub) onSignPlaced(players map[int32]*tracked, e evSignPlaced) {
 	t := players[e.eid]
 	if t == nil {
 		return
 	}
-	sd := signData{Hanging: e.hanging}
-	h.signs.set(e.dim, e.x, e.y, e.z, sd)
-	h.signMayEdit[signKey(e.dim, e.x, e.y, e.z)] = e.eid
+	sd, loaded := h.signs.get(e.dim, e.x, e.y, e.z)
+	if !loaded {
+		sd = signData{Hanging: e.hanging}
+		h.signs.set(e.dim, e.x, e.y, e.z, sd)
+	}
 	t.p.trySendEv(signTextEv(e.x, e.y, e.z, sd))
+	if sd.Waxed {
+		return
+	}
+	h.signMayEdit[signKey(e.dim, e.x, e.y, e.z)] = e.eid
 	t.p.trySendEv(attachproto.SignEditor{X: int32(e.x), Y: int32(e.y), Z: int32(e.z), Front: true})
 }
 

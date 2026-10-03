@@ -68,6 +68,7 @@ type itemEntity struct {
 	golemPose     int8        // a copper golem statue's pose (block_state)
 	standTags     string      // an armor stand's entity_data
 	profile       string      // a player head's owner
+	noteSound     string      // note_block_sound
 	beData        string      // block_entity_data (pickdata.go)
 	tags          itemTags    // lore, unbreakable, can_break, can_place_on
 	vx, vy, vz    float64     // motion per tick (tickItem); all 0 at rest
@@ -88,7 +89,7 @@ func (it *itemEntity) stack() invStack {
 		hiveID: it.hiveID, bundleID: it.bundleID, potion: it.potion, repairCost: it.repairCost,
 		instrument: it.instrument, name: it.name, lode: it.lode, color: it.color, stew: it.stew,
 		shieldBase: it.shieldBase, sherds: it.sherds, flight: it.flight, starID: it.starID, cube: it.cube,
-		ominous: it.ominous, load: it.load, golemPose: it.golemPose, standTags: it.standTags, profile: it.profile, beData: it.beData, tags: it.tags}
+		ominous: it.ominous, load: it.load, golemPose: it.golemPose, standTags: it.standTags, profile: it.profile, noteSound: it.noteSound, beData: it.beData, tags: it.tags}
 }
 
 // setFrom is stack()'s inverse: everything a slot carries, onto the dropped
@@ -108,6 +109,7 @@ func (it *itemEntity) setFrom(st invStack) {
 	it.golemPose = st.golemPose
 	it.standTags = st.standTags
 	it.profile = st.profile
+	it.noteSound = st.noteSound
 	it.beData = st.beData
 	it.tags = st.tags
 }
@@ -186,8 +188,8 @@ func (h *hub) spawnBlockDrop(players map[int32]*tracked, dim int, item int32, co
 		if n := h.takeHeldBlockName(simPos{dim: dim, blockPos: blockPos{x, y, z}}, item); n != "" {
 			it.name = n // copy_components custom_name
 		}
-		if p := h.takeHeldSkullProfile(simPos{dim: dim, blockPos: blockPos{x, y, z}}, item); p != "" {
-			it.profile = p // copy_components profile
+		if p, n := h.takeHeldSkullProfile(simPos{dim: dim, blockPos: blockPos{x, y, z}}, item); p != "" || n != "" {
+			it.profile, it.noteSound = p, n // copy_components profile, note_block_sound
 			h.refreshItemMeta(players, it)
 		}
 		if p := h.takeHeldStatuePose(simPos{dim: dim, blockPos: blockPos{x, y, z}}, item); p != 0 {

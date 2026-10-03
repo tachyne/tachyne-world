@@ -228,15 +228,74 @@ func profileFromSNBT(v any) (gameProfile, bool) {
 	return gameProfile{}, false
 }
 
-// skullStore holds the owners of placed player heads, keyed by simKey. It
-// is guarded because the chunk block-entity section is composed on the
-// parallel chunk workers (appendBlockEntities).
+// skullStore holds the owners of placed player heads, keyed by simKey, and
+// the note_block_sound each head carries (SkullBlockEntity.noteBlockSound:
+// the sound a note block under the head plays). It is guarded because the
+// chunk block-entity section is composed on the parallel chunk workers
+// (appendBlockEntities).
 type skullStore struct {
-	mu sync.Mutex
-	m  map[string]string
+	mu    sync.Mutex
+	m     map[string]string
+	notes map[string]string
 }
 
-func newSkullStore() *skullStore { return &skullStore{m: map[string]string{}} }
+func newSkullStore() *skullStore {
+	return &skullStore{m: map[string]string{}, notes: map[string]string{}}
+}
+
+// note is a head's note_block_sound ("" = none).
+func (s *skullStore) note(pos simPos) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.notes[simKey(pos)]
+}
+
+// setNote records a head's note_block_sound; "" forgets it.
+func (s *skullStore) setNote(pos simPos, sound string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.notes == nil {
+		s.notes = map[string]string{}
+	}
+	if sound == "" {
+		delete(s.notes, simKey(pos))
+		return
+	}
+	s.notes[simKey(pos)] = sound
+}
+
+// takeNote removes and returns a head's note_block_sound.
+func (s *skullStore) takeNote(pos simPos) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	k := simKey(pos)
+	n := s.notes[k]
+	delete(s.notes, k)
+	return n
+}
+
+// snapshotNotes / restoreNotes are the note sounds' save-file form: the
+// identifiers as they are.
+func (s *skullStore) snapshotNotes() map[string]string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make(map[string]string, len(s.notes))
+	for k, v := range s.notes {
+		out[k] = v
+	}
+	return out
+}
+
+func (s *skullStore) restoreNotes(m map[string]string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.notes = make(map[string]string, len(m))
+	for k, v := range m {
+		if id, ok := parseResID(v); ok {
+			s.notes[k] = id
+		}
+	}
+}
 
 func (s *skullStore) get(pos simPos) string {
 	s.mu.Lock()
@@ -255,11 +314,12 @@ func (s *skullStore) set(pos simPos, profile string) {
 	s.m[simKey(pos)] = profile
 }
 
-// remove forgets an owner.
+// remove forgets an owner and a note sound.
 func (s *skullStore) remove(pos simPos) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.m, simKey(pos))
+	delete(s.notes, simKey(pos))
 }
 
 // take removes and returns an owner.
@@ -294,55 +354,82 @@ func (s *skullStore) restore(m map[string]string) {
 	}
 }
 
-// skullDisplayEv is a head's block-entity update: its owner.
-func skullDisplayEv(pos blockPos, profile string) attachproto.BlockDisplay {
-	ev := blockDisplayEv(pos, attachproto.DisplaySkull, "", 0)
+// skullDisplayEv is a head's block-entity update (its whole update tag):
+// its owner and its note_block_sound.
+func skullDisplayEv(pos blockPos, profile, note string) attachproto.BlockDisplay {
+	ev := blockDisplayEv(pos, attachproto.DisplaySkull, note, 0)
 	ev.Profile = profileEv(profile)
 	return ev
 }
 
-// ownSkullFromStack is a placed head taking the stack's profile: the block
-// entity keeps it, and every viewer is sent the update that draws the face.
+// ownSkullFromStack is a placed head taking the stack's profile and
+// note_block_sound (SkullBlockEntity.applyImplicitComponents): the block
+// entity keeps them, and every viewer is sent the update that draws the
+// face and tells the client what a note block under it plays.
 func (h *hub) ownSkullFromStack(players map[int32]*tracked, pos simPos, state uint32, st invStack) {
 	if h.skulls == nil || !isPlayerHeadState(state) {
 		return
 	}
 	h.skulls.set(pos, st.profile)
-	if st.profile != "" {
-		h.toNearbyEv(players, pos.dim, float64(pos.x), float64(pos.z), skullDisplayEv(pos.blockPos, st.profile))
+	h.skulls.setNote(pos, st.noteSound)
+	if st.profile != "" || st.noteSound != "" {
+		h.toNearbyEv(players, pos.dim, float64(pos.x), float64(pos.z), skullDisplayEv(pos.blockPos, st.profile, st.noteSound))
 	}
 }
 
-// holdSkullProfile runs as a head is removed: its owner leaves the store
-// and is held for the drop that follows the removal (spawnBlockDrop).
+// holdSkullProfile runs as a head is removed: its owner and note sound
+// leave the store and are held for the drop that follows the removal
+// (spawnBlockDrop; the loot table's copy_components of profile and
+// note_block_sound).
 func (h *hub) holdSkullProfile(pos simPos, old, now uint32) {
 	if h.skulls == nil || !isPlayerHeadState(old) || sameBlockKind(old, now) {
 		return
 	}
-	if p := h.skulls.take(pos); p != "" {
-		h.lastSkullPos, h.lastSkullProfile = pos, p
+	p, n := h.skulls.take(pos), h.skulls.takeNote(pos)
+	if p != "" || n != "" {
+		h.lastSkullPos, h.lastSkullProfile, h.lastSkullNote = pos, p, n
 	}
 }
 
-// takeHeldSkullProfile is the held owner for a drop of item at pos, when the
-// drop is the head itself.
-func (h *hub) takeHeldSkullProfile(pos simPos, item int32) string {
-	if item != itemPlayerHead || h.lastSkullProfile == "" || h.lastSkullPos != pos {
-		return ""
+// takeHeldSkullProfile is the held owner and note sound for a drop of item
+// at pos, when the drop is the head itself.
+func (h *hub) takeHeldSkullProfile(pos simPos, item int32) (profile, note string) {
+	if item != itemPlayerHead || (h.lastSkullProfile == "" && h.lastSkullNote == "") || h.lastSkullPos != pos {
+		return "", ""
 	}
-	p := h.lastSkullProfile
-	h.lastSkullPos, h.lastSkullProfile = simPos{}, ""
-	return p
+	profile, note = h.lastSkullProfile, h.lastSkullNote
+	h.lastSkullPos, h.lastSkullProfile, h.lastSkullNote = simPos{}, "", ""
+	return profile, note
 }
 
-// skullUpdateTagNBT is SkullBlockEntity's update tag for a chunk's
-// block-entity section: the profile, in the codec's map form.
-func skullUpdateTagNBT(b []byte, profile string) []byte {
+// skullUpdateTagNBT is SkullBlockEntity's update tag (saveCustomOnly) for a
+// chunk's block-entity section: the profile, in the codec's map form, and
+// the note_block_sound.
+func skullUpdateTagNBT(b []byte, profile, note string) []byte {
 	ev := profileEv(profile)
-	if ev == nil {
+	if ev == nil && note == "" {
 		return append(b, 0x00) // TAG_End: a plain head
 	}
 	b = append(b, protocol.NBTRoot()...)
-	b = render770.AppendProfileNBT(protocol.NBTCompound(b, "profile"), *ev)
+	if ev != nil {
+		b = render770.AppendProfileNBT(protocol.NBTCompound(b, "profile"), *ev)
+	}
+	if note != "" {
+		b = protocol.NBTString(b, "note_block_sound", note)
+	}
 	return protocol.NBTEnd(b)
+}
+
+// componentNoteBlockSound is note_block_sound's canonical component id: an
+// Identifier (Identifier.STREAM_CODEC, a UTF-8 string).
+const componentNoteBlockSound = 62
+
+// noteSoundFromSNBT reads note_block_sound as a command writes it: an
+// identifier, namespaced or bare.
+func noteSoundFromSNBT(v any) (string, bool) {
+	s, ok := v.(string)
+	if !ok {
+		return "", false
+	}
+	return parseResID(s)
 }

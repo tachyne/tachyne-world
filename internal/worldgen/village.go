@@ -121,7 +121,11 @@ func (g *Generator) stampVillages(ch *Chunk, cx, cz int32) {
 			// The decor re-roll (villagedecor.go): some lamps give way to
 			// vanilla's feature elements or to nothing.
 			plan := g.villageDecor(v)
-			g.stampPiecesExcept(ch, cx, cz, g.AssembleVillage(v), plan.suppress)
+			// beard_thin: an untouched village's ground was met by the
+			// terrain adaptation; one a player has built in or dug into
+			// keeps its old dirt beards.
+			pieces := g.AssembleVillage(v)
+			g.stampPiecesBeard(ch, cx, cz, pieces, plan.suppress, !g.jigsawAdapted(pieces))
 			if len(plan.features) > 0 {
 				if bg == nil {
 					bg = g.newBuildGuard(cx, cz)

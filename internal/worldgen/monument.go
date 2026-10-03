@@ -182,6 +182,25 @@ func (g *Generator) MonumentElders(m Monument) [][3]int {
 	return g.monumentPlan(m).elders
 }
 
+// MonumentRooms is the boxes (inclusive: x0, y0, z0, x1, y1, z1) of the
+// monument's rooms — the entry, the core and the simple and double rooms
+// of the room graph, in the plan's order — or nil for a monument that
+// keeps the old layout. The monument's guardians (its spawn override:
+// guardian, in water, anywhere in the structure) are seeded in them.
+func (g *Generator) MonumentRooms(m Monument) [][6]int {
+	if !m.Exists || g.monumentTouched(m) {
+		return nil
+	}
+	var out [][6]int
+	for _, p := range g.monumentPlan(m).pieces {
+		if p.kind == monWing || p.kind == monPenthouse {
+			continue
+		}
+		out = append(out, [6]int{p.bb.x0, p.bb.y0, p.bb.z0, p.bb.x1, p.bb.y1, p.bb.z1})
+	}
+	return out
+}
+
 // shell is the building's own blocks: the wings, entrance, roof and walls,
 // the foundation pillars and the moat.
 func (s *monStamp) shell() {

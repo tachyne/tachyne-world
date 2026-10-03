@@ -741,6 +741,7 @@ type hub struct {
 	lastNamedName    string          // …and its name, for the drop that follows
 	lastSkullPos     simPos          // a player head just removed…
 	lastSkullProfile string          // …and its owner, for the drop that follows
+	lastSkullNote    string          // …and its note_block_sound
 	lastPosePos      simPos          // a copper golem statue just removed…
 	lastPose         int8            // …and its pose + 1, for the drop that follows (copy_state)
 	hopperTicking    map[simPos]bool // hoppers among the block-entity tickers (tickHoppers)…
@@ -1071,6 +1072,7 @@ func (h *hub) run() {
 		h.potSherds.restore(h.containers.loadPotSherds())
 		h.blockNames.restore(h.containers.loadBlockNames())
 		h.skulls.restore(h.containers.loadSkulls())
+		h.skulls.restoreNotes(h.containers.loadSkullNotes())
 		h.initBundles(h.containers.loadBundles())
 		h.hiveItems, h.nextHiveID = h.containers.loadHiveItems()
 		h.conduits = h.containers.loadConduits()
@@ -1611,7 +1613,9 @@ func (h *hub) run() {
 					// A hive placed from a Silk-Touched stack takes its bees and
 					// honey back (same FIFO reasoning as the box above).
 					if t := players[e.by]; t != nil {
-						h.restoreBeeHome(players, e.dim, blockPos{e.x, e.y, e.z}, heldStack(t).hiveID)
+						// Creative keeps the stack, and with it the bees: the
+						// hive gets a copy (as the box above does).
+						h.restoreBeeHome(players, e.dim, blockPos{e.x, e.y, e.z}, heldStack(t).hiveID, t.gamemode == gmCreative)
 					}
 				}
 				h.checkWitherBuild(players, e.by, e.dim, e.x, e.y, e.z, e.state)

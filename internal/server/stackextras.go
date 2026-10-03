@@ -86,6 +86,13 @@ func extraComponents(st invStack) (int32, []byte) {
 		b = append(b, st.profile...)
 		n++
 	}
+	if st.noteSound != "" {
+		// note_block_sound: Identifier.STREAM_CODEC, one UTF-8 string. Any
+		// item may carry it; a player head hands it to the skull it places.
+		b = protocol.AppendVarInt(b, componentNoteBlockSound)
+		b = protocol.AppendString(b, st.noteSound)
+		n++
+	}
 	if c, cb := tagComponents(st); c > 0 {
 		n += c
 		b = append(b, cb...)

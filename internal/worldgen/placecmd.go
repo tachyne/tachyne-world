@@ -151,7 +151,7 @@ func (g *Generator) PlaceJigsawPieces(pool, target string, x, y, z, maxDepth int
 	ox, oy, oz := x-rx, y-ry-1, z-rz
 	sw, sh, sd := start.rotatedSize(rot)
 	first := &PlacedPiece{Tmpl: start, OX: ox, OY: oy, OZ: oz, Rot: rot, Proc: sp.procFor(loc),
-		x1: ox + sw, y1: oy + sh, z1: oz + sd}
+		x1: ox + sw, y1: oy + sh, z1: oz + sd, gld: 1}
 	return g.growJigsaw(first, prng, maxDepth, false, nil, nil), true
 }
 

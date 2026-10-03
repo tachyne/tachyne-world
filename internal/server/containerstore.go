@@ -96,6 +96,7 @@ type containerFile struct {
 	PotSherds  map[string]potSherds       `json:"pot_sherds,omitempty"`
 	BlockNames map[string]string          `json:"block_names,omitempty"` // custom names of placed containers, banners, heads
 	Skulls     map[string]string          `json:"skulls,omitempty"`      // placed player heads' owners (base64 profile stream form)
+	SkullNotes map[string]string          `json:"skull_notes,omitempty"` // placed player heads' note_block_sound identifiers
 	Stars      map[string][]fireworkBurst `json:"stars,omitempty"`
 	NextStarID int32                      `json:"next_star_id,omitempty"`
 	// Custom item names by id (names.go). Loaded before any other store
@@ -1154,9 +1155,10 @@ func (s *containerStore) recordSkulls(sk *skullStore) {
 	if sk == nil {
 		return
 	}
-	snap := sk.snapshot()
+	snap, notes := sk.snapshot(), sk.snapshotNotes()
 	s.mu.Lock()
 	s.m.Skulls = snap
+	s.m.SkullNotes = notes
 	s.mu.Unlock()
 }
 
@@ -1164,6 +1166,12 @@ func (s *containerStore) loadSkulls() map[string]string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.m.Skulls
+}
+
+func (s *containerStore) loadSkullNotes() map[string]string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.m.SkullNotes
 }
 
 // recordPotSherds / loadPotSherds persist the decorated pots' faces.

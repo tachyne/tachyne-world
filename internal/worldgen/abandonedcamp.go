@@ -104,7 +104,8 @@ func (g *Generator) stampAbandonedCamps(ch *Chunk, cx, cz int32) {
 		if !c.Exists {
 			continue
 		}
-		g.StampPieces(ch, cx, cz, g.AssembleAbandonedCamp(c))
+		pieces := g.AssembleAbandonedCamp(c)
+		g.stampPiecesBeard(ch, cx, cz, pieces, nil, !g.jigsawAdapted(pieces)) // beard_thin, as a village's
 	}
 }
 

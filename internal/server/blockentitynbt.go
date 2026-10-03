@@ -55,6 +55,9 @@ func stackNBT(st invStack) map[string]any {
 			comps[key] = lv
 		}
 	}
+	if st.noteSound != "" {
+		comps["minecraft:note_block_sound"] = st.noteSound
+	}
 	if len(comps) > 0 {
 		m["components"] = comps
 	}
@@ -337,8 +340,12 @@ func nbtNumber(v any) (float64, bool) {
 
 // carriedFromNBT reads block entity data for a state into the carried form
 // placeBlockEntity sets down: Items for a chest-like container, a
-// dispenser, dropper, hopper, crafter or brewing stand, or a furnace; a
-// sign's front_text / back_text / is_waxed; a banner's patterns. A field
+// dispenser, dropper, hopper, crafter or brewing stand, a furnace, a
+// campfire (with its CookingTimes / CookingTotalTimes) or a chiseled
+// bookshelf (with last_interacted_slot); a sign's front_text / back_text /
+// is_waxed; a banner's patterns; a lectern's Book and Page; a jukebox's
+// RecordItem and ticks_since_song_started; a decorated pot's item. A
+// stack's tag may carry its whole component patch (pickStackNBT). A field
 // the tag leaves out keeps what the cell had (the fresh block entity's
 // default). A malformed field is refused by name.
 func (h *hub) carriedFromNBT(pos simPos, state uint32, nbt map[string]any) (carriedBE, string) {
@@ -349,7 +356,7 @@ func (h *hub) carriedFromNBT(pos simPos, state uint32, nbt map[string]any) (carr
 	if v, ok := nbt["Items"]; ok {
 		switch {
 		case isChestLikeContainer(state):
-			slots, ok := itemsFromNBT(v, 27)
+			slots, ok := h.fullItemsFromNBT(v, 27)
 			if !ok {
 				return bad("Items")
 			}
@@ -357,7 +364,7 @@ func (h *hub) carriedFromNBT(pos simPos, state uint32, nbt map[string]any) (carr
 			copy(ch.slots[:], slots)
 			c.chest = ch
 		case isBinBlock(state):
-			slots, ok := itemsFromNBT(v, binSizeFor(state))
+			slots, ok := h.fullItemsFromNBT(v, binSizeFor(state))
 			if !ok {
 				return bad("Items")
 			}
@@ -366,9 +373,34 @@ func (h *hub) carriedFromNBT(pos simPos, state uint32, nbt map[string]any) (carr
 				b.disabled = old.disabled
 			}
 			c.bin = b
+		case isCampfireBlock(state):
+			slots, ok := h.fullItemsFromNBT(v, 4)
+			if !ok {
+				return bad("Items")
+			}
+			cf := &campfire{}
+			if c.campfire != nil {
+				cp := *c.campfire
+				cf = &cp
+			}
+			for i, s := range slots {
+				cf.items[i] = 0
+				if s.item != 0 && s.count > 0 {
+					cf.items[i] = s.item
+				}
+			}
+			c.campfire = cf
+		case isBookshelf(state):
+			slots, ok := h.fullItemsFromNBT(v, 6)
+			if !ok {
+				return bad("Items")
+			}
+			var shelf [6]invStack
+			copy(shelf[:], slots)
+			c.shelf = &shelf
 		default:
 			if kind, ok := furnaceKindOf(state); ok {
-				slots, ok := itemsFromNBT(v, 3)
+				slots, ok := h.fullItemsFromNBT(v, 3)
 				if !ok {
 					return bad("Items")
 				}
@@ -401,6 +433,90 @@ func (h *hub) carriedFromNBT(pos simPos, state uint32, nbt map[string]any) (carr
 			sd.Waxed = w != 0
 		}
 		c.sign = &sd
+	}
+	if isCampfireBlock(state) {
+		// CampfireBlockEntity.loadAdditional: the cooking progress and
+		// totals, slot by slot.
+		for _, key := range []string{"CookingTimes", "CookingTotalTimes"} {
+			v, ok := nbt[key]
+			if !ok {
+				continue
+			}
+			vals, ok := snbtInts(v)
+			if !ok {
+				return bad(key)
+			}
+			cf := &campfire{}
+			if c.campfire != nil {
+				cp := *c.campfire
+				cf = &cp
+			}
+			dst := &cf.prog
+			if key == "CookingTotalTimes" {
+				dst = &cf.total
+			}
+			for i := range dst {
+				dst[i] = 0
+				if i < len(vals) {
+					dst[i] = int(vals[i])
+				}
+			}
+			c.campfire = cf
+		}
+	}
+	if isBookshelf(state) {
+		if v, ok := nbt["last_interacted_slot"]; ok {
+			n, ok := snbtInt(v)
+			if !ok {
+				return bad("last_interacted_slot")
+			}
+			last := int(n)
+			c.shelfLast = &last
+		}
+	}
+	if v, ok := nbt["Book"]; ok && isLectern(state) {
+		// LecternBlockEntity.loadAdditional: the book, and the page clamped
+		// to it.
+		book, ok := h.fullOneStackFromNBT(v)
+		if !ok {
+			return bad("Book")
+		}
+		l := &lectern{book: book}
+		if n, ok := snbtInt(nbt["Page"]); ok {
+			pages := 1
+			if h.books != nil {
+				pages = h.lecternPages(l)
+			}
+			l.page = int(max(0, min(n, int64(pages-1))))
+		}
+		c.lectern = l
+	}
+	if v, ok := nbt["RecordItem"]; ok && isJukebox(state) {
+		// JukeboxBlockEntity.loadAdditional: the disc, and — with
+		// ticks_since_song_started — its song carried on where it was,
+		// without starting it afresh (setSongWithoutPlaying).
+		disc, ok := h.fullOneStackFromNBT(v)
+		if !ok {
+			return bad("RecordItem")
+		}
+		disc.count = 1
+		j := &jukebox{disc: disc}
+		if ticks, ok := snbtInt(nbt["ticks_since_song_started"]); ok && ticks >= 0 {
+			if _, length, ok := jukeboxSongFor(disc.item); ok && uint64(ticks) < length {
+				if now := h.tick.Load(); now > uint64(ticks) {
+					j.started, j.length = now-uint64(ticks), length
+				}
+			}
+		}
+		c.jukebox = j
+	}
+	if v, ok := nbt["item"]; ok && isDecoratedPot(state) {
+		// DecoratedPotBlockEntity's one stack.
+		st, ok := h.fullOneStackFromNBT(v)
+		if !ok {
+			return bad("item")
+		}
+		c.pot = &st
 	}
 	if v, ok := nbt["patterns"]; ok && isBannerState(state) {
 		layers, ok := bannerLayersFromNBT(v)

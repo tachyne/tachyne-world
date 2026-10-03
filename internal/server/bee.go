@@ -970,8 +970,9 @@ func (h *hub) dropBeeHome(players map[int32]*tracked, by int32, dim int, state u
 }
 
 // restoreBeeHome is the other half: a placed hive takes back the bees and
-// honey its stack carried.
-func (h *hub) restoreBeeHome(players map[int32]*tracked, dim int, pos blockPos, hiveID int32) {
+// honey its stack carried. keep leaves the stack's record in place (a
+// creative placement, whose stack is not used up): the hive gets a copy.
+func (h *hub) restoreBeeHome(players map[int32]*tracked, dim int, pos blockPos, hiveID int32, keep bool) {
 	if hiveID == 0 {
 		return
 	}
@@ -979,11 +980,19 @@ func (h *hub) restoreBeeHome(players map[int32]*tracked, dim int, pos blockPos, 
 	if !ok {
 		return
 	}
-	delete(h.hiveItems, hiveID)
+	if !keep {
+		delete(h.hiveItems, hiveID)
+	}
 	h.registerHive(dim, pos)
 	sp := simPos{dim: dim, blockPos: pos}
 	if len(st.Occ) > 0 {
-		h.hives[sp] = append(h.hives[sp], st.Occ...)
+		for _, o := range st.Occ {
+			if o.Flower != nil { // a copy of its own, whichever hive keeps the record
+				f := *o.Flower
+				o.Flower = &f
+			}
+			h.hives[sp] = append(h.hives[sp], o)
+		}
 		h.hivesMark()
 	}
 	if cur := h.worldFor(dim).At(pos.x, pos.y, pos.z); isBeeHome(cur) && st.Honey > 0 {

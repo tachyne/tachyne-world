@@ -6,8 +6,10 @@ import (
 )
 
 // Terrain adaptation: vanilla's Beardifier for the structures that declare
-// one in 26.3 — pillager outposts (beard_thin), ancient cities (beard_box),
-// trial chambers (encapsulate), trail ruins and strongholds (bury).
+// one in 26.3 — pillager outposts, villages and abandoned camps
+// (beard_thin), ancient cities (beard_box), trial chambers (encapsulate),
+// trail ruins and strongholds (bury), and in the Nether the fossils
+// (beard_thin, adaptNetherTerrain).
 //
 // Vanilla adds the Beardifier to the terrain's density before any block is
 // chosen: each rigid piece near the chunk adds a positive density below its
@@ -17,10 +19,11 @@ import (
 // the 24³ Gaussian beard kernel, the bury cone (1 − d/6), the per-kind
 // distances (to the ground for bury and beard_thin, outside the box's
 // vertical span for beard_box and encapsulate, halved for bury's y and all
-// of encapsulate's axes) and the 0.8 weights. Every rigid piece of a jigsaw
-// structure shares its start piece's ground level (its bottom plus one, as
-// JigsawPlacement's groundLevelDelta works out); a stronghold piece's ground
-// is its own bottom.
+// of encapsulate's axes) and the 0.8 weights, and the jigsaw junctions'
+// beards at 0.4. A jigsaw piece's ground is its bottom plus its
+// groundLevelDelta as JigsawPlacement works it out (PlacedPiece.gld: one
+// ground down a rigid chain, a house's own off a street); a stronghold
+// piece's or a fossil's ground is its own bottom.
 //
 // tachyne's terrain is a heightfield carved by caves, not a density, so the
 // adaptation is a post-pass over the generated chunk, run before the
@@ -52,6 +55,7 @@ const (
 	adaptBeardThin
 	adaptBeardBox
 	adaptEncapsulate
+	adaptJunction // a JigsawJunction: its box is the junction's cell, its ground the cell's y
 )
 
 // beardRigid is Beardifier.Rigid: a piece's box, its adjustment and its
@@ -119,6 +123,9 @@ func beardValue(rs []beardRigid, x, y, z int) float64 {
 		case adaptEncapsulate:
 			dy := max(0, max(b.y0-y, y-b.y1))
 			sum += buryContribution(float64(dx)/2, float64(dy)/2, float64(dz)/2) * 0.8
+		case adaptJunction:
+			// The kernel's reach is signed from the junction (-12..11).
+			sum += beardContribution(x-b.x0, toGround, z-b.z0, toGround) * 0.4
 		}
 	}
 	return sum
@@ -171,26 +178,27 @@ func (g *Generator) adaptRigids(cx, cz int32) []beardRigid {
 		out = append(out, set...)
 	}
 	jigsaw := func(pieces []PlacedPiece, kind adaptKind) {
-		if len(pieces) == 0 {
+		all, ok := jigsawBox(pieces)
+		if !ok {
 			return
 		}
-		ground := pieces[0].OY + 1 // the start's groundLevelDelta, shared down every rigid chain
 		var set []beardRigid
-		var all fbox
-		first := true
 		for i := range pieces {
 			p := &pieces[i]
-			if p.Tmpl == nil || p.TerrainMatch {
+			if p.Tmpl == nil {
 				continue
 			}
 			b := fbox{p.OX, p.OY, p.OZ, p.x1 - 1, p.y1 - 1, p.z1 - 1}
-			if first {
-				all, first = b, false
-			} else {
-				all = all.union(b)
+			if !near(b) { // Beardifier: isCloseToChunk(chunk, 12)
+				continue
 			}
-			if near(b) {
-				set = append(set, beardRigid{b, kind, ground})
+			if !p.TerrainMatch {
+				set = append(set, beardRigid{b, kind, p.OY + p.gld})
+			}
+			for _, j := range p.junctions {
+				if j[0] > baseX-adaptReach && j[2] > baseZ-adaptReach && j[0] < baseX+15+adaptReach && j[2] < baseZ+15+adaptReach {
+					set = append(set, beardRigid{fbox{j[0], j[1], j[2], j[0], j[1], j[2]}, adaptJunction, j[1]})
+				}
 			}
 		}
 		add(set, all)
@@ -214,6 +222,19 @@ func (g *Generator) adaptRigids(cx, cz int32) []beardRigid {
 			jigsaw(g.AssembleTrailRuins(t), adaptBury)
 		}
 	}
+	// Villages (the same 3×3 cells stampVillages scans) and abandoned camps.
+	for ddx := -1; ddx <= 1; ddx++ {
+		for ddz := -1; ddz <= 1; ddz++ {
+			if v := g.VillageIn(baseX+8+ddx*villageCell, baseZ+8+ddz*villageCell); v.Exists {
+				jigsaw(g.AssembleVillage(v), adaptBeardThin)
+			}
+		}
+	}
+	for _, off := range cellNeighbours(campCell) {
+		if c := g.AbandonedCampIn(baseX+8+off[0], baseZ+8+off[1]); c.Exists && siteNear(c.X, c.Z) {
+			jigsaw(g.AssembleAbandonedCamp(c), adaptBeardThin)
+		}
+	}
 	for _, st := range g.StrongholdsNear(baseX+8, baseZ+8) {
 		var set []beardRigid
 		var all fbox
@@ -230,6 +251,43 @@ func (g *Generator) adaptRigids(cx, cz int32) []beardRigid {
 		add(set, all)
 	}
 	return out
+}
+
+// jigsawBox is the box round a jigsaw structure's template pieces; false
+// for a structure with none.
+func jigsawBox(pieces []PlacedPiece) (fbox, bool) {
+	var all fbox
+	first := true
+	for i := range pieces {
+		p := &pieces[i]
+		if p.Tmpl == nil {
+			continue
+		}
+		b := fbox{p.OX, p.OY, p.OZ, p.x1 - 1, p.y1 - 1, p.z1 - 1}
+		if first {
+			all, first = b, false
+		} else {
+			all = all.union(b)
+		}
+	}
+	return all, !first
+}
+
+// jigsawAdapted reports whether a jigsaw structure takes the terrain
+// adaptation: no player's build or dig within reach of any of its pieces
+// (adaptRigids leaves such a structure out whole). A village or camp that
+// is not adapted keeps its old layout — the dirt beard under its rigid
+// pieces (beardUnder) — so what was built round it stays as it was.
+func (g *Generator) jigsawAdapted(pieces []PlacedPiece) bool {
+	if terrainAdaptOff {
+		return false
+	}
+	all, ok := jigsawBox(pieces)
+	if !ok {
+		return false
+	}
+	return !g.touchedIn(all.x0-adaptReach, all.y0-adaptReach, all.z0-adaptReach,
+		all.x1+adaptReach, all.y1+adaptReach, all.z1+adaptReach)
 }
 
 // terrainAdaptOff skips the adaptation — for the tests that compare.
@@ -341,6 +399,113 @@ func (g *Generator) adaptColumn(ch *Chunk, lx, lz, x, z, y0, y1 int, rs []beardR
 				setSectionBlock(ch, lx, y, lz, col.topBlock(), true)
 			}
 			break
+		}
+	}
+}
+
+// netherAdaptGround is the Nether terrain the adaptation may cut: its rock
+// and the floors its surface rules lay.
+var netherAdaptGround = func() map[uint32]bool {
+	m := map[uint32]bool{}
+	for _, n := range []string{"netherrack", "soul_sand", "soul_soil", "basalt", "blackstone", "gravel",
+		"crimson_nylium", "warped_nylium"} {
+		lo, hi := BlockRange(n)
+		for s := lo; s <= hi; s++ {
+			m[s] = true
+		}
+	}
+	return m
+}()
+
+// adaptNetherTerrain is the Beardifier in the Nether, where the one
+// adapting structure is the fossil (nether_fossil: beard_thin, a plain
+// piece whose ground is its own bottom). The Nether has no surface to take
+// a gradient from, so a cell's density is modelled flat: rock adaptSolid,
+// a cavern's air or lava adaptCave below zero. Rock the beard pulls below
+// zero becomes air (lava under the lava sea), air or lava it lifts above
+// zero becomes netherrack; nothing at or over the roof's underside
+// (NetherCeiling) changes. A fossil with a player's build or dig within
+// reach is left unadapted. It runs on the dressed terrain, before anything
+// stamps.
+func (g *Generator) adaptNetherTerrain(ch *Chunk, cx, cz int32) {
+	if !g.nether || terrainAdaptOff || TemplateByName("nether_fossils/fossil_1") == nil {
+		return
+	}
+	baseX, baseZ := int(cx)*16, int(cz)*16
+	var rs []beardRigid
+	for _, off := range cellNeighbours(netherFossilCell) {
+		ox, oz := cellOrigin(baseX+8+off[0], netherFossilCell), cellOrigin(baseZ+8+off[1], netherFossilCell)
+		x := ox + int(hash01(g.seed, ox, oz, 0xF001)*16)
+		z := oz + int(hash01(g.seed, ox, oz, 0xF002)*16)
+		if x+32+adaptReach < baseX || x-adaptReach > baseX+15 || z+32+adaptReach < baseZ || z-adaptReach > baseZ+15 {
+			continue // no fossil from this cell reaches the chunk
+		}
+		f := g.netherFossilAt(ox, oz)
+		if !f.Exists {
+			continue
+		}
+		t := TemplateByName("nether_fossils/fossil_" + itoaW(f.N))
+		if t == nil {
+			continue
+		}
+		w, h, d := t.rotatedSize(f.Rot)
+		b := fbox{f.X, f.Y, f.Z, f.X + w - 1, f.Y + h - 1, f.Z + d - 1}
+		if b.x1 < baseX-adaptReach || b.x0 > baseX+15+adaptReach || b.z1 < baseZ-adaptReach || b.z0 > baseZ+15+adaptReach {
+			continue
+		}
+		if g.touchedIn(b.x0-adaptReach, b.y0-adaptReach, b.z0-adaptReach, b.x1+adaptReach, b.y1+adaptReach, b.z1+adaptReach) {
+			continue
+		}
+		rs = append(rs, beardRigid{b, adaptBeardThin, b.y0})
+	}
+	if len(rs) == 0 {
+		return
+	}
+	top := min(NetherCeiling, MinY+len(ch.Sections)*16) - 1
+	var local []beardRigid
+	for lx := 0; lx < 16; lx++ {
+		for lz := 0; lz < 16; lz++ {
+			x, z := baseX+lx, baseZ+lz
+			local = local[:0]
+			y0, y1 := top+1, MinY-1
+			for _, r := range rs {
+				dx := max(0, max(r.box.x0-x, x-r.box.x1))
+				dz := max(0, max(r.box.z0-z, z-r.box.z1))
+				if dx >= adaptReach || dz >= adaptReach {
+					continue
+				}
+				local = append(local, r)
+				y0 = min(y0, r.groundY-adaptReach)
+				y1 = max(y1, max(r.box.y1, r.groundY)+adaptReach)
+			}
+			if len(local) == 0 {
+				continue
+			}
+			y0, y1 = max(y0, MinY+5), min(y1, top) // above the bedrock floor, below the roof
+			for y := y0; y <= y1; y++ {
+				cur := sectionBlockAt(ch, lx, y, lz)
+				ground := netherAdaptGround[cur]
+				var t float64
+				switch {
+				case ground:
+					t = adaptSolid
+				case cur == Air || IsFluid(cur):
+					t = -adaptCave
+				default:
+					continue
+				}
+				v := t + beardValue(local, x, y, z)
+				switch {
+				case ground && v < 0:
+					cut := Air
+					if y <= NetherLavaSea {
+						cut = Lava
+					}
+					setSectionBlock(ch, lx, y, lz, cut, true)
+				case !ground && v > 0:
+					setSectionBlock(ch, lx, y, lz, Netherrack, true)
+				}
+			}
 		}
 	}
 }

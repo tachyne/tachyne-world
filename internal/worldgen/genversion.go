@@ -172,4 +172,24 @@ package worldgen
 //     round a buried structure close — a post-pass over the heightfield,
 //     before the pieces stamp, left out whole for any structure a player
 //     has built near or dug into.
-const GenVersion = 26
+//
+// v27: the leftovers of v26, behind the build guard:
+//   - the Nether's blob ores as vanilla's step-7 placements, each an
+//     OreFeature ellipsoid across chunk borders replacing netherrack only:
+//     magma everywhere, soul sand in the soul sand valley only, gravel,
+//     blackstone, gold and quartz everywhere but the basalt deltas, which
+//     take their own richer gold and quartz; a blob with a player's build
+//     in its box left out. (Ancient debris stays scattered.) Every Nether
+//     chunk's rock changes.
+//   - villages and abandoned camps take beard_thin as the Beardifier
+//     works it, each rigid piece at its own ground (JigsawPlacement's
+//     groundLevelDelta: a house off a street stands at the street's
+//     ground), with the jigsaw junctions' beards — which every jigsaw
+//     structure's adaptation now carries too; such a structure no longer
+//     lays the dirt beard under its pieces. A village or camp a player has
+//     built in or dug into keeps its old layout: no adaptation, its dirt
+//     beards as before.
+//   - Nether fossils take beard_thin: the rock round a fossil is shaved
+//     back above its floor and its caves filled below, left out for a
+//     fossil a player has built near.
+const GenVersion = 27
