@@ -2,6 +2,7 @@ package server
 
 import (
 	"testing"
+	"time"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
 
@@ -91,7 +92,13 @@ func TestBigDripleafOnADripleaf(t *testing.T) {
 	if got := w.Block(x, y+1, z); !isBigDripleaf(got) || propOf(t, got, "facing") != "east" {
 		t.Fatalf("a leaf set on a leaf should keep its facing (east): %d", got)
 	}
-	onHub(t, h, func() {}) // the placement's sweep has run
+	// The leaf below turns to stem on the neighbour reaction, a tick or so
+	// after the placement: wait for it rather than for one hub event.
+	deadline := time.Now().Add(hubTestWait)
+	for !inRange(w.Block(x, y, z), dripleafStemRng) && time.Now().Before(deadline) {
+		onHub(t, h, func() {})
+		time.Sleep(5 * time.Millisecond)
+	}
 	if got := w.Block(x, y, z); !inRange(got, dripleafStemRng) {
 		t.Fatalf("the lower leaf did not become stem: %d", got)
 	}
