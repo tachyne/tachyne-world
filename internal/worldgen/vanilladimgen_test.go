@@ -202,3 +202,82 @@ func (vdmMarkPlacement) Decorate(ch *Chunk, cx, cz int32) {
 }
 
 var vdmTestMark = blockBase("sponge")
+
+// vdmEndCityStarts are the 26.3 server's end city starts (region, then the
+// start position) over regions -8..7 on both axes:
+// RandomSpreadStructurePlacement.getPotentialStructureChunk and
+// EndCityStructure.findValidGenerationPoint on the vanilla End.
+var vdmEndCityStarts = map[int64][][5]int{
+	1: {
+		{-8, -6, -2489, 62, -1913}, {-7, -6, -2217, 61, -1833}, {-7, 1, -2153, 63, 375}, {-6, 4, -1897, 61, 1351},
+		{-5, -6, -1561, 61, -1849}, {-4, -1, -1161, 60, -233}, {-1, -4, -233, 61, -1241}, {0, 5, 103, 60, 1655},
+		{2, -8, 695, 60, -2505}, {4, -1, 1383, 61, -233}, {5, -5, 1703, 61, -1561}, {7, 3, 2295, 60, 1031},
+	},
+	-4172144997902289642: {
+		{-8, -8, -2489, 60, -2553}, {-7, -2, -2169, 60, -585}, {-7, 3, -2169, 60, 1015}, {-7, 5, -2153, 60, 1655},
+		{-6, -2, -1833, 61, -617}, {-6, 2, -1801, 60, 711}, {-6, 3, -1881, 61, 1047}, {-5, -4, -1577, 60, -1177},
+		{-5, -1, -1561, 60, -313}, {-5, 4, -1577, 60, 1287}, {-4, -5, -1273, 62, -1497}, {-4, -2, -1225, 60, -553},
+		{-4, 1, -1193, 64, 407}, {-4, 7, -1241, 60, 2263}, {-3, 7, -937, 60, 2343}, {-2, 3, -569, 60, 967},
+		{-1, -7, -281, 60, -2121}, {-1, -5, -217, 60, -1577}, {-1, 4, -265, 60, 1351}, {0, -4, 71, 62, -1177},
+		{2, -6, 695, 61, -1865}, {2, 5, 743, 62, 1703}, {3, 7, 1079, 60, 2263}, {4, -1, 1367, 60, -249},
+		{5, 2, 1655, 60, 743}, {6, -8, 1959, 60, -2457}, {6, -4, 2039, 61, -1225}, {6, -3, 1975, 60, -905},
+		{6, 6, 1975, 62, 1975}, {7, -3, 2311, 63, -953}, {7, 3, 2279, 60, 1031},
+	},
+}
+
+func TestVanillaEndCityStarts(t *testing.T) {
+	for seed, starts := range vdmEndCityStarts {
+		g := vdmGen(t, seed, false)
+		v := g.vEnd()
+		want := map[[2]int][3]int{}
+		for _, s := range starts {
+			want[[2]int{s[0], s[1]}] = [3]int{s[2], s[3], s[4]}
+		}
+		for rx := -8; rx < 8; rx++ {
+			for rz := -8; rz < 8; rz++ {
+				c := v.cityIn(rx, rz)
+				w, ok := want[[2]int{rx, rz}]
+				switch {
+				case ok != c.Exists:
+					t.Errorf("seed %d region %d,%d: city %v, vanilla has one: %v", seed, rx, rz, c, ok)
+				case ok && [3]int{c.X, c.Y, c.Z} != w:
+					t.Errorf("seed %d region %d,%d: city at %d,%d,%d, vanilla %v", seed, rx, rz, c.X, c.Y, c.Z, w)
+				}
+			}
+		}
+		// The engine's lookups find them by block position.
+		for _, s := range starts {
+			if c := g.EndCityIn(s[2]+100, s[4]-100); !c.Exists || c.X != s[2] || c.Z != s[4] {
+				if floorDiv(floorDiv16(s[2]+100), 20) == s[0] && floorDiv(floorDiv16(s[4]-100), 20) == s[1] {
+					t.Errorf("seed %d: EndCityIn near %d,%d = %v", seed, s[2], s[4], c)
+				}
+			}
+		}
+	}
+}
+
+// A vanilla End city stamps its pieces into the chunks it covers, drawn
+// from the start's random: the base floor sits at the start.
+func TestVanillaEndCityStamps(t *testing.T) {
+	g := vdmGen(t, 1, false)
+	c := g.EndCityIn(103, 1655)
+	if !c.Exists {
+		t.Fatal("no city at the region vanilla starts one in")
+	}
+	pieces := g.AssembleEndCity(c)
+	if len(pieces) < 5 {
+		t.Fatalf("%d pieces", len(pieces))
+	}
+	ch := g.GenerateChunk(int32(c.X>>4), int32(c.Z>>4))
+	purpur := 0
+	for s := range ch.Sections {
+		for _, b := range ch.Sections[s] {
+			if n, _ := StateName(b); strings.HasPrefix(n, "purpur") {
+				purpur++
+			}
+		}
+	}
+	if purpur == 0 {
+		t.Error("the city's start chunk has no purpur")
+	}
+}

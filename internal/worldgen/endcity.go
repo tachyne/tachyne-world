@@ -35,6 +35,9 @@ func (g *Generator) endSurface(x, z int) (int, bool) {
 // takes the lowest corner of the start and rejects one below y=60; the outer
 // islands here are patchy plates, so the cell tries a handful of spots).
 func (g *Generator) EndCityIn(wx, wz int) EndCity {
+	if v := g.vEnd(); v != nil {
+		return v.cityIn(floorDiv(floorDiv16(wx), vdmCitySpacing), floorDiv(floorDiv16(wz), vdmCitySpacing))
+	}
 	ox, oz := cellOrigin(wx, endCityCell), cellOrigin(wz, endCityCell)
 	if hash01(g.seed, ox, oz, 0xEC00) >= endCityOdds {
 		return EndCity{}
@@ -110,12 +113,28 @@ func rotateOffset(x, z, rot int) (int, int) {
 }
 
 type endCityGen struct {
-	rng         *jigsawRNG
+	rng         endCityRNG
 	shipCreated bool
 }
 
+// endCityRNG is the random a city's pieces draw from: the engine's own
+// (jigsawRNG) or, in a vanilla-mode End, the structure start's
+// WorldgenRandom (vanillaendcity.go).
+type endCityRNG interface {
+	intn(n int) int
+	boolean() bool
+	tag() int // RandomSource.nextInt(): a batch's genDepth tag
+}
+
+// jigsawCityRNG is the engine's city random.
+type jigsawCityRNG struct{ r *jigsawRNG }
+
+func (j jigsawCityRNG) intn(n int) int { return j.r.intn(n) }
+func (j jigsawCityRNG) boolean() bool  { return j.r.next()&1 == 1 }
+func (j jigsawCityRNG) tag() int       { return int(int32(j.r.next())) }
+
 func (e *endCityGen) intn(n int) int { return e.rng.intn(n) }
-func (e *endCityGen) boolean() bool  { return e.rng.next()&1 == 1 }
+func (e *endCityGen) boolean() bool  { return e.rng.boolean() }
 
 // newPiece is EndCityPieces.addPiece: the child sits at the parent's position
 // plus the offset rotated by the parent's rotation.
@@ -281,7 +300,7 @@ func (e *endCityGen) recursiveChildren(gen sectionGen, depth int, parent *endPie
 	if !gen(e, depth, parent, off, &children) {
 		return false
 	}
-	tag := int(int32(e.rng.next()))
+	tag := e.rng.tag()
 	for _, c := range children {
 		c.genDepth = tag
 		if hit := findCollision(*pieces, c); hit != nil && hit.genDepth != parent.genDepth {
@@ -306,8 +325,9 @@ func findCollision(pieces []*endPiece, c *endPiece) *endPiece {
 }
 
 type endCityKey struct {
-	seed int64
-	x, z int
+	seed    int64
+	x, z    int
+	vanilla bool // a vanilla-mode End's city draws its pieces from vanilla's random
 }
 
 var (
@@ -317,14 +337,17 @@ var (
 
 // AssembleEndCity is EndCityPieces.startHouseTower for a site (cached).
 func (g *Generator) AssembleEndCity(c EndCity) []PlacedPiece {
-	k := endCityKey{g.seed, c.X, c.Z}
+	k := endCityKey{g.seed, c.X, c.Z, g.vEnd() != nil}
 	endCityMu.Lock()
 	p, ok := endCityCache[k]
 	endCityMu.Unlock()
 	if ok {
 		return p
 	}
-	e := &endCityGen{rng: newJigsawRNG(g.seed, c.X, c.Z)}
+	e := &endCityGen{rng: jigsawCityRNG{newJigsawRNG(g.seed, c.X, c.Z)}}
+	if v := g.vEnd(); v != nil {
+		e.rng = v.cityRandom(c)
+	}
 	var pieces []*endPiece
 	base := templates["end_city/base_floor"]
 	if base != nil {
