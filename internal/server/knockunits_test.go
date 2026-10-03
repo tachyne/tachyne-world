@@ -40,12 +40,13 @@ func TestWindBurstPushesInTickUnits(t *testing.T) {
 }
 
 // /damage's default knockback on a mob is LivingEntity.knockback(0.4).
+// generic is #no_knockback, so the blow is a mob_attack.
 func TestDamageCommandKnocksMobInTickUnits(t *testing.T) {
 	h, players := maceHub(t)
 	cow := putMob(t, h, players, entityCow, 5.5, 70, 0.5)
 	cow.vx, cow.vz, cow.spawnInvuln = 0, 0, 0
 	src := cmdDamageSource{pos: true, x: 4.5, z: 0.5}
-	if !h.commandHurt(players, cmdEntity{m: cow}, 1, dtGeneric, src) {
+	if !h.commandHurt(players, cmdEntity{m: cow}, 1, dtMobAttack, src) {
 		t.Fatal("the blow did not land")
 	}
 	want := 0.4 * cow.kbScale()

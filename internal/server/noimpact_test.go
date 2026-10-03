@@ -9,15 +9,15 @@ import (
 
 // LivingEntity.hurtServer: a #no_impact type skips markHurt, the only sync
 // that carries a player's knockback to its own client. Only drowning is in
-// the tag (and it is #no_knockback too), so the test lends the tag to the
-// generic type: /damage with a source position shoves a player, unless the
-// type is #no_impact.
+// the tag (and it is #no_knockback too), so the test lends the tag to
+// mob_attack (generic is #no_knockback): /damage with a source position
+// shoves a player, unless the type is #no_impact.
 func TestNoImpactDamageGivesPlayerNoShove(t *testing.T) {
 	shoved := func(noImpact bool) bool {
-		saved := dmgTypeTags[dtGeneric]
-		defer func() { dmgTypeTags[dtGeneric] = saved }()
+		saved := dmgTypeTags[dtMobAttack]
+		defer func() { dmgTypeTags[dtMobAttack] = saved }()
 		if noImpact {
-			dmgTypeTags[dtGeneric] |= tagNoImpact
+			dmgTypeTags[dtMobAttack] |= tagNoImpact
 		}
 		h := newTestHub(world.New(1))
 		pl := testTracked()
@@ -25,7 +25,7 @@ func TestNoImpactDamageGivesPlayerNoShove(t *testing.T) {
 		players := map[int32]*tracked{1: pl}
 		drainEvents(pl)
 		src := cmdDamageSource{pos: true, x: 12.5, z: 10.5}
-		if !h.commandHurt(players, cmdEntity{t: pl}, 1, dtGeneric, src) {
+		if !h.commandHurt(players, cmdEntity{t: pl}, 1, dtMobAttack, src) {
 			t.Fatal("the blow did not land")
 		}
 		for _, ev := range takeEvents(pl) {
