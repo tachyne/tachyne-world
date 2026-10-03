@@ -70,6 +70,9 @@ func plantable(top uint32) bool {
 // ground-level movement. Pure function of world coordinates, matching the
 // placement test in decorate — used by mob pathing to walk around trees.
 func (g *Generator) TreeAt(wx, wz int) bool {
+	if g.vw != nil {
+		return false // vanilla mode: trees are the placement pass's
+	}
 	col := g.columnAt(wx, wz)
 	if col.biome.Tree == treeNone || !plantable(col.topBlock()) || col.h < SeaLevel {
 		return false

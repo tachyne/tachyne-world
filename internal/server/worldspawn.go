@@ -24,10 +24,11 @@ import (
 //     scanned column by column for the first place a player stands on a
 //     full top face with no fluid over it, per the chunk's heightmaps.
 //
-// The engine's climate is its own (worldgen/biomes.go), not vanilla's
+// A native world's climate is its own (worldgen/biomes.go), not vanilla's
 // multi-noise router, so step 1 scores its resolved biome instead: an
-// ocean misses the target by how deep it is, a river by a fixed step. The
-// search, the scoring and step 2 are vanilla's.
+// ocean misses the target by how deep it is, a river by a fixed step; a
+// vanilla world scores its noise settings' spawn targets on the router
+// itself. The search, the scoring and step 2 are vanilla's.
 //
 // It runs only for a NEW world: no spawn saved, none on the command line,
 // and not one edit in any dimension. An existing world's spawn never moves.
@@ -41,6 +42,9 @@ const (
 // 0 where the column meets the target (dry land, no river), else how far
 // it misses, in the quantised units vanilla squares.
 func spawnFitness(w *world.World, x, z int) int64 {
+	if f, ok := w.Gen().VanillaSpawnFitness(x, z); ok {
+		return f // a vanilla world: the spawn targets on vanilla's own climate
+	}
 	name := w.BiomeAt(x, z)
 	switch {
 	case strings.HasSuffix(name, "river"):

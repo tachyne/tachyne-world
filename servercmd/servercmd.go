@@ -45,6 +45,8 @@ func Main() {
 	earthVScale := flag.Float64("earth-vscale", 4.5, "earth mode: metres of real elevation per block above sea level")
 	ceiling := flag.Int("ceiling", 0, "TALL WORLD: overworld top build limit (0 = vanilla 320; Java max 2032). Pair with -earth-vscale so the region's summits fit, e.g. -ceiling 1664 -earth-vscale 1")
 	caves := flag.String("caves", "", "cave generator for a NEW world: native (the engine's own) or vanilla (26.3's noise caves and cave carvers). Fixed when the world is made and kept in worldgen.json beside the world file; ignored, with a log line, for an existing world (empty = native)")
+	generator := flag.String("generator", "", "world generator for a NEW world: native (the engine's own) or vanilla (26.3's noise router, surface rules, biomes and placement; implies vanilla caves). Fixed when the world is made and kept in worldgen.json beside the world file; ignored, with a log line, for an existing world (empty = native)")
+	preset := flag.String("preset", "", "world preset for a NEW vanilla world: normal, large_biomes, amplified, single_biome_surface, caves, floating_islands or flat (empty = normal)")
 	pluginDir := flag.String("plugindir", "plugins", "directory for per-plugin config + data folders")
 	simRadius := flag.Int("simradius", 10, "chunks around each player that random-tick (crops, grass, ice, fire): vanilla's simulation distance, default 10. Lower it on a slow box — the slow-tick log shows the cost.")
 	spawner := flag.String("spawner", "vanilla", "natural-spawn model: only vanilla (the NaturalSpawner port) exists now; kept so older manifests still parse")
@@ -69,6 +71,8 @@ func Main() {
 	srv.EarthVScale = *earthVScale
 	srv.Ceiling = *ceiling
 	srv.Caves = *caves
+	srv.Generator = *generator
+	srv.Preset = *preset
 	srv.AttachAddr = *attachAddr
 	srv.AttachToken = os.Getenv("ATTACH_TOKEN")
 	// tachyne-access admin API: /op, /deop, /ban, /ban-ip, /pardon,

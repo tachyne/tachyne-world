@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // idSpaceVersion is the canonical content version: the id space every
@@ -151,6 +152,15 @@ type Server struct {
 	// for a NEW world. An existing world keeps the one it was made with
 	// (cavegen.go); "" = native for a new world.
 	Caves string
+
+	// Generator and Preset are the -generator and -preset flags: the
+	// overworld's generator ("native" or "vanilla") and a vanilla world's
+	// preset (normal, large_biomes, amplified, …) for a NEW world; an
+	// existing world keeps what it was made with (cavegen.go). genMode and
+	// genPreset are the choice in force, which every dimension follows.
+	Generator, Preset string
+	genMode           worldgen.GeneratorMode
+	genPreset         worldgen.WorldPreset
 
 	// Ceiling raises the OVERWORLD's top build limit (0 = vanilla 320). Tall
 	// worlds exist for earth mode at true vertical scale: pick Ceiling and
@@ -420,6 +430,9 @@ func (s *Server) Serve() error {
 		}
 		w, err := dt.Open(s.Seed, store)
 		if err != nil {
+			return err
+		}
+		if err := s.applyDimGen(w); err != nil {
 			return err
 		}
 		if cache := s.openChunkCache(); cache != nil {

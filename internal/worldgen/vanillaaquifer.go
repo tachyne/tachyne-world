@@ -94,20 +94,43 @@ var vaqNoiseParams = map[string]vnNoiseParams{
 
 // vanillaAquifer is a world's aquifer noises and positional random.
 type vanillaAquifer struct {
-	random                       vnPositional // RandomState's "minecraft:aquifer" factory
-	barrier, flood, spread, lava *vnNormal
+	random                           vnPositional // RandomState's "minecraft:aquifer" factory
+	barrierN, floodN, spreadN, lavaN *vnNormal
 }
 
 func newVanillaAquifer(seed int64) *vanillaAquifer {
 	w := vnWorldPositional(seed)
 	n := func(name string) *vnNormal { return newVNNormal(w, "minecraft:"+name, vaqNoiseParams[name]) }
 	return &vanillaAquifer{
-		random:  w.fromHashOf("minecraft:aquifer").forkPositional(),
-		barrier: n("aquifer_barrier"),
-		flood:   n("aquifer_fluid_level_floodedness"),
-		spread:  n("aquifer_fluid_level_spread"),
-		lava:    n("aquifer_lava"),
+		random:   w.fromHashOf("minecraft:aquifer").forkPositional(),
+		barrierN: n("aquifer_barrier"),
+		floodN:   n("aquifer_fluid_level_floodedness"),
+		spreadN:  n("aquifer_fluid_level_spread"),
+		lavaN:    n("aquifer_lava"),
 	}
+}
+
+// vaqSource is what an aquifer reads: its four noises at a block and the
+// positional random that places each cell's centre. A vanilla-caves world
+// gives its own noises (vanillaAquifer); the vanilla generator gives the
+// noise settings' aquifer density functions (vanillafill.go).
+type vaqSource interface {
+	barrier(x, y, z int) float32
+	flood(x, y, z int) float32
+	spread(x, y, z int) float32
+	lava(x, y, z int) float32
+	nextInts(gx, gy, gz int32) (int32, int32, int32) // nextInt(10), nextInt(9), nextInt(10) at a cell
+}
+
+func (a *vanillaAquifer) barrier(x, y, z int) float32 { return vcSample(a.barrierN, x, y, z, 1, 0.5) }
+func (a *vanillaAquifer) flood(x, y, z int) float32   { return vcSample(a.floodN, x, y, z, 1, 0.67) }
+func (a *vanillaAquifer) spread(x, y, z int) float32 {
+	return vcSample(a.spreadN, x, y, z, 1, 0.7142857142857143)
+}
+func (a *vanillaAquifer) lava(x, y, z int) float32 { return vcSample(a.lavaN, x, y, z, 1, 1) }
+func (a *vanillaAquifer) nextInts(gx, gy, gz int32) (int32, int32, int32) {
+	r := a.random.at(gx, gy, gz)
+	return r.nextInt(10), r.nextInt(9), r.nextInt(10)
 }
 
 // at is XoroshiroPositionalRandomFactory.at.
@@ -130,11 +153,17 @@ func vaqFromGridY(g, o int) int { return g*12 + o }
 // vaqChunk is one chunk's aquifer (vanilla makes one per NoiseChunk): the
 // grid it covers, its caches, and the inputs it reads.
 type vaqChunk struct {
-	a *vanillaAquifer
+	a vaqSource
 	// surface is preliminary_surface_level at a quart-aligned column, floored.
 	surface func(x, z int) int
+	// surfaceVol, when set, is the surface function over a quart grid
+	// (sampleVolume), which the constructor's maximum reads as vanilla's
+	// does; the levels it computes are kept for later lookups.
+	surfaceVol func(v vtVolume) []float32
 	// excluded is the exclusion function's "> 0" at an aquifer centre.
 	excluded func(x, y, z int) bool
+	// global is the settings' global fluid picker (vaqGlobal unless set).
+	global func(y int) vaqStatus
 
 	minGX, minGY, minGZ int
 	sizeX, sizeZ        int
@@ -149,9 +178,15 @@ type vaqChunk struct {
 
 // newVaqChunk is NoiseBasedAquifer's constructor over the block box
 // [minX..maxX]×[minY..maxY]×[minZ..maxZ].
-func newVaqChunk(a *vanillaAquifer, minX, minY, minZ, maxX, maxY, maxZ int,
+func newVaqChunk(a vaqSource, minX, minY, minZ, maxX, maxY, maxZ int,
 	surface func(x, z int) int, excluded func(x, y, z int) bool) *vaqChunk {
-	c := &vaqChunk{a: a, surface: surface, excluded: excluded, surf: map[[2]int]int{}}
+	return newVaqChunkVol(a, minX, minY, minZ, maxX, maxY, maxZ, surface, nil, excluded)
+}
+
+// newVaqChunkVol is newVaqChunk with the surface's volume form (surfaceVol).
+func newVaqChunkVol(a vaqSource, minX, minY, minZ, maxX, maxY, maxZ int,
+	surface func(x, z int) int, surfaceVol func(v vtVolume) []float32, excluded func(x, y, z int) bool) *vaqChunk {
+	c := &vaqChunk{a: a, surface: surface, surfaceVol: surfaceVol, excluded: excluded, global: vaqGlobal, surf: map[[2]int]int{}}
 	c.minGX = vaqGridX(minX-5) + 0
 	maxGX := vaqGridX(maxX-5) + 1
 	c.sizeX = maxGX - c.minGX + 1
@@ -184,6 +219,19 @@ func (c *vaqChunk) surfaceLevel(x, z int) int {
 }
 
 func (c *vaqChunk) maxSurfaceLevel(minX, minZ, maxX, maxZ int) int {
+	if c.surfaceVol != nil {
+		v := vtVolume{(maxX >> 2) - (minX >> 2) + 1, 1, (maxZ >> 2) - (minZ >> 2) + 1, minX >> 2 << 2, 0, minZ >> 2 << 2, 4, 1, 4}
+		buf := c.surfaceVol(v)
+		m := math.MinInt32
+		for z := 0; z < v.sz; z++ {
+			for x := 0; x < v.sx; x++ {
+				s := int(math.Floor(float64(buf[v.index(x, 0, z)])))
+				c.surf[[2]int{v.blockX(x), v.blockZ(z)}] = s
+				m = max(m, s)
+			}
+		}
+		return m
+	}
 	m := math.MinInt32
 	for qz := minZ >> 2; qz <= maxZ>>2; qz++ {
 		for qx := minX >> 2; qx <= maxX>>2; qx++ {
@@ -203,7 +251,7 @@ func (c *vaqChunk) substance(x, y, z int, density float64) int8 {
 	if density > 0 {
 		return vaqSolid
 	}
-	global := vaqGlobal(y)
+	global := c.global(y)
 	if y > c.skipAbove {
 		return global.at(y)
 	}
@@ -221,10 +269,10 @@ func (c *vaqChunk) substance(x, y, z int, density float64) int8 {
 				gx, gy, gz := xA+x1, yA+y1, zA+z1
 				i := c.index(gx, gy, gz)
 				if !c.locSet[i] {
-					r := c.a.random.at(int32(gx), int32(gy), int32(gz))
-					lx := vaqFromGridX(gx, int(r.nextInt(10)))
-					ly := vaqFromGridY(gy, int(r.nextInt(9)))
-					lz := vaqFromGridX(gz, int(r.nextInt(10)))
+					rx, ry, rz := c.a.nextInts(int32(gx), int32(gy), int32(gz))
+					lx := vaqFromGridX(gx, int(rx))
+					ly := vaqFromGridY(gy, int(ry))
+					lz := vaqFromGridX(gz, int(rz))
 					c.loc[i] = [3]int32{int32(lx), int32(ly), int32(lz)}
 					c.locSet[i] = true
 				}
@@ -250,7 +298,7 @@ func (c *vaqChunk) substance(x, y, z int, density float64) int8 {
 	if sim12 <= 0 {
 		return fluid
 	}
-	if fluid == vaqWater && vaqGlobal(y-1).at(y-1) == vaqLava {
+	if fluid == vaqWater && c.global(y-1).at(y-1) == vaqLava {
 		return fluid
 	}
 	barrier := math.NaN()
@@ -308,7 +356,7 @@ func (c *vaqChunk) pressure(x, y, z int, barrier *float64, s1, s2 vaqStatus) flo
 	noise := 0.0
 	if !(gradient < -2.0) && !(gradient > 2.0) {
 		if math.IsNaN(*barrier) {
-			*barrier = float64(vcSample(c.a.barrier, x, y, z, 1, 0.5))
+			*barrier = float64(c.a.barrier(x, y, z))
 		}
 		noise = *barrier
 	}
@@ -326,7 +374,7 @@ func (c *vaqChunk) statusAt(i int) vaqStatus {
 
 // computeFluid is the status at an aquifer centre.
 func (c *vaqChunk) computeFluid(x, y, z int) vaqStatus {
-	global := vaqGlobal(y)
+	global := c.global(y)
 	lowest := math.MaxInt32
 	top, bottom := y+12, y-12
 	underGlobal := false
@@ -340,7 +388,7 @@ func (c *vaqChunk) computeFluid(x, y, z int) vaqStatus {
 		}
 		pokes := top > adjusted
 		if pokes || start {
-			if atSurface := vaqGlobal(adjusted); atSurface.at(adjusted) != vaqAir {
+			if atSurface := c.global(adjusted); atSurface.at(adjusted) != vaqAir {
 				if start {
 					underGlobal = true
 				}
@@ -365,7 +413,7 @@ func (c *vaqChunk) computeSurfaceLevel(x, y, z int, global vaqStatus, lowest int
 		if underGlobal {
 			factor = mthClampedMap(float64(below), 0.0, 64.0, 1.0, 0.0)
 		}
-		noise := mthClamp(float64(vcSample(c.a.flood, x, y, z, 1, 0.67)), -1.0, 1.0)
+		noise := mthClamp(float64(c.a.flood(x, y, z)), -1.0, 1.0)
 		fullyThreshold := mthMap(factor, 1.0, 0.0, -0.3, 0.8)
 		partiallyThreshold := mthMap(factor, 1.0, 0.0, -0.8, 0.4)
 		partially = noise - partiallyThreshold
@@ -384,7 +432,7 @@ func (c *vaqChunk) computeSurfaceLevel(x, y, z int, global vaqStatus, lowest int
 func (c *vaqChunk) randomizedLevel(x, y, z, lowest int) int {
 	cx, cy, cz := floorDiv(x, 16), floorDiv(y, 40), floorDiv(z, 16)
 	middle := cy*40 + 20
-	spread := float64(vcSample(c.a.spread, cx, cy, cz, 1, 0.7142857142857143) * 10.0)
+	spread := float64(c.a.spread(cx, cy, cz) * 10.0)
 	quantized := int(math.Floor(spread/3)) * 3
 	return min(lowest, middle+quantized)
 }
@@ -392,7 +440,7 @@ func (c *vaqChunk) randomizedLevel(x, y, z, lowest int) int {
 // computeFluidType: deep enough, the lava noise makes a level lava.
 func (c *vaqChunk) computeFluidType(x, y, z int, global vaqStatus, level int) bool {
 	if level <= -10 && level != vaqWayBelow && !global.lava {
-		v := vcSample(c.a.lava, floorDiv(x, 64), floorDiv(y, 40), floorDiv(z, 64), 1, 1)
+		v := c.a.lava(floorDiv(x, 64), floorDiv(y, 40), floorDiv(z, 64))
 		if math.Abs(float64(v)) > 0.3 {
 			return true
 		}

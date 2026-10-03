@@ -43,6 +43,10 @@ type Generator struct {
 	caveMode CaveMode
 	vcaves   *vanillaCaves
 
+	// vw is the vanilla generator (vanillagen.go): nil in native mode,
+	// which every world made before the choice existed is.
+	vw *vtWorld
+
 	// earth mode (earth.go): terrain heights come from a real elevation model
 	// instead of the noise stack; rivers and caves are disabled (the DEM has
 	// real valleys, and carving real mountains would falsify them). All other
@@ -271,6 +275,9 @@ func (ch *Chunk) RecomputeHeightmapColumns(cols *[256]bool) {
 // Continentalness sets the base elevation — deep ocean to high inland — and the
 // highlands get progressively more rugged, so coasts are smooth and peaks jagged.
 func (g *Generator) Height(wx, wz int) int {
+	if g.vw != nil {
+		return g.vw.landHeight(wx, wz)
+	}
 	if g.nether {
 		return g.NetherFloor(wx, wz)
 	}
@@ -456,6 +463,14 @@ func (c column) block(y int) uint32 {
 
 // BiomeName returns the biome identifier at a world column (e.g. "minecraft:plains").
 func (g *Generator) BiomeName(wx, wz int) string {
+	if g.vw != nil {
+		return g.vw.biomeName(wx, wz)
+	}
+	return g.nativeBiomeName(wx, wz)
+}
+
+// nativeBiomeName is the engine's own BiomeName.
+func (g *Generator) nativeBiomeName(wx, wz int) string {
 	if g.nether {
 		return g.netherBiome(wx, wz)
 	}
@@ -593,6 +608,9 @@ func removeFloatingFragments(ch *Chunk) {
 
 // GenerateChunk produces all block states and a per-section biome for a chunk.
 func (g *Generator) GenerateChunk(cx, cz int32) *Chunk {
+	if g.vw != nil {
+		return g.vw.generateChunk(cx, cz)
+	}
 	if g.nether {
 		return g.generateNetherChunk(cx, cz)
 	}
@@ -665,6 +683,9 @@ func (ch *Chunk) MaxHeight() int {
 // SurfaceY is a safe spawn height for a column: the land surface, or the sea
 // surface over water.
 func (g *Generator) SurfaceY(wx, wz int) float64 {
+	if g.vw != nil {
+		return g.vw.surfaceY(wx, wz)
+	}
 	if g.nether {
 		return float64(g.NetherFloor(wx, wz))
 	}
@@ -679,6 +700,9 @@ func (g *Generator) SurfaceY(wx, wz int) float64 {
 func (g *Generator) BlockAt(x, y, z int) uint32 {
 	if y < MinY || y >= MinY+g.sections*16 {
 		return Air
+	}
+	if g.vw != nil {
+		return g.vw.blockAt(x, y, z)
 	}
 	if g.nether {
 		return g.netherBlock(x, y, z)
