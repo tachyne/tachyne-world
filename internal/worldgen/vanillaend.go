@@ -98,10 +98,14 @@ func (v *vanillaEnd) islands(x, z int) float32 {
 }
 
 // corner is final_density's interpolated input at a cell corner.
-func (v *vanillaEnd) corner(x, y, z int) float32 {
+func (v *vanillaEnd) corner(x, y, z int) float32 { return v.cornerWith(v.islands(x, z), x, y, z) }
+
+// cornerWith is corner given the column's islands density (end/islands is
+// cached per column in vanilla; it does not vary with y).
+func (v *vanillaEnd) cornerWith(islands float32, x, y, z int) float32 {
 	inner := func() float32 {
 		return vdmLerpConstFirst(vcGradient(y, 56, 312, 1, 0), -23.4375, func() float32 {
-			return v.islands(x, z) + v.base.sample(x, y, z)
+			return islands + v.base.sample(x, y, z)
 		})
 	}
 	return vdmLerpConstFirst(vcGradient(y, 4, 32, 0, 1), -0.234375, inner) * 0.64
@@ -147,7 +151,16 @@ func (v *vanillaEnd) terrain(cx, cz int32) *vdmTerrain {
 func (v *vanillaEnd) build(cx, cz int32) *vdmTerrain {
 	t := &vdmTerrain{cx: cx, cz: cz}
 	var dens [vdmH * 256]float32
-	vdmInterpolate(int(cx)*16, int(cz)*16, 8, 4, v.corner, &dens)
+	bx, bz := int(cx)*16, int(cz)*16
+	var cols [3][3]float32 // the islands density at the corner columns
+	for i := range cols {
+		for k := range cols[i] {
+			cols[i][k] = v.islands(bx+i*8, bz+k*8)
+		}
+	}
+	vdmInterpolate(bx, bz, 8, 4, func(x, y, z int) float32 {
+		return v.cornerWith(cols[(x-bx)/8][(z-bz)/8], x, y, z)
+	}, &dens)
 	for i, d := range dens {
 		if vcSqueeze(d) > 0 {
 			t.codes[i] = vdmEndStone
