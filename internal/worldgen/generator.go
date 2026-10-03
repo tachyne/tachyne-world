@@ -275,7 +275,7 @@ func (ch *Chunk) RecomputeHeightmapColumns(cols *[256]bool) {
 // Continentalness sets the base elevation — deep ocean to high inland — and the
 // highlands get progressively more rugged, so coasts are smooth and peaks jagged.
 func (g *Generator) Height(wx, wz int) int {
-	if g.vw != nil && g.vw.whole == nil {
+	if g.vw != nil {
 		return g.vw.landHeight(wx, wz)
 	}
 	if g.nether {

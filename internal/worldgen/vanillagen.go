@@ -29,10 +29,9 @@ type vtWorld struct {
 
 	biomes   VanillaBiomes
 	place    VanillaPlacement
-	whole    VanillaDimension // a registered whole-dimension generator (Nether, End)
-	flat     []uint32         // the flat preset's layers from MinY (nil otherwise)
-	carvers  bool             // the overworld carvers run
-	standIn  bool             // biomes are the engine's own stand-in
+	flat     []uint32 // the flat preset's layers from MinY (nil otherwise)
+	carvers  bool     // the overworld carvers run
+	standIn  bool     // biomes are the engine's own stand-in
 	terrain  [vtTerrainSlots]atomic.Pointer[vtTerrainChunk]
 	heights  [vtHeightSlots]atomic.Pointer[vtHeights]
 	warnOnce sync.Once
@@ -109,23 +108,15 @@ func (g *Generator) SetGenerator(m GeneratorMode, p WorldPreset) error {
 	case g.end:
 		dim = DimEnd
 	}
-	vw := &vtWorld{g: g, seed: g.seed, dim: dim, preset: p, zoom: vtZoomSeed(g.seed)}
 	if dim != DimOverworld {
-		// The Nether and the End: a registered whole-dimension generator,
-		// else the engine's own until one is.
-		if ctor := vanillaDimensionCtor[dim]; ctor != nil {
-			vw.whole = ctor(VanillaGenContext{Seed: g.seed, Dim: dim, Preset: p, Gen: g})
-		}
-		if vw.whole == nil {
-			log.Printf("vanilla generator: no vanilla %s registered; the engine's own stands in", dimName(dim))
-			return nil
-		}
-		g.vw = vw
+		// The Nether and the End are whole-dimension generators of their
+		// own (RegisterVanillaDimension), which the world installs from the
+		// world seed (NewNetherGenerator and NewEndGenerator scramble
+		// theirs); this switch is the overworld's.
 		return nil
 	}
-	if !g.nether && !g.end {
-		g.SetCaveMode(CavesVanilla)
-	}
+	vw := &vtWorld{g: g, seed: g.seed, dim: dim, preset: p, zoom: vtZoomSeed(g.seed)}
+	g.SetCaveMode(CavesVanilla)
 	if p == PresetFlat {
 		vw.flat = vtFlatLayers()
 		vw.biomes = vtFixedBiome("minecraft:plains")
@@ -149,7 +140,7 @@ func (g *Generator) SetGenerator(m GeneratorMode, p WorldPreset) error {
 		vw.biomes = vanillaBiomesCtor(ctx)
 	}
 	if vw.biomes == nil {
-		vw.biomes = vtNativeBiomes{g}
+		vw.biomes = vtNativeBiomes{NewGenerator(g.seed)}
 		vw.standIn = true
 		log.Printf("vanilla generator: no vanilla biome source registered; the engine's biome lookup stands in")
 	}
@@ -174,6 +165,11 @@ func dimName(d Dimension) string {
 	return "overworld"
 }
 
+// vtSectionBiomes, when set, picks a chunk's per-section biomes from the
+// biome source (the biome source's VanillaSectionBiomes: the most common
+// quart of each section).
+var vtSectionBiomes func(b VanillaBiomes, cx, cz int32, minY, sections int) []string
+
 // vtFlatLayers is the flat preset's layers: bedrock, two dirt, grass.
 func vtFlatLayers() []uint32 { return []uint32{Bedrock, Dirt, Dirt, GrassBlock} }
 
@@ -183,7 +179,8 @@ type vtFixedBiome string
 func (b vtFixedBiome) BiomeAt(int, int, int) string { return string(b) }
 
 // vtNativeBiomes is the stand-in biome source: the engine's own lookup at
-// the quart's column.
+// the quart's column, from a native generator of the seed (the vanilla
+// one's heights would ask the biome source back).
 type vtNativeBiomes struct{ g *Generator }
 
 func (b vtNativeBiomes) BiomeAt(qx, _, qz int) string { return b.g.resolveBiome(qx<<2, qz<<2).Name }
@@ -203,6 +200,25 @@ func (c vtClimate) Sample(qx, qy, qz int) ClimatePoint {
 		Erosion:         QuantizeClimate(g.erosion.value(ctx, x, y, z)),
 		Depth:           QuantizeClimate(g.depth.value(ctx, x, y, z)),
 		Weirdness:       QuantizeClimate(g.ridges.value(ctx, x, y, z)),
+	}
+}
+
+// SampleColumn is Sample over the quarts qy0, qy0+1, … of one column, the
+// column's horizontal functions computed once.
+func (c vtClimate) SampleColumn(qx, qz, qy0 int, out []ClimatePoint) {
+	ctx := newVDCtx()
+	x, z := qx<<2, qz<<2
+	g := c.g
+	for i := range out {
+		y := (qy0 + i) << 2
+		out[i] = ClimatePoint{
+			Temperature:     QuantizeClimate(g.temperature.value(ctx, x, y, z)),
+			Humidity:        QuantizeClimate(g.vegetation.value(ctx, x, y, z)),
+			Continentalness: QuantizeClimate(g.continents.value(ctx, x, y, z)),
+			Erosion:         QuantizeClimate(g.erosion.value(ctx, x, y, z)),
+			Depth:           QuantizeClimate(g.depth.value(ctx, x, y, z)),
+			Weirdness:       QuantizeClimate(g.ridges.value(ctx, x, y, z)),
+		}
 	}
 }
 
@@ -398,9 +414,6 @@ func (w *vtWorld) heightsOf(cx, cz int32) *vtHeights {
 }
 
 func (w *vtWorld) blockAt(x, y, z int) uint32 {
-	if w.whole != nil {
-		return w.whole.BlockAt(x, y, z)
-	}
 	ch := w.terrainChunk(int32(x>>4), int32(z>>4))
 	return ch.getGen(x&15, y, z&15)
 }
@@ -413,16 +426,18 @@ func (w *vtWorld) landHeight(x, z int) int {
 
 // generateChunk is the vanilla GenerateChunk.
 func (w *vtWorld) generateChunk(cx, cz int32) *Chunk {
-	if w.whole != nil {
-		return w.whole.GenerateChunk(cx, cz)
-	}
 	t := w.terrainChunk(cx, cz)
 	ch := NewChunk(len(t.Sections))
 	copy(ch.Sections, t.Sections)
-	// One biome per section: the noise biome at the section's middle quart.
-	qx, qz := int(cx)*4+2, int(cz)*4+2
-	for s := range ch.Biomes {
-		ch.Biomes[s] = w.noiseBiome(qx, (MinY>>2)+s*4+2, qz)
+	// One biome per section (the engine stores no more): the biome source's
+	// pick for the section when it has one, else the section's middle quart.
+	if vtSectionBiomes != nil {
+		copy(ch.Biomes, vtSectionBiomes(w.biomes, cx, cz, MinY, len(ch.Biomes)))
+	} else {
+		qx, qz := int(cx)*4+2, int(cz)*4+2
+		for s := range ch.Biomes {
+			ch.Biomes[s] = w.noiseBiome(qx, (MinY>>2)+s*4+2, qz)
+		}
 	}
 	if w.place != nil {
 		w.place.Decorate(ch, cx, cz)
@@ -433,18 +448,12 @@ func (w *vtWorld) generateChunk(cx, cz int32) *Chunk {
 
 // biomeName is BiomeName in vanilla mode: the biome shown at the surface.
 func (w *vtWorld) biomeName(x, z int) string {
-	if w.whole != nil {
-		return w.g.nativeBiomeName(x, z)
-	}
 	h := w.heightsOf(int32(x>>4), int32(z>>4))
 	return w.biomeAt(x, int(h.surface[(z&15)*16+x&15])+1, z, true)
 }
 
 // surfaceY is SurfaceY in vanilla mode.
 func (w *vtWorld) surfaceY(x, z int) float64 {
-	if w.whole != nil {
-		return w.whole.SurfaceY(x, z)
-	}
 	return float64(max(w.landHeight(x, z), w.seaLevel()))
 }
 

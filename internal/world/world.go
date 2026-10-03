@@ -161,6 +161,30 @@ func (w *World) SetCaves(m worldgen.CaveMode) {
 	}
 }
 
+// SetGenerator picks the world's generator (worldgen/vanillagen.go). Must
+// be called at boot, before any chunk is generated. A vanilla world keys
+// the chunk cache with a "GV." prefix (and its preset when not the normal
+// one), so its chunks never collide with a native world's of the same seed;
+// a dimension the vanilla generator does not cover yet keeps the native
+// generator and its keys.
+func (w *World) SetGenerator(m worldgen.GeneratorMode, p worldgen.WorldPreset) error {
+	was := w.gen.GeneratorMode()
+	if err := w.gen.SetGenerator(m, p); err != nil {
+		return err
+	}
+	if was != worldgen.GeneratorVanilla && w.gen.GeneratorMode() == worldgen.GeneratorVanilla {
+		tag := "GV."
+		if p != worldgen.PresetNormal {
+			tag = "GV." + p.String() + "."
+		}
+		w.dimTag = tag + w.dimTag
+	}
+	return nil
+}
+
+// GeneratorMode is the world's generator.
+func (w *World) GeneratorMode() worldgen.GeneratorMode { return w.gen.GeneratorMode() }
+
 // Caves is the world's cave generator.
 func (w *World) Caves() worldgen.CaveMode { return w.gen.CaveMode() }
 
