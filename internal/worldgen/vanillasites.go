@@ -89,7 +89,7 @@ func (g *Generator) vanillaVillage(vp *vanillaPlacer, wx, wz int) Village {
 	if !ok {
 		return Village{}
 	}
-	return Village{X: st.X, Z: st.Z, Y: g.Height(st.X, st.Z),
+	return Village{X: st.X, Z: st.Z, Y: vp.land(st.X, st.Z),
 		Variant: strings.TrimPrefix(st.Structure, "village_"), Exists: true}
 }
 
@@ -102,7 +102,7 @@ func (g *Generator) vanillaDesertTemple(vp *vanillaPlacer, wx, wz int) DesertTem
 	lowest := 1 << 30
 	for dx := 0; dx < templeWidth; dx++ {
 		for dz := 0; dz < templeDepth; dz++ {
-			if h := g.Height(x+dx, z+dz); h < lowest {
+			if h := vp.land(x+dx, z+dz); h < lowest {
 				lowest = h
 			}
 		}
@@ -155,7 +155,7 @@ func (g *Generator) vanillaIgloo(vp *vanillaPlacer, wx, wz int) Igloo {
 		ig.Depth = int(r.nextIntN(8)) + 4
 	}
 	ex, ez := rotAboutPivot(3, 0, ig.Rot, iglooTopPivot)
-	ig.Y = g.Height(ig.X+ex, ig.Z+ez) - 1
+	ig.Y = vp.land(ig.X+ex, ig.Z+ez) - 1
 	ig.setChest()
 	return ig
 }
@@ -165,7 +165,7 @@ func (g *Generator) vanillaOutpost(vp *vanillaPlacer, wx, wz int) PillagerOutpos
 	if !ok {
 		return PillagerOutpost{}
 	}
-	return PillagerOutpost{X: st.X, Y: g.Height(st.X, st.Z), Z: st.Z, Exists: true}
+	return PillagerOutpost{X: st.X, Y: vp.land(st.X, st.Z), Z: st.Z, Exists: true}
 }
 
 func (g *Generator) vanillaMansion(vp *vanillaPlacer, wx, wz int) Mansion {
@@ -173,7 +173,7 @@ func (g *Generator) vanillaMansion(vp *vanillaPlacer, wx, wz int) Mansion {
 	if !ok {
 		return Mansion{}
 	}
-	return Mansion{X: st.X, Y: g.Height(st.X, st.Z), Z: st.Z, Exists: true}
+	return Mansion{X: st.X, Y: vp.land(st.X, st.Z), Z: st.Z, Exists: true}
 }
 
 func (g *Generator) vanillaMonument(vp *vanillaPlacer, wx, wz int) Monument {
@@ -181,7 +181,7 @@ func (g *Generator) vanillaMonument(vp *vanillaPlacer, wx, wz int) Monument {
 	if !ok {
 		return Monument{}
 	}
-	return Monument{X: st.X, Y: g.Height(st.X, st.Z), Z: st.Z, Exists: true}
+	return Monument{X: st.X, Y: vp.land(st.X, st.Z), Z: st.Z, Exists: true}
 }
 
 func (g *Generator) vanillaAncientCity(vp *vanillaPlacer, wx, wz int) AncientCity {
@@ -205,7 +205,7 @@ func (g *Generator) vanillaTrailRuins(vp *vanillaPlacer, wx, wz int) TrailRuins 
 	if !ok {
 		return TrailRuins{}
 	}
-	return TrailRuins{X: st.X, Y: g.Height(st.X+2, st.Z+2) + trailRuinsDepth, Z: st.Z, Exists: true}
+	return TrailRuins{X: st.X, Y: vp.land(st.X+2, st.Z+2) + trailRuinsDepth, Z: st.Z, Exists: true}
 }
 
 func (g *Generator) vanillaAbandonedCamp(vp *vanillaPlacer, wx, wz int) AbandonedCamp {
@@ -213,7 +213,7 @@ func (g *Generator) vanillaAbandonedCamp(vp *vanillaPlacer, wx, wz int) Abandone
 	if !ok {
 		return AbandonedCamp{}
 	}
-	return AbandonedCamp{X: st.X, Y: g.Height(st.X, st.Z) - 1, Z: st.Z,
+	return AbandonedCamp{X: st.X, Y: vp.land(st.X, st.Z) - 1, Z: st.Z,
 		Biome: strings.TrimPrefix(st.Structure, "abandoned_camp_"), Exists: true}
 }
 
@@ -243,7 +243,7 @@ func (g *Generator) vanillaShipwreck(vp *vanillaPlacer, wx, wz int, beached bool
 	}
 	rot := r.intn(4)
 	if !beached {
-		return shipwreckAt(t, x, g.Height(st.X, st.Z), z, name, rot)
+		return shipwreckAt(t, x, vp.land(st.X, st.Z), z, name, rot)
 	}
 	fx, fz := t.Size[0], t.Size[2]
 	if rot&1 == 1 {
@@ -252,7 +252,7 @@ func (g *Generator) vanillaShipwreck(vp *vanillaPlacer, wx, wz int, beached bool
 	low := 1 << 30
 	for dx := 0; dx < fx; dx++ {
 		for dz := 0; dz < fz; dz++ {
-			if h := maxInt(g.Height(x+dx, z+dz), SeaLevel); h < low {
+			if h := vp.surface(x+dx, z+dz); h < low {
 				low = h
 			}
 		}
@@ -268,7 +268,7 @@ func (g *Generator) vanillaBuriedTreasure(vp *vanillaPlacer, wx, wz int) BuriedT
 	// BuriedTreasurePieces: the chest at the chunk's (9, 9), sunk under the
 	// sand.
 	x, z := int(st.ChunkX)*16+9, int(st.ChunkZ)*16+9
-	return BuriedTreasure{X: x, Y: g.Height(x, z) - 3, Z: z, Exists: true}
+	return BuriedTreasure{X: x, Y: vp.land(x, z) - 3, Z: z, Exists: true}
 }
 
 func (g *Generator) vanillaRuinedPortal(vp *vanillaPlacer, wx, wz int) RuinedPortal {
@@ -334,7 +334,8 @@ func (g *Generator) stampVanillaStructures(ch *Chunk, cx, cz int32) {
 	if vp == nil {
 		return
 	}
-	g.adaptTerrain(ch, cx, cz)
+	// The terrain was shaped to the structures already: the noise stage
+	// asked BeardsFor and added vanilla's Beardifier.
 	g.stampMineshafts(ch, cx, cz)
 	g.stampVillages(ch, cx, cz)
 	g.stampStrongholds(ch, cx, cz)
@@ -375,13 +376,13 @@ func (g *Generator) stampVanillaStructures(ch *Chunk, cx, cz int32) {
 		setSectionBlock(ch, b.X-baseX, b.Y, b.Z-baseZ, ChestNorth, true)
 	}
 	for _, st := range vp.startsNear("ocean_monuments", cx, cz, 64) {
-		g.stampMonumentAt(ch, cx, cz, Monument{X: st.X, Y: g.Height(st.X, st.Z), Z: st.Z, Exists: true})
+		g.stampMonumentAt(ch, cx, cz, Monument{X: st.X, Y: vp.land(st.X, st.Z), Z: st.Z, Exists: true})
 	}
 	for _, st := range vp.startsNear("igloos", cx, cz, 16) {
 		g.stampIglooAt(ch, cx, cz, g.vanillaIgloo(vp, int(st.ChunkX)*16, int(st.ChunkZ)*16))
 	}
 	for _, st := range vp.startsNear("woodland_mansions", cx, cz, 96) {
-		m := Mansion{X: st.X, Y: g.Height(st.X, st.Z), Z: st.Z, Exists: true}
+		m := Mansion{X: st.X, Y: vp.land(st.X, st.Z), Z: st.Z, Exists: true}
 		for _, pc := range g.AssembleMansion(m) {
 			if t := TemplateByName("woodland_mansion/" + pc.tmpl); t != nil {
 				t.StampAt(ch, cx, cz, pc.pos[0], pc.pos[1], pc.pos[2], pc.rot, pc.mir)
@@ -427,4 +428,208 @@ func (vp *vanillaPlacer) locateCell(name string) int {
 		}
 	}
 	return 0
+}
+
+// BeardsFor is VanillaBeards: the pieces and junctions of the adapting
+// structures near a chunk (Beardifier.forStructuresInChunk), which the
+// noise stage shapes the terrain to. The structures are the engine's
+// assemblies on the vanilla sites; every height they read is
+// getBaseHeight's noise-only column, never the terrain being shaped.
+func (p *vanillaPlacer) BeardsFor(cx, cz int32) ([]VanillaBeardPiece, []VanillaJunction) {
+	if p.g == nil || p.dim != DimOverworld {
+		return nil, nil
+	}
+	var pieces []VanillaBeardPiece
+	var junctions []VanillaJunction
+	kinds := map[adaptKind]TerrainAdjustment{adaptBury: AdjustBury, adaptBeardThin: AdjustBeardThin,
+		adaptBeardBox: AdjustBeardBox, adaptEncapsulate: AdjustEncapsulate}
+	for _, r := range p.rigids(cx, cz) {
+		if r.kind == adaptJunction {
+			junctions = append(junctions, VanillaJunction{X: r.box.x0, GroundY: r.groundY, Z: r.box.z0})
+			continue
+		}
+		pieces = append(pieces, VanillaBeardPiece{MinX: r.box.x0, MinY: r.box.y0, MinZ: r.box.z0,
+			MaxX: r.box.x1, MaxY: r.box.y1, MaxZ: r.box.z1, Adjust: kinds[r.kind], GroundLevelDelta: r.groundY - r.box.y0})
+	}
+	return pieces, junctions
+}
+
+// rigids is adaptRigids for a vanilla world: the same pieces and
+// junctions, the structures found from every start whose cell comes
+// within reach of the chunk (a vanilla start may sit anywhere in its
+// cell).
+func (p *vanillaPlacer) rigids(cx, cz int32) []beardRigid {
+	g := p.g
+	baseX, baseZ := int(cx)*16, int(cz)*16
+	near := func(b fbox) bool {
+		return b.x1 >= baseX-adaptReach && b.x0 <= baseX+15+adaptReach &&
+			b.z1 >= baseZ-adaptReach && b.z0 <= baseZ+15+adaptReach
+	}
+	var out []beardRigid
+	add := func(set []beardRigid, all fbox) {
+		if len(set) == 0 || g.touchedIn(all.x0-adaptReach, all.y0-adaptReach, all.z0-adaptReach,
+			all.x1+adaptReach, all.y1+adaptReach, all.z1+adaptReach) {
+			return
+		}
+		out = append(out, set...)
+	}
+	jigsaw := func(pieces []PlacedPiece, kind adaptKind) {
+		all, ok := jigsawBox(pieces)
+		if !ok || !near(all) {
+			return
+		}
+		var set []beardRigid
+		for i := range pieces {
+			pc := &pieces[i]
+			if pc.Tmpl == nil {
+				continue
+			}
+			b := fbox{pc.OX, pc.OY, pc.OZ, pc.x1 - 1, pc.y1 - 1, pc.z1 - 1}
+			if !near(b) {
+				continue
+			}
+			if !pc.TerrainMatch {
+				set = append(set, beardRigid{b, kind, pc.OY + pc.gld})
+			}
+			for _, j := range pc.junctions {
+				if j[0] > baseX-adaptReach && j[2] > baseZ-adaptReach && j[0] < baseX+15+adaptReach && j[2] < baseZ+15+adaptReach {
+					set = append(set, beardRigid{fbox{j[0], j[1], j[2], j[0], j[1], j[2]}, adaptJunction, j[1]})
+				}
+			}
+		}
+		add(set, all)
+	}
+	const reach = 128 // max_distance_from_center (≤116) and a beard's 12
+	at := func(st VanillaStart) (int, int) { return int(st.ChunkX) * 16, int(st.ChunkZ) * 16 }
+	for _, st := range p.startsNear("pillager_outposts", cx, cz, reach) {
+		x, z := at(st)
+		jigsaw(g.AssembleOutpost(g.vanillaOutpost(p, x, z)), adaptBeardThin)
+	}
+	for _, st := range p.startsNear("ancient_cities", cx, cz, reach) {
+		jigsaw(g.AssembleAncientCity(AncientCity{X: st.X, Y: ancientCityY, Z: st.Z, Exists: true}), adaptBeardBox)
+	}
+	for _, st := range p.startsNear("trial_chambers", cx, cz, reach) {
+		jigsaw(g.AssembleTrialChamber(TrialChamber{X: st.X, Y: st.Y, Z: st.Z, Exists: true}), adaptEncapsulate)
+	}
+	for _, st := range p.startsNear("trail_ruins", cx, cz, reach) {
+		x, z := at(st)
+		jigsaw(g.AssembleTrailRuins(g.vanillaTrailRuins(p, x, z)), adaptBury)
+	}
+	for _, st := range p.startsNear("villages", cx, cz, reach) {
+		x, z := at(st)
+		jigsaw(g.AssembleVillage(g.vanillaVillage(p, x, z)), adaptBeardThin)
+	}
+	for _, st := range p.startsNear("abandoned_camp", cx, cz, reach) {
+		x, z := at(st)
+		jigsaw(g.AssembleAbandonedCamp(g.vanillaAbandonedCamp(p, x, z)), adaptBeardThin)
+	}
+	for _, st := range g.StrongholdsNear(baseX+8, baseZ+8) {
+		var set []beardRigid
+		var all fbox
+		for i, pc := range st.pieces {
+			if i == 0 {
+				all = pc.box
+			} else {
+				all = all.union(pc.box)
+			}
+			if near(pc.box) {
+				set = append(set, beardRigid{pc.box, adaptBury, pc.box.y0})
+			}
+		}
+		add(set, all)
+	}
+	return out
+}
+
+// ---- the Nether ------------------------------------------------------------------
+
+func (g *Generator) vanillaFortress(vp *vanillaPlacer, wx, wz int) Fortress {
+	st, ok := vp.siteIn("nether_complexes", wx, wz)
+	if !ok || st.Structure != "fortress" {
+		return Fortress{}
+	}
+	return Fortress{X: int(st.ChunkX) * 16, Z: int(st.ChunkZ) * 16, Exists: true}
+}
+
+func (g *Generator) vanillaBastion(vp *vanillaPlacer, wx, wz int) Bastion {
+	st, ok := vp.siteIn("nether_complexes", wx, wz)
+	if !ok || st.Structure != "bastion_remnant" {
+		return Bastion{}
+	}
+	return Bastion{X: st.X, Y: st.Y, Z: st.Z, Exists: true}
+}
+
+// vanillaNetherFossil is NetherFossilStructure's start (vanillastructs.go
+// finds its column and height) and NetherFossilPieces' draws after it:
+// the rotation, then one of the fourteen fossils.
+func (g *Generator) vanillaNetherFossil(vp *vanillaPlacer, wx, wz int) NetherFossil {
+	st, ok := vp.siteIn("nether_fossils", wx, wz)
+	if !ok {
+		return NetherFossil{}
+	}
+	r := newVWLegacy(0)
+	r.setLargeFeatureSeed(g.seed, st.ChunkX, st.ChunkZ)
+	r.nextIntN(16)
+	r.nextIntN(16)
+	if raw, ok := vp.structs.d.Structures["nether_fossil"].raw["height"]; ok {
+		if h, err := parseVPHeight(raw); err == nil {
+			h.sample(r, &vpCtx{minY: vp.structs.minY, height: vp.structs.height, seaLevel: vp.structs.seaLevel})
+		}
+	}
+	rot := int(r.nextIntN(4))
+	n := int(r.nextIntN(14)) + 1
+	return NetherFossil{X: st.X, Y: st.Y, Z: st.Z, N: n, Rot: rot, Exists: true}
+}
+
+func (g *Generator) vanillaRuinedPortalNether(vp *vanillaPlacer, wx, wz int) RuinedPortal {
+	st, ok := vp.siteIn("ruined_portals", wx, wz)
+	if !ok || st.Structure != "ruined_portal_nether" {
+		return RuinedPortal{}
+	}
+	x, z := int(st.ChunkX)*16, int(st.ChunkZ)*16
+	return g.ruinedPortalNetherFrom(x, z, x, z)
+}
+
+// stampVanillaNetherStructures is the Nether's structures on their vanilla
+// sites: ruined portals, bastions, fortresses and fossils, each stamped
+// from every start whose cell comes near the chunk.
+func (g *Generator) stampVanillaNetherStructures(ch *Chunk, cx, cz int32) {
+	vp := g.vanillaPlacerOf()
+	if vp == nil {
+		return
+	}
+	g.adaptNetherTerrain(ch, cx, cz)
+	for _, st := range vp.startsNear("ruined_portals", cx, cz, 32) {
+		p := g.vanillaRuinedPortalNether(vp, int(st.ChunkX)*16, int(st.ChunkZ)*16)
+		if !p.Exists {
+			continue
+		}
+		if t := TemplateByName(p.Tmpl); t != nil {
+			t.StampTemplateRotRemap(ch, cx, cz, p.X, p.Y, p.Z, p.Rot, g.seed, p.Integrity, blackstoneRemap)
+		}
+	}
+	chunk := fbox{int(cx) * 16, MinY, int(cz) * 16, int(cx)*16 + 15, MinY + len(ch.Sections)*16 - 1, int(cz)*16 + 15}
+	for _, st := range vp.startsNear("nether_complexes", cx, cz, 128) {
+		switch st.Structure {
+		case "bastion_remnant":
+			g.StampPieces(ch, cx, cz, g.AssembleBastion(Bastion{X: st.X, Y: st.Y, Z: st.Z, Exists: true}))
+		case "fortress":
+			s := &fstamp{ch: ch, chunk: chunk}
+			for _, p := range g.assembleFortress(Fortress{X: int(st.ChunkX) * 16, Z: int(st.ChunkZ) * 16, Exists: true}) {
+				if p.box.intersects(chunk) {
+					s.p = p
+					s.postProcess()
+				}
+			}
+		}
+	}
+	for _, st := range vp.startsNear("nether_fossils", cx, cz, 16) {
+		f := g.vanillaNetherFossil(vp, int(st.ChunkX)*16, int(st.ChunkZ)*16)
+		if !f.Exists {
+			continue
+		}
+		if t := TemplateByName("nether_fossils/fossil_" + itoaW(f.N)); t != nil {
+			t.StampTemplateProc(ch, cx, cz, f.X, f.Y, f.Z, f.Rot, nil, true)
+		}
+	}
 }

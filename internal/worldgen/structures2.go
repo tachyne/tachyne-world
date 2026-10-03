@@ -175,6 +175,9 @@ func (g *Generator) portalSettle(y, placement int, corners [4][2]int) int {
 // "nether" setup: the same templates, no mossiness, an air pocket, and the
 // BlackstoneReplaceProcessor), standing on a cavern floor above the lava sea.
 func (g *Generator) RuinedPortalNetherIn(wx, wz int) RuinedPortal {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaRuinedPortalNether(vp, wx, wz) // vanillasites.go
+	}
 	ox, oz := cellOrigin(wx, portalCell), cellOrigin(wz, portalCell)
 	if hash01(g.seed, ox, oz, 0x9F11) >= 0.4 {
 		return RuinedPortal{}

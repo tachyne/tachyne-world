@@ -34,6 +34,7 @@ type vpFeature struct {
 	choose []*vpPlacedFeature
 	block  vpStateProvider
 	ext    *vpExtra
+	ext3   *vpExtra3
 }
 
 type vpSelEntry struct {
@@ -152,6 +153,33 @@ type vpExec struct {
 	protect []bool
 	// cold is Biome.coldEnoughToSnow at a position (nil: never).
 	cold func(biome string, x, y, z int) bool
+	// ov is what the feature being placed has written, in the chunk or
+	// beyond it: a feature reads its own blocks back, as it would in a
+	// world, and a chunk replaying a neighbour's feature reads them too.
+	ov map[vpPos]uint32
+	// g is the generator, for the engine's End decorators (nil in tests).
+	g *Generator
+}
+
+// vpOverlayLevel is the terrain with the placing feature's own writes.
+type vpOverlayLevel struct {
+	vpLevel
+	e *vpExec
+}
+
+func (l vpOverlayLevel) Block(x, y, z int) uint32 {
+	if s, ok := l.e.ov[vpPos{x, y, z}]; ok {
+		return s
+	}
+	return l.vpLevel.Block(x, y, z)
+}
+
+// beginFeature starts a top-level placement: the overlay of the previous
+// one is dropped.
+func (e *vpExec) beginFeature() {
+	if len(e.ov) > 0 {
+		e.ov = nil
+	}
 }
 
 func (e *vpExec) inChunk(x, y, z int) bool {
@@ -159,8 +187,13 @@ func (e *vpExec) inChunk(x, y, z int) bool {
 	return lx >= 0 && lx < 16 && lz >= 0 && lz < 16 && y >= MinY && y < MinY+len(e.ch.Sections)*16
 }
 
-// set writes a block if it lies in the chunk and no structure holds it.
+// set records a feature's write and makes it in the chunk if it lies
+// there and no structure holds the cell.
 func (e *vpExec) set(x, y, z int, s uint32) {
+	if e.ov == nil {
+		e.ov = map[vpPos]uint32{}
+	}
+	e.ov[vpPos{x, y, z}] = s
 	if !e.inChunk(x, y, z) {
 		return
 	}
@@ -261,6 +294,9 @@ func (e *vpExec) place(f *vpFeature, r *vwRandom, p vpPos) bool {
 		e.placeTree(r, p, func(d TreeDriver) { PlaceHugeMushroom(brown, p.x, p.y, p.z, vpTreeRNG{r}, d) })
 		return true
 	}
+	if placed, ok := e.placeExtra3(f, r, p); ok {
+		return placed
+	}
 	if placed, ok := e.placeExtra(f, r, p); ok {
 		return placed
 	}
@@ -292,7 +328,7 @@ func (f *vpFeature) parse() {
 			f.sel = append(f.sel, vpSelEntry{chance: en.Chance, pf: vpPlacedRef(en.Feature)})
 		}
 		f.def = vpPlacedRef(f.raw["default"])
-	case "simple_random_selector", "sequence":
+	case "simple_random_selector", "sequence", "overlay":
 		f.choose = placedList("features")
 	case "random_boolean_selector":
 		f.choose = []*vpPlacedFeature{vpPlacedRef(f.raw["feature_true"]), vpPlacedRef(f.raw["feature_false"])}
@@ -310,7 +346,9 @@ func (f *vpFeature) parse() {
 	case "simple_block":
 		f.block = parseVPStateProvider(f.raw["to_place"])
 	default:
-		f.parseExtra()
+		if !f.parseExtra3() {
+			f.parseExtra()
+		}
 	}
 }
 

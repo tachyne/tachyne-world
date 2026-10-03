@@ -19,6 +19,9 @@ type NetherFossil struct {
 // NetherFossilIn reports the fossil of the 2×2-chunk cell containing
 // (wx, wz), if that cell places one.
 func (g *Generator) NetherFossilIn(wx, wz int) NetherFossil {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaNetherFossil(vp, wx, wz) // vanillasites.go
+	}
 	if !g.nether || TemplateByName("nether_fossils/fossil_1") == nil {
 		return NetherFossil{}
 	}

@@ -22,7 +22,8 @@ func init() { RegisterVanillaPlacement(newVanillaPlacer) }
 type vanillaPlacer struct {
 	g       *Generator
 	dim     Dimension
-	terrain VanillaTerrain
+	terrain VanillaTerrain // the terrain before features; its WG heightmaps
+	base    *vpHeightCache // getBaseHeight's noise-only heights, which structures read
 	biomes  VanillaBiomes
 	zoom    int64
 	decor   *vanillaDecor
@@ -30,9 +31,6 @@ type vanillaPlacer struct {
 
 	bmu    sync.Mutex
 	bcache map[[2]int32][]string // a chunk's noise biomes (short names)
-
-	hmu    sync.Mutex
-	hcache map[[2]int32][2]int16 // a column's decoration heights (surface, ocean floor)
 }
 
 // vpPlacers finds a generator's placement pass (the structure code asks
@@ -43,24 +41,28 @@ var (
 	vpPlacerCount atomic.Int32
 )
 
-// newVanillaPlacer builds the overworld's placement pass. The Nether and
-// End keep their generators' own decoration until the features they use
-// are ported (a nil result: not this dimension).
+// newVanillaPlacer builds a dimension's placement pass.
 func newVanillaPlacer(ctx VanillaGenContext) VanillaPlacement {
-	if ctx.Dim != DimOverworld || ctx.Terrain == nil || ctx.Biomes == nil {
+	if ctx.Terrain == nil || ctx.Biomes == nil {
 		return nil
 	}
-	p := &vanillaPlacer{g: ctx.Gen, dim: ctx.Dim, terrain: newVPHeightCache(ctx.Terrain), biomes: ctx.Biomes,
-		zoom: vpObfuscateSeed(ctx.Seed), bcache: map[[2]int32][]string{}, hcache: map[[2]int32][2]int16{}}
-	decor, err := newVanillaDecor(ctx.Seed, "overworld")
+	dim := map[Dimension]string{DimOverworld: "overworld", DimNether: "nether", DimEnd: "end"}[ctx.Dim]
+	if dim == "" {
+		return nil
+	}
+	p := &vanillaPlacer{g: ctx.Gen, dim: ctx.Dim, terrain: ctx.Terrain, base: newVPHeightCache(ctx.Terrain), biomes: ctx.Biomes,
+		zoom: vpObfuscateSeed(ctx.Seed), bcache: map[[2]int32][]string{}}
+	decor, err := newVanillaDecor(ctx.Seed, dim)
 	if err != nil {
 		return nil
 	}
 	p.decor = decor
-	p.decor.minY, p.decor.seaLevel = ctx.Terrain.MinY(), ctx.Terrain.SeaLevel()
-	p.decor.height = min(ctx.Terrain.Ceiling(), MinY+SectionCount*16) - p.decor.minY
-	p.structs = newVanillaStructs(ctx.Seed, "overworld", p.noiseBiome, p.terrain)
-	if ctx.Preset == PresetSingleBiome {
+	// WorldGenerationContext: the level's limits within the noise settings'.
+	lo := max(ctx.Terrain.MinY(), p.decor.minY)
+	p.decor.height = min(ctx.Terrain.Ceiling(), p.decor.minY+p.decor.height) - lo
+	p.decor.minY, p.decor.seaLevel = lo, ctx.Terrain.SeaLevel()
+	p.structs = newVanillaStructs(ctx.Seed, dim, p.noiseBiome, p.base)
+	if ctx.Preset == PresetSingleBiome && ctx.Dim == DimOverworld {
 		p.structs.fixed = vpShort(ctx.Biomes.BiomeAt(0, 0, 0))
 	}
 	if ctx.Gen != nil {
@@ -153,51 +155,14 @@ func (l vpTerrainLevel) Block(x, y, z int) uint32 {
 	return l.p.terrain.BlockAt(x, y, z)
 }
 
-// Height is the heightmap decoration reads: the terrain's own column as
-// the earlier steps left it (noise, surface and carvers — the WG
-// heightmaps a chunk keeps up as it is carved), one above its highest
-// block (WORLD_SURFACE and the motion-blocking kinds, fluids counting) or
-// its highest non-fluid block (OCEAN_FLOOR).
+// Height is the heightmap decoration reads: the terrain's own WG
+// heightmaps (noise, surface and carvers — what a chunk keeps up as it is
+// carved), which stand for the feature-dependent kinds too.
 func (l vpTerrainLevel) Height(hm HeightmapType, x, z int) int {
-	h := l.p.decoHeights(x, z)
 	if hm == HeightOceanFloor || hm == HeightOceanFloorWG {
-		return int(h[1])
+		return l.p.terrain.Height(HeightOceanFloorWG, x, z)
 	}
-	return int(h[0])
-}
-
-// decoHeights scans a column of the terrain before features, once.
-func (p *vanillaPlacer) decoHeights(x, z int) [2]int16 {
-	k := [2]int32{int32(x), int32(z)}
-	p.hmu.Lock()
-	h, ok := p.hcache[k]
-	p.hmu.Unlock()
-	if ok {
-		return h
-	}
-	lo := p.terrain.MinY()
-	h = [2]int16{int16(lo), int16(lo)}
-	surface := false
-	for y := p.terrain.Ceiling() - 1; y >= lo; y-- {
-		s := p.terrain.BlockAt(x, y, z)
-		if s == Air {
-			continue
-		}
-		if !surface {
-			h[0], surface = int16(y+1), true
-		}
-		if !IsFluid(s) {
-			h[1] = int16(y + 1)
-			break
-		}
-	}
-	p.hmu.Lock()
-	if len(p.hcache) >= 1<<20 {
-		p.hcache = map[[2]int32][2]int16{}
-	}
-	p.hcache[k] = h
-	p.hmu.Unlock()
-	return h
+	return l.p.terrain.Height(HeightWorldSurfaceWG, x, z)
 }
 
 func (l vpTerrainLevel) Biome(x, y, z int) string {
@@ -208,7 +173,14 @@ func (l vpTerrainLevel) Biome(x, y, z int) string {
 // Decorate is the placement pass for one chunk.
 func (p *vanillaPlacer) Decorate(ch *Chunk, cx, cz int32) {
 	if p.g != nil {
-		p.g.stampVanillaStructures(ch, cx, cz)
+		switch p.dim {
+		case DimNether:
+			p.g.stampVanillaNetherStructures(ch, cx, cz)
+		case DimEnd:
+			p.g.stampEndCities(ch, cx, cz) // the End's generator sites them as 26.3 does
+		default:
+			p.g.stampVanillaStructures(ch, cx, cz)
+		}
 	}
 	lv := vpTerrainLevel{p}
 	e := p.newExec(ch, cx, cz)
@@ -235,7 +207,9 @@ func (p *vanillaPlacer) Decorate(ch *Chunk, cx, cz int32) {
 	}
 	for step := 0; step < vpStepCount; step++ {
 		for _, s := range srcs {
-			p.decor.decorateSteps(s.cx, s.cz, lv, s.biomes, step, step, nil, func(pl *vpPlacement) {
+			p.decor.decorateSteps(s.cx, s.cz, lv, s.biomes, step, step, func(int, int, *vpPlacedFeature, *vwRandom) {
+				e.beginFeature()
+			}, func(pl *vpPlacement) {
 				e.place(pl.placed.feature(), pl.rng, pl.pos)
 			}, nil)
 		}
@@ -244,8 +218,8 @@ func (p *vanillaPlacer) Decorate(ch *Chunk, cx, cz int32) {
 
 // newExec is the feature placer for one chunk.
 func (p *vanillaPlacer) newExec(ch *Chunk, cx, cz int32) *vpExec {
-	e := &vpExec{ch: ch, baseX: int(cx) << 4, baseZ: int(cz) << 4, terrain: p.terrain,
-		ctx: &vpCtx{lv: vpTerrainLevel{p}, minY: p.decor.minY, height: p.decor.height, seaLevel: p.decor.seaLevel}}
+	e := &vpExec{ch: ch, baseX: int(cx) << 4, baseZ: int(cz) << 4, terrain: p.terrain, g: p.g}
+	e.ctx = &vpCtx{lv: vpOverlayLevel{vpTerrainLevel{p}, e}, minY: p.decor.minY, height: p.decor.height, seaLevel: p.decor.seaLevel}
 	if p.g != nil {
 		e.cold = func(b string, x, y, z int) bool { return p.g.coldEnoughToSnow("minecraft:"+b, x, y, z) }
 	} else {
@@ -332,11 +306,12 @@ func vpFiddle(r int64) float64 {
 	return (u - 0.5) * 0.9
 }
 
-// vpHeightCache wraps a VanillaTerrain with a cache of its two WG
-// heightmaps by column: the terrain computes a column's base height from
-// the noise each time it is asked, and placement asks for the same
-// columns over and over (every ore probes the columns round it, every
-// chunk replays its neighbours, every structure start reads its corners).
+// vpHeightCache is ChunkGenerator.getBaseHeight for structure starts: the
+// terrain's noise-only base heights (VanillaBaseHeights) when it has them,
+// else its heightmaps, cached by column — a base height is a whole noise
+// column, and starts ask for the same corners again and again. It never
+// reads a generated chunk, so a structure start (and the beards made from
+// it) cannot wait on the terrain it shapes.
 type vpHeightCache struct {
 	VanillaTerrain
 	mu    sync.Mutex
@@ -347,7 +322,7 @@ func newVPHeightCache(t VanillaTerrain) *vpHeightCache {
 	return &vpHeightCache{VanillaTerrain: t, cache: map[[3]int32]int16{}}
 }
 
-// Height is the terrain's WG height, computed once per column and kind.
+// Height is the column's base height, computed once per column and kind.
 func (c *vpHeightCache) Height(kind HeightmapType, x, z int) int {
 	if kind == HeightOceanFloor {
 		kind = HeightOceanFloorWG
@@ -361,7 +336,12 @@ func (c *vpHeightCache) Height(kind HeightmapType, x, z int) int {
 	if ok {
 		return int(h)
 	}
-	v := c.VanillaTerrain.Height(kind, x, z)
+	var v int
+	if b, ok := c.VanillaTerrain.(VanillaBaseHeights); ok {
+		v = b.BaseHeight(kind, x, z)
+	} else {
+		v = c.VanillaTerrain.Height(kind, x, z)
+	}
 	c.mu.Lock()
 	if len(c.cache) >= 1<<20 {
 		c.cache = map[[3]int32]int16{}
@@ -370,3 +350,8 @@ func (c *vpHeightCache) Height(kind HeightmapType, x, z int) int {
 	c.mu.Unlock()
 	return v
 }
+
+// land is the base height of a column's land (OCEAN_FLOOR_WG: the first
+// cell above its highest non-fluid block), surface its WORLD_SURFACE_WG.
+func (p *vanillaPlacer) land(x, z int) int    { return p.base.Height(HeightOceanFloorWG, x, z) }
+func (p *vanillaPlacer) surface(x, z int) int { return p.base.Height(HeightWorldSurfaceWG, x, z) }

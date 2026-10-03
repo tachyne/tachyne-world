@@ -59,7 +59,8 @@ func TestVanillaPlacementDecorates(t *testing.T) {
 		for step := 0; step < vpStepCount; step++ {
 			for dx := int32(-1); dx <= 1; dx++ {
 				for dz := int32(-1); dz <= 1; dz++ {
-					p.decor.decorateSteps(cx+dx, cz+dz, vpTerrainLevel{p}, p.neighbourhoodBiomes(cx+dx, cz+dz), step, step, nil,
+					p.decor.decorateSteps(cx+dx, cz+dz, vpTerrainLevel{p}, p.neighbourhoodBiomes(cx+dx, cz+dz), step, step,
+						func(int, int, *vpPlacedFeature, *vwRandom) { e.beginFeature() },
 						func(pl *vpPlacement) { e.place(pl.placed.feature(), pl.rng, pl.pos) }, nil)
 				}
 			}

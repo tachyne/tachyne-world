@@ -26,6 +26,9 @@ type Bastion struct {
 // BastionIn returns the bastion owning (wx,wz)'s cell, if the cell rolled one
 // on a qualifying biome.
 func (g *Generator) BastionIn(wx, wz int) Bastion {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaBastion(vp, wx, wz) // vanillasites.go
+	}
 	ox, oz := cellOrigin(wx, bastionCell), cellOrigin(wz, bastionCell)
 	if hash01(g.seed, ox, oz, 0xBA50) >= bastionOdds {
 		return Bastion{}
