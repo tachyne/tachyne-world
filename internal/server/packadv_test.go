@@ -20,10 +20,10 @@ func TestDataPackAdvancements(t *testing.T) {
 			`"rewards":{"experience":5,"function":"test:reward","recipes":["minecraft:crafting_table"]}}`,
 		"data/test/advancement/dig.json": `{"parent":"test:root",` + disp("Dig") + `,"criteria":{"get":{"trigger":"minecraft:inventory_changed",` +
 			`"conditions":{"items":[{"items":"minecraft:diamond"}]}}}}`,
-		"data/test/advancement/never.json":                `{"parent":"test:root",` + disp("Never") + `,"criteria":{"x":{"trigger":"minecraft:impossible"}}}`,
-		"data/test/advancement/orphan.json":               `{"parent":"test:missing","criteria":{"t":{"trigger":"minecraft:tick"}}}`,
+		"data/test/advancement/never.json":                 `{"parent":"test:root",` + disp("Never") + `,"criteria":{"x":{"trigger":"minecraft:impossible"}}}`,
+		"data/test/advancement/orphan.json":                `{"parent":"test:missing","criteria":{"t":{"trigger":"minecraft:tick"}}}`,
 		"data/minecraft/advancement/story/mine_stone.json": `{}`,
-		"data/test/function/reward.mcfunction":            "tag @s add rewarded\n",
+		"data/test/function/reward.mcfunction":             "tag @s add rewarded\n",
 	})
 	alice := ps["alice"]
 	run := exRunner(t, s, h, logs, alice)
