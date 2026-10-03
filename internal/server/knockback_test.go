@@ -49,7 +49,7 @@ func TestKnockbackIsVanillaStrength(t *testing.T) {
 	h.attackMob(players, 1, m.eid)
 
 	// Per tick, which is the unit vanilla's 0.4 is quoted in.
-	if got := m.vx / mobMoveInterval; math.Abs(got-0.4) > 1e-9 {
+	if got := m.dmx; math.Abs(got-0.4) > 1e-9 {
 		t.Errorf("the shove is %.3f blocks a tick, want vanilla's 0.4", got)
 	}
 	for i := 0; i < 6; i++ {
@@ -67,11 +67,11 @@ func TestKnockbackIsVanillaStrength(t *testing.T) {
 // walking INTO the swing is turned rather than simply reset.
 func TestKnockbackKeepsHalfTheMobsMomentum(t *testing.T) {
 	h, _, players, m := knockbackRig(t)
-	m.vx = -0.4 // charging at the player
+	m.dmx = -0.4 // charging at the player, 0.4 a tick
 	h.attackMob(players, 1, m.eid)
-	want := -0.2 + 0.4*mobMoveInterval
-	if math.Abs(m.vx-want) > 1e-9 {
-		t.Errorf("velocity after the hit %.3f, want %.3f (half of its own, plus the shove)", m.vx, want)
+	want := -0.2 + 0.4
+	if math.Abs(m.dmx-want) > 1e-9 {
+		t.Errorf("velocity after the hit %.3f, want %.3f (half of its own, plus the shove)", m.dmx, want)
 	}
 }
 
@@ -100,7 +100,7 @@ func TestKnockbackHopIsCappedAtVanillasCeiling(t *testing.T) {
 	}
 	// …while its HORIZONTAL shove is much bigger: 0.4 + 0.5 sprint + 1.0 for
 	// two levels of Knockback.
-	if got := m2.vx / mobMoveInterval; math.Abs(got-1.9) > 1e-9 {
+	if got := m2.dmx; math.Abs(got-1.9) > 1e-9 {
 		t.Errorf("the shove is %.3f a tick, want 1.9", got)
 	}
 }

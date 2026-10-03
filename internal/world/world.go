@@ -682,6 +682,18 @@ func (w *World) Walkable(x, z int) bool {
 	return !w.gen.TreeAt(x, z)
 }
 
+// DryLand is Walkable without its generated-tree test: the column's footing
+// is dry. The tree test is a generator query — the most expensive thing in a
+// route search — and where the column's blocks are read anyway it is not
+// needed: MobFeet climbs a trunk to its canopy, a step no walker takes.
+func (w *World) DryLand(x, z int) bool {
+	if w.noSky {
+		return w.Walkable(x, z)
+	}
+	y := w.MobFeet(x, z)
+	return w.inBounds(y) && !worldgen.HoldsWater(w.Block(x, y, z)) && !worldgen.HoldsWater(w.Block(x, y-1, z))
+}
+
 // standable reports whether a block is solid enough for a mob to rest on top of.
 // It uses blocks.json's bounding box (worldgen.Collides): full/partial-cube blocks
 // hold a mob up; pass-through blocks (air, fluids, plants, torches, rails, signs,

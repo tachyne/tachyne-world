@@ -116,8 +116,8 @@ func TestLowGravityPlayerIsNotGrounded(t *testing.T) {
 	}
 }
 
-// A zombie on /attribute gravity 0 stays put when the ground under it is
-// dug out; at the default it drops to the new floor.
+// A pig on /attribute gravity 0 stays put when the ground under it is
+// dug out; at the default it falls to the new floor.
 func TestZeroGravityMobHangsInTheAir(t *testing.T) {
 	drop := func(zero bool) float64 {
 		h, _, players := cmdHub()
@@ -134,7 +134,9 @@ func TestZeroGravityMobHangsInTheAir(t *testing.T) {
 			h.applyAttributeCommand(players, evAttributeCmd{by: 1, target: "@e[type=pig]", id: attr.Gravity, op: "base set", value: 0})
 		}
 		h.world.SetBlock(10, 179, 10, 0) // dig it out
-		h.mobUpdate(players)
+		for i := 0; i < 20; i++ {        // a second: the fall takes its ticks now
+			h.mobUpdate(players)
+		}
 		return m.y
 	}
 	if y := drop(false); y > 172 {
@@ -198,7 +200,12 @@ func TestSlowFallingMobTakesNoFallDamage(t *testing.T) {
 		}
 		before := m.health
 		h.world.SetBlock(10, 179, 10, 0)
-		h.mobUpdate(players)
+		for i := 0; i < 40 && (i == 0 || !m.onGround); i++ {
+			h.mobUpdate(players)
+		}
+		if m.y > 162 {
+			t.Fatalf("the pig never reached the floor: y=%.2f", m.y)
+		}
 		return m.health < before
 	}
 	if !hurt(false) {

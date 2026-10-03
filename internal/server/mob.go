@@ -66,10 +66,16 @@ type mob struct {
 	panic           int      // ticks left fleeing after being hit
 	kb              int      // knockback updates left (velocity decays, no steering/clamp)
 	kbFlight        bool     // …and the knock launched it: it flies its arc on travel's physics (knockflight.go)
-	kvx, kvz        float64  // …that flight's horizontal deltaMovement, per TICK
-	rest            int      // grazing pause: updates left standing still (passive idling)
-	fleeX, fleeZ    float64  // the threat that set it panicking
-	panicTX         float64  // the random spot it is running to (PanicGoal), when panicHasT
+	dmx, dmz        float64  // a walker's horizontal deltaMovement, per tick (mobtravel.go; m.vy is the vertical)
+	onGround        bool     // a walker's Entity.onGround: its last move came down on something
+	horizColl       bool     // …and its last move was stopped across (horizontalCollision)
+	jumpWanted      bool     // the move control's jump for the next tick (a step a block high)
+	jumpDelay       int      // LivingEntity.noJumpDelay
+	stuckSet        bool     // makeStuckInBlock: the next move is cut by stuckX (across) and stuckY
+	stuckX, stuckY  float64
+	rest            int     // grazing pause: updates left standing still (passive idling)
+	fleeX, fleeZ    float64 // the threat that set it panicking
+	panicTX         float64 // the random spot it is running to (PanicGoal), when panicHasT
 	panicTZ         float64
 	panicHasT       bool
 	panicLeg        int          // updates spent on the current panic leg
@@ -721,6 +727,7 @@ func (h *hub) spawnMobCause(players map[int32]*tracked, etype, dim int, x, y, z 
 	eid := h.allocEID()
 	m := &mob{living: living{attrs: newMobAttributes(etype)}, eid: eid, etype: etype, dim: dim, behavior: wanderBehavior{}, health: mobHealth(etype), x: x, y: y, z: z, sx: x, sy: y, sz: z, spawnTick: h.tick.Load()}
 	binary.BigEndian.PutUint32(m.uuid[12:], uint32(eid)) // unique enough for the client
+	m.onGround = h.mobSupported(m)                       // placed on a floor, it stands on it from the start
 	if etype == entitySheep {
 		m.color = h.rollSheepColor() // vanilla's spread: mostly white, pink 1-in-600
 	}
@@ -1247,8 +1254,12 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				chase = chaseSpeedMod(m)
 			}
 			dvx, dvz = dvx*chase, dvz*chase
-			m.vx = m.vx*0.85 + dvx*0.15 // momentum → smooth
-			m.vz = m.vz*0.85 + dvz*0.15
+			if h.travels(m) {
+				m.vx, m.vz = dvx, dvz // a walker's momentum is its travel's
+			} else {
+				m.vx = m.vx*0.85 + dvx*0.15 // momentum → smooth
+				m.vz = m.vz*0.85 + dvz*0.15
+			}
 			// An amble runs at the stroll goal's own speed — a ravager
 			// lumbers at 0.4 of its pace, a horse at 0.7 — while a mob with
 			// somewhere to be (a hunt, a mate) moves at its full speed.
@@ -1324,167 +1335,51 @@ func (h *hub) mobMoveTick(players map[int32]*tracked, m *mob, goal bool) bool {
 		h.applyFluidPush(m) // a current carries whatever is standing in it (a goal update's worth)
 	}
 
-	// Move, by locomotion mode: walkers collide with terrain, fliers float
+	// Move, by locomotion mode: walkers travel (mobtravel.go), fliers float
 	// free, swimmers stay inside their water column, anchored mobs hold.
-	// The crowding shove rides on top of the steering: vanilla applies it
-	// after the AI has moved (pushEntities is the tail of aiStep), and it
-	// deliberately escapes the speed clamp above — squeezing out of a
-	// packed pen is meant to outrun a walk.
-	// Block.getSpeedFactor: soul sand and honey take a walker down to 0.4×
-	// (Entity.getBlockSpeedFactor reads the feet cell, else the one below).
-	sf := 1.0
-	if !m.flies && !m.swims {
-		sf = h.mobSpeedFactor(m)
+	// For the fliers and swimmers the crowding shove rides on top of the
+	// steering: vanilla applies it after the AI has moved (pushEntities is
+	// the tail of aiStep), and it deliberately escapes the speed clamp —
+	// squeezing out of a packed pen is meant to outrun a walk.
+	step := func() (nx, nz float64, fnx, fnz int) {
+		// Block.getSpeedFactor: soul sand and honey slow a wader (Entity.getBlockSpeedFactor
+		// reads the feet cell, else the one below); a flier's FLYING_SPEED sets its pace.
+		sf := 1.0
+		if !m.flies && !m.swims {
+			sf = h.mobSpeedFactor(m)
+		}
+		sf *= h.webFactor(m)
+		if m.flies {
+			sf *= m.flyingFactor()
+		}
+		nx, nz = m.x+(m.vx*sf+m.pushX)*share, m.z+(m.vz*sf+m.pushZ)*share
+		return nx, nz, int(math.Floor(nx)), int(math.Floor(nz))
 	}
-	sf *= h.webFactor(m)
-	if m.flies {
-		sf *= m.flyingFactor() // FlyingMoveControl: airborne, FLYING_SPEED sets the pace
-	}
-	nx, nz := m.x+(m.vx*sf+m.pushX)*share, m.z+(m.vz*sf+m.pushZ)*share
-	fnx, fnz := int(math.Floor(nx)), int(math.Floor(nz))
 	switch {
 	case m.statik:
 		m.vx, m.vz = 0, 0 // anchored (shulker)
 	case m.geyserFly:
 		m.vx, m.vz = 0, 0 // lifted by a geyser: geyserFlights moves it, tick by tick
-	case m.leaping:
-		h.leapFlight(players, m) // LeapAtTargetGoal's spring, gravity and all
-	case (m.etype == entityGoat || m.etype == entityFrog) && m.goatJumping:
-		h.goatFlight(players, m) // the long jump's arc
-	case m.etype == entityBreeze && m.brzState == brzJumping:
-		h.breezeFlight(players, m) // the long jump's arc, gravity and all
+	case m.leaping && !h.travels(m):
+		h.leapFlight(players, m) // a swimmer's spring out of the water, gravity and all
 	case m.etype == entityVex:
 		if goal {
 			h.vexGoals(players, m) // the charge and the drift
 		}
 		h.vexFlyTick(players, m) // wanted-point flight through blocks
 	case m.flies:
+		nx, nz, fnx, fnz := step()
 		h.flyStep(m, nx, nz, fnx, fnz, share)
-	case m.swims:
-		h.swimStep(m, nx, nz, fnx, fnz, share, goal)
-	case isAmphibious(m.etype) && h.inWater(m.dim, m.x, m.y, m.z):
-		// Drowned.travelInWater: in water it swims rather than walking the
-		// floor, which is what lets it come up at a target instead of
-		// trudging along the seabed under them.
+	case m.swims || isAmphibious(m.etype) && h.inWater(m.dim, m.x, m.y, m.z):
+		// A drowned in water swims rather than walking the floor
+		// (Drowned.travelInWater), which is what lets it come up at a target
+		// instead of trudging along the seabed under them.
+		nx, nz, fnx, fnz := step()
 		h.swimStep(m, nx, nz, fnx, fnz, share, goal)
 	default:
-		// Walk — but never onto water, into a tree, up a step taller than
-		// one block or off a drop deeper than three (mobStepOK holds the
-		// rules). When blocked, commit to a fresh random heading for a while
-		// to escape.
-		//
-		// The shove gets a second chance first: a mob being pressed into a
-		// wall by the crowd should slide along it, as vanilla's axis-separated
-		// collision does, not read the wall as "my route is blocked" and pick
-		// a random new heading. Dropping the shove and retrying the mob's own
-		// step keeps a herd against a fence from twitching.
-		stepFn := h.mobStepOK
-		if m.kbFlight {
-			stepFn = h.knockStepOK // a knocked body goes where the blow sends it, not where it would walk
-		}
-		stepOK := stepFn(m, nx, nz)
-		if !stepOK && (m.pushX != 0 || m.pushZ != 0) {
-			nx, nz = m.x+m.vx*share, m.z+m.vz*share
-			stepOK = stepFn(m, nx, nz)
-		}
-		switch {
-		case stepOK && h.ownedAt(nx, nz):
-			m.x, m.z = nx, nz
-		case stepOK && h.migrateMobAcross(players, m, nx, nz):
+		// Walk: LivingEntity.travel, tick by tick (mobtravel.go).
+		if h.mobTravel(players, m, goal) {
 			return true // stepped into a neighbour shard — handed off, done this tick
-		case climbsWalls(m.etype):
-			// Spider.tick: setClimbing(horizontalCollision) — a spider is
-			// climbing exactly when it walked into something, and then goes
-			// UP rather than looking for a way round.
-			h.setClimbing(players, m, true)
-			if goal {
-				m.y++
-			}
-		case m.kbFlight:
-			h.knockHitsWall(m, nx, nz) // Entity.collide: the blocked axis stops, the other slides on
-		default:
-			// A hunting zombie stopped by a closed wooden door beats on it
-			// (BreakDoorGoal) instead of picking a new heading.
-			if m.breaksDoors && m.hasTarget {
-				if door, ok := h.doorAhead(m, nx, nz); ok && h.zombieBeatsDoor(players, m, door) {
-					break
-				}
-			}
-			if m.etype == entityVindicator && h.raiderInActiveRaid(m) {
-				if door, ok := h.doorAhead(m, nx, nz); ok && h.vindicatorAtDoor(players, m, door) {
-					break
-				}
-			}
-			ang := h.rng.Float64() * 2 * math.Pi
-			m.vx, m.vz = math.Cos(ang)*m.moveSpeed(), math.Sin(ang)*m.moveSpeed()
-			m.reroute = 15 + h.rng.Intn(15)
-		}
-		if stepOK && m.doorPos != (blockPos{}) {
-			h.zombieStopDoor(players, m) // walked on: the door is no longer in the way
-		}
-		if climbsWalls(m.etype) && stepOK {
-			h.setClimbing(players, m, false) // nothing in the way any more
-		}
-		// Seat the feet on the real (edit-aware) floor every tick, so digging
-		// the block under a mob drops it and a placed block lifts it — but never
-		// onto a fence (the floor scan excludes fence-tops, so placing a fence
-		// on a mob doesn't teleport it up onto the fence and strand it). The
-		// floor is found from the mob's own height, NOT the column surface —
-		// seating against the surface teleported every cave mob into daylight.
-		oldY := m.y
-		fx, fz := int(math.Floor(m.x)), int(math.Floor(m.z))
-		floor := float64(h.mobFeetAt(m, fx, fz, int(math.Floor(m.y)))) // a snow walker stops on powder snow
-		if m.stepsOverFences() {
-			if top, ok := h.fenceTopAt(m, fx, int(floor), fz); ok {
-				floor = top // a camel stands on the fence it stepped onto
-			}
-		}
-		if lvl := m.hasEffect(effLevitation); lvl > 0 {
-			// LivingEntity.travel under Levitation: each tick dy eases
-			// toward 0.05 × level (dy += (target − dy) × 0.2) and nothing
-			// pulls it down; a ceiling stops the rise. When the effect
-			// ends the floor below takes it back — and the fall hurts.
-			ht := m.box().h
-			m.vy += (0.05*float64(lvl) - m.vy) * 0.2
-			if top := int(math.Floor(m.y + m.vy + ht)); worldgen.Collides(h.worldFor(m.dim).At(fx, top, fz)) {
-				m.vy = 0
-			} else {
-				m.y += m.vy
-			}
-		} else if h.mobAirborneStep(players, m, fx, fz, floor) {
-			// A bubble column, a bounce off slime, a web or a honey wall:
-			// the vertical integrator moved it (mobairborne.go).
-		} else if fl, ok := h.floatLevel(m, fx, fz, floor); ok && mobFloats(m) {
-			// FloatGoal / Swim: in deep water it bobs up until its eyes clear the surface.
-			if m.y < fl {
-				m.y = math.Min(fl, m.y+floatRisePerUpd*share)
-			} else {
-				m.y = fl
-			}
-		} else if floor < m.y && m.gravity() <= 0 {
-			// No GRAVITY (or less than none): nothing pulls it down onto
-			// the lower floor, so it stays where it is, as a vanilla mob
-			// on /attribute gravity 0 hangs in the air.
-		} else {
-			m.y = floor
-			// Water, a web, powder snow or a honey side on the way down
-			// reset the fall: only what lies below the last of them counts.
-			fell := h.fallAfterResets(m, fx, fz, oldY, m.y)
-			if v := slimeLaunch(fell, m.gravity()); oldY > m.y && v > 0 && isSlimeBlock(h.worldFor(m.dim).At(fx, floorInt(m.y)-1, fz)) {
-				// SlimeBlock: no damage, and the landing turns into a
-				// bounce the integrator carries from here.
-				m.airborne, m.vy, m.airFall = true, v, 0
-			} else {
-				if fell > 0.5 {
-					h.mobTrample(players, m, fell) // FarmlandBlock.fallOn
-				}
-				if oldY > m.y {
-					h.mobFallOnEgg(players, m) // TurtleEggBlock.fallOn
-				}
-				if fell > m.safeFallDistance() { // the ground dropped out under it
-					h.mobFall(players, m, fell)
-				}
-			}
 		}
 	}
 	return false
@@ -1654,7 +1549,9 @@ func (h *hub) mobAfterMove(players map[int32]*tracked, m *mob) {
 	}
 }
 
-// mobStepOK reports whether a walker may stand at (nx, nz): never onto water,
+// mobStepOK is the whole-column walk rule a walker stopped across consults
+// before it jumps a step (walkBlocked; walking itself is travel now).
+// It reports whether a walker may stand at (nx, nz): never onto water,
 // into a tree, up a step taller than its climb (one block, or more on a
 // raised STEP_HEIGHT), or off a drop deeper than
 // Mob.getMaxFallDistance's comfortable three (pathMaxFall — the same drop the

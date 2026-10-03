@@ -165,7 +165,7 @@ func (h *hub) ravagerRoar(players map[int32]*tracked, m *mob) {
 		}
 		dx, dz := o.x-m.x, o.z-m.z
 		d3 := math.Max(dx*dx+dz*dz, 0.001)
-		o.vx, o.vz, o.kb, o.reroute = dx/d3*ravagerStrongPush*mobMoveInterval, dz/d3*ravagerStrongPush*mobMoveInterval, 3, 0
+		h.mobShove(players, o, 0, dx/d3*ravagerStrongPush, dz/d3*ravagerStrongPush, 0, 3)
 	})
 	h.spawnParticles(players, m.dim, particlePoof, m.x, m.y+1, m.z, 1.5, 0.1, 20)
 }

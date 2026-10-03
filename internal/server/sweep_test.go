@@ -34,8 +34,8 @@ func TestSweepingBlow(t *testing.T) {
 	if lost := 100 - side.health; lost != 9 {
 		t.Errorf("the swept zombie lost %d, want 9", lost)
 	}
-	if side.kb == 0 || side.vx <= 0 {
-		t.Errorf("the swept zombie was not shoved along the swing: kb %d vx %v", side.kb, side.vx)
+	if side.kb == 0 || side.dmx <= 0 {
+		t.Errorf("the swept zombie was not shoved along the swing: kb %d dx %v", side.kb, side.dmx)
 	}
 	if side.fireSecs <= 0 {
 		t.Error("Fire Aspect did not reach the swept zombie")

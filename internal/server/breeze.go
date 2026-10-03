@@ -207,25 +207,10 @@ func (h *hub) breezeJumpVector(m *mob, tx, ty, tz float64) (float64, float64, fl
 	return jumpVectorFor(m, tx, ty, tz, breezeJumpAngles, breezeJumpVelMul*float64(m.followRange()), h.rng.Intn)
 }
 
-// breezeFlight is one tick of the jump's arc, in place of the walk: gravity,
-// landing when it comes down on the floor.
+// breezeFlight is one tick of the jump's arc: walking travel flies it and
+// breezeLand ends it.
 func (h *hub) breezeFlight(players map[int32]*tracked, m *mob) {
-	w := h.worldFor(m.dim)
-	m.brzVY -= m.effectiveGravity(m.brzVY)
-	nx, nz := m.x+m.brzVX, m.z+m.brzVZ
-	if h.ownedAt(nx, nz) && !worldgen.Collides(w.At(int(math.Floor(nx)), int(math.Floor(m.y)), int(math.Floor(nz)))) {
-		m.x, m.z = nx, nz
-	} else {
-		m.brzVX, m.brzVZ = 0, 0
-	}
-	m.y += m.brzVY
-	feet := float64(w.MobFeetFrom(int(math.Floor(m.x)), int(math.Floor(m.z)), int(math.Floor(m.y))))
-	if m.brzVY < 0 && m.y <= feet {
-		m.y = feet
-		h.breezeLand(players, m)
-		return
-	}
-	m.vx, m.vz = 0, 0
+	h.mobTravel(players, m, false)
 }
 
 // breezeLand is isFinishedJumping: the landing sound, a jump cooldown

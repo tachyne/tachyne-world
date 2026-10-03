@@ -101,7 +101,7 @@ func TestMobFallSoftenedByLandingBlockAndWater(t *testing.T) {
 	hay := h.spawnMob(players, entityZombie, 0.5, 191, 0.5)
 	wet := h.spawnMob(players, entityZombie, 10.5, 195, 0.5)
 	hp := hay.health
-	runMobs(h, players, 2, nil)
+	runMobs(h, players, 20, nil) // the falls take their ticks
 	if hay.y != 180 {
 		t.Fatalf("the zombie should be on the hay: y=%v", hay.y)
 	}

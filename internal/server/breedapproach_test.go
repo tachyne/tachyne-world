@@ -53,9 +53,9 @@ func TestCatCourtsAtItsGoalSpeed(t *testing.T) {
 		h.gridDirty()
 		fastest = math.Max(fastest, math.Hypot(a.x-ox, a.z-oz))
 	}
-	sp := a.moveSpeed()
-	if fastest > 0.8*sp*1.01 || fastest < 0.5*sp {
-		t.Fatalf("courting cat's fastest step %.4f, want about 0.8 × %.4f", fastest, sp)
+	want := walkPerUpdate(a, 0.8)
+	if fastest > want*1.01 || fastest < 0.7*want {
+		t.Fatalf("courting cat's fastest update %.4f, want about %.4f (0.8 of its speed)", fastest, want)
 	}
 }
 

@@ -57,8 +57,8 @@ func TestFallingCritHitsHarder(t *testing.T) {
 func TestHitKnocksTheMobBack(t *testing.T) {
 	h, _, players, m := combatSetup()
 	h.attackMob(players, 1, 2)
-	if m.kb == 0 || m.vx <= 0 {
-		t.Fatalf("hit must shove the mob away from the attacker: kb=%d vx=%v", m.kb, m.vx)
+	if m.kb == 0 || m.dmx <= 0 {
+		t.Fatalf("hit must shove the mob away from the attacker: kb=%d dx=%v", m.kb, m.dmx)
 	}
 }
 

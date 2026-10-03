@@ -59,7 +59,7 @@ func (h *hub) leapCheck(players map[int32]*tracked, m *mob) {
 	if d2 < leapMinSq || d2 > leapMaxSq {
 		return
 	}
-	if !h.mobOnGround(m) {
+	if !m.onGround {
 		return
 	}
 	hit := false
@@ -72,18 +72,12 @@ func (h *hub) leapCheck(players map[int32]*tracked, m *mob) {
 		return
 	}
 	dx, dz := tx-m.x, tz-m.z
-	vx, vz := m.vx*leapCarry, m.vz*leapCarry
+	vx, vz := m.dmx*leapCarry, m.dmz*leapCarry
 	if hd := math.Hypot(dx, dz); hd > 1e-6 {
 		vx += dx / hd * leapSpeed
 		vz += dz / hd * leapSpeed
 	}
 	m.leaping, m.leapVX, m.leapVY, m.leapVZ = true, vx, yd, vz
-}
-
-// mobOnGround: its feet sit on the floor at its own level.
-func (h *hub) mobOnGround(m *mob) bool {
-	w := h.worldFor(m.dim)
-	return m.y <= float64(w.MobFeetFrom(int(math.Floor(m.x)), int(math.Floor(m.z)), int(math.Floor(m.y))))+1e-6
 }
 
 // leapFlight is one tick of the spring: gravity, and the ground stops it.

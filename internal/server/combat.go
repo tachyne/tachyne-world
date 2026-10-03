@@ -408,10 +408,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 			// takes the shove off that, so a zombie charging in is turned
 			// rather than simply reset — its own momentum still counts against
 			// it. Per mob update, not per tick: m.v* is the step.
-			step := power * mobMoveInterval
-			m.vx, m.vz = m.vx/2+kdx/d*step, m.vz/2+kdz/d*step
-			m.kb, m.reroute = 3, 0
-			h.mobKnockVelocity(players, m)
+			h.mobShove(players, m, 0.5, kdx/d*power, kdz/d*power, 0, 3)
 		}
 		// Sweep (Player.doSweepAttack): a full-charge, grounded, non-sprinting
 		// sword swing clips every living thing beside the target. Each takes
@@ -448,10 +445,8 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 					continue // shrugged off: no shove, no follow-on effects
 				}
 				if om.health > 0 && om.kbScale() > 0 {
-					step := 0.4 * om.kbScale() * mobMoveInterval
-					om.vx, om.vz = om.vx/2+fx*step, om.vz/2+fz*step
-					om.kb, om.reroute = 3, 0
-					h.mobKnockVelocity(players, om)
+					p := 0.4 * om.kbScale()
+					h.mobShove(players, om, 0.5, fx*p, fz*p, 0, 3)
 				}
 				if om.health > 0 {
 					h.applyFireAspect(players, t, om)

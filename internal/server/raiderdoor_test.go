@@ -32,6 +32,7 @@ func TestRaidingVindicatorGetsThroughDoors(t *testing.T) {
 		lower := setBoolProp(door, "open", false)
 		info, _ := worldgen.InfoForState(lower)
 		lower = worldgen.SetProperty(info, lower, "half", "lower")
+		lower = worldgen.SetProperty(info, lower, "facing", "east") // its slab across the doorway in the x=4 wall
 		upper := worldgen.SetProperty(info, lower, "half", "upper")
 		w.SetBlock(4, 180, 0, lower)
 		w.SetBlock(4, 181, 0, upper)

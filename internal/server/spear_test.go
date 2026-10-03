@@ -169,7 +169,7 @@ func TestSpearChargeDamageScales(t *testing.T) {
 		if got := 100 - m.health; got != c.want {
 			t.Errorf("charge at %v b/t dealt %d, want %d", c.v, got, c.want)
 		}
-		if m.vz <= 0 {
+		if m.dmz <= 0 {
 			t.Errorf("charge at %v b/t (over 5.1 b/s) should knock the cow on", c.v)
 		}
 	}
@@ -198,7 +198,7 @@ func TestSpearChargeThresholdAndWindow(t *testing.T) {
 	// A target running away as fast closes at nothing.
 	h, pl, players = spearFixture(t, "iron_spear")
 	m = cowAt(h, 9, 0.5, 3)
-	m.vz = 0.5 * mobMoveInterval // 0.5 blocks a tick away
+	m.dmz = 0.5 // 0.5 blocks a tick away
 	chargeAt(h, pl, 0.5)
 	h.spearChargeTick(players, pl)
 	if m.health != 100 {
@@ -313,7 +313,7 @@ func TestZombieSpearCharge(t *testing.T) {
 	// The charge connects: 2 b/s of closing speed, a fifth of a player's thresholds.
 	pl.z = 2.3
 	z.spearUseAt = h.tick.Load() - uint64(spearOf(itemIronSpear).delay) - 1
-	z.vx, z.vz = 0, 0.2 // per update: 0.1 blocks a tick
+	z.dmx, z.dmz = 0, 0.1 // its motion: 0.1 blocks a tick
 	h.mobSpearTick(players, z)
 	if got := 20 - pl.health; got != 4 { // 3 + floor(2 × 0.95)
 		t.Fatalf("zombie charge dealt %v, want 4", got)

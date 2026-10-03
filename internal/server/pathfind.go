@@ -331,7 +331,7 @@ func malusFor(etype int) malusProfile {
 // clear that for wooden doors and leave iron/copper doors (and real fences) solid.
 type doorPather struct{ w *world.World }
 
-func (d doorPather) Walkable(x, z int) bool   { return d.w.Walkable(x, z) }
+func (d doorPather) Walkable(x, z int) bool   { return d.w.DryLand(x, z) }
 func (d doorPather) MobFeet(x, z int) int     { return d.w.MobFeet(x, z) }
 func (d doorPather) Block(x, y, z int) uint32 { return d.w.Block(x, y, z) }
 func (d doorPather) TallObstacle(x, z int) bool {
@@ -366,7 +366,12 @@ func (p *memoPather) Walkable(x, z int) bool {
 	if v, ok := p.walk[k]; ok {
 		return v
 	}
-	v := p.w.Walkable(x, z)
+	var v bool
+	if w, ok := p.w.(*world.World); ok {
+		v = w.DryLand(x, z) // a route reads the columns it crosses: the tree test is redundant (DryLand)
+	} else {
+		v = p.w.Walkable(x, z)
+	}
 	p.walk[k] = v
 	return v
 }

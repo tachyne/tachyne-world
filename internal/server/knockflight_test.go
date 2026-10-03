@@ -23,33 +23,62 @@ func flyKnocked(t *testing.T, h *hub, players map[int32]*tracked, m *mob) (peak 
 	return peak, updates
 }
 
+// vanillaKnockArc is LivingEntity.knockback then travel on flat ground,
+// worked by hand: deltaMovement (v, hop) from a body on the ground, the
+// first tick's drag the floor's (0.6 × 0.91, it was on the ground when it
+// was hit), then 0.91 across and gravity with 0.98 down until it lands.
+// It returns the peak rise and how far it has gone when it lands.
+func vanillaKnockArc(v, hop float64) (peak, dist float64) {
+	x, y, vx, vy, ground := 0.0, 0.0, v, hop, true
+	for i := 0; i < 200; i++ {
+		f := 0.91
+		if ground {
+			f = 0.6 * 0.91
+		}
+		x += vx
+		y += vy
+		ground = y <= 0
+		if ground {
+			y, vy = 0, 0
+		}
+		peak = math.Max(peak, y)
+		vy = (vy - 0.08) * 0.98
+		vx *= f
+		if ground && i > 0 {
+			return peak, x
+		}
+	}
+	return peak, x
+}
+
 // LivingEntity.knockback sets deltaMovement, and travel carries it: a
 // grounded zombie hit by a bare hand leaves the ground with vanilla's 0.4
-// hop, rises a little over a block, and comes down about three blocks off
-// (0.4 a tick kept at 0.91 a tick in the air, then the floor's friction).
-// The server's body used to stay on the floor and slide under a block.
+// hop, rises a little over a block, and comes down where vanilla's arc puts
+// it, under its goals again. The server's body used to stay on the floor and
+// slide under a block.
 func TestKnockbackLaunchesTheMob(t *testing.T) {
 	h, _, players, m := knockbackRig(t)
 	x0, y0 := m.x, m.y
 	h.attackMob(players, 1, m.eid)
-	if !m.kbFlight || !m.airborne || math.Abs(m.vy-0.4) > 1e-9 {
-		t.Fatalf("a grounded zombie should be launched with the 0.4 hop: flight %v airborne %v vy %.3f", m.kbFlight, m.airborne, m.vy)
+	if !m.kbFlight || math.Abs(m.vy-0.4) > 1e-9 {
+		t.Fatalf("a grounded zombie should be launched with the 0.4 hop: flight %v vy %.3f", m.kbFlight, m.vy)
 	}
-	if math.Abs(m.kvx-0.4) > 1e-9 || m.kvz != 0 {
-		t.Fatalf("the flight's per-tick speed should be the blow's 0.4 away from the player, got (%.3f, %.3f)", m.kvx, m.kvz)
+	if math.Abs(m.dmx-0.4) > 1e-9 || m.dmz != 0 {
+		t.Fatalf("the flight's per-tick speed should be the blow's 0.4 away from the player, got (%.3f, %.3f)", m.dmx, m.dmz)
 	}
 	peak, updates := flyKnocked(t, h, players, m)
-	if rise := peak - y0; rise < 1.0 || rise > 1.25 {
-		t.Errorf("the hop should lift the zombie about 1.15 blocks, it rose %.3f", rise)
+	wantPeak, wantDist := vanillaKnockArc(0.4, 0.4)
+	if rise := peak - y0; math.Abs(rise-wantPeak) > 0.05 {
+		t.Errorf("the hop should lift the zombie %.3f blocks, it rose %.3f", wantPeak, rise)
 	}
-	if d := m.x - x0; d < 2.8 || d > 3.8 {
-		t.Errorf("a bare-hand knock carries a zombie about three blocks, it went %.3f", d)
+	if d := m.x - x0; math.Abs(d-wantDist) > 0.2 {
+		t.Errorf("a bare-hand knock carries a zombie %.3f blocks, it went %.3f", wantDist, d)
 	}
 	if m.y != y0 || m.airborne {
 		t.Errorf("the zombie should be back on its floor: y %.3f (floor %.0f) airborne %v", m.y, y0, m.airborne)
 	}
 	if updates > 15 {
-		t.Errorf("the flight and the skid should be over within a second or so, took %d updates", updates)
+		t.Errorf("the flight should be over within a second or so, took %d updates", updates)
 	}
 	if m.kb != 0 {
 		t.Errorf("the landed zombie should be back under its goals, kb %d", m.kb)
@@ -83,7 +112,7 @@ func TestKnockbackStopsAtAWall(t *testing.T) {
 // is not a blow's business — and the fall counts: five blocks hurt.
 func TestKnockbackCarriesOffALedge(t *testing.T) {
 	h, _, players, m := knockbackRig(t)
-	for x := 44; x <= 60; x++ {
+	for x := 43; x <= 60; x++ { // the edge a block and a half off: the arc lands past it
 		for dz := -6; dz <= 6; dz++ {
 			h.world.SetBlock(x, 179, 40+dz, worldgen.Air)
 			h.world.SetBlock(x, 174, 40+dz, worldgen.Stone)

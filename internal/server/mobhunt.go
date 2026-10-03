@@ -85,7 +85,7 @@ func (h *hub) mobHuntStep(players map[int32]*tracked, m *mob) bool {
 			if kdx, kdz := target.x-m.x, target.z-m.z; kdx != 0 || kdz != 0 {
 				dd := math.Hypot(kdx, kdz)
 				f := h.rng.Float64()*0.5 + 0.2
-				target.vx, target.vz, target.kb, target.reroute = kdx/dd*f*mobMoveInterval, kdz/dd*f*mobMoveInterval, 3, 0
+				h.mobShove(players, target, 0, kdx/dd*f, kdz/dd*f, 0, 3)
 			}
 		}
 		if target.health <= 0 {

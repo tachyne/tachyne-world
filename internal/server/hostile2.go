@@ -134,8 +134,8 @@ func (m *mob) applyCubeSize() {
 	}
 }
 
-// slimeHop is vanilla SlimeMoveControl adapted to our step model: a slime
-// travels ONLY mid-bound and sits still between hops. jumpDelay is
+// slimeHop is vanilla SlimeMoveControl: a slime travels only on a bound —
+// a real jump, which walking travel flies — and sits still between hops. jumpDelay is
 // rand(20)+10 ticks (a magma cube's four times that), ÷3 while hunting; each launch rides a jump impulse to
 // the client so the arc animates (jump power 0.42, pure visual).
 func (h *hub) slimeHop(players map[int32]*tracked, m *mob) {
@@ -178,6 +178,9 @@ func (h *hub) slimeHop(players map[int32]*tracked, m *mob) {
 	vy := 0.42
 	if m.etype == entityMagmaCube {
 		vy += float64(m.size) * 0.1 // MagmaCube.jumpFromGround: bigger cubes jump higher
+	}
+	if m.onGround {
+		m.vy = vy // Slime.jumpFromGround: the bound is a real jump, travel flies it
 	}
 	h.toNearbyEv(players, m.dim, m.x, m.z, attachproto.Velocity{
 		EID: m.eid, VX: m.vx / mobMoveInterval, VY: vy, VZ: m.vz / mobMoveInterval})

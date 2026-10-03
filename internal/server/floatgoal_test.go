@@ -9,7 +9,8 @@ import (
 )
 
 // A cow in deep water comes up and bobs with its eyes clear, swims on, and
-// never drowns; a zombie sinks and walks the bottom; shallow water is waded.
+// never drowns; a zombie sinks and walks the bottom; in a block of water it
+// barely lifts.
 func TestFloatersBobInDeepWater(t *testing.T) {
 	h := newTestHub(world.New(1))
 	pl := survPlayer(h)
@@ -35,20 +36,21 @@ func TestFloatersBobInDeepWater(t *testing.T) {
 	if !mobFloats(cow) || mobFloats(zombie) {
 		t.Fatal("a cow floats and a zombie sinks")
 	}
-	want, ok := h.floatLevel(cow, 0, 0, 180)
-	if !ok || math.Abs(want-(184-mobEyeHeight(cow)+floatEyeAbove)) > 1e-9 {
-		t.Fatalf("float level %.2f ok=%v", want, ok)
-	}
+	// FloatGoal's jumps against the water's drag bob the cow at the
+	// surface: it jumps while more than 0.4 of it is under water, so its
+	// head rides clear of the waterline, never under it.
+	low, high := 999.0, -999.0
 	for i := 0; i < 120; i++ {
 		h.mobUpdate(players)
+		if i >= 60 {
+			eyes := cow.y + mobEyeHeight(cow)
+			low, high = math.Min(low, eyes), math.Max(high, eyes)
+		}
 	}
-	if math.Abs(cow.y-want) > 0.01 {
-		t.Errorf("the cow rides at y=%.2f, want %.2f", cow.y, want)
+	if low < 184-0.5 || high > 184+1 {
+		t.Errorf("the cow's eyes bobbed between y=%.2f and %.2f, want about the surface at 184", low, high)
 	}
-	if int(math.Floor(cow.y+mobEyeHeight(cow))) != 184 {
-		t.Errorf("the cow's eyes are at y=%.2f, under the surface", cow.y+mobEyeHeight(cow))
-	}
-	if zombie.y != 180 {
+	if math.Abs(zombie.y-180) > 0.01 {
 		t.Errorf("the zombie should walk the bottom, at y=%.2f", zombie.y)
 	}
 	// It can swim on through the deep water, where a walker's step rule would refuse the drop.
@@ -74,8 +76,14 @@ func TestFloatersBobInDeepWater(t *testing.T) {
 			}
 		}
 	}
-	if _, ok := h.floatLevel(cow, 0, 0, 180); ok {
-		t.Error("one block of water is waded, not floated")
+	for i := 0; i < 40; i++ {
+		h.mobUpdate(players)
+	}
+	// One block of water: FloatGoal still runs while more than the jump
+	// threshold (0.4) of it is over the feet, so the cow rises off the bed
+	// by about half a block and no further.
+	if cow.y > 180.75 {
+		t.Errorf("in one block of water the cow floated to y=%.2f", cow.y)
 	}
 }
 

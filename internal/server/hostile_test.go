@@ -2,7 +2,6 @@ package server
 
 import (
 	"github.com/tachyne/tachyne-world/internal/worldgen"
-	"math"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -221,40 +220,53 @@ func TestFireMetadataShape(t *testing.T) {
 	}
 }
 
-// TestClosedDoorBlocksZombie proves a zombie can neither open nor walk through a
-// door: a door is two solid collision cells, so entering its column is a 2-block
-// step-up the mob refuses. Ring one in with doors and it must stay penned.
+// A closed wooden door is a wall: its shape is a slab three sixteenths
+// thick across the doorway, and a zombie that cannot break doors stays on
+// its side of one, however hard it drives at the player beyond it.
 func TestClosedDoorBlocksZombie(t *testing.T) {
-	w := world.New(1)
-	h := newTestHub(w)
-	players := map[int32]*tracked{}
-	pl := testTracked()
-	players[1] = pl
-	cx, cz := h.findLand(0, 0)
-	// Genuinely CLOSED oak_door states (open=false; the fixture previously
-	// used 4686, which is open=true — the old collision-only logic blocked
-	// mobs even through open doors, hiding the mistake).
-	oakDoorClosedUpper := worldgen.BlockBase("oak_door") + 3  // north/upper/left/open=false/powered=false
-	oakDoorClosedLower := worldgen.BlockBase("oak_door") + 11 // north/lower/left/open=false/powered=false
-	// Fence the 3x3 pen with two-tall doors seated on each ring column's surface.
-	for dx := -1; dx <= 1; dx++ {
-		for dz := -1; dz <= 1; dz++ {
-			if dx == 0 && dz == 0 {
-				continue
+	h := newTestHub(world.New(1))
+	w := h.world
+	w.ForceLoad(0, 0, 2)
+	// A corridor along x at z=0, walled at z=±1, with a closed door across it at x=2.
+	for x := -8; x <= 8; x++ {
+		for z := -2; z <= 2; z++ {
+			w.SetBlock(x, 179, z, worldgen.Stone)
+			for y := 180; y <= 183; y++ {
+				s := uint32(worldgen.Air)
+				if z != 0 {
+					s = worldgen.Stone
+				}
+				w.SetBlock(x, y, z, s)
 			}
-			fx, fz := cx+dx, cz+dz
-			base := w.SurfaceFeet(fx, fz)
-			w.SetBlock(fx, base, fz, oakDoorClosedLower)
-			w.SetBlock(fx, base+1, fz, oakDoorClosedUpper)
 		}
 	}
-	m := h.spawnZombie(players, cx, cz)
-	pl.x, pl.y, pl.z = float64(cx+5), m.y, float64(cz) // player outside the pen → zombie drives at the door
+	base := worldgen.BlockBase("oak_door")
+	info, _ := worldgen.InfoForState(base)
+	door := worldgen.SetProperty(info, base, "facing", "east")
+	door = worldgen.SetProperty(info, door, "open", "false")
+	door = worldgen.SetProperty(info, door, "powered", "false")
+	w.SetBlock(2, 180, 0, worldgen.SetProperty(info, door, "half", "lower"))
+	w.SetBlock(2, 181, 0, worldgen.SetProperty(info, door, "half", "upper"))
+	if !worldgen.IsClosedDoor(w.At(2, 180, 0)) {
+		t.Fatal("the fixture's door is not closed")
+	}
+	pl := survPlayer(h)
+	pl.x, pl.y, pl.z = 6.5, 180, 0.5
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	m := h.spawnHostileY(players, entityZombie, -2.5, 180, 0.5)
+	m.breaksDoors = false
+	reached := m.x
 	for i := 0; i < 2000; i++ {
+		pl.health, pl.dead = 20, false
 		h.mobUpdate(players)
-		if int(math.Floor(m.x)) != cx || int(math.Floor(m.z)) != cz {
+		if m.x >= 2 {
 			t.Fatalf("zombie passed a closed door to (%v,%v) at step %d", m.x, m.z, i)
 		}
+		reached = max(reached, m.x)
+	}
+	if reached < 1.5 {
+		t.Errorf("the zombie should have pressed up to the door, it got to x=%.2f", reached)
 	}
 }
 

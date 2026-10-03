@@ -19,7 +19,7 @@ func TestSilverfishMergesOnlyWhenIdle(t *testing.T) {
 			t.Fatalf("update %d: a strolling silverfish burrowed into the stone", i)
 		}
 	}
-	m.x, m.z = 0.5, 0.5
+	m.x, m.y, m.z, m.dmx, m.dmz = 0.5, 180, 0.5, 0, 0 // back on the stone, wherever the walk took it
 	for i := 0; i < 400 && h.mobs[m.eid] != nil; i++ {
 		m.stroll, m.rest = 0, 1000 // standing idle
 		h.mobUpdate(players)

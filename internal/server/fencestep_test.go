@@ -11,15 +11,33 @@ import (
 // fencePen rings (cx, cz) with fences one block out, height high.
 func fencePen(h *hub, cx, cz, high int) {
 	oakFence := worldgen.BlockBase("oak_fence") + 31
-	for dx := -1; dx <= 1; dx++ {
-		for dz := -1; dz <= 1; dz++ {
-			if dx == 0 && dz == 0 {
+	flatPad(h, cx, cz, h.world.GroundY(cx, cz))
+	// A ring two out: the 3×3 inside holds a camel's 1.7-wide body without
+	// it standing in the fence (a body already inside a shape is not held
+	// by it, in vanilla's collision as in ours).
+	for dx := -2; dx <= 2; dx++ {
+		for dz := -2; dz <= 2; dz++ {
+			if abs(dx) < 2 && abs(dz) < 2 {
 				continue
 			}
 			fx, fz := cx+dx, cz+dz
-			y := h.world.SurfaceFeet(fx, fz)
+			y := h.world.GroundY(cx, cz)
 			for i := 0; i < high; i++ {
 				h.world.SetBlock(fx, y+i, fz, oakFence)
+			}
+		}
+	}
+}
+
+// flatPad levels the ground about (cx, cz) to a stone floor under feet
+// height g, with air over it: a pen's fences then stand on the level the
+// mob does, whatever the terrain was.
+func flatPad(h *hub, cx, cz, g int) {
+	for dx := -4; dx <= 4; dx++ {
+		for dz := -4; dz <= 4; dz++ {
+			h.world.SetBlock(cx+dx, g-1, cz+dz, worldgen.Stone)
+			for y := g; y <= g+4; y++ {
+				h.world.SetBlock(cx+dx, y, cz+dz, worldgen.Air)
 			}
 		}
 	}
@@ -43,11 +61,10 @@ func TestCamelStepsOverFences(t *testing.T) {
 			m.poseTick = int64(h.tick.Load()) - camelStandUpTicks - 1 // standing, and too lately to sit
 			h.mobUpdate(players)
 			fx, fz := int(math.Floor(m.x)), int(math.Floor(m.z))
-			if worldgen.IsTallCollision(h.world.Block(fx, h.world.SurfaceFeet(fx, fz)-1, fz)) &&
-				m.y-math.Floor(m.y) == 0.5 {
+			if m.y-math.Floor(m.y) == 0.5 { // the pad is level: only a fence top is half a block up
 				perched = true
 			}
-			if abs(fx-cx) > 1 || abs(fz-cz) > 1 {
+			if abs(fx-cx) > 2 || abs(fz-cz) > 2 {
 				return true, perched
 			}
 		}

@@ -124,50 +124,24 @@ func (h *hub) goatJumpStep(players map[int32]*tracked, m *mob) bool {
 	return true
 }
 
-// goatFlight is one tick of the arc, in place of the walk.
+// goatFlight is one tick of the long jump's arc: walking travel flies it
+// (the jump's motion is the body's deltaMovement) and goatLanded ends it.
 func (h *hub) goatFlight(players map[int32]*tracked, m *mob) {
-	w := h.worldFor(m.dim)
-	m.goatVY -= m.effectiveGravity(m.goatVY)
-	nx, nz := m.x+m.goatVX, m.z+m.goatVZ
-	if h.ownedAt(nx, nz) && !worldgen.Collides(w.At(int(math.Floor(nx)), int(math.Floor(m.y)), int(math.Floor(nz)))) {
-		m.x, m.z = nx, nz
+	h.mobTravel(players, m, false)
+}
+
+// goatLanded is LongJumpMidJump's landing: the cooldown, and the landing
+// step.
+func (h *hub) goatLanded(players map[int32]*tracked, m *mob) {
+	m.goatJumping, m.goatVX, m.goatVY, m.goatVZ = false, 0, 0, 0
+	if m.etype == entityFrog {
+		m.goatJumpCD = frogJumpCDMin + h.rng.Intn(frogJumpCDMax-frogJumpCDMin+1)
+		h.playSoundDim(players, m.dim, "minecraft:entity.frog.step", sndNeutral, m.x, m.y, m.z, 1, 1)
 	} else {
-		m.goatVX, m.goatVZ = 0, 0
+		m.goatJumpCD = goatJumpCDMin + h.rng.Intn(goatJumpCDMax-goatJumpCDMin+1)
+		h.playSoundDim(players, m.dim, "minecraft:entity.goat.step", sndNeutral, m.x, m.y, m.z, 1, 1)
 	}
-	m.y += m.goatVY
-	// Landing: a ledge under any corner of its box catches it (a goat's
-	// is 0.9 wide), as vanilla's collision does.
-	feet, landed := -1e9, false
-	hw := m.box().w / 2
-	var onX, onZ int
-	if m.goatVY < 0 {
-		for _, c := range [5][2]float64{{0, 0}, {hw, hw}, {-hw, hw}, {hw, -hw}, {-hw, -hw}} {
-			cx, cz := int(math.Floor(m.x+c[0])), int(math.Floor(m.z+c[1]))
-			f := float64(w.MobFeetFrom(cx, cz, int(math.Floor(m.y))))
-			if f > feet && m.y <= f && f <= m.y-m.goatVY {
-				feet, landed, onX, onZ = f, true, cx, cz
-			}
-		}
-	}
-	if landed {
-		m.y = feet
-		// The engine stands a walker on the column under its centre: one
-		// caught by a corner is settled onto the ledge that caught it.
-		m.x = math.Min(math.Max(m.x, float64(onX)+0.01), float64(onX)+0.99)
-		m.z = math.Min(math.Max(m.z, float64(onZ)+0.01), float64(onZ)+0.99)
-		m.goatJumping, m.goatVX, m.goatVY, m.goatVZ = false, 0, 0, 0
-		// LongJumpMidJump: landed — the cooldown, and the landing step.
-		if m.etype == entityFrog {
-			m.goatJumpCD = frogJumpCDMin + h.rng.Intn(frogJumpCDMax-frogJumpCDMin+1)
-			h.playSoundDim(players, m.dim, "minecraft:entity.frog.step", sndNeutral, m.x, m.y, m.z, 1, 1)
-		} else {
-			m.goatJumpCD = goatJumpCDMin + h.rng.Intn(goatJumpCDMax-goatJumpCDMin+1)
-			h.playSoundDim(players, m.dim, "minecraft:entity.goat.step", sndNeutral, m.x, m.y, m.z, 1, 1)
-		}
-		h.breezePose(players, m, poseStanding)
-		return
-	}
-	m.vx, m.vz = 0, 0
+	h.breezePose(players, m, poseStanding)
 }
 
 // jumpVectorFor is LongJumpUtil.calculateJumpVectorForAngle over the

@@ -36,7 +36,7 @@ func TestIronGolemStrollsTheVillage(t *testing.T) {
 	v.bed = blockPos{20, 180, 2} // a claimed bed makes this a village
 	v.lastSlept = h.tick.Load() + 1
 	h.gridDirty()
-	cap := g.moveSpeed() * golemStrollSpeed * 1.05
+	cap := walkPerUpdate(g, golemStrollSpeed) * 1.05
 	walked := 0.0
 	for i := 0; i < 1500; i++ {
 		px, pz := g.x, g.z
