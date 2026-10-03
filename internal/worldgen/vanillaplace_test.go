@@ -336,6 +336,9 @@ func TestVanillaRingsAndNetherOrderMatchServer(t *testing.T) {
 // generator — the terrain core's heights and the vanilla biome source —
 // and skips in a tree without them.
 func TestVanillaLocateMatchesServer(t *testing.T) {
+	if testing.Short() {
+		t.Skip("heavy: whole vanilla chunks and searches; runs in the gate's non-race pass")
+	}
 	g := NewGenerator(1)
 	sg, ok := any(g).(interface {
 		SetGenerator(GeneratorMode, WorldPreset) error

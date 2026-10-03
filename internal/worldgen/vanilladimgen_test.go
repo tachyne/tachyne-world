@@ -117,6 +117,9 @@ func TestVanillaNetherLanding(t *testing.T) {
 // the spikes standing on the dimension's floor, the podium on the main
 // island's top at the origin, and the outer islands' chorus.
 func TestVanillaEndChunks(t *testing.T) {
+	if testing.Short() {
+		t.Skip("heavy: whole vanilla chunks and searches; runs in the gate's non-race pass")
+	}
 	const seed = 1
 	g := vdmGen(t, seed, false)
 	v := g.vEnd()

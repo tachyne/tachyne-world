@@ -125,6 +125,9 @@ func TestVanillaGeneratorGenerates(t *testing.T) {
 
 // Every preset builds and generates a chunk.
 func TestVanillaPresetsGenerate(t *testing.T) {
+	if testing.Short() {
+		t.Skip("heavy: whole vanilla chunks and searches; runs in the gate's non-race pass")
+	}
 	for _, p := range []WorldPreset{PresetNormal, PresetLargeBiomes, PresetAmplified, PresetSingleBiome, PresetCaves, PresetFloatingIslands, PresetFlat} {
 		g := NewGenerator(3)
 		if err := g.SetGenerator(GeneratorVanilla, p); err != nil {
