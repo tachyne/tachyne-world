@@ -189,6 +189,14 @@ func (g *Generator) carve(b uint32, wx, wy, wz, colH int) uint32 {
 	return b
 }
 
+// carved reports whether carve changes b at (wx, wy, wz): a cave opened the
+// cell (to air; in a vanilla-caves world also to the aquifer's water or
+// lava). For the engine's own caves, which only ever cut to air, it is
+// carve(...) == Air for every solid b.
+func (g *Generator) carved(b uint32, wx, wy, wz, colH int) bool {
+	return g.carve(b, wx, wy, wz, colH) != b
+}
+
 // Chunk holds generated block states and one biome per section. Biomes are
 // identifiers (e.g. "minecraft:plains"); the wire layer maps them to network
 // IDs, so worldgen stays free of protocol concerns.
@@ -385,7 +393,7 @@ func (g *Generator) columnAt(wx, wz int) column {
 // noise fill, carved, with the sulfur caves' underground bands laid in.
 func (g *Generator) terrainCell(c column, x, y, z int) uint32 {
 	b := g.carve(c.block(y), x, y, z, c.h)
-	if c.h-1-y <= 3 && ceilingSwap(b) != b && g.carve(c.block(y-1), x, y-1, z, c.h) == Air {
+	if c.h-1-y <= 3 && ceilingSwap(b) != b && g.carved(c.block(y-1), x, y-1, z, c.h) {
 		b = ceilingSwap(b) // ON_CEILING: sand over a cave is sandstone (surfacerules.go)
 	}
 	return g.sulfurBand(b, c, x, y, z)

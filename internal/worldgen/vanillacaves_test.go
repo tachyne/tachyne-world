@@ -318,8 +318,8 @@ func TestNativeCavesUnchanged(t *testing.T) {
 }
 
 // A vanilla world's caves: through GenerateChunk, the chunk is cut where the
-// mask says (air, or lava below y=-54), the mask agrees with BlockAt, and
-// the world differs from a native one.
+// caves say (air, the aquifer's water, lava — all of it below y=-54), the
+// cells agree with BlockAt, and the world differs from a native one.
 func TestVanillaCavesGenerate(t *testing.T) {
 	g := NewGenerator(1)
 	g.SetCaveMode(CavesVanilla)
@@ -327,7 +327,7 @@ func TestVanillaCavesGenerate(t *testing.T) {
 		t.Fatal("vanilla mode not set")
 	}
 	native := NewGenerator(1)
-	open, lava, below, differ := 0, 0, 0, 0
+	open, water, lava, below, differ := 0, 0, 0, 0, 0
 	for _, p := range [][2]int32{{0, 0}, {6, -4}, {-9, 11}} {
 		ch := g.GenerateChunk(p[0], p[1])
 		nch := native.GenerateChunk(p[0], p[1])
@@ -341,22 +341,32 @@ func TestVanillaCavesGenerate(t *testing.T) {
 					if s != sectionBlockAt(nch, lx, y, lz) {
 						differ++
 					}
-					if !g.vcaves.open(g, x, y, z) {
+					b, ok := g.vcaves.cell(g, x, y, z)
+					if !ok || !carveable(g.columnAt(x, z).block(y)) {
 						continue
 					}
-					open++
-					if bs := g.BlockAt(x, y, z); bs != Air && bs != Lava && carveable(g.columnAt(x, z).block(y)) {
-						t.Fatalf("BlockAt(%d,%d,%d) = %d in an open vanilla cave cell", x, y, z, bs)
-					}
-					if y < vanillaLavaLevel && g.BlockAt(x, y, z) == Lava {
+					switch b {
+					case Air:
+						open++
+					case Water:
+						open++
+						water++
+					case Lava:
+						open++
 						lava++
+					}
+					if y < vanillaLavaLevel && b != Lava {
+						t.Fatalf("cave cell %d,%d,%d below y=-54 is %d, not lava", x, y, z, b)
+					}
+					if bs := g.BlockAt(x, y, z); bs != b {
+						t.Fatalf("BlockAt(%d,%d,%d) = %d, the caves made it %d", x, y, z, bs, b)
 					}
 				}
 			}
 		}
 	}
-	t.Logf("vanilla caves: %d of %d cells under the ground open (%.1f%%), %d lava, %d cells differ from native",
-		open, below, 100*float64(open)/float64(below), lava, differ)
+	t.Logf("vanilla caves: %d of %d cells under the ground open (%.1f%%), %d water, %d lava, %d cells differ from native",
+		open, below, 100*float64(open)/float64(below), water, lava, differ)
 	if open == 0 || open*50 < below {
 		t.Errorf("vanilla caves open %d of %d cells under the ground", open, below)
 	}
@@ -407,5 +417,48 @@ func TestParseCaveMode(t *testing.T) {
 	n.SetCaveMode(CavesVanilla)
 	if n.CaveMode() != CavesNative || n.vcaves != nil {
 		t.Error("the Nether took vanilla caves")
+	}
+}
+
+// The carvers' grass fix-up (applyCarvingMask's hasGrass and topMaterial):
+// where a carver's run cuts down from a grass surface, the dirt it stops on
+// becomes the column's top block again, through BlockAt and GenerateChunk —
+// and only there: under a dry cut, never under water, always with the cell
+// above it open.
+func TestVanillaCarvedGrass(t *testing.T) {
+	g := NewGenerator(1)
+	g.SetCaveMode(CavesVanilla)
+	n := 0
+	for cx := int32(-10); cx <= 10 && n < 40; cx++ {
+		for cz := int32(-10); cz <= 10 && n < 40; cz++ {
+			c := g.vcaves.chunk(g, cx, cz)
+			if len(c.grass) == 0 {
+				continue
+			}
+			ch := g.GenerateChunk(cx, cz)
+			for i, b := range c.grass {
+				lx, lz, y := int(i)&15, int(i)>>4&15, int(i)>>8+MinY
+				x, z := int(cx)*16+lx, int(cz)*16+lz
+				col := g.columnAt(x, z)
+				if col.block(y) != Dirt || !vcGrassy(col.topBlock()) || b != col.topBlock() {
+					t.Fatalf("fix-up at %d,%d,%d: %d over the column's %d (top %d)", x, y, z, b, col.block(y), col.topBlock())
+				}
+				if got := g.BlockAt(x, y, z); got != b {
+					t.Fatalf("BlockAt(%d,%d,%d) = %d, the fix-up laid %d", x, y, z, got, b)
+				}
+				if above, _ := g.vcaves.cell(g, x, y+1, z); above != Air {
+					t.Fatalf("fix-up at %d,%d,%d under %d, not a dry cut", x, y, z, above)
+				}
+				if s := sectionBlockAt(ch, lx, y, lz); s != b && s != Air {
+					// (decoration may plant on it; it is never dirt again)
+					t.Errorf("GenerateChunk has %d at the fix-up %d,%d,%d", s, x, y, z)
+				}
+				n++
+			}
+		}
+	}
+	t.Logf("%d carved-grass fix-ups checked", n)
+	if n == 0 {
+		t.Error("no carver run cut down from grass in 441 chunks")
 	}
 }

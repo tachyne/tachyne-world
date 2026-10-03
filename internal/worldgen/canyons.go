@@ -22,6 +22,10 @@ import "math"
 // standing against air. Where the cut takes a grass block the dirt under it
 // becomes the surface block again.
 //
+// In a vanilla-caves world (vanillacaves.go) the cut is filled as 26.3
+// fills it instead: by the aquifer (vanillaaquifer.go), which also floods
+// a ravine under the sea and leaves rock between it and a differing level.
+//
 // Build guard: a ravine whose whole envelope (buildguard.go) holds a
 // player's build is not carved at all.
 
@@ -233,6 +237,10 @@ func (g *Generator) applyCanyonMask(ch *Chunk, cx, cz int32, mask []bool, loY, h
 		h := height(x, z)
 		return y < h && g.carve(Stone, x, y, z, h) == Air
 	}
+	var aq *vaqChunk // a vanilla-caves world fills the cut through the aquifer
+	if g.vcaves != nil {
+		aq = g.vcaves.aquiferFor(g, bx, bz)
+	}
 	for lx := 0; lx < 16; lx++ {
 		for lz := 0; lz < 16; lz++ {
 			x, z := bx+lx, bz+lz
@@ -251,6 +259,19 @@ func (g *Generator) applyCanyonMask(ch *Chunk, cx, cz int32, mask []bool, loY, h
 				}
 				fill := Air
 				switch {
+				case aq != nil:
+					// 26.3's canyon has no lava level of its own: the cell
+					// takes the aquifer's answer at density zero, as every
+					// carver's cell does (applyCarvingMask) — except a sea or
+					// river floor cell it would leave as air under the
+					// engine's standing water (vanillacaves.go).
+					st := aq.substance(x, y, z, 0)
+					if st == vaqSolid {
+						continue
+					}
+					if fill = [3]uint32{Air, Water, Lava}[st]; fill == Air && y == height(x, z)-1 && height(x, z) < SeaLevel {
+						continue
+					}
 				case y <= canyonLavaLevel:
 					fill = Lava
 				case y < SeaLevel && height(x, z) < SeaLevel:

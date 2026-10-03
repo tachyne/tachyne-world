@@ -100,7 +100,7 @@ func (g *Generator) forestRocksOf(ch *Chunk, cx, cz int32, ox, oz int) {
 		top := col.topBlock()
 		// BlockBlobFeature walks down to #forest_rock_can_place_on; the
 		// column's floor is that or the rock does not sit.
-		if !forestRockBase(top) || g.carve(top, x, col.h-1, z, col.h) == Air || col.h <= MinY+3 {
+		if !forestRockBase(top) || g.carved(top, x, col.h-1, z, col.h) || col.h <= MinY+3 {
 			continue
 		}
 		y := col.h
@@ -170,7 +170,7 @@ func (g *Generator) iceSpikesOf(ch *Chunk, cx, cz int32, ox, oz int) {
 		// MOTION_BLOCKING, then down through the air to the snow block the
 		// spike must stand on.
 		col := g.columnAt(x, z)
-		if col.topBlock() != SnowBlock || g.carve(SnowBlock, x, col.h-1, z, col.h) == Air {
+		if col.topBlock() != SnowBlock || g.carved(SnowBlock, x, col.h-1, z, col.h) {
 			continue
 		}
 		g.iceSpike(c, x, col.h-1, z)
@@ -185,7 +185,7 @@ func (g *Generator) iceSpikesOf(ch *Chunk, cx, cz int32, ox, oz int) {
 		// MOTION_BLOCKING, one down, and that block must be snow.
 		col := g.columnAt(x, z)
 		y := col.h - 1
-		if col.topBlock() != SnowBlock || g.carve(SnowBlock, x, y, z, col.h) == Air {
+		if col.topBlock() != SnowBlock || g.carved(SnowBlock, x, y, z, col.h) {
 			continue
 		}
 		if g.builtIn(x-radius, y-1, z-radius, x+radius, y+4, z+radius) {

@@ -17,7 +17,9 @@ import (
 //     corners of vanilla's 4×8×4 cells and interpolated across them as
 //     vanilla interpolates, with the bottom and top slides;
 //   - the cave and cave_extra_underground carvers (CaveWorldCarver,
-//     vanillacarvers.go), seeded per start chunk as vanilla seeds them.
+//     vanillacarvers.go), seeded per start chunk as vanilla seeds them;
+//   - the aquifer (NoiseBasedAquifer, vanillaaquifer.go) that decides what
+//     each opened cell holds.
 //
 // Every noise is seeded from the world seed and its name exactly as 26.3's
 // RandomState does (vanillanoise.go), so a seed samples vanilla's values.
@@ -29,19 +31,26 @@ import (
 // sloped_cheese = 4·quarter_negative(factor·(h−y)/128), the depth gradient's
 // slope of 1/128 a block taken from the engine's surface h (vanilla's depth
 // is zero at its own surface), with no base_3d_noise (the engine's terrain
-// has no overhangs to carry) and no jaggedness. The factor is a constant —
-// 6.3 on land, the spline's value wherever ridges are at or below -0.2 and
-// so its most common one, and 3.95 under the sea (continents at or below
-// -0.19) — where vanilla's spline varies it from 0.625 to 6.3 with
-// continentalness, erosion and ridges the engine does not have. The factor
-// only decides how deep under the ground the full cave set begins (where
-// sloped_cheese reaches 1.5625: about eight blocks down on land; above it
-// only the entrances cut) and where the cheese caves stop being held back
-// (sloped_cheese 2.34, about twelve); deeper, the caves are vanilla's
-// density alone. Aquifers are not modelled: a cave is air, lava below
-// y=-54 as vanilla's global fluid rule has it, and under the sea the five
-// blocks below the floor stay solid (the engine's rule) rather than
-// flooding through. The beardifier is the engine's terrain adaptation.
+// has no overhangs to carry) and no jaggedness. The factor is vanilla's
+// own (vanillafactor.go: the overworld/factor spline over vanilla's
+// climate noises for the seed, bit for bit), with only the side of the
+// coast taken from the engine's column, so the engine's sea gets the
+// ocean's 3.95 and its land vanilla's land values, 0.625 to 6.3. The
+// factor decides how deep under the ground the full cave set begins (where
+// sloped_cheese reaches 1.5625: 50/factor blocks, eight at 6.3, eighty at
+// 0.625; above it only the entrances cut) and where the cheese caves stop
+// being held back (sloped_cheese 2.34); deeper, the caves are vanilla's
+// density alone. What fills an opened cell is vanilla's aquifer
+// (vanillaaquifer.go): air, local lakes of water at their own levels, lava
+// pockets deep down and every cave below y=-54, flooded caves under the
+// sea, with the barrier rock between differing levels — its surface input
+// computed over the same model. The cave carvers fill their cells through
+// the same aquifer at density zero and lay grass on the dirt under a run
+// they cut down from a grass surface, as applyCarvingMask does. Two engine
+// rules stay: a two-block floor crust over bedrock, and, since the engine's
+// sea water stands above the floor regardless (vanilla's is the aquifer's
+// own), a sea or river floor block the aquifer would leave as air stays
+// solid. The beardifier is the engine's terrain adaptation.
 
 // CaveMode picks a world's cave generator. It is chosen when a world is
 // made and never changes after (it shapes every cave).
@@ -92,7 +101,8 @@ func (g *Generator) CaveMode() CaveMode { return g.caveMode }
 // it before anything else).
 const vanillaLavaLevel = -54
 
-// The vanilla terrain factor the sloped_cheese model uses (see above).
+// The land and sea constants the model used for the factor before it took
+// vanilla's own (the comparison in vanillafactor.go; constFactor).
 const (
 	vcFactorLand  = float32(6.3)
 	vcFactorOcean = float32(3.95)
@@ -125,7 +135,7 @@ var vcNoiseParams = map[string]vnNoiseParams{
 // vcSlots is the per-chunk cave cache's size (a power of two).
 const vcSlots = 1024
 
-// vanillaCaves holds one world's cave noises and its per-chunk cave masks.
+// vanillaCaves holds one world's cave noises and its per-chunk cave results.
 type vanillaCaves struct {
 	seed int64
 
@@ -136,17 +146,42 @@ type vanillaCaves struct {
 	pillar, pillarRare, pillarThick                 *vnNormal
 	noodle, noodleThick, noodleRidgeA, noodleRidgeB *vnNormal
 
-	// slots caches chunks' masks, direct-mapped by chunk position: a slot
+	aquifer *vanillaAquifer
+	vfactor *vanillaFactor
+	// constFactor uses the land and sea constants for the factor in place
+	// of vanilla's (the comparison the factor's choice was measured by).
+	constFactor bool
+
+	// slots caches chunks' results, direct-mapped by chunk position: a slot
 	// holds the last chunk that hashed to it (generation runs on many
-	// goroutines; a mask is immutable once stored).
+	// goroutines; a result is immutable once stored).
 	slots [vcSlots]atomic.Pointer[vcChunk]
 }
 
-// vcChunk is one chunk's caves: a bit per cell, (y-MinY)*256 + lz*16 + lx,
-// set where vanilla's density or a cave carver opens the cell.
+// vcChunk is one chunk's caves: what each cell under the ground became.
+// codes holds two bits a cell, (y-MinY)*256 + lz*16 + lx, for the rows up
+// to the chunk's highest surface: vcKeep (the terrain's block), or the air,
+// water or lava the caves and the aquifer put there. grass holds the few
+// cells the carvers' grass fix-up turned to the column's top block.
 type vcChunk struct {
 	cx, cz int32
-	mask   []uint64
+	cells  int
+	codes  []uint64
+	grass  map[int32]uint32
+}
+
+const (
+	vcKeep uint64 = iota
+	vcAir
+	vcWater
+	vcLava
+)
+
+func (c *vcChunk) code(i int) uint64 {
+	if i < 0 || i >= c.cells {
+		return vcKeep
+	}
+	return c.codes[i>>5] >> ((i & 31) * 2) & 3
 }
 
 func newVanillaCaves(seed int64) *vanillaCaves {
@@ -174,6 +209,8 @@ func newVanillaCaves(seed int64) *vanillaCaves {
 		noodleThick:  n("noodle_thickness"),
 		noodleRidgeA: n("noodle_ridge_a"),
 		noodleRidgeB: n("noodle_ridge_b"),
+		aquifer:      newVanillaAquifer(seed),
+		vfactor:      newVanillaFactor(seed),
 	}
 }
 
@@ -296,11 +333,7 @@ func (v *vanillaCaves) pillars(x, y, z int) float32 {
 // corner: the slides over the terrain-or-caves choice, times 0.64. h is the
 // column's surface, factor the terrain factor (see the file comment).
 func (v *vanillaCaves) corner(x, y, z, h int, factor float32) float32 {
-	d := factor * float32(h-y) / 128
-	if d <= 0 {
-		d *= 0.25 // quarter_negative
-	}
-	sloped := 4 * d
+	sloped := 4 * vcDepthFactor(y, h, factor)
 	rough := v.roughness(x, y, z)
 	ent := v.entrances(x, y, z, rough)
 	var inner float32
@@ -316,19 +349,60 @@ func (v *vanillaCaves) corner(x, y, z, h int, factor float32) float32 {
 		}
 		inner = vcMax(vcMin(vcMin(cheese, ent), v.spaghetti2D(x, y, z)+rough), p)
 	}
-	// The top slide (y 240 → 256) toward -0.078125, then the bottom slide
-	// (y -64 → -40) toward 0.1171875.
+	return vcSlide(y, inner) * 0.64
+}
+
+// vcSlide is slideOverworld: the top slide (y 240 → 256) toward -0.078125,
+// then the bottom slide (y -64 → -40) toward 0.1171875.
+func vcSlide(y int, v float32) float32 {
 	if a := vcGradient(y, 240, 256, 1, 0); a == 0 {
-		inner = -0.078125
+		v = -0.078125
 	} else if a != 1 {
-		inner = vnLerp(a, -0.078125, inner)
+		v = vnLerp(a, -0.078125, v)
 	}
 	if a := vcGradient(y, -64, -40, 0, 1); a == 0 {
-		inner = 0.1171875
+		v = 0.1171875
 	} else if a != 1 {
-		inner = vnLerp(a, 0.1171875, inner)
+		v = vnLerp(a, 0.1171875, v)
 	}
-	return inner * 0.64
+	return v
+}
+
+// vcDepthFactor is the depth term the model puts in vanilla's place:
+// factor·depth with depth (h−y)/128, quarter_negative (see the file
+// comment).
+func vcDepthFactor(y, h int, factor float32) float32 {
+	d := factor * float32(h-y) / 128
+	if d <= 0 {
+		d *= 0.25 // quarter_negative
+	}
+	return d
+}
+
+// vcPrelimSurface is overworld/preliminary_surface_level over the same
+// model: FindTopSurfaceFunction stepping down by eight from the upper bound
+// to the first y where the terrain's density without its 3-D noise is
+// positive. Vanilla's upper bound, remap(0.2734375/factor − offset, 1.5,
+// -1.5, -64, 320) with the model's offset h/128 − 1, is h − 35/factor.
+func vcPrelimSurface(h int, factor float32) int {
+	upper := vcClamp(float32(h)-35/factor, -40, 320)
+	top := int(math.Floor(float64(upper/8))) * 8
+	if top <= MinY {
+		return MinY
+	}
+	for y := top; y >= MinY; y -= 8 {
+		d := vcClamp(4*vcDepthFactor(y, h, factor)+-0.703125, -64, 64)
+		if vcSlide(y, d)+-0.390625 > 0 {
+			return y
+		}
+	}
+	return MinY
+}
+
+// vcSqueeze is the squeeze postProcess applies to the interpolated term.
+func vcSqueeze(v float32) float32 {
+	c := vcClamp(v, -1, 1)
+	return c/2 - vcCube(c)/24
 }
 
 // noodleCorner is overworld/caves/noodle's four interpolated inputs at a
@@ -368,18 +442,33 @@ func vcFillCell(v000, v100, v010, v110, v001, v101, v011, v111 float32, out *[12
 	}
 }
 
-// open reports whether vanilla's caves open (x, y, z).
-func (v *vanillaCaves) open(g *Generator, x, y, z int) bool {
+// cell is what vanilla's caves made of (x, y, z): the block, and whether
+// they changed it at all (false: the terrain's own block stays).
+func (v *vanillaCaves) cell(g *Generator, x, y, z int) (uint32, bool) {
 	cx, cz := int32(floorDiv16(x)), int32(floorDiv16(z))
 	c := v.chunk(g, cx, cz)
 	i := (y-MinY)*256 + (z-int(cz)*16)*16 + (x - int(cx)*16)
-	if i < 0 || i >= len(c.mask)*64 {
-		return false
+	switch c.code(i) {
+	case vcAir:
+		return Air, true
+	case vcWater:
+		return Water, true
+	case vcLava:
+		return Lava, true
 	}
-	return c.mask[i>>6]&(1<<(i&63)) != 0
+	if b, ok := c.grass[int32(i)]; ok {
+		return b, true
+	}
+	return 0, false
 }
 
-// chunk is chunk (cx, cz)'s cave mask, from the cache or built.
+// open reports whether vanilla's caves open (x, y, z): air, water or lava.
+func (v *vanillaCaves) open(g *Generator, x, y, z int) bool {
+	b, ok := v.cell(g, x, y, z)
+	return ok && (b == Air || b == Water || b == Lava)
+}
+
+// chunk is chunk (cx, cz)'s caves, from the cache or built.
 func (v *vanillaCaves) chunk(g *Generator, cx, cz int32) *vcChunk {
 	slot := &v.slots[(uint32(cx)*0x9E3779B1^uint32(cz)*0x85EBCA77)&(vcSlots-1)]
 	if c := slot.Load(); c != nil && c.cx == cx && c.cz == cz {
@@ -390,12 +479,63 @@ func (v *vanillaCaves) chunk(g *Generator, cx, cz int32) *vcChunk {
 	return c
 }
 
-// build works out one chunk's caves: the density at the 5×5 columns of
-// cell corners, interpolated over every cell, then the cave carvers.
+// factor is the terrain factor the model gives column (x, z) of surface h:
+// vanilla's own factor there, on the engine's side of the coast
+// (vanillafactor.go), or with constFactor the land/sea constants.
+func (v *vanillaCaves) factor(x, z, h int) float32 {
+	sea := h < SeaLevel
+	if v.constFactor {
+		if sea {
+			return vcFactorOcean
+		}
+		return vcFactorLand
+	}
+	return v.vfactor.at(x, z, &sea)
+}
+
+// aquiferFor is the chunk's aquifer, over the engine's stand-ins for
+// vanilla's surface level and deep-dark exclusion (vanillaaquifer.go).
+func (v *vanillaCaves) aquiferFor(g *Generator, bx, bz int) *vaqChunk {
+	surface := func(x, z int) int {
+		h := g.Height(x, z)
+		return vcPrelimSurface(h, v.factor(x, z, h))
+	}
+	excluded := func(x, y, z int) bool { return g.caveBiomeAt(x, y, z) == "minecraft:deep_dark" }
+	return newVaqChunk(v.aquifer, bx, MinY, bz, bx+15, g.Ceiling()-1, bz+15, surface, excluded)
+}
+
+// vcGrassy is grass_block or mycelium, any state (the carvers' hasGrass).
+func vcGrassy(b uint32) bool {
+	return b == GrassBlock || b == GrassBlock-1 || b == Mycelium || b == Mycelium-1
+}
+
+// build works out one chunk's caves as vanilla fills and carves it: the
+// density at the 5×5 columns of cell corners, interpolated over every cell,
+// each cell the density opens given what the aquifer puts there; then the
+// cave carvers (applyCarvingMask), whose cells take the aquifer's answer at
+// density zero, with the fix-up that turns the dirt under a carved run
+// that began in grass into the column's top block.
 func (v *vanillaCaves) build(g *Generator, cx, cz int32) *vcChunk {
 	bx, bz := int(cx)*16, int(cz)*16
-	cells := g.sections * 16
-	ny := cells/8 + 1 // corner rows
+	rows := g.sections * 16
+	ny := rows/8 + 1 // corner rows
+	var cols [256]column
+	maxH := MinY
+	for lz := 0; lz < 16; lz++ {
+		for lx := 0; lx < 16; lx++ {
+			cols[lz*16+lx] = g.columnAt(bx+lx, bz+lz)
+			maxH = max(maxH, cols[lz*16+lx].h)
+		}
+	}
+	maxH = min(maxH, g.Ceiling())
+	cells := (maxH - MinY) * 256
+	// open marks a cell the caves may change: under the column's surface,
+	// above the floor crust, and a block caves cut (carveable).
+	open := func(lx, y, lz int) bool {
+		c := &cols[lz*16+lx]
+		return y >= caveMinY && y < c.h && carveable(c.block(y))
+	}
+
 	main := make([]float32, 25*ny)
 	nd := make([]float32, 25*ny)
 	nt := make([]float32, 25*ny)
@@ -405,10 +545,7 @@ func (v *vanillaCaves) build(g *Generator, cx, cz int32) *vcChunk {
 		for iz := 0; iz < 5; iz++ {
 			x, z := bx+ix*4, bz+iz*4
 			h := g.Height(x, z)
-			factor := vcFactorLand
-			if h < SeaLevel {
-				factor = vcFactorOcean
-			}
+			factor := v.factor(x, z, h)
 			for iy := 0; iy < ny; iy++ {
 				y := MinY + iy*8
 				k := (ix*5+iz)*ny + iy
@@ -417,7 +554,8 @@ func (v *vanillaCaves) build(g *Generator, cx, cz int32) *vcChunk {
 			}
 		}
 	}
-	c := &vcChunk{cx: cx, cz: cz, mask: make([]uint64, (cells*256+63)/64)}
+	aq := v.aquiferFor(g, bx, bz)
+	state := make([]uint8, cells) // vcKeep/vcAir/vcWater/vcLava a cell
 	var fm, fd, ft, fa, fb [128]float32
 	fill := func(q []float32, ix, iz, iy int, out *[128]float32) {
 		k := func(dx, dz, dy int) float32 { return q[((ix+dx)*5+iz+dz)*ny+iy+dy] }
@@ -425,7 +563,7 @@ func (v *vanillaCaves) build(g *Generator, cx, cz int32) *vcChunk {
 	}
 	for ix := 0; ix < 4; ix++ {
 		for iz := 0; iz < 4; iz++ {
-			for iy := 0; iy < ny-1; iy++ {
+			for iy := 0; iy < ny-1 && MinY+iy*8 < maxH; iy++ {
 				fill(main, ix, iz, iy, &fm)
 				fill(nd, ix, iz, iy, &fd)
 				fill(nt, ix, iz, iy, &ft)
@@ -434,45 +572,127 @@ func (v *vanillaCaves) build(g *Generator, cx, cz int32) *vcChunk {
 				for lx := 0; lx < 4; lx++ {
 					for lz := 0; lz < 4; lz++ {
 						for ly := 0; ly < 8; ly++ {
+							x, y, z := ix*4+lx, MinY+iy*8+ly, iz*4+lz
+							if !open(x, y, z) {
+								continue
+							}
 							j := (lx*4+lz)*8 + ly
 							noodle := float32(64)
 							if !(fd[j] >= -1000000 && fd[j] < 0) {
 								noodle = ft[j] + 1.5*vcMax(vcAbs(fa[j]), vcAbs(fb[j]))
 							}
-							// final_density = min(squeeze(interpolated), noodle) +
-							// beardifier: squeeze keeps the sign, so a cell is
-							// open where either term is at or below zero.
-							if fm[j] > 0 && noodle > 0 {
+							// final_density = min(squeeze(interpolated), noodle)
+							// + beardifier (the engine's own terrain adaptation).
+							d := vcMin(vcSqueeze(fm[j]), noodle)
+							if d > 0 {
 								continue
 							}
-							i := (iy*8+ly)*256 + (iz*4+lz)*16 + ix*4 + lx
-							c.mask[i>>6] |= 1 << (i & 63)
+							if s := aq.substance(bx+x, y, bz+z, float64(d)); s != vaqSolid {
+								state[(y-MinY)*256+z*16+x] = uint8(s) + 1
+							}
 						}
 					}
 				}
 			}
 		}
 	}
-	v.carveCaves(g, cx, cz, c.mask)
-	return c
+
+	// The carvers' cells, then applyCarvingMask over each column's runs.
+	mask := make([]uint64, (rows*256+63)/64)
+	v.carveCaves(g, cx, cz, mask)
+	var grass map[int32]uint32
+	cur := make([]uint32, maxH-MinY)
+	for lx := 0; lx < 16; lx++ {
+		for lz := 0; lz < 16; lz++ {
+			c := &cols[lz*16+lx]
+			loaded := false
+			hasGrass := false
+			for y := min(c.h, maxH) - 1; y >= caveMinY; y-- {
+				i := (y-MinY)*256 + lz*16 + lx
+				if mask[i>>6]&(1<<(i&63)) == 0 {
+					hasGrass = false // a run ends: the next one starts afresh
+					continue
+				}
+				if !open(lx, y, lz) {
+					continue // the engine's uncarvable (vanilla's is bedrock alone)
+				}
+				if !loaded { // the column as the noise left it
+					for yy := MinY; yy < c.h && yy < maxH; yy++ {
+						cur[yy-MinY] = c.block(yy)
+						switch state[(yy-MinY)*256+lz*16+lx] {
+						case uint8(vcAir):
+							cur[yy-MinY] = Air
+						case uint8(vcWater):
+							cur[yy-MinY] = Water
+						case uint8(vcLava):
+							cur[yy-MinY] = Lava
+						}
+					}
+					loaded = true
+				}
+				if vcGrassy(cur[y-MinY]) {
+					hasGrass = true
+				}
+				s := aq.substance(bx+lx, y, bz+lz, 0)
+				if s == vaqSolid {
+					continue
+				}
+				cur[y-MinY] = [3]uint32{Air, Water, Lava}[s]
+				state[i] = uint8(s) + 1
+				if hasGrass && y-1 >= MinY && cur[y-1-MinY] == Dirt && s == vaqAir {
+					// topMaterial at the dirt: the column's top (under a fluid,
+					// vanilla's rules give dirt, which it already is).
+					cur[y-1-MinY] = c.topBlock()
+					if grass == nil {
+						grass = map[int32]uint32{}
+					}
+					grass[int32(i-256)] = c.topBlock()
+				}
+			}
+			if loaded {
+				// A grass fix-up the run later carved through is carved.
+				for k := range grass {
+					if int(k)&255 == lz*16+lx && state[k] != uint8(vcKeep) {
+						delete(grass, k)
+					}
+				}
+			}
+		}
+	}
+
+	// The engine's sea and river water stands on the column whatever the
+	// aquifer says (vanilla's water above the floor is the aquifer's own
+	// decision, so it never sits on a cave the aquifer left dry): a floor
+	// cell the aquifer would leave as air under that water stays solid.
+	for i := range cols {
+		c := &cols[i]
+		if y := c.h - 1; c.h <= SeaLevel && y >= caveMinY && y < maxH && c.block(c.h) == Water {
+			if k := (y-MinY)*256 + i; state[k] == uint8(vcAir) {
+				state[k] = uint8(vcKeep)
+			}
+		}
+	}
+
+	out := &vcChunk{cx: cx, cz: cz, cells: cells, codes: make([]uint64, (cells+31)/32), grass: grass}
+	for i, s := range state {
+		if s != uint8(vcKeep) {
+			out.codes[i>>5] |= uint64(s) << ((i & 31) * 2)
+		}
+	}
+	return out
 }
 
-// carveVanilla is carve for a vanilla-caves world: the cell opens where
-// vanilla's caves do, as air (lava below y=-54), with the engine's floor
-// crust over bedrock and its solid layer under the sea floor kept.
+// carveVanilla is carve for a vanilla-caves world: the cell becomes what
+// vanilla's caves and aquifer made of it (air, water or lava, or the grass
+// the carvers' fix-up lays), with the engine's floor crust over bedrock
+// kept. Under the sea the caves reach the floor, flooded as the aquifer
+// floods them.
 func (g *Generator) carveVanilla(b uint32, wx, wy, wz, colH int) uint32 {
-	if wy < caveMinY || !carveable(b) {
+	if wy < caveMinY || wy >= colH || !carveable(b) {
 		return b
 	}
-	ceil := colH
-	if colH <= SeaLevel+1 {
-		ceil = colH - caveSeaFloorGap
+	if s, ok := g.vcaves.cell(g, wx, wy, wz); ok {
+		return s
 	}
-	if wy >= ceil || !g.vcaves.open(g, wx, wy, wz) {
-		return b
-	}
-	if wy < vanillaLavaLevel {
-		return Lava
-	}
-	return Air
+	return b
 }
