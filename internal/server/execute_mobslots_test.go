@@ -119,3 +119,23 @@ func TestItemPredicateEnchantmentPotionTags(t *testing.T) {
 		t.Error("an unknown enchantment tag was accepted")
 	}
 }
+
+// type=#tag selects the entity types the tag holds (vanilla's tags, merged
+// with the data packs'), type=!#tag the rest; an unknown tag holds none.
+func TestSelectorTypeTag(t *testing.T) {
+	s, h, ps, logs := feedbackServer(t)
+	run := exRunner(t, s, h, logs, ps["alice"])
+	run("summon skeleton 3 100 3 {NoAI:1b}")
+	run("summon stray 4 100 4 {NoAI:1b}")
+	run("summon zombie 5 100 5 {NoAI:1b}")
+	for _, c := range []struct{ cmd, want string }{
+		{"execute if entity @e[type=#minecraft:skeletons]", "Test passed. Count: 2"},
+		{"execute if entity @e[type=#skeletons,type=!stray]", "Test passed. Count: 1"},
+		{"execute if entity @e[type=!#minecraft:skeletons]", "Test passed. Count: 4"},
+		{"execute if entity @e[type=#minecraft:no_such_tag]", "Test failed"},
+	} {
+		if got := run(c.cmd); !hasLine(got, c.want) {
+			t.Errorf("%s: want %q, heard %q", c.cmd, c.want, got)
+		}
+	}
+}

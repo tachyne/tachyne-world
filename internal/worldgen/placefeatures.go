@@ -1,10 +1,14 @@
 package worldgen
 
+import "math"
+
 // /place feature for the configured features the engine's decoration
 // already grows, beyond trees and huge mushrooms: the overworld ores and
-// stone blobs (OreFeature), the disks (DiskFeature), the springs
+// stone blobs (OreFeature), the Nether's ores and ancient debris
+// (ScatteredOreFeature), the disks (DiskFeature), the springs
 // (SpringFeature), the monster room (MonsterRoomFeature), the amethyst
-// geode (GeodeFeature) and the deep dark's sculk patch and sculk vein. Each
+// geode (GeodeFeature) and the deep dark's and the ancient city's sculk
+// patches and the sculk vein. Each
 // runs once at the command's origin on one random stream, and is stamped
 // into every chunk it can reach the way generation stamps it. The features
 // that plan against a view of the area (the room, the geode, the sculk)
@@ -37,6 +41,55 @@ var placeOreCfgs = map[string]oreCfg{
 	"ore_copper_small": oreOf(CopperOre, DeepslateCopperOre, 10, 0), "ore_copper_large": oreOf(CopperOre, DeepslateCopperOre, 20, 0),
 }
 
+// placeNetherOreCfgs are the Nether's ore features by configured id
+// (OreFeatures.bootstrap: each an OreFeature replacing netherrack).
+var placeNetherOreCfgs = map[string]oreCfg{
+	"ore_magma": netherrackOre(MagmaBlock, 33), "ore_soul_sand": netherrackOre(SoulSand, 12),
+	"ore_nether_gold": netherrackOre(NetherGoldOre, 10), "ore_quartz": netherrackOre(NetherQuartzOre, 14),
+	"ore_gravel_nether": netherrackOre(Gravel, 33), "ore_blackstone": netherrackOre(Blackstone, 33),
+}
+
+// placeScatteredOres are the ScatteredOreFeature ones: ancient debris in
+// #base_stone_nether, never beside air (discard chance 1), up to size
+// blocks.
+var placeScatteredOres = map[string]int{"ore_ancient_debris_large": 3, "ore_ancient_debris_small": 2}
+
+// scatteredOre is ScatteredOreFeature.place at an origin: up to size tries
+// (random.nextInt(size + 1)), each offset on every axis by
+// round((nextFloat − nextFloat) · min(i, 7)), placing the ore in base
+// stone with no air beside it.
+func scatteredOre(r TreeRNG, x, y, z, size int, at func(x, y, z int) uint32) map[[3]int]uint32 {
+	cells := map[[3]int]uint32{}
+	get := func(px, py, pz int) uint32 {
+		if s, ok := cells[[3]int{px, py, pz}]; ok {
+			return s
+		}
+		return at(px, py, pz)
+	}
+	tries := r.Intn(size + 1)
+	for i := 0; i < tries; i++ {
+		d := float64(min(i, 7))
+		off := func() int {
+			return int(math.Floor((float64(float32(r.Float64()))-float64(float32(r.Float64())))*d + 0.5))
+		}
+		px, py, pz := x+off(), y+off(), z+off()
+		if !baseStoneNether(get(px, py, pz)) {
+			continue
+		}
+		exposed := false
+		for _, o := range [6][3]int{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}} {
+			if get(px+o[0], py+o[1], pz+o[2]) == Air {
+				exposed = true
+				break
+			}
+		}
+		if !exposed {
+			cells[[3]int{px, py, pz}] = AncientDebris
+		}
+	}
+	return cells
+}
+
 // PlaceFeatureStamp grows a configured feature (vanilla's id, namespace
 // optional) at (x, y, z) on the random stream seed names; live reads the
 // world the planned features see. ok is false for a feature the engine does
@@ -45,6 +98,17 @@ var placeOreCfgs = map[string]oreCfg{
 func (g *Generator) PlaceFeatureStamp(name string, x, y, z int, seed int64, live func(x, y, z int) uint32) (FeatureStamp, bool) {
 	name = trimNS(name)
 	reach := func(n int) FeatureStamp { return FeatureStamp{X0: x - n, Z0: z - n, X1: x + n, Z1: z + n} }
+	if cfg, ok := placeNetherOreCfgs[name]; ok {
+		st := reach(16)
+		st.Stamp = func(ch *Chunk, cx, cz int32) {
+			reg := &owRegion{g: g, ch: ch, baseX: int(cx) * 16, baseZ: int(cz) * 16, cols: map[[2]int]column{}}
+			oreBlob(reg, nil, cfg, newTreeRNG(seed, x, z), x, y, z, MinY+len(ch.Sections)*16, seed, 0)
+		}
+		return st, true
+	}
+	if size, ok := placeScatteredOres[name]; ok {
+		return cellsStamp(scatteredOre(newTreeRNG(seed, x, z), x, y, z, size, live), x, z), true
+	}
 	if cfg, ok := placeOreCfgs[name]; ok {
 		st := reach(16)
 		st.Stamp = func(ch *Chunk, cx, cz int32) {
@@ -110,13 +174,16 @@ func (g *Generator) PlaceFeatureStamp(name string, x, y, z int, seed int64, live
 			return FeatureStamp{X0: x, Z0: z, X1: x, Z1: z, Stamp: func(*Chunk, int32, int32) {}}, true
 		}
 		return cellsStamp(p.cells, x, z), true
-	case "sculk_patch_deep_dark", "sculk_vein":
+	case "sculk_patch_deep_dark", "sculk_patch_ancient_city", "sculk_vein":
 		view := &owRegion{g: g, baseX: x &^ 15, baseZ: z &^ 15, cols: map[[2]int]column{}, capture: map[[3]int]uint32{}, under: live}
 		w := &sculkWorld{view: view, orig: map[[3]int]uint32{}}
 		r := newTreeRNG(seed, x, z)
-		if name == "sculk_vein" {
+		switch name {
+		case "sculk_vein":
 			w.vein([3]int{x, y, z}, r)
-		} else {
+		case "sculk_patch_ancient_city":
+			w.patchAncientCity([3]int{x, y, z}, r)
+		default:
 			w.patch([3]int{x, y, z}, r)
 		}
 		cells := map[[3]int]uint32{}
@@ -133,8 +200,14 @@ func (g *Generator) PlaceFeatureStamp(name string, x, y, z int, seed int64, live
 // PlaceFeatureNames are the features PlaceFeatureStamp grows.
 func PlaceFeatureNames() []string {
 	out := []string{"disk_sand", "disk_clay", "disk_gravel", "disk_grass", "spring_water", "spring_lava_overworld",
-		"spring_lava_frozen", "monster_room", "amethyst_geode", "sculk_patch_deep_dark", "sculk_vein"}
+		"spring_lava_frozen", "monster_room", "amethyst_geode", "sculk_patch_deep_dark", "sculk_patch_ancient_city", "sculk_vein"}
 	for n := range placeOreCfgs {
+		out = append(out, n)
+	}
+	for n := range placeNetherOreCfgs {
+		out = append(out, n)
+	}
+	for n := range placeScatteredOres {
 		out = append(out, n)
 	}
 	return out

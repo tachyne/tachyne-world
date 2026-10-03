@@ -602,9 +602,43 @@ func (w *sculkWorld) canSpreadFrom(p [3]int) bool {
 	return false
 }
 
-// patch is SculkPatchFeature.place (one round of ten charges of 32 over 64
-// steps), then the sequence's catalyst: half the time, on a sturdy floor.
+// patch is sculk_patch_deep_dark: SculkPatchFeature.place (one round of
+// ten charges of 32 over 64 steps), then the sequence's catalyst.
 func (w *sculkWorld) patch(origin [3]int, r TreeRNG) bool {
+	if !w.patchCore(origin, r) {
+		return false
+	}
+	w.catalyst(origin, r)
+	return true
+}
+
+// patchAncientCity is sculk_patch_ancient_city: the same patch, then an
+// overlay of the catalyst and one to three can-summon shriekers, each
+// offset up to two blocks on every axis into air over a sturdy floor.
+func (w *sculkWorld) patchAncientCity(origin [3]int, r TreeRNG) bool {
+	if !w.patchCore(origin, r) {
+		return false
+	}
+	w.catalyst(origin, r)
+	n := 1 + r.Intn(3) // CountPlacement UniformInt(1, 3)
+	for i := 0; i < n; i++ {
+		p := [3]int{origin[0] + r.Intn(5) - 2, origin[1] + r.Intn(5) - 2, origin[2] + r.Intn(5) - 2}
+		if w.get(p) == Air && IsFaceSturdy(w.get(sculkStep(p, 0)), FaceUp) {
+			w.set(p, sculkShriekerState)
+		}
+	}
+	return true
+}
+
+// catalyst is the sequence's catalyst: half the time, on a sturdy floor.
+func (w *sculkWorld) catalyst(origin [3]int, r TreeRNG) {
+	if r.Float64() < 0.5 && IsFaceSturdy(w.get(sculkStep(origin, 0)), FaceUp) {
+		w.set(origin, sculkCatalystState)
+	}
+}
+
+// patchCore is SculkPatchFeature.place.
+func (w *sculkWorld) patchCore(origin [3]int, r TreeRNG) bool {
 	if !w.canSpreadFrom(origin) {
 		return false
 	}
@@ -623,9 +657,6 @@ func (w *sculkWorld) patch(origin [3]int, r TreeRNG) bool {
 			}
 		}
 		cursors = kept
-	}
-	if r.Float64() < 0.5 && IsFaceSturdy(w.get(sculkStep(origin, 0)), FaceUp) {
-		w.set(origin, sculkCatalystState)
 	}
 	return true
 }

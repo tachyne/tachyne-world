@@ -23,8 +23,8 @@ import (
 type targetSpec struct {
 	kind     byte    // 's', 'p', 'a', 'r', 'e', or 0 for a plain name
 	name     string  // the literal name, or a name= predicate
-	etype    string  // type= (without the namespace); "player" selects players
-	notEtype string  // type=! …
+	etype    string  // type= (without the namespace), or #tag (namespaced); "player" selects players
+	notEtype string  // type=! … (the same forms)
 	maxDist  float64 // distance=..max
 	minDist  float64 // distance=min..
 	limit    int     // limit=, 0 = unlimited
@@ -108,9 +108,9 @@ func parseTargetSpec(arg string) (targetSpec, bool) {
 		switch k {
 		case "type":
 			if strings.HasPrefix(v, "!") {
-				spec.notEtype = strings.TrimPrefix(strings.TrimPrefix(v, "!"), "minecraft:")
+				spec.notEtype = selectorType(v[1:])
 			} else {
-				spec.etype = strings.TrimPrefix(v, "minecraft:")
+				spec.etype = selectorType(v)
 			}
 		case "name":
 			if strings.HasPrefix(v, "!") {
@@ -293,6 +293,37 @@ func (spec targetSpec) selectsEntities() bool {
 	return spec.kind == 'e' && spec.etype != "player"
 }
 
+// selectorType is a type= value as the spec keeps it: an entity type's
+// bare name, or an entity type tag (#…) by its namespaced id.
+func selectorType(v string) string {
+	if tag, ok := strings.CutPrefix(v, "#"); ok {
+		return "#" + nsID(tag)
+	}
+	return strings.TrimPrefix(v, "minecraft:")
+}
+
+// selectorTypeIs reports whether an entity type (its bare name) is the one
+// a type= value names or a member of the tag it names (vanilla's tags,
+// merged with the data packs'; an unknown tag holds no type).
+func selectorTypeIs(etype, want string) bool {
+	tag, ok := strings.CutPrefix(want, "#")
+	if !ok {
+		return etype == want
+	}
+	members, _ := tagMembers("entity_type", tag)
+	for _, m := range members {
+		if m == "minecraft:"+etype {
+			return true
+		}
+	}
+	return false
+}
+
+// typeMayBePlayer reports whether a type= value can select players.
+func (spec targetSpec) typeMayBePlayer() bool {
+	return spec.etype == "" || selectorTypeIs("player", spec.etype)
+}
+
 // reachesEntities is selectsEntities for a selector read from `from`: an
 // /execute source's @s may be any entity, not only a player.
 func reachesEntities(spec targetSpec, from *tracked) bool {
@@ -356,7 +387,7 @@ func (h *hub) selectEntitiesAll(players map[int32]*tracked, from *tracked, spec 
 		}
 		return out
 	}
-	if withPlayers && !(spec.kind == 'e' && spec.etype != "" && spec.etype != "player") {
+	if withPlayers && !(spec.kind == 'e' && !spec.typeMayBePlayer()) {
 		for _, t := range players {
 			// /execute's stand-ins and the console are sources, not entities.
 			if t.p.exec == nil && t != h.console && h.specMatches(spec, cmdEntity{t: t}, from) {
@@ -503,10 +534,10 @@ func (h *hub) specMatches(spec targetSpec, en cmdEntity, from *tracked) bool {
 			}
 		}
 	}
-	if spec.etype != "" && etype != spec.etype {
+	if spec.etype != "" && !selectorTypeIs(etype, spec.etype) {
 		return false
 	}
-	if spec.notEtype != "" && etype == spec.notEtype {
+	if spec.notEtype != "" && selectorTypeIs(etype, spec.notEtype) {
 		return false
 	}
 	if spec.name != "" && name != spec.name {
