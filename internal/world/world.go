@@ -439,21 +439,32 @@ func (w *World) generated(cx, cz int32) *worldgen.Chunk {
 	return ch
 }
 
-// cacheBudgets sizes the three caches against the process memory limit rather
-// than by fixed constants. The fixed values (256 + 64 + 64 MiB of generator
-// output plus 48 MiB of light per world) added up to ~530 MiB — inside a
-// 768 MiB GOMEMLIMIT that also had to hold the heap proper, so a quiet server
-// with mobs touring terrain filled the caches to the point where the GC began
-// to thrash, and it read as a leak. Under a limit, the caches together get
-// half of it: main 5/16, each minor 1/16, light 1/16 per world (three worlds).
-// With no limit set the historical defaults apply.
+// cacheBudgets sizes the caches against the process memory limit rather than
+// by fixed constants. The fixed values (256 + 64 + 64 MiB of generator output
+// plus 48 MiB of light per world) added up to ~530 MiB — inside a 768 MiB
+// GOMEMLIMIT that also had to hold the heap proper, so a quiet server with
+// mobs touring terrain filled the caches to the point where the GC began to
+// thrash, and it read as a leak. Under a limit, the caches of every world
+// together get half of it, however many worlds the table runs: the main
+// world's generated chunks half of that, the other worlds' a quarter between
+// them, and every world's light the last quarter. (The shares were once fixed
+// for three worlds; a fourth, the shipyard, took the sum to three quarters of
+// the limit and the GC ran almost without pause.)
 func cacheBudgets() (main, minor, light int) {
 	limit := debug.SetMemoryLimit(-1) // read-only query of GOMEMLIMIT
 	if limit <= 0 || limit == math.MaxInt64 {
 		return genCacheBudgetDefault, genCacheBudgetMinorDefault, lightCacheBudgetDefault
 	}
-	pool := int(limit / 2)
-	return pool * 5 / 8, pool / 8, pool / 8
+	return splitCachePool(int(limit/2), len(Dimensions))
+}
+
+// splitCachePool divides the cache pool between n worlds: one main world,
+// n-1 minor ones, and a light cache each.
+func splitCachePool(pool, n int) (main, minor, light int) {
+	if n < 2 {
+		return pool * 3 / 4, 0, pool / 4
+	}
+	return pool / 2, pool / 4 / (n - 1), pool / 4 / n
 }
 
 // CacheLen reports how many generated chunks are held in memory — the number

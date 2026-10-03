@@ -64,3 +64,18 @@ func TestVoidTakesTheMinorCacheBudget(t *testing.T) {
 		t.Errorf("cache caps: void %d, nether %d, overworld %d", v.cacheCap(), n.cacheCap(), ow.cacheCap())
 	}
 }
+
+// The caches of every world fit the pool together, whatever the number of
+// worlds: one main, the rest minor, a light cache each.
+func TestCachePoolFitsEveryWorld(t *testing.T) {
+	const pool = 1280 << 20
+	for n := 1; n <= 8; n++ {
+		main, minor, light := splitCachePool(pool, n)
+		if sum := main + (n-1)*minor + n*light; sum > pool {
+			t.Errorf("%d worlds: %d MiB of caches in a %d MiB pool", n, sum>>20, pool>>20)
+		}
+		if main <= minor {
+			t.Errorf("%d worlds: the main world's cache (%d) is no larger than a minor one's (%d)", n, main, minor)
+		}
+	}
+}
