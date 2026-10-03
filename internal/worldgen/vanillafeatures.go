@@ -33,6 +33,7 @@ type vpFeature struct {
 	def    *vpPlacedFeature
 	choose []*vpPlacedFeature
 	block  vpStateProvider
+	ext    *vpExtra
 }
 
 type vpSelEntry struct {
@@ -149,6 +150,8 @@ type vpExec struct {
 	// protect marks the chunk's cells a structure built (section-major,
 	// as Chunk.Sections): features leave them be.
 	protect []bool
+	// cold is Biome.coldEnoughToSnow at a position (nil: never).
+	cold func(biome string, x, y, z int) bool
 }
 
 func (e *vpExec) inChunk(x, y, z int) bool {
@@ -258,6 +261,9 @@ func (e *vpExec) place(f *vpFeature, r *vwRandom, p vpPos) bool {
 		e.placeTree(r, p, func(d TreeDriver) { PlaceHugeMushroom(brown, p.x, p.y, p.z, vpTreeRNG{r}, d) })
 		return true
 	}
+	if placed, ok := e.placeExtra(f, r, p); ok {
+		return placed
+	}
 	if e.unhandled != nil {
 		e.unhandled[f.typ]++
 	}
@@ -303,6 +309,8 @@ func (f *vpFeature) parse() {
 		f.ore = parseVPOre(f.raw)
 	case "simple_block":
 		f.block = parseVPStateProvider(f.raw["to_place"])
+	default:
+		f.parseExtra()
 	}
 }
 
@@ -567,25 +575,61 @@ func (e *vpExec) placeScatteredOre(c *vpOreCfg, r *vwRandom, p vpPos) bool {
 
 // ---- single blocks ---------------------------------------------------------------
 
-// vpStateProvider is a BlockStateProvider (nil state: none).
-type vpStateProvider func(r *vwRandom, p vpPos) (uint32, bool)
+// vpStateProvider is a BlockStateProvider: getOptionalState (ok false:
+// none). getState is vpGetState.
+type vpStateProvider func(c *vpCtx, r *vwRandom, p vpPos) (uint32, bool)
 
-// vpParseState reads a block state: "minecraft:x" or {id, properties}.
+// vpGetState is BlockStateProvider.getState: the provider's state, or the
+// block already there.
+func vpGetState(pr vpStateProvider, c *vpCtx, r *vwRandom, p vpPos) uint32 {
+	if pr != nil {
+		if s, ok := pr(c, r, p); ok {
+			return s
+		}
+	}
+	return c.blockAt(p)
+}
+
+// vpParseState reads a block state: "minecraft:x" or {id, properties} —
+// the block's DEFAULT state with the listed properties set (as the state
+// codec reads it); air for a block the engine does not know.
 func vpParseState(raw json.RawMessage) uint32 {
 	var name string
-	if json.Unmarshal(raw, &name) == nil {
-		return resolveState(paletteEntry{Name: name}, 0)
+	var props map[string]string
+	if json.Unmarshal(raw, &name) != nil {
+		var o struct {
+			ID    string            `json:"id"`
+			Name  string            `json:"Name"`
+			Props map[string]string `json:"properties"`
+		}
+		_ = json.Unmarshal(raw, &o)
+		name, props = o.ID, o.Props
+		if name == "" {
+			name = o.Name
+		}
 	}
-	var o struct {
-		ID    string            `json:"id"`
-		Name  string            `json:"Name"`
-		Props map[string]string `json:"properties"`
+	return vpStateOf(vpShort(name), props)
+}
+
+// vpStateOf is a block's default state with properties set.
+func vpStateOf(name string, props map[string]string) uint32 {
+	s, ok := blockDefaultState[name]
+	if !ok {
+		return Air
 	}
-	_ = json.Unmarshal(raw, &o)
-	if o.ID == "" {
-		o.ID = o.Name
+	if len(props) == 0 {
+		return s
 	}
-	return resolveState(paletteEntry{Name: o.ID, Props: o.Props}, 0)
+	info, ok := InfoForState(s)
+	if !ok {
+		return s
+	}
+	for k, v := range props {
+		if info.HasProperty(k) {
+			s = SetProperty(info, s, k, v)
+		}
+	}
+	return s
 }
 
 func parseVPStateProvider(raw json.RawMessage) vpStateProvider {
@@ -596,7 +640,7 @@ func parseVPStateProvider(raw json.RawMessage) vpStateProvider {
 			return parseVPStateProvider(pr)
 		}
 		s := vpParseState(raw)
-		return func(*vwRandom, vpPos) (uint32, bool) { return s, true }
+		return func(*vpCtx, *vwRandom, vpPos) (uint32, bool) { return s, true }
 	}
 	var o map[string]json.RawMessage
 	_ = json.Unmarshal(raw, &o)
@@ -605,10 +649,10 @@ func parseVPStateProvider(raw json.RawMessage) vpStateProvider {
 	switch vpShort(t) {
 	case "":
 		s := vpParseState(raw)
-		return func(*vwRandom, vpPos) (uint32, bool) { return s, true }
-	case "simple_state_provider":
+		return func(*vpCtx, *vwRandom, vpPos) (uint32, bool) { return s, true }
+	case "simple", "simple_state_provider":
 		s := vpParseState(o["state"])
-		return func(*vwRandom, vpPos) (uint32, bool) { return s, true }
+		return func(*vpCtx, *vwRandom, vpPos) (uint32, bool) { return s, true }
 	case "weighted":
 		var ents []struct {
 			Data   json.RawMessage `json:"data"`
@@ -621,7 +665,7 @@ func parseVPStateProvider(raw json.RawMessage) vpStateProvider {
 			states[i] = vpParseState(en.Data)
 			total += en.Weight
 		}
-		return func(r *vwRandom, _ vpPos) (uint32, bool) {
+		return func(_ *vpCtx, r *vwRandom, _ vpPos) (uint32, bool) {
 			if total == 0 {
 				return 0, false
 			}
@@ -638,14 +682,110 @@ func parseVPStateProvider(raw json.RawMessage) vpStateProvider {
 		var prop string
 		_ = json.Unmarshal(o["property"], &prop)
 		vals, err := parseVPInt(o["values"])
-		return func(r *vwRandom, p vpPos) (uint32, bool) {
-			s, ok := src(r, p)
+		return func(c *vpCtx, r *vwRandom, p vpPos) (uint32, bool) {
+			s, ok := src(c, r, p)
 			if !ok || err != nil {
 				return s, ok
 			}
 			v := vals.sample(r)
 			if info, ok := InfoForState(s); ok && info.HasProperty(prop) {
 				return SetProperty(info, s, prop, strconv.Itoa(v)), true
+			}
+			return s, true
+		}
+	case "rule_based":
+		type rule struct {
+			test vpPredicate
+			then vpStateProvider
+		}
+		var rs []struct {
+			If   json.RawMessage `json:"if_true"`
+			Then json.RawMessage `json:"then"`
+		}
+		_ = json.Unmarshal(o["rules"], &rs)
+		var rules []rule
+		for _, r := range rs {
+			t, err := parseVPPredicate(r.If)
+			if err != nil {
+				continue
+			}
+			rules = append(rules, rule{t, parseVPStateProvider(r.Then)})
+		}
+		var fallback vpStateProvider
+		if f, ok := o["fallback"]; ok {
+			fallback = parseVPStateProvider(f)
+		}
+		return func(c *vpCtx, r *vwRandom, p vpPos) (uint32, bool) {
+			for _, ru := range rules {
+				if ru.test.test(c, p) {
+					if s, ok := ru.then(c, r, p); ok {
+						return s, true
+					}
+				}
+			}
+			if fallback != nil {
+				return fallback(c, r, p)
+			}
+			return 0, false
+		}
+	case "rotated":
+		src := parseVPStateProvider(o["state"])
+		var dir string
+		_ = json.Unmarshal(o["direction"], &dir)
+		return func(c *vpCtx, r *vwRandom, p vpPos) (uint32, bool) {
+			d := dir
+			if d == "" {
+				d = [6]string{"down", "up", "north", "south", "west", "east"}[r.nextIntN(6)]
+			}
+			s := vpGetState(src, c, r, p)
+			info, ok := InfoForState(s)
+			if !ok {
+				return s, true
+			}
+			axis := map[string]string{"down": "y", "up": "y", "north": "z", "south": "z", "west": "x", "east": "x"}[d]
+			if info.HasProperty("axis") {
+				s = SetProperty(info, s, "axis", axis)
+			}
+			if info.HasProperty("facing") {
+				s = SetProperty(info, s, "facing", d)
+			}
+			return s, true
+		}
+	case "random_block":
+		bl, tag := []string(nil), ""
+		var one string
+		if json.Unmarshal(o["blocks"], &one) == nil {
+			if len(one) > 0 && one[0] == '#' {
+				tag = vpShort(one[1:])
+			} else {
+				bl = []string{vpShort(one)}
+			}
+		} else {
+			_ = json.Unmarshal(o["blocks"], &bl)
+		}
+		if tag != "" {
+			vpLoadTags()
+			bl = vpBlockTags[tag]
+		}
+		return func(_ *vpCtx, r *vwRandom, _ vpPos) (uint32, bool) {
+			if len(bl) == 0 {
+				return 0, false
+			}
+			return vpStateOf(vpShort(bl[r.nextIntN(int32(len(bl)))]), nil), true
+		}
+	case "copy_properties":
+		src := parseVPStateProvider(o["source"])
+		return func(c *vpCtx, r *vwRandom, p vpPos) (uint32, bool) {
+			s := vpGetState(src, c, r, p)
+			old := c.blockAt(p)
+			if oi, ok := InfoForState(old); ok {
+				if ni, ok := InfoForState(s); ok {
+					for k, v := range StateProps(old) {
+						if ni.HasProperty(k) && oi.HasProperty(k) {
+							s = SetProperty(ni, s, k, v)
+						}
+					}
+				}
 			}
 			return s, true
 		}
@@ -667,7 +807,7 @@ func parseVPStateProvider(raw json.RawMessage) vpStateProvider {
 		for i, s := range states {
 			parsed[i] = vpParseState(s)
 		}
-		return func(_ *vwRandom, p vpPos) (uint32, bool) {
+		return func(_ *vpCtx, _ *vwRandom, p vpPos) (uint32, bool) {
 			if len(parsed) == 0 {
 				return 0, false
 			}
@@ -676,7 +816,7 @@ func parseVPStateProvider(raw json.RawMessage) vpStateProvider {
 			return parsed[min(max(i, 0), len(parsed)-1)], true
 		}
 	}
-	return func(*vwRandom, vpPos) (uint32, bool) { return 0, false }
+	return func(*vpCtx, *vwRandom, vpPos) (uint32, bool) { return 0, false }
 }
 
 // placeSimpleBlock is SimpleBlockFeature.place: the provider's state, if
@@ -686,7 +826,7 @@ func (e *vpExec) placeSimpleBlock(f *vpFeature, r *vwRandom, p vpPos) bool {
 	if f.block == nil {
 		return false
 	}
-	s, ok := f.block(r, p)
+	s, ok := f.block(e.ctx, r, p)
 	if !ok {
 		return false
 	}

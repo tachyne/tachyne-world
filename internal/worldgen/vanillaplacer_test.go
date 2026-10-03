@@ -54,8 +54,8 @@ func TestVanillaPlacementDecorates(t *testing.T) {
 	count := map[string]int{}
 	gen := func(cx, cz int32) *Chunk {
 		ch := vpSynthChunk(cx, cz)
-		e := &vpExec{ch: ch, baseX: int(cx) << 4, baseZ: int(cz) << 4, terrain: p.terrain, unhandled: map[string]int{},
-			ctx: &vpCtx{lv: vpTerrainLevel{p}, minY: p.decor.minY, height: p.decor.height, seaLevel: p.decor.seaLevel}}
+		e := p.newExec(ch, cx, cz)
+		e.unhandled = map[string]int{}
 		for step := 0; step < vpStepCount; step++ {
 			for dx := int32(-1); dx <= 1; dx++ {
 				for dz := int32(-1); dz <= 1; dz++ {
@@ -102,8 +102,7 @@ func TestVanillaPlacementStraddles(t *testing.T) {
 	p := newSynthPlacer(t, 7)
 	run := func(target [2]int32, src [2]int32) *Chunk {
 		ch := vpSynthChunk(target[0], target[1])
-		e := &vpExec{ch: ch, baseX: int(target[0]) << 4, baseZ: int(target[1]) << 4, terrain: p.terrain,
-			ctx: &vpCtx{lv: vpTerrainLevel{p}, minY: p.decor.minY, height: p.decor.height, seaLevel: p.decor.seaLevel}}
+		e := p.newExec(ch, target[0], target[1])
 		p.decor.decorate(src[0], src[1], vpTerrainLevel{p}, p.neighbourhoodBiomes(src[0], src[1]),
 			func(pl *vpPlacement) { e.place(pl.placed.feature(), pl.rng, pl.pos) }, nil)
 		return ch

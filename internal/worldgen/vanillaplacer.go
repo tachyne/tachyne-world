@@ -211,8 +211,7 @@ func (p *vanillaPlacer) Decorate(ch *Chunk, cx, cz int32) {
 		p.g.stampVanillaStructures(ch, cx, cz)
 	}
 	lv := vpTerrainLevel{p}
-	e := &vpExec{ch: ch, baseX: int(cx) << 4, baseZ: int(cz) << 4, terrain: p.terrain,
-		ctx: &vpCtx{lv: lv, minY: p.decor.minY, height: p.decor.height, seaLevel: p.decor.seaLevel}}
+	e := p.newExec(ch, cx, cz)
 	// A structure's blocks are not the terrain's: features keep off them.
 	e.protect = make([]bool, len(ch.Sections)*4096)
 	for s := range ch.Sections {
@@ -241,6 +240,21 @@ func (p *vanillaPlacer) Decorate(ch *Chunk, cx, cz int32) {
 			}, nil)
 		}
 	}
+}
+
+// newExec is the feature placer for one chunk.
+func (p *vanillaPlacer) newExec(ch *Chunk, cx, cz int32) *vpExec {
+	e := &vpExec{ch: ch, baseX: int(cx) << 4, baseZ: int(cz) << 4, terrain: p.terrain,
+		ctx: &vpCtx{lv: vpTerrainLevel{p}, minY: p.decor.minY, height: p.decor.height, seaLevel: p.decor.seaLevel}}
+	if p.g != nil {
+		e.cold = func(b string, x, y, z int) bool { return p.g.coldEnoughToSnow("minecraft:"+b, x, y, z) }
+	} else {
+		e.cold = func(b string, x, y, z int) bool {
+			t, ok := biomeTemperature["minecraft:"+b]
+			return ok && t < snowTemperature && y <= SeaLevel+17
+		}
+	}
+	return e
 }
 
 // vpObfuscateSeed is BiomeManager.obfuscateSeed: the first eight bytes of
