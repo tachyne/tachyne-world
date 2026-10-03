@@ -11,6 +11,72 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-10-03
+
+### Added
+- **Vanilla caves, per world.** A new world can be started with
+  `-caves vanilla` to get 26.3's own caves under the engine's terrain:
+  cheese caverns, spaghetti and noodle tunnels, pillars and surface
+  entrances from vanilla's seeded noise, plus its cave carvers. With them
+  dungeons come back to vanilla's frequency. The choice is fixed when the
+  world is made and kept in `worldgen.json`; existing worlds keep the
+  engine's native caves untouched.
+- **Data packs apply their data.** A pack's item, block, entity, fluid and
+  biome tags, crafting and cooking recipes (add, replace or remove; the
+  recipe book follows), loot tables, predicates and item modifiers take
+  effect on `/reload` and `/datapack`, and Java players' clients get the
+  new tags at once. Advancements and stonecutting/smithing recipes from
+  packs are not applied yet.
+- **Signed `/msg`, `/say`, `/me` and `/teammsg`.** Their messages are
+  signed like chat and relayed as player chat with vanilla's whisper,
+  say, emote and team decorations. Operators' selectors inside a message
+  (`@a`, `@p`…) resolve to names.
+- **`/execute` stores into and tests NBT.** `store … block|entity|storage`,
+  `if data`, `if slots` with 26.3's slot sources, item predicates with
+  tags, component values and predicates, and biome tags; `^` coordinates
+  after `anchored eyes` count from the eyes.
+- **`/place` builds every structure and many features.** Mansions,
+  monuments, fortresses, strongholds, mineshafts, End cities, temples,
+  witch huts, shipwrecks, ruined portals, ocean ruins and buried treasure
+  with their loot, spawners and mobs; placed villages, igloos, outposts
+  and bastions come with their inhabitants. Ores, disks, springs,
+  dungeons, geodes and sculk as features. `/data modify … compute` works,
+  and an entity's custom data survives restarts.
+- **The command list follows your operator level**, and updates the moment
+  you are opped or deopped.
+- **Player heads carry a note-block sound**, and a note block under one
+  plays it. Bedrock players see heads with their owner's skin.
+- **Creative ctrl+pick** copies signs (with their text), lecterns,
+  jukeboxes mid-song, campfires, decorated pots, beehives with their bees
+  and chiseled bookshelves.
+- **Scores can show a display name** in place of the holder's name.
+- **Dimensions are a table end to end**, ready for a fourth dimension.
+
+### Changed
+- **Knockback has vanilla strength for every source.** Arrows, wind
+  charges, the mace shockwave, explosions, goat rams, nautilus charges and
+  fishing reels shoved mobs at half strength; iron golems now toss their
+  targets upward.
+- **Scheduled block ticks are real ticks.** A change next to frosted ice
+  no longer ages it, and dry coral bleaches on its own tick a few seconds
+  later rather than the moment something nearby changes.
+- **Worldgen (GenVersion 27).** Explored land outside player builds
+  regenerates once more: Nether ores form vanilla's blobs (soul sand only
+  in soul sand valleys, the basalt deltas with their own gold and quartz),
+  villages, camps and other jigsaw structures meet the ground the way
+  vanilla's do, Nether fossils sit naturally in their caverns, and ocean
+  monument guardians start in the rooms' water. Villages and camps a
+  player has built in keep their layout.
+
+### Fixed
+- **Note blocks are audible again**: the server sends the note's sound, as
+  vanilla does.
+- **Heads, banners and signs placed from an item keep their name, owner
+  and data** again.
+- **26.x's new biomes** (dappled forest, sulfur caves) are known to
+  `/fillbiome` and to vanilla's biome tags, ten of which failed to load
+  without them.
+
 ## 2026-10-01
 
 ### Added
