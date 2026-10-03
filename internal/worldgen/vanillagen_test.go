@@ -192,3 +192,22 @@ func TestVanillaSpawnFitnessMatchesServer(t *testing.T) {
 		t.Error("a native generator scored vanilla spawn targets")
 	}
 }
+
+// SampleColumn is Sample at every quart of the column.
+func TestVanillaClimateColumn(t *testing.T) {
+	gen, err := newVTGen("minecraft:overworld", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := vtClimate{gen}
+	if gen.climateY != [6]bool{false, false, false, false, true, false} {
+		t.Errorf("climate y dependence %v, want depth alone", gen.climateY)
+	}
+	out := make([]ClimatePoint, 96)
+	c.SampleColumn(-37, 112, -16, out)
+	for i, p := range out {
+		if want := c.Sample(-37, -16+i, 112); p != want {
+			t.Fatalf("quart y %d: column %+v, point %+v", -16+i, p, want)
+		}
+	}
+}

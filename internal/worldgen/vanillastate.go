@@ -97,9 +97,20 @@ func (rs *vtState) compileNamed(name string) (vdSampler, error) {
 
 // compile is getSampler. Compilation is serialised, as vanilla's is.
 func (rs *vtState) compile(f *vdFn) (vdSampler, error) {
+	smp, _, err := rs.compileAxes(f)
+	return smp, err
+}
+
+// compileAxes is compile with the function's domain axes (vdAxisX|Y|Z).
+func (rs *vtState) compileAxes(f *vdFn) (vdSampler, int, error) {
 	rs.compMu.Lock()
 	defer rs.compMu.Unlock()
-	return rs.comp.compile(f)
+	g, err := rs.comp.optimize(f)
+	if err != nil {
+		return nil, 0, err
+	}
+	smp, err := rs.comp.build(g)
+	return smp, vdDomain(g), err
 }
 
 // vtLegacyNetherNoise is NormalNoise.createForLegacyNetherBiome.

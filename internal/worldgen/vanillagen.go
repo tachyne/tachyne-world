@@ -38,7 +38,7 @@ type vtWorld struct {
 }
 
 const (
-	vtTerrainSlots = 64   // pre-feature chunks kept (≈400 KB each)
+	vtTerrainSlots = 128  // pre-feature chunks kept (≈400 KB each)
 	vtHeightSlots  = 4096 // chunks' surface heights kept
 )
 
@@ -203,22 +203,34 @@ func (c vtClimate) Sample(qx, qy, qz int) ClimatePoint {
 	}
 }
 
-// SampleColumn is Sample over the quarts qy0, qy0+1, … of one column, the
-// column's horizontal functions computed once.
+// SampleColumn is Sample over the quarts qy0, qy0+1, … of one column: a
+// climate function that does not depend on y (all but depth, in the
+// overworld) is sampled once for the column.
 func (c vtClimate) SampleColumn(qx, qz, qy0 int, out []ClimatePoint) {
+	if len(out) == 0 {
+		return
+	}
 	ctx := newVDCtx()
 	x, z := qx<<2, qz<<2
 	g := c.g
+	fns := [6]vdSampler{g.temperature, g.vegetation, g.continents, g.erosion, g.depth, g.ridges}
+	var flat [6]int64
+	for k, f := range fns {
+		if !g.climateY[k] {
+			flat[k] = QuantizeClimate(f.value(ctx, x, qy0<<2, z))
+		}
+	}
 	for i := range out {
 		y := (qy0 + i) << 2
-		out[i] = ClimatePoint{
-			Temperature:     QuantizeClimate(g.temperature.value(ctx, x, y, z)),
-			Humidity:        QuantizeClimate(g.vegetation.value(ctx, x, y, z)),
-			Continentalness: QuantizeClimate(g.continents.value(ctx, x, y, z)),
-			Erosion:         QuantizeClimate(g.erosion.value(ctx, x, y, z)),
-			Depth:           QuantizeClimate(g.depth.value(ctx, x, y, z)),
-			Weirdness:       QuantizeClimate(g.ridges.value(ctx, x, y, z)),
+		var v [6]int64
+		for k, f := range fns {
+			if g.climateY[k] {
+				v[k] = QuantizeClimate(f.value(ctx, x, y, z))
+			} else {
+				v[k] = flat[k]
+			}
 		}
+		out[i] = ClimatePoint{v[0], v[1], v[2], v[3], v[4], v[5]}
 	}
 }
 
@@ -227,12 +239,27 @@ type vtTerrain struct{ w *vtWorld }
 
 func (t vtTerrain) BlockAt(x, y, z int) uint32 { return t.w.blockAt(x, y, z) }
 
-// Height is ChunkGenerator.getBaseHeight: the noise column alone (no
-// surface, no carvers), as structure placement reads it.
-func (t vtTerrain) Height(kind HeightmapType, x, z int) int { return t.w.baseHeight(kind, x, z) }
-func (t vtTerrain) MinY() int                               { return t.w.minY() }
-func (t vtTerrain) Ceiling() int                            { return t.w.minY() + t.w.depth() }
-func (t vtTerrain) SeaLevel() int                           { return t.w.seaLevel() }
+// Height is the WG heightmaps of the terrain chunk (filled, surfaced,
+// carved; cached per chunk): one above the column's highest non-air block
+// (WORLD_SURFACE_WG) or highest solid one (OCEAN_FLOOR_WG).
+func (t vtTerrain) Height(kind HeightmapType, x, z int) int {
+	if t.w.flat != nil {
+		return MinY + len(t.w.flat)
+	}
+	h := t.w.heightsOf(int32(x>>4), int32(z>>4))
+	i := (z&15)*16 + x&15
+	if kind == HeightOceanFloorWG || kind == HeightOceanFloor {
+		return int(h.land[i]) + 1
+	}
+	return int(h.surface[i]) + 1
+}
+
+// BaseHeight is ChunkGenerator.getBaseHeight: the noise column alone (no
+// surface, no carvers), as structure placement reads it (VanillaBaseHeights).
+func (t vtTerrain) BaseHeight(kind HeightmapType, x, z int) int { return t.w.baseHeight(kind, x, z) }
+func (t vtTerrain) MinY() int                                   { return t.w.minY() }
+func (t vtTerrain) Ceiling() int                                { return t.w.minY() + t.w.depth() }
+func (t vtTerrain) SeaLevel() int                               { return t.w.seaLevel() }
 
 func (w *vtWorld) minY() int {
 	if w.gen != nil {
@@ -290,7 +317,7 @@ func (w *vtWorld) biomeAt(x, y, z int, clamp bool) string {
 // terrainChunk is the chunk's terrain before features: filled, surfaced,
 // carved. Kept in a small cache; callers must not modify it.
 func (w *vtWorld) terrainChunk(cx, cz int32) *Chunk {
-	slot := &w.terrain[uint32(cx*31+cz*17)&(vtTerrainSlots-1)]
+	slot := &w.terrain[vtSlot(cx, cz)&(vtTerrainSlots-1)]
 	if t := slot.Load(); t != nil && t.cx == cx && t.cz == cz {
 		return t.ch
 	}
@@ -394,9 +421,18 @@ func (w *vtWorld) carveRun(ch *Chunk, nc *vtNoiseChunk, x, z, bx, bz, bottom, to
 	}
 }
 
+// vtSlot spreads chunk positions over a direct-mapped cache.
+func vtSlot(cx, cz int32) uint32 {
+	h := uint64(uint32(cx))<<32 | uint64(uint32(cz))
+	h ^= h >> 33
+	h *= 0xff51afd7ed558ccd
+	h ^= h >> 33
+	return uint32(h)
+}
+
 // heightsOf is the chunk's terrain heights (cached).
 func (w *vtWorld) heightsOf(cx, cz int32) *vtHeights {
-	slot := &w.heights[uint32(cx*131+cz*71)&(vtHeightSlots-1)]
+	slot := &w.heights[vtSlot(cx, cz)&(vtHeightSlots-1)]
 	if h := slot.Load(); h != nil && h.cx == cx && h.cz == cz {
 		return h
 	}

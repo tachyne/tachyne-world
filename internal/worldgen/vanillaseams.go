@@ -154,6 +154,15 @@ type VanillaTerrain interface {
 	SeaLevel() int
 }
 
+// VanillaBaseHeights is ChunkGenerator.getBaseHeight, which structure
+// starts read: the noise column alone, before the surface rules and the
+// carvers (the terrain core's VanillaTerrain implements it; checked with a
+// type assertion). It is a whole noise column per call — far dearer than
+// Height, which placement should use.
+type VanillaBaseHeights interface {
+	BaseHeight(kind HeightmapType, x, z int) int
+}
+
 // VanillaPlacement is the placement pass in vanilla mode: the eleven
 // GenerationStep.Decoration steps (and structure pieces) for one chunk,
 // written into ch — a chunk whose terrain is filled and whose biomes are

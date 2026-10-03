@@ -175,6 +175,7 @@ type vtGen struct {
 	aqBarrier, aqFlood, aqSpread, aqLava, aqExclusion, aqSurface                     vdSampler
 	aqRandom                                                                         vtPositional
 	spawn                                                                            []vtSpawnTarget // the spawn targets, compiled
+	climateY                                                                         [6]bool         // which climate functions depend on y
 
 	water, lava, air uint32
 }
@@ -185,20 +186,24 @@ func newVTGen(settings string, seed int64) (*vtGen, error) {
 		return nil, err
 	}
 	g := &vtGen{set: set, rs: newVTState(seed, set.legacy), water: Water, lava: Lava, air: Air}
-	for _, f := range []struct {
+	for i, f := range []struct {
 		key string
 		dst *vdSampler
 	}{
-		{"final_density", &g.final}, {"temperature", &g.temperature}, {"vegetation", &g.vegetation},
-		{"continents", &g.continents}, {"erosion", &g.erosion}, {"depth", &g.depth}, {"ridges", &g.ridges},
-		{"chunk_surface_level", &g.chunkSurface},
+		{"temperature", &g.temperature}, {"vegetation", &g.vegetation}, {"continents", &g.continents},
+		{"erosion", &g.erosion}, {"depth", &g.depth}, {"ridges", &g.ridges},
+		{"final_density", &g.final}, {"chunk_surface_level", &g.chunkSurface},
 	} {
 		fn, ok := set.router[f.key]
 		if !ok {
 			return nil, fmt.Errorf("noise settings %q: router has no %s", settings, f.key)
 		}
-		if *f.dst, err = g.rs.compile(fn); err != nil {
+		var axes int
+		if *f.dst, axes, err = g.rs.compileAxes(fn); err != nil {
 			return nil, fmt.Errorf("noise settings %q %s: %w", settings, f.key, err)
+		}
+		if i < 6 {
+			g.climateY[i] = axes&vdAxisY != 0
 		}
 	}
 	if set.aquifers != nil {
