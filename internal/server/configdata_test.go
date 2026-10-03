@@ -7,23 +7,28 @@ import (
 )
 
 // The world's dimension table, as the gateways take it, names the three
-// dimensions exactly as their built-in default does — so a gateway renders
+// vanilla dimensions exactly as their built-in default does — so a gateway renders
 // the same login, registries and sky light whether it is sent the table or
 // not — and a session's Welcome is given it.
 func TestDimensionTableMatchesTheGatewayDefault(t *testing.T) {
 	got := dimensionTable()
 	want := protocol.DefaultDimensions
-	if len(got) != len(want) {
-		t.Fatalf("%d dimensions, want %d: %+v", len(got), len(want), got)
+	if len(got) != len(want)+1 {
+		t.Fatalf("%d dimensions, want %d and the shipyard: %+v", len(got), len(want), got)
 	}
-	for i, d := range got {
+	// The shipyard follows them, of the overworld's type: the client knows
+	// the type, so no data rides with it.
+	if y := got[len(want)]; y.ID != 3 || y.Key != "tachyne:shipyard" || y.Type != "minecraft:overworld" || !y.SkyLight || y.TypeData != nil {
+		t.Errorf("shipyard %+v", y)
+	}
+	for i, d := range got[:len(want)] {
 		w := want[i]
 		if d.ID != w.ID || d.Key != w.Key || d.Type != w.Type || d.SkyLight != w.SkyLight || d.Clock != w.Clock || d.TypeData != nil {
 			t.Errorf("dimension %d: %+v, want %+v", i, d, w)
 		}
 	}
 	s := &Server{}
-	if cd := s.configData(); cd == nil || len(cd.Dimensions) != len(want) {
+	if cd := s.configData(); cd == nil || len(cd.Dimensions) != len(got) {
 		t.Fatalf("configData %+v", cd)
 	}
 	r := &remotePlayer{s: s, p: newPlayer(1, "a", [16]byte{1})}

@@ -295,7 +295,7 @@ var terrainAdaptOff bool
 
 // adaptTerrain runs the adaptation over the chunk (see the file comment).
 func (g *Generator) adaptTerrain(ch *Chunk, cx, cz int32) {
-	if g.nether || g.end || terrainAdaptOff {
+	if g.nether || g.end || g.void || terrainAdaptOff {
 		return
 	}
 	if rs := g.adaptRigids(cx, cz); len(rs) > 0 {

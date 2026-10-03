@@ -80,7 +80,7 @@ func (g *Generator) OceanRuinsIn(wx, wz int) OceanRuins {
 	if vp := g.vanillaPlacerOf(); vp != nil {
 		return g.vanillaOceanRuins(vp, wx, wz) // vanillasites.go
 	}
-	if g.nether || g.end {
+	if g.nether || g.end || g.void {
 		return OceanRuins{}
 	}
 	ox, oz := cellOrigin(wx, oceanRuinCell), cellOrigin(wz, oceanRuinCell)
@@ -264,7 +264,7 @@ func (g *Generator) ruinFloorY(t *Template, x, z, rot int) int {
 
 // stampOceanRuins stamps every ruin piece overlapping this chunk.
 func (g *Generator) stampOceanRuins(ch *Chunk, cx, cz int32) {
-	if g.nether || g.end {
+	if g.nether || g.end || g.void {
 		return
 	}
 	baseX, baseZ := int(cx)*16, int(cz)*16

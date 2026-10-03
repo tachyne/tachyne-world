@@ -63,7 +63,7 @@ var sulfurCfg = &speleothemCfg{
 // -1.1..-0.85, erosion 0.45..1, continentalness -0.19..0.55 (the checks run
 // rarest first).
 func (g *Generator) sulfurClimate(wx, wz int) bool {
-	if g.nether || g.end {
+	if g.nether || g.end || g.void {
 		return false
 	}
 	x, z := float64(wx), float64(wz)

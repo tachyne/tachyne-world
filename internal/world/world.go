@@ -242,6 +242,21 @@ func NewEnd(seed int64, store Store) (*World, error) {
 	return w, nil
 }
 
+// NewVoid builds a void world for a seed (worldgen/void.go): air, the
+// start platform and sky light. Its chunks key the cache under "void.",
+// apart from the overworld's of the same seed.
+func NewVoid(seed int64, store Store) (*World, error) {
+	w, err := NewWithStore(seed, store)
+	if err != nil {
+		return nil, err
+	}
+	w.gen = worldgen.NewVoidGenerator(seed)
+	w.gen.SetEditLookup(w.EditAt)
+	w.gen.SetEditRegion(w.ForEachEditIn)
+	w.dimTag = "void."
+	return w, nil
+}
+
 // NewNether builds the nether world for a seed: nether-mode generator and no
 // sky light (the dimension has no sky).
 func NewNether(seed int64, store Store) (*World, error) {

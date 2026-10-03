@@ -126,6 +126,17 @@ func TestExecuteMovesTheSource(t *testing.T) {
 	if got := run("execute in minecraft:the_nether if dimension minecraft:the_nether"); !hasLine(got, "Test passed") {
 		t.Errorf("in + if dimension: %q", got)
 	}
+	// The shipyard by its own namespace: a source there, and a player sent.
+	if got := run("execute in tachyne:shipyard if dimension tachyne:shipyard"); !hasLine(got, "Test passed") {
+		t.Errorf("in the shipyard: %q", got)
+	}
+	run("execute in tachyne:shipyard run tp bob 8 -60 8")
+	onHub(t, h, func() {
+		b := exTracked(h, "bob")
+		if b == nil || (b.dim != 3 && b.p.pendingDim.Load() != 3) {
+			t.Errorf("tp into the shipyard: bob %+v", b)
+		}
+	})
 	if got := run("execute positioned 5 0 5 positioned over world_surface if block ~ ~ ~ air"); !hasLine(got, "Test passed") {
 		t.Errorf("positioned over: the cell above the surface should be air: %q", got)
 	}

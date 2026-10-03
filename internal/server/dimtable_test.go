@@ -1,9 +1,11 @@
 package server
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // newTestHub is newHub for a test: its one world stands in for every
@@ -73,6 +75,7 @@ func TestDimensionTableIsStable(t *testing.T) {
 		{dimOverworld, "minecraft:overworld", "world.gob", 1, true, false},
 		{dimNether, "minecraft:the_nether", "nether.gob", 8, false, true},
 		{dimEnd, "minecraft:the_end", "end.gob", 1, false, false},
+		{world.DimShipyard, "tachyne:shipyard", "shipyard.gob", 1, true, false},
 	}
 	for _, w := range want {
 		d := world.Dimension(w.id)
@@ -91,5 +94,44 @@ func TestDimensionTableIsStable(t *testing.T) {
 	}
 	if !dimType(dimOverworld).HasWeather() || dimType(dimNether).HasWeather() || dimType(dimEnd).HasWeather() {
 		t.Error("only the overworld has weather")
+	}
+	// A key without a namespace is in minecraft:, so the shipyard needs its own.
+	if _, ok := parseDimension("shipyard"); ok {
+		t.Error("parseDimension(\"shipyard\") resolved without its namespace")
+	}
+	if id, ok := parseDimension("the_nether"); !ok || id != dimNether {
+		t.Errorf("parseDimension(\"the_nether\") = %d, %v", id, ok)
+	}
+}
+
+// The shipyard is a void of the overworld's type with its own save beside
+// world.gob: what is built there is kept there, and comes back on a reboot.
+func TestShipyardSavesItsOwnEdits(t *testing.T) {
+	d := world.Dimension(world.DimShipyard)
+	if d.TypeKey() != "minecraft:overworld" || !d.HasSkyLight || !d.HasWeather() || d.TypeData != nil {
+		t.Fatalf("shipyard type %+v", d)
+	}
+	s := &Server{WorldFile: filepath.Join(t.TempDir(), "world.gob")}
+	f := s.dimFile(world.DimShipyard)
+	if filepath.Base(f) != "shipyard.gob" {
+		t.Fatalf("shipyard file %s", f)
+	}
+	w, err := d.Open(1, world.NewFileStore(f))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w.At(8, worldgen.MinY+3, 8) != worldgen.Cobblestone || w.At(0, 64, 0) != worldgen.Air {
+		t.Fatal("the shipyard is not the void")
+	}
+	w.SetBlock(10, 300, 10, worldgen.Stone)
+	if err := w.Save(); err != nil {
+		t.Fatal(err)
+	}
+	again, err := d.Open(1, world.NewFileStore(f))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.At(10, 300, 10) != worldgen.Stone || again.EditCount() != 1 {
+		t.Fatalf("after a reboot: %d edits", again.EditCount())
 	}
 }

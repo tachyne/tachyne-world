@@ -425,7 +425,7 @@ func (g *Generator) MineshaftAt(cx, cz int) Mineshaft {
 	if vp := g.vanillaPlacerOf(); vp != nil {
 		return g.vanillaMineshaftAt(vp, cx, cz) // vanillasites.go
 	}
-	if g.nether || g.end || hash01(g.seed, cx, cz, 0x111E) >= shaftOdds {
+	if g.nether || g.end || g.void || hash01(g.seed, cx, cz, 0x111E) >= shaftOdds {
 		return Mineshaft{}
 	}
 	// The structure set's two mineshafts split by biome: the badlands take

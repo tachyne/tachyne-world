@@ -63,7 +63,7 @@ func (g *Generator) caveBiomeAt(x, y, z int) string {
 // a cell by the generator's rule, without generating its chunk. (A chunk's
 // biome array samples this at its centre column, a section's centre y.)
 func (g *Generator) CaveBiomeAt(x, y, z int) string {
-	if g.nether || g.end {
+	if g.nether || g.end || g.void {
 		return g.BiomeName(x, z)
 	}
 	return g.caveBiomeAt(x, y, z)

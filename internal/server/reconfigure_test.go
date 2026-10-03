@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/attach"
+	"github.com/tachyne/tachyne-world/internal/world"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
 )
@@ -84,7 +85,7 @@ func TestReconfigureRoundTrip(t *testing.T) {
 		_, ok := ev.(attachproto.StartConfiguration)
 		return ok
 	}).(attachproto.StartConfiguration)
-	if len(start.Dimensions) != 3 || start.Dimensions[0].Key != "minecraft:overworld" {
+	if len(start.Dimensions) != len(world.Dimensions) || start.Dimensions[0].Key != "minecraft:overworld" {
 		t.Errorf("start configuration data %+v", start.ConfigData)
 	}
 	waitAnyEv(t, logs["carol"], "bob leaving carol's tab list", func(ev any) bool {

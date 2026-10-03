@@ -56,7 +56,7 @@ func (m *lakeModel) at(x, y, z int) uint32 {
 
 // placeLavaLakes stamps the lava lakes of this chunk and its neighbours.
 func (g *Generator) placeLavaLakes(ch *Chunk, cx, cz int32) {
-	if g.nether || g.end {
+	if g.nether || g.end || g.void {
 		return
 	}
 	m := &lakeModel{g: g, cols: map[[2]int]column{}}

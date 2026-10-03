@@ -277,7 +277,7 @@ func (g *Generator) placeMonsterRooms(ch *Chunk, cx, cz int32) {
 // square) of (x, z): the placed monster rooms and the old rooms kept for
 // the players who touched them. The server's spawners and loot use it.
 func (g *Generator) DungeonsNear(x, z, r int) []Dungeon {
-	if g.nether || g.end {
+	if g.nether || g.end || g.void {
 		return nil
 	}
 	var out []Dungeon

@@ -186,7 +186,7 @@ func StructureDim(name string) (dim int, ok bool) {
 // structure's). ok=false when none lies within reach or the id is unknown.
 func (g *Generator) LocateStructure(name string, wx, wz, radius int) (x, z int, ok bool) {
 	l, known := structureLocators[name]
-	if !known {
+	if !known || g.void {
 		return 0, 0, false
 	}
 	if vp := g.vanillaPlacerOf(); vp != nil {

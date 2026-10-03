@@ -36,7 +36,7 @@ func (g *Generator) TrailRuinsIn(wx, wz int) TrailRuins {
 	if vp := g.vanillaPlacerOf(); vp != nil {
 		return g.vanillaTrailRuins(vp, wx, wz) // vanillasites.go
 	}
-	if g.nether || g.end {
+	if g.nether || g.end || g.void {
 		return TrailRuins{}
 	}
 	ox, oz := cellOrigin(wx, trailRuinsCell), cellOrigin(wz, trailRuinsCell)
@@ -84,7 +84,7 @@ func (g *Generator) AssembleTrailRuins(t TrailRuins) []PlacedPiece {
 // stampTrailRuins stamps the pieces overlapping this chunk. Roads run up to
 // 80 blocks from the tower, so the neighbouring cells are checked too.
 func (g *Generator) stampTrailRuins(ch *Chunk, cx, cz int32) {
-	if g.nether || g.end {
+	if g.nether || g.end || g.void {
 		return
 	}
 	baseX, baseZ := int(cx)*16, int(cz)*16

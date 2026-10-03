@@ -44,7 +44,7 @@ func (g *Generator) AbandonedCampIn(wx, wz int) AbandonedCamp {
 	if vp := g.vanillaPlacerOf(); vp != nil {
 		return g.vanillaAbandonedCamp(vp, wx, wz) // vanillasites.go
 	}
-	if g.nether || g.end {
+	if g.nether || g.end || g.void {
 		return AbandonedCamp{}
 	}
 	ox, oz := cellOrigin(wx, campCell), cellOrigin(wz, campCell)
@@ -98,7 +98,7 @@ func (g *Generator) AssembleAbandonedCamp(c AbandonedCamp) []PlacedPiece {
 // reaches at most 80 blocks from its start, so the neighbouring cells are
 // checked too.
 func (g *Generator) stampAbandonedCamps(ch *Chunk, cx, cz int32) {
-	if g.nether || g.end {
+	if g.nether || g.end || g.void {
 		return
 	}
 	baseX, baseZ := int(cx)*16, int(cz)*16

@@ -28,7 +28,7 @@ func (g *Generator) SwampHutIn(wx, wz int) SwampHut {
 	if vp := g.vanillaPlacerOf(); vp != nil {
 		return g.vanillaSwampHut(vp, wx, wz) // vanillasites.go
 	}
-	if g.nether || g.end {
+	if g.nether || g.end || g.void {
 		return SwampHut{}
 	}
 	ox, oz := cellOrigin(wx, swampHutCell), cellOrigin(wz, swampHutCell)

@@ -83,7 +83,7 @@ func ParseCaveMode(s string) (CaveMode, bool) {
 // before any chunk is generated. The Nether and the End have no such
 // choice; earth mode carves no caves either way.
 func (g *Generator) SetCaveMode(m CaveMode) {
-	if g.nether || g.end {
+	if g.nether || g.end || g.void {
 		return
 	}
 	g.caveMode = m

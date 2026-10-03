@@ -36,6 +36,7 @@ type Generator struct {
 	caveB     *Perlin        // 3D cave field B (tunnels where A and B both ≈ 0)
 	nether    bool           // nether mode: cavern-sponge assembly, no surface features
 	end       bool           // End mode: floating island + pillar ring, void elsewhere
+	void      bool           // void mode: air and the start platform only (void.go)
 
 	// caveMode picks the overworld's caves (vanillacaves.go): the engine's own
 	// tunnel field below, or vanilla's noise caves and cave carvers, whose
@@ -279,6 +280,9 @@ func (ch *Chunk) RecomputeHeightmapColumns(cols *[256]bool) {
 // Continentalness sets the base elevation — deep ocean to high inland — and the
 // highlands get progressively more rugged, so coasts are smooth and peaks jagged.
 func (g *Generator) Height(wx, wz int) int {
+	if g.void {
+		return voidHeight(wx, wz)
+	}
 	if g.vw != nil {
 		return g.vw.landHeight(wx, wz)
 	}
@@ -470,6 +474,9 @@ func (c column) block(y int) uint32 {
 
 // BiomeName returns the biome identifier at a world column (e.g. "minecraft:plains").
 func (g *Generator) BiomeName(wx, wz int) string {
+	if g.void {
+		return voidBiome
+	}
 	if g.vw != nil {
 		return g.vw.biomeName(wx, wz)
 	}
@@ -615,6 +622,9 @@ func removeFloatingFragments(ch *Chunk) {
 
 // GenerateChunk produces all block states and a per-section biome for a chunk.
 func (g *Generator) GenerateChunk(cx, cz int32) *Chunk {
+	if g.void {
+		return g.generateVoidChunk(cx, cz)
+	}
 	if g.vw != nil {
 		return g.vw.generateChunk(cx, cz)
 	}
@@ -693,6 +703,9 @@ func (ch *Chunk) MaxHeight() int {
 // SurfaceY is a safe spawn height for a column: the land surface, or the sea
 // surface over water.
 func (g *Generator) SurfaceY(wx, wz int) float64 {
+	if g.void {
+		return float64(voidHeight(wx, wz))
+	}
 	if g.vw != nil {
 		return g.vw.surfaceY(wx, wz)
 	}
@@ -713,6 +726,9 @@ func (g *Generator) SurfaceY(wx, wz int) float64 {
 func (g *Generator) BlockAt(x, y, z int) uint32 {
 	if y < MinY || y >= MinY+g.sections*16 {
 		return Air
+	}
+	if g.void {
+		return voidBlock(x, y, z)
 	}
 	if g.vw != nil {
 		return g.vw.blockAt(x, y, z)

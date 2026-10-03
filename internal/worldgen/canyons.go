@@ -159,7 +159,7 @@ func (c *canyon) markChunk(mask []bool, cx, cz int32, loY, hiY int) {
 // canyonsTouching lists the ravines whose envelope reaches the box (x0..x1,
 // z0..z1) and that the build guard lets through.
 func (g *Generator) canyonsTouching(x0, z0, x1, z1 int) []*canyon {
-	if g.earth != nil || g.nether || g.end {
+	if g.earth != nil || g.nether || g.end || g.void {
 		return nil // real terrain is not cut; the other dimensions have no canyon carver
 	}
 	var out []*canyon

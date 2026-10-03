@@ -1,6 +1,10 @@
 package world
 
-import "github.com/tachyne/tachyne-world/internal/worldgen"
+import (
+	"strings"
+
+	"github.com/tachyne/tachyne-world/internal/worldgen"
+)
 
 // Dimensions are a table, not three hard-wired worlds: each entry is vanilla's
 // LevelStem (an id, a registry key, a generator) with the DimensionType facts
@@ -56,6 +60,7 @@ const (
 	DimOverworld = 0
 	DimNether    = 1
 	DimEnd       = 2
+	DimShipyard  = 3
 )
 
 // Dimensions is every dimension the engine runs, indexed by ID.
@@ -77,6 +82,16 @@ var Dimensions = []DimensionType{
 		File: "end.gob", AnvilDir: "DIM1", Open: NewEnd, Clock: "minecraft:the_end",
 		CoordinateScale: 1, MinY: 0, PiglinsZombify: true, CanStartRaid: true,
 	},
+	{
+		// The shipyard: an empty void to build in, apart from the survival
+		// world and its save. It is vanilla's "The Void" flat preset as a
+		// dimension of its own, of the overworld's type (sky, day and night,
+		// weather; the client knows the type, so none is sent).
+		ID: DimShipyard, Key: "tachyne:shipyard", Name: "shipyard", Type: "minecraft:overworld",
+		File: "shipyard.gob", AnvilDir: "dimensions/tachyne/shipyard", Open: NewVoid, Clock: "minecraft:overworld",
+		CoordinateScale: 1, MinY: worldgen.MinY, HasSkyLight: true,
+		BedWorks: true, PiglinsZombify: true, CanStartRaid: true,
+	},
 }
 
 // Dimension returns the dimension with id, or nil for an id the engine does
@@ -88,10 +103,10 @@ func Dimension(id int) *DimensionType {
 	return &Dimensions[id]
 }
 
-// DimensionByKey resolves a registry key, with or without the "minecraft:"
-// namespace.
+// DimensionByKey resolves a registry key; one without a namespace is in
+// "minecraft:" (ResourceLocation's default).
 func DimensionByKey(key string) *DimensionType {
-	if len(key) < 10 || key[:10] != "minecraft:" {
+	if !strings.Contains(key, ":") {
 		key = "minecraft:" + key
 	}
 	for i := range Dimensions {

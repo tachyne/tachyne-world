@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-10-03
 
 ### Added
+- **The shipyard: an empty dimension to build in.** `tachyne:shipyard` is a
+  fourth dimension beside the survival world: vanilla's "The Void" — air in
+  every direction, the_void biome (so nothing spawns), and the 33×33 stone
+  start platform at the origin — under the overworld's sky, day and night.
+  Its edits are saved in their own `shipyard.gob`, apart from the survival
+  world's. Operators reach it with
+  `/execute in tachyne:shipyard run tp @s 8 -60 8`, and `/clone` copies
+  between it and the other dimensions. Java and Bedrock players both see it.
 - **The vanilla world generator, per world.** A new world started with
   `-generator vanilla` is built exactly as Minecraft 26.3 builds it, from
   the game's own data: continents and mountains, aquifers, caves and

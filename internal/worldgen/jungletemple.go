@@ -37,7 +37,7 @@ func (g *Generator) JungleTempleIn(wx, wz int) JungleTemple {
 	if vp := g.vanillaPlacerOf(); vp != nil {
 		return g.vanillaJungleTemple(vp, wx, wz) // vanillasites.go
 	}
-	if g.nether || g.end {
+	if g.nether || g.end || g.void {
 		return JungleTemple{}
 	}
 	ox, oz := cellOrigin(wx, jungleTempleCell), cellOrigin(wz, jungleTempleCell)

@@ -76,7 +76,7 @@ func (g *Generator) DesertTempleIn(wx, wz int) DesertTemple {
 	if vp := g.vanillaPlacerOf(); vp != nil {
 		return g.vanillaDesertTemple(vp, wx, wz) // vanillasites.go
 	}
-	if g.nether || g.end {
+	if g.nether || g.end || g.void {
 		return DesertTemple{}
 	}
 	ox, oz := cellOrigin(wx, templeCell), cellOrigin(wz, templeCell)
