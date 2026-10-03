@@ -33,7 +33,7 @@ func (g *Generator) decorate(ch *Chunk, cx, cz int32) []coverCell {
 			if !plantable(col.topBlock()) || col.h < SeaLevel {
 				continue // trees/flora only on solid, dry-ish ground
 			}
-			if g.carve(col.topBlock(), wx, col.h-1, wz, col.h) == Air || ravine(wx, col.h-1, wz) {
+			if g.carved(col.topBlock(), wx, col.h-1, wz, col.h) || ravine(wx, col.h-1, wz) {
 				continue // a cave opening or a ravine removed the surface here — nothing to root
 			}
 			if b.Tree != treeNone && g.treeAt(wx, wz, b.TreeDensity) {
@@ -74,7 +74,7 @@ func (g *Generator) TreeAt(wx, wz int) bool {
 	if col.biome.Tree == treeNone || !plantable(col.topBlock()) || col.h < SeaLevel {
 		return false
 	}
-	if g.carve(col.topBlock(), wx, col.h-1, wz, col.h) == Air || g.ravineCut(wx, wz, wx, wz)(wx, col.h-1, wz) {
+	if g.carved(col.topBlock(), wx, col.h-1, wz, col.h) || g.ravineCut(wx, wz, wx, wz)(wx, col.h-1, wz) {
 		return false // a cave opening or a ravine removed the surface — nothing rooted
 	}
 	return g.treeAt(wx, wz, col.biome.TreeDensity)
