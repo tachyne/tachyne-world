@@ -31,9 +31,8 @@ func TestBlockTickRescheduleWhilePendingIsIgnored(t *testing.T) {
 	if h.scheduleBlockTickIn(0, pos, 5) {
 		t.Error("a second schedule for the same block was added while one is pending")
 	}
-	key := simPos{dim: 0, blockPos: pos}
-	if m := h.simTicks[key]; m.due != now+30 {
-		t.Errorf("pending tick due %d, want %d (the first one kept)", m.due, now+30)
+	if due, _ := h.blockTickDue(0, pos, frostedIceMin); due != now+30 {
+		t.Errorf("pending tick due %d, want %d (the first one kept)", due, now+30)
 	}
 	if !h.hasBlockTickIn(0, pos, frostedIceMin+1) {
 		t.Error("an older age of the same block should count as the same block")
@@ -71,12 +70,12 @@ func TestFrostedIceOnPlaceBooksItsTick(t *testing.T) {
 	h, _, players, pos := simTickFixture(t)
 	now := h.tick.Load()
 	h.setBlockAt(players, 0, pos, frostedIceMin)
-	m, ok := h.simTicks[simPos{dim: 0, blockPos: pos}]
+	due, ok := h.blockTickDue(0, pos, frostedIceMin)
 	if !ok {
 		t.Fatal("placing frosted ice booked no tick")
 	}
-	if m.due < now+frostedFirstMin || m.due > now+frostedFirstMin+frostedFirstSpan-1 {
-		t.Errorf("first tick due in %d, want 60-120", m.due-now)
+	if due < now+frostedFirstMin || due > now+frostedFirstMin+frostedFirstSpan-1 {
+		t.Errorf("first tick due in %d, want 60-120", due-now)
 	}
 }
 
@@ -103,24 +102,24 @@ func TestCoralReactionBooksDieTickInsteadOfBleaching(t *testing.T) {
 
 // ServerLevel.tickBlock: a tick runs only for the block it was scheduled
 // for. A coral swapped for another before its die tick is not bleached by
-// the old one; the newcomer's own change books its own tick.
+// the old one, whose tick just drops.
 func TestBlockTickSkippedWhenItsBlockIsGone(t *testing.T) {
 	h, w, players, pos := simTickFixture(t)
 	tube, _, _ := worldgen.BlockRangeOK("tube_coral_block")
 	brain, _, _ := worldgen.BlockRangeOK("brain_coral_block")
 	w.SetBlock(pos.x, pos.y, pos.z, tube)
 	h.scheduleCoralDeath(0, pos)
-	m, ok := h.simTicks[simPos{dim: 0, blockPos: pos}]
+	due, ok := h.blockTickDue(0, pos, tube)
 	if !ok {
 		t.Fatal("the dry coral booked no die tick")
 	}
 	w.SetBlock(pos.x, pos.y, pos.z, brain)
-	stepTicks(h, players, int(m.due-h.tick.Load()))
+	stepTicks(h, players, int(due-h.tick.Load()))
 	if w.At(pos.x, pos.y, pos.z) != brain {
 		t.Fatal("the tube coral's tick bleached the brain coral that replaced it")
 	}
-	if !h.hasBlockTickIn(0, pos, brain) {
-		t.Error("the stale tick's update should reach the brain coral as a change and book its own tick")
+	if _, ok := h.blockTickDue(0, pos, tube); ok {
+		t.Error("the tube coral's tick is still pending after its trigger tick")
 	}
 }
 
@@ -140,5 +139,67 @@ func TestEyeblossomSwitchesOnlyOnItsTick(t *testing.T) {
 	stepTicks(h, players, 3)
 	if w.At(pos.x, pos.y, pos.z) != openEyeblossom {
 		t.Error("the eyeblossom's own tick did not open it at night")
+	}
+}
+
+// runBlockTickNow jumps the clock to the trigger tick of the tick pending
+// for the block at pos and runs that game tick, as the hub would.
+func runBlockTickNow(t *testing.T, h *hub, players map[int32]*tracked, dim int, pos blockPos) {
+	t.Helper()
+	w := h.worldFor(dim)
+	due, ok := h.blockTickDue(dim, pos, w.At(pos.x, pos.y, pos.z))
+	if !ok {
+		t.Fatalf("no tick pending at %v", pos)
+	}
+	w.ForceLoad(pos.x, pos.z, 2)
+	h.tick.Store(due - 1)
+	stepTicks(h, players, 1)
+}
+
+// LecternBlock.signalPageChange asks for the 2-tick tick that ends the
+// pulse; a page turned while it is pending leaves it, so the pulse ends two
+// ticks after the first turn, not the last.
+func TestLecternPulseKeepsItsFirstTick(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	pos := blockPos{x + 3, y, z}
+	w.SetBlock(pos.x, pos.y, pos.z, setBoolProp(worldgen.BlockBase("lectern"), "powered", false))
+	h.lecternPulse(players, simPos{blockPos: pos})
+	if !boolProp(w.At(pos.x, pos.y, pos.z), "powered") {
+		t.Fatal("a page turn did not power the lectern")
+	}
+	stepTicks(h, players, 1)
+	h.lecternPulse(players, simPos{blockPos: pos})
+	stepTicks(h, players, 1)
+	if boolProp(w.At(pos.x, pos.y, pos.z), "powered") {
+		t.Error("the second turn pushed the pulse's end back")
+	}
+}
+
+// A button's unpress is its scheduled tick: a neighbour's update in the
+// middle of the press does not release it, and it pops up on time.
+func TestButtonUnpressIsItsTick(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	pos := blockPos{x + 3, y, z}
+	btn := worldgen.BlockBase("stone_button")
+	info, _ := worldgen.InfoForState(btn)
+	btn = setBoolProp(worldgen.SetProperty(info, worldgen.SetProperty(info, btn, "face", "floor"), "facing", "north"), "powered", false)
+	w.SetBlock(pos.x, pos.y, pos.z, btn)
+	ticks, _, _, _ := buttonKind(btn)
+	h.inDim(0, func() { h.pressButton(players, pos, btn, nil) })
+	if !boolProp(w.At(pos.x, pos.y, pos.z), "powered") {
+		t.Fatal("the button did not press")
+	}
+	due, ok := h.blockTickDue(0, pos, btn)
+	if !ok || due != h.tick.Load()+uint64(ticks) {
+		t.Fatalf("the unpress is due %d (pending %v), want %d out", due, ok, ticks)
+	}
+	stepTicks(h, players, ticks-1)
+	h.notifyAround(players, 0, pos)
+	if !boolProp(w.At(pos.x, pos.y, pos.z), "powered") {
+		t.Fatal("the button came up early")
+	}
+	stepTicks(h, players, 1)
+	if boolProp(w.At(pos.x, pos.y, pos.z), "powered") {
+		t.Error("the button stayed down past its press")
 	}
 }

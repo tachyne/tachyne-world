@@ -450,7 +450,7 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 				h.heartExplosionHit(players, dim, pos, st, by)
 			}
 			h.setBlockAt(players, dim, pos, worldgen.Air)
-			h.scheduleIn(dim, pos, 1)
+			h.nbFrom(st, func() { h.notifyAround(players, dim, pos) }) // removeBlock: the neighbours hear it
 			h.dropExploded(players, dim, pos, st, radius, kind)
 			// BlockBehaviour.onExplosionHit: spawnAfterBreak drops the block's
 			// experience when a PLAYER set the blast off (TNT they lit or
@@ -742,7 +742,7 @@ func (h *hub) checkBurnOut(players map[int32]*tracked, pos blockPos, resilience,
 		h.igniteFire(players, pos, min(srcAge+h.rng.Intn(5)/4, 15))
 	} else {
 		h.rsSet(players, pos, worldgen.Air)
-		h.scheduleAroundIn(h.rsDim, pos, 1) // sand above falls, fluid flows into the gap
+		h.notifyAround(players, h.rsDim, pos) // sand above falls, fluid flows into the gap
 	}
 	if isTNT(state) {
 		// Direct call, NOT h.post: this runs on the hub goroutine, and the hub
@@ -790,32 +790,19 @@ func (h *hub) igniteFire(players map[int32]*tracked, pos blockPos, age int) {
 	h.armFire(pos)
 }
 
-// armFire books a fire's next tick (FireBlock.onPlace and tick:
-// getFireTickDelay, 30 + rand(10)) and remembers when it is due: the
-// simulation queue also reaches a fire for every neighbour change, and
-// those only check that it can stay (updateShape).
+// armFire is the fire's Level.scheduleTick (FireBlock.onPlace and tick:
+// getFireTickDelay, 30 + rand(10)); a tick already pending is kept.
 func (h *hub) armFire(pos blockPos) {
-	delay := uint64(30 + h.rng.Intn(10))
-	h.fireDue[h.rsKey(pos)] = h.tick.Load() + delay
-	h.rsSchedule(pos, delay)
+	h.scheduleBlockTickIn(h.rsDim, pos, uint64(30+h.rng.Intn(10)))
 }
 
-// fireUpdate is the simulation queue reaching a fire: its own due tick runs
-// FireBlock.tick; a fire with no tick booked (a player's, a command's) books
-// one as onPlace does; any other update is updateShape — a fire that can no
-// longer survive goes out.
+// fireUpdate is a neighbour's change reaching a fire (FireBlock.updateShape):
+// a fire that can no longer survive goes out, and the sides follow what
+// beside it burns. A fire with no tick pending (a player's, a command's, one
+// from before a restart) books one as onPlace does.
 func (h *hub) fireUpdate(players map[int32]*tracked, pos blockPos) {
-	key := h.rsKey(pos)
-	due, armed := h.fireDue[key]
-	if armed && h.tick.Load() >= due {
-		delete(h.fireDue, key)
-		h.updateFire(players, pos)
-		return
-	}
-	below := h.rsWorld().Block(pos.x, pos.y-1, pos.z)
-	if !worldgen.IsSolidFull(below) && !h.validFireLocation(pos) {
+	if !h.fireSurvivesAt(pos) {
 		h.removeFire(players, pos, false) // FireBlock.canSurvive fails: updateShape gives air
-		delete(h.fireDue, key)
 		return
 	}
 	// updateShape: getStateWithAge — the sides follow what beside it burns.
@@ -824,16 +811,22 @@ func (h *hub) fireUpdate(players map[int32]*tracked, pos blockPos) {
 			h.rsSet(players, pos, want)
 		}
 	}
-	if !armed {
+	if cur := h.rsWorld().At(pos.x, pos.y, pos.z); isFire(cur) && !h.hasScheduledTick(pos) {
 		h.armFire(pos)
 	}
+}
+
+// fireSurvivesAt is FireBlock.canSurvive for a cell in the current
+// simulation dimension: a full solid block under it, or something beside it
+// that burns.
+func (h *hub) fireSurvivesAt(pos blockPos) bool {
+	return worldgen.IsSolidFull(h.rsWorld().Block(pos.x, pos.y-1, pos.z)) || h.validFireLocation(pos)
 }
 
 // removeFire clears a fire block (and its side-mapped age).
 func (h *hub) removeFire(players map[int32]*tracked, pos blockPos, doused bool) {
 	h.rsSet(players, pos, worldgen.Air)
 	delete(h.fireAge, h.rsKey(pos))
-	delete(h.fireDue, h.rsKey(pos))
 	if doused {
 		h.rsSound(players, "minecraft:block.fire.extinguish", sndBlock,
 			float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5, 0.5, 1.2)

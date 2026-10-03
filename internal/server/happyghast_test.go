@@ -9,11 +9,18 @@ import (
 
 // driedGhastCycle is one random tick (which schedules the step) and the
 // step's own scheduled tick 5000 ticks later.
-func driedGhastCycle(h *hub, players map[int32]*tracked, pos blockPos) {
-	h.tickDriedGhast(players, 0, pos.x, pos.y, pos.z, h.world.At(pos.x, pos.y, pos.z))
+func driedGhastCycle(t *testing.T, h *hub, players map[int32]*tracked, pos blockPos) {
+	t.Helper()
+	before := h.world.At(pos.x, pos.y, pos.z)
+	h.tickDriedGhast(players, 0, pos.x, pos.y, pos.z, before)
+	if due, ok := h.blockTickDue(0, pos, before); !ok || due != h.tick.Load()+driedGhastDelay {
+		t.Fatalf("the random tick booked the step at %d (pending %v), want %d out", due, ok, driedGhastDelay)
+	}
 	h.processUpdate(players, 0, pos) // a neighbour's update before the step is due does nothing
-	h.tick.Add(driedGhastDelay)
-	h.processUpdate(players, 0, pos)
+	if h.world.At(pos.x, pos.y, pos.z) != before {
+		t.Fatal("a neighbour's update took a step")
+	}
+	runBlockTickNow(t, h, players, 0, pos)
 }
 
 // TestDriedGhastHatchesGhastling: a waterlogged dried_ghast takes a step of
@@ -28,12 +35,12 @@ func TestDriedGhastHatchesGhastling(t *testing.T) {
 	h.world.SetBlock(x, y, z, worldgen.SetProperty(info, wet, "hydration", "0"))
 	pos := blockPos{x, y, z}
 	for i := 0; i < 3; i++ {
-		driedGhastCycle(h, players, pos)
+		driedGhastCycle(t, h, players, pos)
 		if got := driedGhastHydration(h.world.At(x, y, z)); got != i+1 {
 			t.Fatalf("after %d steps hydration is %d", i+1, got)
 		}
 	}
-	driedGhastCycle(h, players, pos)
+	driedGhastCycle(t, h, players, pos)
 	if got := h.world.At(x, y, z); got != worldgen.Air {
 		t.Fatalf("dried ghast should be consumed on hatch, got state %d", got)
 	}
@@ -61,7 +68,7 @@ func TestDriedGhastDriesWithoutWater(t *testing.T) {
 	dry := worldgen.SetProperty(info, driedGhastBase, "waterlogged", "false")
 	h.world.SetBlock(x, y, z, worldgen.SetProperty(info, dry, "hydration", "2"))
 	h.world.SetBlock(x+1, y, z, worldgen.WaterBase)
-	driedGhastCycle(h, players, blockPos{x, y, z})
+	driedGhastCycle(t, h, players, blockPos{x, y, z})
 	got := h.world.At(x, y, z)
 	if !isDriedGhast(got) {
 		t.Fatal("a dry dried ghast must not hatch")

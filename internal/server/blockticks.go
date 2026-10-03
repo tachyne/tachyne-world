@@ -24,10 +24,13 @@ import (
 // notification waited a tick: a lamp at the end of dust lit two ticks late
 // and a line of repeaters ran at 3 ticks a stage instead of 2.
 //
-// The fluid, falling-block, fire and growth simulation keeps the older
-// hub.pending queue (sim.go) and its timing: a neighbour update that reaches
-// a block with no redstone behaviour is handed to that queue for the next
-// tick, exactly as before.
+// Every other block answers a neighbour update the same way, at once
+// (neighbourReaction, sim.go): a fire that lost its fuel goes out, concrete
+// powder that water reached sets, frogspawn whose water went is gone. The
+// blocks whose vanilla answer is to schedule their own tick — leaves, a
+// chorus plant, a creaking heart, a bubble column — schedule it. The older
+// hub.pending queue (sim.go) is left with the fluid ticks and the re-checks
+// that wait for a chunk to tick.
 //
 // Everything here runs on the hub goroutine.
 
@@ -62,11 +65,21 @@ type schedTick struct {
 	order uint64 // subTickOrder: scheduling order, the last tie-break
 }
 
-// blockTickQueue is LevelTicks for the redstone family.
+// tickKey is a scheduled tick's identity: the position and the block
+// (blockKind) it is for. LevelChunkTicks keeps one tick per pair, so a
+// cell can hold a tick for the fire burning there and one for the sand
+// that has just fallen into it.
+type tickKey struct {
+	simPos
+	kind uint32
+}
+
+// blockTickQueue is LevelTicks for blocks: the redstone family, falling
+// blocks, and the rest of the block list (simticks.go).
 type blockTickQueue struct {
 	due     map[uint64][]schedTick // by trigger tick
-	pending map[simPos]uint64      // hasScheduledTick: pos → trigger tick
-	running map[simPos]struct{}    // willTickThisTick: due now, not yet run
+	pending map[tickKey]uint64     // hasScheduledTick: (pos, block) → trigger tick
+	running map[tickKey]struct{}   // willTickThisTick: due now, not yet run
 	seq     uint64
 	run     []schedTick // scratch for the tick being run
 }
@@ -85,40 +98,54 @@ func blockKind(s uint32) uint32 {
 // simulation dimension. A block with a tick already pending keeps that one
 // (LevelChunkTicks.schedule: one tick per position and block).
 func (h *hub) scheduleTick(pos blockPos, delay uint64, prio int8) {
-	dim := h.rsDim
+	h.scheduleTickFor(h.rsDim, pos, blockKind(h.rsWorld().At(pos.x, pos.y, pos.z)), delay, prio)
+}
+
+// scheduleTickFor is Level.scheduleTick(pos, block, delay, priority) with
+// the block named: it reports whether a tick was added (false when one for
+// that block is pending there, or the cell is not this pod's).
+func (h *hub) scheduleTickFor(dim int, pos blockPos, kind uint32, delay uint64, prio int8) bool {
 	if dim == 0 && !h.ownedBlock(pos.x, pos.z) {
-		return
+		return false
 	}
 	q := &h.bticks
 	if q.due == nil {
 		q.due = map[uint64][]schedTick{}
-		q.pending = map[simPos]uint64{}
-		q.running = map[simPos]struct{}{}
+		q.pending = map[tickKey]uint64{}
+		q.running = map[tickKey]struct{}{}
 	}
 	key := simPos{dim: dim, blockPos: pos}
-	if _, ok := q.pending[key]; ok {
-		return
+	if _, ok := q.pending[tickKey{key, kind}]; ok {
+		return false
 	}
 	if delay == 0 {
 		delay = 1
 	}
 	at := h.tick.Load() + delay
 	q.seq++
-	q.pending[key] = at
-	q.due[at] = append(q.due[at], schedTick{pos: key, at: at, kind: blockKind(h.rsWorld().At(pos.x, pos.y, pos.z)), prio: prio, order: q.seq})
+	q.pending[tickKey{key, kind}] = at
+	q.due[at] = append(q.due[at], schedTick{pos: key, at: at, kind: kind, prio: prio, order: q.seq})
+	return true
 }
 
-// hasScheduledTick is LevelTicks.hasScheduledTick (a future tick; one that
-// is running this tick has already left the set).
+// tickKeyAt is the (pos, block) key for the block now at pos in the current
+// simulation dimension.
+func (h *hub) tickKeyAt(pos blockPos) tickKey {
+	return tickKey{h.rsKey(pos), blockKind(h.rsWorld().At(pos.x, pos.y, pos.z))}
+}
+
+// hasScheduledTick is LevelTicks.hasScheduledTick(pos, block) for the block
+// now at pos (a future tick; one that is running this tick has already left
+// the set).
 func (h *hub) hasScheduledTick(pos blockPos) bool {
-	_, ok := h.bticks.pending[h.rsKey(pos)]
+	_, ok := h.bticks.pending[h.tickKeyAt(pos)]
 	return ok
 }
 
-// willTickThisTick is LevelTicks.willTickThisTick: collected for this tick
-// and not yet run.
+// willTickThisTick is LevelTicks.willTickThisTick(pos, block): collected for
+// this tick and not yet run.
 func (h *hub) willTickThisTick(pos blockPos) bool {
-	_, ok := h.bticks.running[h.rsKey(pos)]
+	_, ok := h.bticks.running[h.tickKeyAt(pos)]
 	return ok
 }
 
@@ -160,24 +187,24 @@ func (h *hub) runBlockTicks(players map[int32]*tracked, age uint64) int {
 		rest := run[maxBlockTicksPerTick:]
 		q.due[age+1] = append(append([]schedTick(nil), rest...), q.due[age+1]...)
 		for _, t := range rest {
-			q.pending[t.pos] = age + 1
+			q.pending[tickKey{t.pos, t.kind}] = age + 1
 		}
 		run = run[:maxBlockTicksPerTick]
 	}
 	for _, t := range run {
-		delete(q.pending, t.pos)
-		q.running[t.pos] = struct{}{}
+		delete(q.pending, tickKey{t.pos, t.kind})
+		q.running[tickKey{t.pos, t.kind}] = struct{}{}
 	}
 	for _, t := range run {
-		delete(q.running, t.pos)
+		delete(q.running, tickKey{t.pos, t.kind})
 		if !h.inWorldYIn(t.pos.dim, t.pos.y) || h.worldFor(t.pos.dim) == nil {
 			continue
 		}
 		if !h.canTickBlocksAt(t.pos) {
 			// Its chunk stopped ticking: the tick waits with it.
-			if _, ok := q.pending[t.pos]; !ok {
+			if _, ok := q.pending[tickKey{t.pos, t.kind}]; !ok {
 				at := age + unloadedRetry
-				q.pending[t.pos] = at
+				q.pending[tickKey{t.pos, t.kind}] = at
 				q.due[at] = append(q.due[at], t)
 			}
 			continue
@@ -185,6 +212,10 @@ func (h *hub) runBlockTicks(players map[int32]*tracked, age uint64) int {
 		state := h.worldFor(t.pos.dim).At(t.pos.x, t.pos.y, t.pos.z)
 		if blockKind(state) != t.kind {
 			continue // ServerLevel.tickBlock: the block it was for is gone
+		}
+		if h.simBlockTick(players, t.pos.dim, t.pos.blockPos, state) {
+			h.nbRun(players) // any neighbour updates it queued
+			continue
 		}
 		h.inDim(t.pos.dim, func() { h.redstoneTick(players, t.pos.blockPos, state) })
 	}
@@ -352,7 +383,7 @@ func (h *hub) neighborChanged(players map[int32]*tracked, sp simPos) {
 	if reactsToNeighbors(st) {
 		h.inDim(sp.dim, func() { h.updateRedstone(players, sp.blockPos, st) })
 		if worldgen.IsWaterlogged(st) {
-			h.scheduleIn(sp.dim, sp.blockPos, 1) // its water's own re-check
+			h.scheduleFluidTick(sp.dim, sp.blockPos, waterDelay) // its water's tick (updateShape)
 		}
 		return
 	}
@@ -371,7 +402,7 @@ func (h *hub) neighborChanged(players map[int32]*tracked, sp simPos) {
 		// and the fluid's tick is asked for its own delay away.
 		h.liquidOnPlace(players, sp.dim, sp.blockPos, st)
 	} else {
-		h.scheduleIn(sp.dim, sp.blockPos, 1)
+		h.neighbourReaction(players, sp.dim, sp.blockPos, st)
 	}
 	// The quasi-connectivity relay (updateRedstone does the same for the
 	// redstone blocks): an update at the cell above a piston reaches it.
@@ -380,9 +411,9 @@ func (h *hub) neighborChanged(players map[int32]*tracked, sp simPos) {
 	}
 }
 
-// notifyAround is a block change's own notification: the cell itself and
-// its six neighbours hear of it now (redstone) or next tick (the rest of
-// the simulation, as before).
+// notifyAround is a block change's own notification (setBlockAndUpdate's
+// neighbour update, and the cell's own look at itself): the cell and its
+// six neighbours hear of it now, inside the change's cascade.
 func (h *hub) notifyAround(players map[int32]*tracked, dim int, pos blockPos) {
 	h.inDim(dim, func() {
 		h.nbAdd(pos)

@@ -247,7 +247,7 @@ func portalIntact(w *world.World, x, y, z int, state uint32) bool {
 func (h *hub) updatePortalBlock(players map[int32]*tracked, pos blockPos, state uint32) {
 	if !portalIntact(h.rsWorld(), pos.x, pos.y, pos.z, state) { // the portal's own dimension: h.world is the overworld
 		h.setBlockAt(players, h.rsDim, pos, worldgen.Air)
-		h.scheduleAroundIn(h.rsDim, pos, 1)
+		h.nbFrom(state, func() { h.notifyAround(players, h.rsDim, pos) })
 	}
 }
 

@@ -47,6 +47,10 @@ func (h *hub) redstoneTick(players map[int32]*tracked, pos blockPos, state uint3
 		h.observerTick(players, pos, state)
 	case isCrafter(state):
 		h.crafterTick(players, simPos{dim: h.rsDim, blockPos: pos}, state)
+	case isButton(state):
+		h.buttonTick(players, pos, state)
+	case isLightningRod(state), isLectern(state):
+		h.poweredPulseEnds(players, pos, state)
 	default:
 		if _, _, ok := cauldronOf(state); ok { // AbstractCauldronBlock.tick: a stalactite's drop lands
 			h.cauldronDripTick(players, h.rsDim, pos, state)
@@ -275,7 +279,8 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 	defer h.nbRun(players)
 	switch {
 	case isTarget(state):
-		h.updateTarget(players, pos, state)
+		// TargetBlock has no neighborChanged: its signal drops on its own
+		// scheduled tick (tickTarget), whatever changes beside it.
 	case isTripwireHook(state):
 		h.calcHook(players, pos, state) // re-evaluate its line (attached/powered)
 	case isCrafter(state):
@@ -332,20 +337,10 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 			}
 			h.rsSet(players, pos, setBoolProp(state, "powered", want))
 		}
-	case isLightningRod(state) && boolProp(state, "powered"): // LightningRodBlock.tick: 8 ticks after the strike
-		// …and LightningRodBlock.onPlace: a rod that arrives powered with no
-		// tick pending (pushed by a piston mid-pulse) switches off.
-		if due, ok := h.rsDue[h.rsKey(pos)]; !ok || h.tick.Load() >= due {
-			delete(h.rsDue, h.rsKey(pos))
-			h.rsSet(players, pos, setBoolProp(state, "powered", false))
-			h.scheduleSignalAround(players, pos)
-		}
-	case isLectern(state) && boolProp(state, "powered"): // LecternBlock.tick: the page-turn pulse ends after 2
-		if due, ok := h.rsDue[h.rsKey(pos)]; ok && h.tick.Load() >= due {
-			delete(h.rsDue, h.rsKey(pos))
-			h.rsSet(players, pos, setBoolProp(state, "powered", false))
-			h.scheduleSignalAround(players, pos)
-		}
+	case isLightningRod(state), isLectern(state):
+		// Neither reacts to a neighbour: a rod's signal ends on its
+		// scheduled tick 8 after the strike, a lectern's 2 after the page
+		// turn (redstoneTick).
 	case isLamp(state):
 		// RedstoneLampBlock.neighborChanged: lights at once, and schedules
 		// going dark 4 ticks after the power leaves (the tick checks again,
@@ -357,22 +352,9 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 		case !want && state == lampOn:
 			h.scheduleTick(pos, lampOffDelay, tickNormal)
 		}
-	case isButton(state) && boolProp(state, "powered"):
-		// Scheduled unpress: only past the press window (neighbor updates land
-		// here too — they must not cut a press short).
-		ticks, _, off, wooden := buttonKind(state)
-		if at, ok := h.pressedAt[simPos{dim: h.rsDim, blockPos: pos}]; ok && h.tick.Load() >= at+uint64(ticks) {
-			if wooden && h.arrowInCell(h.rsDim, pos) { // ButtonBlock.checkPressed: an arrow keeps it down
-				h.pressedAt[simPos{dim: h.rsDim, blockPos: pos}] = h.tick.Load()
-				h.rsSchedule(pos, uint64(ticks))
-				break
-			}
-			delete(h.pressedAt, simPos{dim: h.rsDim, blockPos: pos})
-			h.rsSet(players, pos, setBoolProp(state, "powered", false))
-			h.vib(h.rsDim, freqBlockDeactivate, pos.x, pos.y, pos.z, 0)
-			h.rsSound(players, off, sndBlock, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
-			h.scheduleSignalAround(players, pos)
-		}
+	case isButton(state):
+		// A neighbour's update does not cut a press short: the unpress is
+		// the button's scheduled tick (buttonTick).
 	case isTNT(state):
 		if h.inputPower(x, y, z, false) > 0 {
 			h.primeTNT(players, x, y, z, tntFuseTicks)
@@ -547,7 +529,6 @@ func (h *hub) pressButton(players map[int32]*tracked, pos blockPos, state uint32
 		return
 	}
 	ticks, on, _, _ := buttonKind(state)
-	h.pressedAt[simPos{dim: h.rsDim, blockPos: pos}] = h.tick.Load()
 	h.rsSet(players, pos, setBoolProp(state, "powered", true))
 	var src int32
 	if by != nil {
@@ -564,7 +545,33 @@ func (h *hub) pressButton(players map[int32]*tracked, pos blockPos, state uint32
 		h.rsSound(players, on, sndBlock, cx, cy, cz, 1, 1)
 	}
 	h.scheduleSignalAround(players, pos)
-	h.rsSchedule(pos, uint64(ticks)) // the unpress timer
+	h.scheduleTick(pos, uint64(ticks), tickNormal) // the unpress
+}
+
+// buttonTick is ButtonBlock.tick → checkPressed: a wooden button with an
+// arrow in it stays down for another press's time; any other pops up.
+func (h *hub) buttonTick(players map[int32]*tracked, pos blockPos, state uint32) {
+	if !boolProp(state, "powered") {
+		return
+	}
+	ticks, _, off, wooden := buttonKind(state)
+	if wooden && h.arrowInCell(h.rsDim, pos) {
+		h.scheduleTick(pos, uint64(ticks), tickNormal)
+		return
+	}
+	h.rsSet(players, pos, setBoolProp(state, "powered", false))
+	h.vib(h.rsDim, freqBlockDeactivate, pos.x, pos.y, pos.z, 0)
+	h.rsSound(players, off, sndBlock, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
+	h.scheduleSignalAround(players, pos)
+}
+
+// poweredPulseEnds is LightningRodBlock.tick and LecternBlock.tick: the
+// signal a strike or a page turn gave is gone.
+func (h *hub) poweredPulseEnds(players map[int32]*tracked, pos blockPos, state uint32) {
+	if boolProp(state, "powered") {
+		h.rsSet(players, pos, setBoolProp(state, "powered", false))
+		h.scheduleSignalAround(players, pos)
+	}
 }
 
 func (h *hub) toggleLever(players map[int32]*tracked, pos blockPos, state uint32) {

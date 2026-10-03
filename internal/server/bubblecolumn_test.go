@@ -20,16 +20,24 @@ func TestBubbleColumnFormsAndCollapses(t *testing.T) {
 		w.SetBlock(0, y, 0, worldgen.WaterBase)
 	}
 	w.SetBlock(0, 184, 0, worldgen.WaterBase+1) // flowing: the column stops under it
-	src := blockPos{0, 180, 0}
-	if !h.tickBubbleSource(players, 0, src, worldgen.SoulSand) || w.At(0, 181, 0) != worldgen.WaterBase {
-		t.Fatal("the first update only schedules the 20-tick tick")
+	w.ForceLoad(0, 0, 2)
+	water := blockPos{0, 181, 0}
+	// LiquidBlock.neighborChanged: the source over soul sand asks for its
+	// own block tick, 20 ticks out; nothing forms before it.
+	h.processUpdate(players, 0, water)
+	if w.At(0, 181, 0) != worldgen.WaterBase {
+		t.Fatal("a neighbour's change only schedules the 20-tick tick")
 	}
-	due := h.bubbleDue[simPos{0, src}]
-	if due != h.tick.Load()+bubbleSourceDelay {
-		t.Fatalf("due %d, now %d", due, h.tick.Load())
+	due, ok := h.blockTickDue(0, water, worldgen.WaterBase)
+	if !ok || due != h.tick.Load()+bubbleSourceDelay {
+		t.Fatalf("due %d (pending %v), now %d", due, ok, h.tick.Load())
 	}
-	h.tick.Store(due)
-	h.tickBubbleSource(players, 0, src, worldgen.SoulSand)
+	h.processUpdate(players, 0, water) // a second change keeps the pending tick
+	if again, _ := h.blockTickDue(0, water, worldgen.WaterBase); again != due {
+		t.Fatalf("a second change moved the tick to %d", again)
+	}
+	h.tick.Store(due - 1)
+	stepTicks(h, players, 1)
 	for y := 181; y <= 183; y++ {
 		if got := w.At(0, y, 0); got != worldgen.BubbleColumnUp {
 			t.Fatalf("y=%d: %d, want an updraft column (%d)", y, got, worldgen.BubbleColumnUp)

@@ -194,11 +194,9 @@ func (h *hub) rodOnPlace(pos blockPos, state uint32) {
 	if !isLightningRod(state) || !boolProp(state, "powered") {
 		return
 	}
-	if _, ok := h.rsDue[h.rsKey(pos)]; ok {
-		return
+	if !h.hasScheduledTick(pos) {
+		h.scheduleTick(pos, 8, tickNormal)
 	}
-	h.rsDue[h.rsKey(pos)] = h.tick.Load() + 8
-	h.rsSchedule(pos, 8)
 }
 
 // putMoving records a moving cell's block entity, and mirrors it for the

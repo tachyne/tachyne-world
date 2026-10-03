@@ -65,11 +65,13 @@ func (h *hub) scheduleAroundIn(dim int, pos blockPos, delay uint64) {
 	}
 }
 
-// runUpdates is a tick's block-update phase, in vanilla's order: the
-// scheduled block ticks (blockticks.go), then the simulation queue below
-// (fluids, falling blocks, fire, growth…), then the block events (pistons),
-// then the moving pistons' own tick, which vanilla runs with the block
-// entities after all of that.
+// runUpdates is a tick's block-update phase, in ServerLevel.tick's order:
+// the block tick list (blockticks.go — every block's scheduled tick, by
+// trigger tick, priority and scheduling order), then the fluid ticks riding
+// the simulation queue below (with the restart re-checks and the updates
+// that waited for their chunk), then the block events (pistons), then the
+// moving pistons' own tick, which vanilla runs with the block entities
+// after all of that.
 func (h *hub) runUpdates(players map[int32]*tracked, age uint64) {
 	ran := h.runBlockTicks(players, age)
 	h.runSimUpdates(players, age, maxBlockTicksPerTick-ran)
@@ -116,7 +118,6 @@ func (h *hub) runSimUpdates(players map[int32]*tracked, age uint64, blockBudget 
 		if !h.canTickBlocksAt(sp) {
 			h.pending[age+unloadedRetry] = append(h.pending[age+unloadedRetry], sp)
 			h.fluidTickMoved(sp, age, age+unloadedRetry)
-			h.blockTickMoved(sp, age, age+unloadedRetry)
 			continue
 		}
 		budget := &blockBudget
@@ -135,7 +136,6 @@ func (h *hub) runSimUpdates(players map[int32]*tracked, age uint64, blockBudget 
 		h.pending[age+1] = append(over, h.pending[age+1]...)
 		for _, sp := range over {
 			h.fluidTickMoved(sp, age, age+1) // the cell's one pending fluid tick moves with it
-			h.blockTickMoved(sp, age, age+1) // …and its scheduled block tick
 		}
 	}
 }
@@ -151,35 +151,63 @@ func (h *hub) canTickBlocksAt(sp simPos) bool {
 
 func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 	// A fluid tick due here runs the fluid (FlowingFluid.tick); any other
-	// update reaching a fluid is a neighbour's change, which only schedules
-	// that tick (LiquidBlock.neighborChanged / updateShape).
+	// update reaching a cell is a neighbour's change (neighbourReaction).
+	// The blocks' own scheduled ticks are on the block tick list
+	// (simticks.go), not here.
 	ft := h.takeFluidTick(dim, pos)
 	if !h.inWorldY(pos.y) {
-		delete(h.simTicks, simPos{dim: dim, blockPos: pos})
 		return
 	}
+	h.reactAt(players, dim, pos, ft)
+}
+
+// bubbleColumnDelay is the tick BubbleColumnBlock.updateShape schedules for
+// the column itself.
+const bubbleColumnDelay = 5
+
+// neighbourReaction is a neighbour update reaching a block with no redstone
+// behaviour (blockticks.go neighborChanged). Vanilla's neighborChanged and
+// updateShape run inside the change that caused them, so this runs now —
+// except for the blocks whose answer is to schedule their own tick: a leaf
+// recomputing its distance, a chorus plant that lost its footing, a
+// creaking heart re-reading its logs (each 1 tick out) and a bubble column
+// (5, beside its water's tick).
+func (h *hub) neighbourReaction(players map[int32]*tracked, dim int, pos blockPos, st uint32) {
+	switch {
+	case isLeaf(st), isChorusPlant(st), isCreakingHeartBlock(st):
+		h.scheduleBlockTickIn(dim, pos, 1)
+		if worldgen.IsWaterlogged(st) {
+			h.scheduleFluidTick(dim, pos, waterDelay)
+		}
+	case worldgen.IsBubbleColumn(st):
+		h.scheduleFluidTick(dim, pos, waterDelay)
+		h.scheduleBlockTickIn(dim, pos, bubbleColumnDelay)
+	default:
+		h.reactAt(players, dim, pos, false)
+	}
+}
+
+// isLeaf is any leaves block.
+func isLeaf(s uint32) bool {
+	_, _, _, ok := leafInfo(s)
+	return ok
+}
+
+// reactAt is a neighbour's change reaching the block at pos — vanilla's
+// neighborChanged and updateShape — or, when ft, the cell's fluid tick.
+func (h *hub) reactAt(players map[int32]*tracked, dim int, pos blockPos, ft bool) {
 	state := h.worldFor(dim).Block(pos.x, pos.y, pos.z)
-	// A scheduled block tick due here, for the block still here, runs the
-	// block's tick(); any other update is a neighbour's change (simticks.go).
-	bt := h.takeBlockTick(dim, pos, state)
 	switch {
 	case state == openEyeblossom || state == closedEyeblossom:
-		// A flower woken by the one that turned beside it: on its own tick
-		// it switches on the SHORT sound, and wakes its own neighbours in
-		// turn. A neighbour's change does nothing to it.
-		if bt {
-			h.switchEyeblossom(players, dim, pos.x, pos.y, pos.z, state, false)
-		}
+		// A neighbour's change does nothing to a flower; its switch is a
+		// scheduled tick.
 	case isFrostedIce(state):
-		// Frost Walker's ice ages itself back to water on its own schedule;
-		// a neighbour's change does not age it (FrostedIceBlock.
+		// A neighbour's change does not age frosted ice (FrostedIceBlock.
 		// neighborChanged melts only a lone cell beside frosted ice that
-		// melted, which frostedMelt does as it goes).
-		if bt {
-			h.tickFrostedIce(players, dim, pos, state)
-		} else if !h.hasBlockTickIn(dim, pos, state) {
-			// Ice whose tick was lost (vanilla saves ticks with the chunk;
-			// a restart here drops them): it is booked afresh, as onPlace.
+		// melted, which frostedMelt does as it goes). Ice whose tick was
+		// lost (vanilla saves ticks with the chunk; a restart here drops
+		// them) is booked afresh, as onPlace.
+		if !h.hasBlockTickIn(dim, pos, state) {
 			h.frostedOnPlace(dim, pos)
 		}
 	case worldgen.IsConcretePowder(state) && h.powderTouchesWater(dim, pos):
@@ -192,8 +220,6 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		// FallingBlock.updateShape: a neighbour changed, so the block looks
 		// again two ticks from now at what is under it (fallingblock.go).
 		h.fallScheduleTick(dim, pos)
-	case h.tickBubbleSource(players, dim, pos, state):
-		// Soul sand or magma with water above raises (or drops) its column.
 	case worldgen.IsBubbleColumn(state):
 		// The column keeps itself: it collapses to water without its source
 		// and climbs into source water above. Column or plain water, the
@@ -218,26 +244,27 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		// (canSurvive, which the support sweep answers), never ageing out.
 	case isFire(state):
 		h.inDim(dim, func() { h.fireUpdate(players, pos) })
-	case h.tickFrogspawn(players, dim, pos, state):
-		// A clutch bursts into tadpoles once its timer runs out.
-	case h.tickSnifferEgg(players, dim, pos.x, pos.y, pos.z, state):
-		// The egg cracks twice and then opens.
+	case h.frogspawnShape(players, dim, pos, state):
+		// A clutch whose water went is gone; its hatch is a scheduled tick.
+	case h.snifferEggShape(players, dim, pos, state):
+		// Nothing happens to an egg; its cracks are scheduled ticks.
 	case h.tickChorusPlant(players, dim, pos.x, pos.y, pos.z, state):
 		// A plant segment that lost its footing pops, taking the rest with it.
-	case h.tickCoral(players, dim, pos, state, bt):
-		// Coral left out of water bleaches to its dead twin on its tick; a
-		// neighbour's change books that tick.
+	case h.tickCoral(players, dim, pos, state, false):
+		// Coral left out of water books the tick that bleaches it.
 	case state == spongeState || state == wetSpongeState:
 		// SpongeBlock.neighborChanged: water that flowed up to it (or a
 		// piston-moved sponge) is drunk; WetSpongeBlock.onPlace: a wet one
 		// arriving in the Nether dries.
 		h.soakSponge(players, dim, pos)
-	case h.driedGhastStep(players, dim, pos, state):
-		// A dried ghast takes a step of water (or loses one) on its own tick.
-	case h.tickComposter(players, dim, pos, state):
-		// A full composter finishes composting a second after its last item.
-	case h.tickDripleaf(players, dim, pos, state):
-		// A big dripleaf tipping under a load, or pinned flat by a signal.
+	case isDriedGhast(state):
+		// A dried ghast's steps are scheduled ticks a random tick books.
+	case isComposter(state):
+		// A composter's finish is a scheduled tick.
+	case h.dripleafNeighborChanged(players, dim, pos, state):
+		// A signal arriving pins a big dripleaf flat.
+	case isTarget(state):
+		// TargetBlock has no neighbour reaction; its reset is a scheduled tick.
 	case isCreakingHeartBlock(state):
 		// CreakingHeartBlock.updateShape schedules the heart's tick a tick
 		// out: an uprooted heart whose logs are back takes root.
@@ -303,6 +330,11 @@ func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, stat
 			h.scheduleCoralDeath(dim, pos)
 		}
 		h.fireOnPlace(players, dim, pos, old, state) // a fire inside an obsidian frame lights it
+		if isBubbleSource(state) && h.inWorldYIn(dim, pos.y+1) {
+			// LiquidBlock.updateShape from below: water over new soul sand
+			// or magma asks for the tick that raises its column.
+			h.bubbleScheduleTick(dim, blockPos{pos.x, pos.y + 1, pos.z}, h.worldFor(dim).Block(pos.x, pos.y+1, pos.z))
+		}
 		if isAnyRail(state) && blockKind(old) != blockKind(state) {
 			h.railOnPlace(players, dim, pos) // BaseRailBlock.onPlace: it connects to the rails around
 		}
@@ -311,11 +343,9 @@ func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, stat
 			h.inDim(dim, func() { h.tripwireUpdateSource(players, pos) })
 		}
 		// LightningRodBlock.onPlace: a rod set down powered with no tick of
-		// its own pending gets one, which switches it off.
-		if isLightningRod(state) && boolProp(state, "powered") {
-			if _, ok := h.rsDue[simPos{dim: dim, blockPos: pos}]; !ok {
-				h.inDim(dim, func() { h.rsSchedule(pos, 1) })
-			}
+		// its own pending gets one, eight ticks out, which switches it off.
+		if isLightningRod(state) && boolProp(state, "powered") && blockKind(old) != blockKind(state) {
+			h.inDim(dim, func() { h.rodOnPlace(pos, state) })
 		}
 		// LiquidBlock.onPlace, last: a water or lava state written here
 		// schedules its fluid tick, or — lava meeting water — sets solid.
@@ -390,8 +420,8 @@ func (h *hub) updateFluid(players map[int32]*tracked, dim int, pos blockPos, sta
 	} else {
 		for _, d := range lavaContactDirs {
 			n := blockPos{pos.x + d.x, pos.y + d.y, pos.z + d.z}
-			if worldgen.IsLava(h.worldFor(dim).Block(n.x, n.y, n.z)) {
-				h.scheduleIn(dim, n, 1)
+			if s := h.worldFor(dim).Block(n.x, n.y, n.z); worldgen.IsLava(s) {
+				h.liquidOnPlace(players, dim, n, s) // it meets the water now, as its neighborChanged would
 			}
 		}
 	}
@@ -442,9 +472,6 @@ func (h *hub) updateFluid(players map[int32]*tracked, dim int, pos blockPos, sta
 	if h.inWorldY(below.y) && fluidPassable(belowB) && !same(belowB) && worldgen.FluidPassesFace(worldgen.FaceDown, state, belowB) {
 		h.fluidInto(players, dim, below, base+8, water) // falling
 		h.scheduleFluidTick(dim, below, delay)
-		if water {
-			h.wakePowder(dim, below) // flowing water solidifies concrete powder it reaches
-		}
 		// Vanilla only pools sideways over a drop when boxed by 3+ sources.
 		if h.sourceNeighborCount(dim, pos, base) >= 3 {
 			h.spreadSides(players, dim, pos, base, level, dropOff, delay, slopeFind)
@@ -543,25 +570,6 @@ func (h *hub) fluidHoleBelow(dim int, pos blockPos, same func(uint32) bool) bool
 	return same(belowB) || worldgen.IsReplaceable(belowB)
 }
 
-// powderWakeDirs are the cells that may hold concrete powder a fluid at the
-// centre touches: the cell below the fluid and the four horizontal neighbours
-// (powder converts on water above or beside it, never below).
-var powderWakeDirs = [5]blockPos{{0, -1, 0}, {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}}
-
-// wakePowder re-checks concrete powder touching a freshly-placed WATER cell so
-// FLOWING water solidifies it, not only hand-placed water. tachyne's sim
-// setBlock doesn't fire neighbour updates the way vanilla's flag-3 setBlock
-// does, so the powder must be woken explicitly (vanilla neighbourChanged →
-// ConcretePowderBlock.touchesLiquid).
-func (h *hub) wakePowder(dim int, pos blockPos) {
-	for _, d := range powderWakeDirs {
-		n := blockPos{pos.x + d.x, pos.y + d.y, pos.z + d.z}
-		if worldgen.IsConcretePowder(h.worldFor(dim).Block(n.x, n.y, n.z)) {
-			h.scheduleIn(dim, n, 1)
-		}
-	}
-}
-
 // spreadSides is vanilla FlowingFluid.spreadToSides: place flowing fluid one
 // step weaker in the direction(s) with the shortest slope-distance to a drop
 // (flowDirections). A falling cell spreads at full strength on landing.
@@ -583,9 +591,6 @@ func (h *hub) spreadSides(players map[int32]*tracked, dim int, pos blockPos, bas
 		np := blockPos{pos.x + d.x, pos.y, pos.z + d.z}
 		h.fluidInto(players, dim, np, out, waterFlow)
 		h.scheduleFluidTick(dim, np, delay)
-		if waterFlow {
-			h.wakePowder(dim, np) // flowing water solidifies concrete powder beside it
-		}
 	}
 }
 

@@ -63,7 +63,10 @@ func TestDispenserBehaviors(t *testing.T) {
 		}
 
 		// Flint and steel → lights a fire in front and wears (not consumes).
+		// The fire needs ground it can stand on (BaseFireBlock.canBePlacedAt).
 		w.SetBlock(front.x, front.y, front.z, worldgen.Air)
+		floor := w.At(front.x, front.y-1, front.z)
+		w.SetBlock(front.x, front.y-1, front.z, worldgen.Stone)
 		s := fire(int32(itemFlintSteel), 0)
 		if !isFire(w.At(front.x, front.y, front.z)) {
 			t.Error("flint and steel did not light a fire ahead")
@@ -71,6 +74,7 @@ func TestDispenserBehaviors(t *testing.T) {
 		if s.count != 3 || s.dmg != 1 {
 			t.Errorf("flint and steel: count %d dmg %d, want 3/1 (worn, not consumed)", s.count, s.dmg)
 		}
+		w.SetBlock(front.x, front.y-1, front.z, floor)
 
 		// Bone meal → advances a crop in front, consuming one.
 		wheat := worldgen.BlockBase("wheat")

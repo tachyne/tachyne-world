@@ -600,7 +600,10 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		if cube := h.cubeInCell(pos.dim, front); cube != nil {
 			h.primeSulfurCube(players, cube, false)
 		} else if fs := w.At(front.x, front.y, front.z); fs == worldgen.Air {
-			h.igniteFire(players, front, 0) // light a fire in the cell ahead
+			// BaseFireBlock.canBePlacedAt: only where a fire can stand.
+			if h.fireSurvivesAt(front) {
+				h.igniteFire(players, front, 0) // light a fire in the cell ahead
+			}
 		} else if canLightBlock(fs) {
 			h.lightBlock(players, pos.dim, front, fs, sndFlintSteelUse)
 		} else if isTNT(fs) {

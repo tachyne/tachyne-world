@@ -28,14 +28,28 @@ func TestTargetBlock(t *testing.T) {
 			t.Errorf("target emits %d to its neighbour, want 15", p)
 		}
 
-		// Holds before the 20-tick deadline, decays to 0 after it.
-		h.tick.Store(1015)
-		h.updateTarget(h.playersRef, pos, w.At(pos.x, pos.y, pos.z))
+		// A second hit while the reset is pending changes nothing: the
+		// signal and its reset stay as the first hit set them.
+		due, ok := h.blockTickDue(dimOverworld, pos, targetMin)
+		if !ok || due != 1020 {
+			t.Fatalf("reset due %d (pending %v), want 1020", due, ok)
+		}
+		h.tick.Store(1010)
+		h.hitTarget(h.playersRef, dimOverworld, pos, w.At(pos.x, pos.y, pos.z), 5.95, 70.95, 5.95, false, nil)
+		if targetPower(w.At(pos.x, pos.y, pos.z)) != 15 {
+			t.Errorf("a hit during the hold re-powered the target to %d", targetPower(w.At(pos.x, pos.y, pos.z)))
+		}
+		if again, _ := h.blockTickDue(dimOverworld, pos, targetMin); again != due {
+			t.Errorf("a hit during the hold moved the reset to %d", again)
+		}
+		// A neighbour's change does nothing; the reset tick drops it to 0.
+		h.processUpdate(h.playersRef, dimOverworld, pos)
 		if targetPower(w.At(pos.x, pos.y, pos.z)) != 15 {
 			t.Error("target decayed early")
 		}
-		h.tick.Store(1021)
-		h.updateTarget(h.playersRef, pos, w.At(pos.x, pos.y, pos.z))
+		w.ForceLoad(pos.x, pos.z, 2)
+		h.tick.Store(1019)
+		stepTicks(h, h.playersRef, 1)
 		if targetPower(w.At(pos.x, pos.y, pos.z)) != 0 {
 			t.Errorf("target power %d after hold, want 0", targetPower(w.At(pos.x, pos.y, pos.z)))
 		}
