@@ -147,6 +147,11 @@ type Server struct {
 	EarthName   string
 	EarthVScale float64
 
+	// Caves is the -caves flag: the cave generator ("native" or "vanilla")
+	// for a NEW world. An existing world keeps the one it was made with
+	// (cavegen.go); "" = native for a new world.
+	Caves string
+
 	// Ceiling raises the OVERWORLD's top build limit (0 = vanilla 320). Tall
 	// worlds exist for earth mode at true vertical scale: pick Ceiling and
 	// EarthVScale together so the region's summits fit (e.g. Cape Town's
@@ -367,6 +372,11 @@ func (s *Server) Serve() error {
 			lat, lon := dem.BlockToLatLon(0, 0)
 			log.Printf("earth mode: %s (block 0,0 = %.4f,%.4f; 1 block = 1 m, vertical 1:%g)",
 				s.EarthName, lat, lon, s.EarthVScale)
+		}
+		// The cave generator: fixed when the world was made (cavegen.go).
+		// Before the chunk cache, whose keys it tags.
+		if err := s.applyCaveMode(); err != nil {
+			return err
 		}
 		if cache := s.openChunkCache(); cache != nil {
 			s.world.SetChunkCache(cache)

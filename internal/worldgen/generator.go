@@ -37,6 +37,12 @@ type Generator struct {
 	nether    bool           // nether mode: cavern-sponge assembly, no surface features
 	end       bool           // End mode: floating island + pillar ring, void elsewhere
 
+	// caveMode picks the overworld's caves (vanillacaves.go): the engine's own
+	// tunnel field below, or vanilla's noise caves and cave carvers, whose
+	// noises and per-chunk masks vcaves holds (nil in native mode).
+	caveMode CaveMode
+	vcaves   *vanillaCaves
+
 	// earth mode (earth.go): terrain heights come from a real elevation model
 	// instead of the noise stack; rivers and caves are disabled (the DEM has
 	// real valleys, and carving real mountains would falsify them). All other
@@ -151,6 +157,9 @@ func carveable(b uint32) bool {
 func (g *Generator) carve(b uint32, wx, wy, wz, colH int) uint32 {
 	if g.earth != nil {
 		return b // real terrain: no noise caves tunnelling through real mountains
+	}
+	if g.vcaves != nil {
+		return g.carveVanilla(b, wx, wy, wz, colH)
 	}
 	if wy < caveMinY || !carveable(b) {
 		return b
