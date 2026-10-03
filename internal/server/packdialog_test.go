@@ -27,8 +27,8 @@ func TestPackDialogsReachConfiguration(t *testing.T) {
 	writePack(t, s.DataPackDir, "fp", "", map[string]string{
 		"data/test/dialog/hello.json": `{"type":"minecraft:notice","title":"Hello","body":{"type":"minecraft:plain_message","contents":"Welcome"},` +
 			`"action":{"label":"Rules","action":{"type":"minecraft:show_dialog","dialog":"test:rules"}}}`,
-		"data/test/dialog/rules.json": `{"type":"minecraft:notice","title":"Rules"}`,
-		"data/test/dialog/bad.json":   `{"type":"minecraft:notice"}`,
+		"data/test/dialog/rules.json":                            `{"type":"minecraft:notice","title":"Rules"}`,
+		"data/test/dialog/bad.json":                              `{"type":"minecraft:notice"}`,
 		"data/minecraft/tags/dialog/pause_screen_additions.json": `{"values":["test:hello"]}`,
 		"data/minecraft/tags/dialog/quick_actions.json":          `{"values":["test:rules","test:bad"]}`,
 	})
