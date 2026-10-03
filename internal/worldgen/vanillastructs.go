@@ -20,7 +20,7 @@ import (
 // The placement grid, the reducers, the exclusion zones, the set's pick
 // and the ring positions are pure functions of the world seed and the
 // biome source, so they match the server exactly; the start positions read
-// the terrain's heights and columns (VanillaHeights, VanillaColumns).
+// the terrain before features (VanillaTerrain).
 
 // VanillaStart is a structure start: which structure, in which chunk, and
 // the position its biome was checked at.
@@ -44,9 +44,8 @@ type vanillaStructs struct {
 	biome    func(qx, qy, qz int) string // the noise biome at a quart cell (short name)
 	// fixed is the biome of a single-biome world (FixedBiomeSource, whose
 	// biome search is its own); "" for a multi-noise one.
-	fixed string
-	heights  VanillaHeights
-	columns  VanillaColumns
+	fixed    string
+	terrain  VanillaTerrain // nil: no terrain (tests): the sea level everywhere
 	minY     int
 	height   int
 	seaLevel int
@@ -57,20 +56,24 @@ type vanillaStructs struct {
 }
 
 // newVanillaStructs builds the placement for a dimension ("overworld",
-// "nether", "end"). biome answers noise biomes by quart cell; heights may
-// also be a VanillaColumns.
-func newVanillaStructs(seed int64, dim string, biome func(qx, qy, qz int) string, heights VanillaHeights) *vanillaStructs {
+// "nether", "end"). biome answers noise biomes by quart cell (short names);
+// terrain gives heights and columns (nil in tests: sea level everywhere).
+func newVanillaStructs(seed int64, dim string, biome func(qx, qy, qz int) string, terrain VanillaTerrain) *vanillaStructs {
 	d := mustVPData()
-	v := &vanillaStructs{seed: seed, d: d, possible: map[string]bool{}, biome: biome, heights: heights,
+	v := &vanillaStructs{seed: seed, d: d, possible: map[string]bool{}, biome: biome, terrain: terrain,
 		minY: MinY, height: SectionCount * 16, seaLevel: SeaLevel}
 	switch dim {
 	case "nether":
-		v.minY, v.height, v.seaLevel = 0, 256, 32
+		v.minY, v.height, v.seaLevel = 0, 128, 32
 	case "end":
-		v.minY, v.height, v.seaLevel = 0, 256, 0
+		v.minY, v.height, v.seaLevel = 0, 128, 0
 	}
-	if c, ok := heights.(VanillaColumns); ok {
-		v.columns = c
+	if terrain != nil {
+		// WorldGenerationContext: the level's limits within the noise
+		// settings' own.
+		lo := max(terrain.MinY(), v.minY)
+		v.height = min(terrain.Ceiling(), v.minY+v.height) - lo
+		v.minY, v.seaLevel = lo, terrain.SeaLevel()
 	}
 	for _, b := range d.Possible[dim] {
 		v.possible[b] = true
@@ -344,12 +347,17 @@ func (v *vanillaStructs) tryStart(s *vpSet, name string, cx, cz int32) (VanillaS
 	return VanillaStart{Structure: name, Set: s.Name, ChunkX: cx, ChunkZ: cz, X: x, Y: y, Z: z, Rotation: rot}, true
 }
 
-// baseHeight is getBaseHeight (the first free y); 0 heights: the sea.
-func (v *vanillaStructs) baseHeight(x, z int, hm VanillaHeightmap) int {
-	if v.heights == nil {
+// baseHeight is getBaseHeight (the first free y) for a WG heightmap; with
+// no terrain, the sea level.
+func (v *vanillaStructs) baseHeight(x, z int, hm HeightmapType) int {
+	if v.terrain == nil {
 		return v.seaLevel
 	}
-	return v.heights.BaseHeight(x, z, hm)
+	switch hm {
+	case HeightOceanFloor, HeightOceanFloorWG:
+		return v.terrain.Height(HeightOceanFloorWG, x, z)
+	}
+	return v.terrain.Height(HeightWorldSurfaceWG, x, z)
 }
 
 // startPos is the structure type's findGenerationPoint, as far as where
@@ -358,13 +366,13 @@ func (v *vanillaStructs) startPos(st *vpStructure, cx, cz int32) (x, y, z, rot i
 	minX, minZ := int(cx)<<4, int(cz)<<4
 	r := newVWLegacy(0) // Structure.GenerationContext.makeRandom
 	r.setLargeFeatureSeed(v.seed, cx, cz)
-	onTop := func(hm VanillaHeightmap) (int, int, int, int, bool) {
+	onTop := func(hm HeightmapType) (int, int, int, int, bool) {
 		return minX + 8, v.baseHeight(minX+8, minZ+8, hm) - 1, minZ + 8, -1, true
 	}
 	corners := func(x0, z0, sx, sz int) int {
 		lo := math.MaxInt
 		for _, c := range [4][2]int{{x0, z0}, {x0, z0 + sz}, {x0 + sx, z0}, {x0 + sx, z0 + sz}} {
-			lo = min(lo, v.baseHeight(c[0], c[1], HeightmapWorldSurfaceWG)-1)
+			lo = min(lo, v.baseHeight(c[0], c[1], HeightWorldSurfaceWG)-1)
 		}
 		return lo
 	}
@@ -377,18 +385,18 @@ func (v *vanillaStructs) startPos(st *vpStructure, cx, cz int32) (x, y, z, rot i
 		if corners(minX, minZ, w, d) < v.seaLevel {
 			return 0, 0, 0, 0, false
 		}
-		return onTop(HeightmapWorldSurfaceWG)
+		return onTop(HeightWorldSurfaceWG)
 	case "igloo", "swamp_hut":
-		return onTop(HeightmapWorldSurfaceWG)
+		return onTop(HeightWorldSurfaceWG)
 	case "buried_treasure", "ocean_ruin":
-		return onTop(HeightmapOceanFloorWG)
+		return onTop(HeightOceanFloorWG)
 	case "shipwreck":
 		var beached bool
 		vpRawField(st, "is_beached", &beached)
 		if beached {
-			return onTop(HeightmapWorldSurfaceWG)
+			return onTop(HeightWorldSurfaceWG)
 		}
-		return onTop(HeightmapOceanFloorWG)
+		return onTop(HeightOceanFloorWG)
 	case "ocean_monument":
 		// Every biome within 29 blocks of (9, sea level, 9) must be one a
 		// monument may be surrounded by (getBiomesWithin's quart square).
@@ -406,7 +414,7 @@ func (v *vanillaStructs) startPos(st *vpStructure, cx, cz int32) (x, y, z, rot i
 				}
 			}
 		}
-		return onTop(HeightmapOceanFloorWG)
+		return onTop(HeightOceanFloorWG)
 	case "woodland_mansion", "end_city":
 		bx, bz := minX+7, minZ+7
 		rot = int(r.nextIntN(4))
@@ -596,9 +604,9 @@ func (v *vanillaStructs) ruinedPortalStart(st *vpStructure, r *vwRandom, minX, m
 	x0, z0, x1, z1 := vpRotatedBox(size, rot, pvx, pvz, mirror)
 	x0, z0, x1, z1 = x0+minX, z0+minZ, x1+minX, z1+minZ
 	ccx, ccz := x0+(x1-x0+1)/2, z0+(z1-z0+1)/2
-	hm := HeightmapWorldSurfaceWG
+	hm := HeightWorldSurfaceWG
 	if setup.Placement == "on_ocean_floor" {
-		hm = HeightmapOceanFloorWG
+		hm = HeightOceanFloorWG
 	}
 	surface := v.baseHeight(ccx, ccz, hm) - 1
 	ySpan := size[1]
@@ -623,12 +631,12 @@ func (v *vanillaStructs) ruinedPortalStart(st *vpStructure, r *vwRandom, minX, m
 	default:
 		y = surface
 	}
-	if v.columns != nil {
+	if v.terrain != nil {
 		cols := [4][2]int{{x0, z0}, {x1, z0}, {x0, z1}, {x1, z1}}
 		for ; y > floor; y-- {
 			n := 0
 			for _, c := range cols {
-				if vpOpaqueFor(hm, v.columns.BaseBlock(c[0], y, c[1])) {
+				if vpOpaqueFor(hm, v.terrain.BlockAt(c[0], y, c[1])) {
 					if n++; n == 3 {
 						return minX, y, minZ, rot, true
 					}
@@ -649,8 +657,8 @@ func vpWithin(r *vwRandom, lo, hi int) int {
 // vpOpaqueFor is the heightmap's isOpaque predicate for terrain blocks:
 // WORLD_SURFACE_WG counts anything but air, OCEAN_FLOOR_WG only blocks
 // that block motion (not fluids).
-func vpOpaqueFor(hm VanillaHeightmap, s uint32) bool {
-	if hm == HeightmapOceanFloorWG || hm == HeightmapOceanFloor {
+func vpOpaqueFor(hm HeightmapType, s uint32) bool {
+	if hm == HeightOceanFloorWG || hm == HeightOceanFloor {
 		return s != Air && !IsFluid(s)
 	}
 	return s != Air
@@ -671,13 +679,13 @@ func (v *vanillaStructs) netherFossilStart(st *vpStructure, r *vwRandom, minX, m
 		}
 		y = h.sample(r, ctx)
 	}
-	if v.columns == nil {
+	if v.terrain == nil {
 		return x, y, z, -1, y > v.seaLevel
 	}
 	for y > v.seaLevel {
-		cur := v.columns.BaseBlock(x, y, z)
+		cur := v.terrain.BlockAt(x, y, z)
 		y--
-		below := v.columns.BaseBlock(x, y, z)
+		below := v.terrain.BlockAt(x, y, z)
 		if cur == Air && (vpIsBlock(below, "soul_sand") || IsFaceSturdy(below, FaceUp)) {
 			break
 		}

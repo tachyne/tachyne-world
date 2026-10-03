@@ -48,6 +48,9 @@ type Shipwreck struct {
 // ShipwreckIn returns the wreck owning the cell containing (wx,wz), if the site
 // is submerged ocean floor.
 func (g *Generator) ShipwreckIn(wx, wz int) Shipwreck {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaShipwreck(vp, wx, wz, false) // vanillasites.go
+	}
 	ox, oz := cellOrigin(wx, shipwreckCell), cellOrigin(wz, shipwreckCell)
 	if hash01(g.seed, ox, oz, 0x5A00) >= shipwreckOdds {
 		return Shipwreck{}
@@ -122,6 +125,9 @@ func isBeach(name string) bool { return name == "minecraft:beach" || name == "mi
 // BeachedShipwreckIn returns the beached wreck owning the cell containing
 // (wx, wz), if the cell's site is a beach.
 func (g *Generator) BeachedShipwreckIn(wx, wz int) Shipwreck {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaShipwreck(vp, wx, wz, true) // vanillasites.go
+	}
 	ox, oz := cellOrigin(wx, beachedCell), cellOrigin(wz, beachedCell)
 	if hash01(g.seed, ox, oz, 0x5B00) >= beachedOdds {
 		return Shipwreck{}
@@ -193,6 +199,9 @@ type BuriedTreasure struct {
 
 // BuriedTreasureIn returns the buried chest owning (wx,wz)'s cell, on beaches.
 func (g *Generator) BuriedTreasureIn(wx, wz int) BuriedTreasure {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaBuriedTreasure(vp, wx, wz) // vanillasites.go
+	}
 	ox, oz := cellOrigin(wx, buriedCell), cellOrigin(wz, buriedCell)
 	if hash01(g.seed, ox, oz, 0xB700) >= buriedOdds {
 		return BuriedTreasure{}

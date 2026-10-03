@@ -29,6 +29,9 @@ type TrialChamber struct {
 
 // TrialChamberIn returns the chamber owning (wx,wz)'s cell.
 func (g *Generator) TrialChamberIn(wx, wz int) TrialChamber {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaTrialChamber(vp, wx, wz) // vanillasites.go
+	}
 	ox, oz := cellOrigin(wx, trialChamberCell), cellOrigin(wz, trialChamberCell)
 	if hash01(g.seed, ox, oz, 0x7C00) >= trialChamberOdds {
 		return TrialChamber{}

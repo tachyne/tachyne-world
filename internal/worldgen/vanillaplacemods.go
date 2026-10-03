@@ -20,7 +20,7 @@ type vpPos struct{ x, y, z int }
 // "plains").
 type vpLevel interface {
 	Block(x, y, z int) uint32
-	Height(hm VanillaHeightmap, x, z int) int
+	Height(hm HeightmapType, x, z int) int
 	Biome(x, y, z int) string
 }
 
@@ -315,14 +315,14 @@ func parseVPHeight(raw json.RawMessage) (vpHeight, error) {
 type vpCount struct{ n vpIntProvider }
 type vpInSquare struct{}
 type vpHeightRange struct{ h vpHeight }
-type vpHeightmap struct{ hm VanillaHeightmap }
+type vpHeightmap struct{ hm HeightmapType }
 type vpRarity struct{ chance int }
 type vpBiomeFilter struct{}
 type vpOffset struct{ x, y, z vpIntProvider }
 type vpPredicateFilter struct{ p vpPredicate }
 type vpWaterDepth struct{ max int }
 type vpSurfaceRelative struct {
-	hm     VanillaHeightmap
+	hm     HeightmapType
 	lo, hi int64
 }
 type vpEnvScan struct {
@@ -394,8 +394,8 @@ func (m vpPredicateFilter) modify(c *vpCtx, r *vwRandom, p vpPos, out func(vpPos
 }
 
 func (m vpWaterDepth) modify(c *vpCtx, r *vwRandom, p vpPos, out func(vpPos)) {
-	floor := c.lv.Height(HeightmapOceanFloor, p.x, p.z)
-	surf := c.lv.Height(HeightmapWorldSurface, p.x, p.z)
+	floor := c.lv.Height(HeightOceanFloor, p.x, p.z)
+	surf := c.lv.Height(HeightWorldSurface, p.x, p.z)
 	if surf-floor <= m.max {
 		out(p)
 	}
@@ -436,7 +436,7 @@ func (m vpEveryLayer) modify(c *vpCtx, r *vwRandom, p vpPos, out func(vpPos)) {
 		for i := 0; i < m.n.sample(r); i++ {
 			x := int(r.nextIntN(16)) + p.x
 			z := int(r.nextIntN(16)) + p.z
-			start := c.lv.Height(HeightmapMotionBlocking, x, z)
+			start := c.lv.Height(HeightMotionBlocking, x, z)
 			if y, ok := vpOnGroundY(c, x, start, z, layer); ok {
 				out(vpPos{x, y, z})
 				found = true
@@ -500,10 +500,10 @@ func (m vpRandomChance) modify(c *vpCtx, r *vwRandom, p vpPos, out func(vpPos)) 
 	}
 }
 
-var vpHeightmapNames = map[string]VanillaHeightmap{
-	"WORLD_SURFACE_WG": HeightmapWorldSurfaceWG, "WORLD_SURFACE": HeightmapWorldSurface,
-	"OCEAN_FLOOR_WG": HeightmapOceanFloorWG, "OCEAN_FLOOR": HeightmapOceanFloor,
-	"MOTION_BLOCKING": HeightmapMotionBlocking, "MOTION_BLOCKING_NO_LEAVES": HeightmapMotionBlockingNoLeaves,
+var vpHeightmapNames = map[string]HeightmapType{
+	"WORLD_SURFACE_WG": HeightWorldSurfaceWG, "WORLD_SURFACE": HeightWorldSurface,
+	"OCEAN_FLOOR_WG": HeightOceanFloorWG, "OCEAN_FLOOR": HeightOceanFloor,
+	"MOTION_BLOCKING": HeightMotionBlocking, "MOTION_BLOCKING_NO_LEAVES": HeightMotionBlockingNoLeaves,
 }
 
 var vpDirections = map[string][3]int{

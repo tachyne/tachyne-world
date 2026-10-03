@@ -198,9 +198,9 @@ func (vpSynthLevel) Block(x, y, z int) uint32 {
 	return Air
 }
 
-func (vpSynthLevel) Height(hm VanillaHeightmap, x, z int) int {
+func (vpSynthLevel) Height(hm HeightmapType, x, z int) int {
 	h := vpSynthH(x, z)
-	if hm == HeightmapOceanFloor || hm == HeightmapOceanFloorWG {
+	if hm == HeightOceanFloor || hm == HeightOceanFloorWG {
 		return h
 	}
 	return max(h, 63)

@@ -77,6 +77,9 @@ type OceanRuins struct {
 // OceanRuinsIn returns the ruin site owning the cell containing (wx,wz), if
 // the site is submerged ocean floor.
 func (g *Generator) OceanRuinsIn(wx, wz int) OceanRuins {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaOceanRuins(vp, wx, wz) // vanillasites.go
+	}
 	if g.nether || g.end {
 		return OceanRuins{}
 	}

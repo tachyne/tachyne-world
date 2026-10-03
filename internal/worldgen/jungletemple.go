@@ -34,6 +34,9 @@ func isJungleBiome(name string) bool {
 // JungleTempleIn returns the temple whose cell contains (wx,wz), if its site
 // is jungle.
 func (g *Generator) JungleTempleIn(wx, wz int) JungleTemple {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaJungleTemple(vp, wx, wz) // vanillasites.go
+	}
 	if g.nether || g.end {
 		return JungleTemple{}
 	}

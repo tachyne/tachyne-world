@@ -206,6 +206,9 @@ def main():
     features = load("feature")
     for f in features.values():
         scan_tags(f)
+    providers = load("block_state_provider")
+    for f in providers.values():
+        scan_tags(f)
 
     noises = {n: load("noise")[n] for n in ORE_NOISES}
 
@@ -260,6 +263,7 @@ def main():
         "noises": noises,
         "start_pools": start_pools,
         "template_sizes": template_sizes,
+        "state_providers": dict(sorted(providers.items())),
         "possible_biomes": {"overworld": OVERWORLD_BIOMES, "nether": NETHER_BIOMES, "end": END_BIOMES},
     }
     os.makedirs(os.path.dirname(OUT), exist_ok=True)

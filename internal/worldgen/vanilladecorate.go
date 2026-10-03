@@ -44,9 +44,9 @@ func newVanillaDecor(seed int64, dim string) (*vanillaDecor, error) {
 		minY: MinY, height: SectionCount * 16, seaLevel: SeaLevel}
 	switch dim {
 	case "nether":
-		v.minY, v.height, v.seaLevel = 0, 256, 32
+		v.minY, v.height, v.seaLevel = 0, 128, 32
 	case "end":
-		v.minY, v.height, v.seaLevel = 0, 256, 0
+		v.minY, v.height, v.seaLevel = 0, 128, 0
 	}
 	for _, b := range d.Possible[dim] {
 		v.possible[b] = true
@@ -97,17 +97,19 @@ type vpPlacement struct {
 // structures and their streams.
 func (v *vanillaDecor) decorate(cx, cz int32, lv vpLevel, biomes []string, place func(p *vpPlacement),
 	structure func(step, index int, name string, r *vwRandom)) {
-	v.decorateHooks(cx, cz, lv, biomes, nil, place, structure)
+	v.decorateSteps(cx, cz, lv, biomes, 0, vpStepCount-1, nil, place, structure)
 }
 
 // decorateTrace is decorate with a hook at the head of every placed
 // feature the chunk tries (the oracle tests print one line per feature).
 func (v *vanillaDecor) decorateTrace(cx, cz int32, lv vpLevel, biomes []string,
 	each func(step, index int, pf *vpPlacedFeature, r *vwRandom), place func(p *vpPlacement)) {
-	v.decorateHooks(cx, cz, lv, biomes, each, place, nil)
+	v.decorateSteps(cx, cz, lv, biomes, 0, vpStepCount-1, each, place, nil)
 }
 
-func (v *vanillaDecor) decorateHooks(cx, cz int32, lv vpLevel, biomes []string,
+// decorateSteps runs steps lo..hi of a chunk's decoration (each step's
+// streams are seeded afresh, so a step can run on its own).
+func (v *vanillaDecor) decorateSteps(cx, cz int32, lv vpLevel, biomes []string, lo, hi int,
 	each func(step, index int, pf *vpPlacedFeature, r *vwRandom), place func(p *vpPlacement),
 	structure func(step, index int, name string, r *vwRandom)) {
 	r := newVWXoroshiro(0)
@@ -117,7 +119,7 @@ func (v *vanillaDecor) decorateHooks(cx, cz int32, lv vpLevel, biomes []string,
 	ctx := &vpCtx{lv: lv, minY: v.minY, height: v.height, seaLevel: v.seaLevel,
 		hasFeature: func(b, f string) bool { return v.has[b][f] }}
 	n := max(vpStepCount, len(v.steps))
-	for step := 0; step < n; step++ {
+	for step := max(lo, 0); step < n && step <= hi; step++ {
 		if structure != nil && step < vpStepCount {
 			for i, name := range v.structSteps[step] {
 				r.setFeatureSeed(ds, i, step)

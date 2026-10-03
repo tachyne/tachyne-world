@@ -422,6 +422,9 @@ func isBadlands(biome string) bool {
 
 // MineshaftAt is the mineshaft that starts in chunk (cx,cz), if any.
 func (g *Generator) MineshaftAt(cx, cz int) Mineshaft {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaMineshaftAt(vp, cx, cz) // vanillasites.go
+	}
 	if g.nether || g.end || hash01(g.seed, cx, cz, 0x111E) >= shaftOdds {
 		return Mineshaft{}
 	}

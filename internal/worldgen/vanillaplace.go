@@ -108,6 +108,8 @@ type vpData struct {
 	// TemplateSizes are the sizes of templates code picks between before
 	// it places them (the ruined portals).
 	TemplateSizes map[string][3]int
+	// StateProviders is the block_state_provider registry.
+	StateProviders map[string]json.RawMessage
 }
 
 // vpPoolElem is one element of a jigsaw start pool.
@@ -165,9 +167,10 @@ func parseVPData(raw []byte) (*vpData, error) {
 			Octaves    int       `json:"octave_count"`
 			Mods       []float64 `json:"amplitude_modifiers"`
 		} `json:"noises"`
-		Possible      map[string][]string     `json:"possible_biomes"`
-		StartPools    map[string][]vpPoolElem `json:"start_pools"`
-		TemplateSizes map[string][3]int       `json:"template_sizes"`
+		Possible      map[string][]string        `json:"possible_biomes"`
+		StartPools    map[string][]vpPoolElem    `json:"start_pools"`
+		TemplateSizes map[string][3]int          `json:"template_sizes"`
+		Providers     map[string]json.RawMessage `json:"state_providers"`
 	}
 	if err := json.Unmarshal(raw, &in); err != nil {
 		return nil, err
@@ -176,7 +179,7 @@ func parseVPData(raw []byte) (*vpData, error) {
 		Sets: map[string]*vpSet{}, Structures: map[string]*vpStructure{}, Biomes: in.Biomes,
 		Placed: map[string]*vpPlacedFeature{}, Features: in.Features, BlockTags: in.BlockTags,
 		FluidTags: in.FluidTags, BiomeTags: in.BiomeTags, Noises: map[string]vnNoiseParams{}, Possible: in.Possible,
-		StartPools: in.StartPools, TemplateSizes: in.TemplateSizes,
+		StartPools: in.StartPools, TemplateSizes: in.TemplateSizes, StateProviders: in.Providers,
 	}
 	for name, n := range in.Noises {
 		d.Noises[name] = vnNoiseParams{baseOctave: n.BaseOctave, baseAmp: n.BaseAmp, octaves: n.Octaves, mods: n.Mods}

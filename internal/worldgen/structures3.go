@@ -22,6 +22,9 @@ type PillagerOutpost struct {
 // OutpostIn returns the outpost whose cell contains (wx,wz), if the roll passes
 // and the site is dry land clear of any village.
 func (g *Generator) OutpostIn(wx, wz int) PillagerOutpost {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaOutpost(vp, wx, wz) // vanillasites.go
+	}
 	ox, oz := cellOrigin(wx, outpostCell), cellOrigin(wz, outpostCell)
 	if hash01(g.seed, ox, oz, 0x0057) >= 0.45 {
 		return PillagerOutpost{}

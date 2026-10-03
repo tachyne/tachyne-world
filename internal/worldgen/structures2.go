@@ -44,6 +44,9 @@ var ruinedPortalGiant = []string{
 }
 
 func (g *Generator) RuinedPortalIn(wx, wz int) RuinedPortal {
+	if vp := g.vanillaPlacerOf(); vp != nil {
+		return g.vanillaRuinedPortal(vp, wx, wz) // vanillasites.go
+	}
 	ox, oz := cellOrigin(wx, portalCell), cellOrigin(wz, portalCell)
 	k := portalKey{g.seed, ox, oz, g.editsIn != nil} // the guard's answer is part of it
 	portalMu.Lock()
