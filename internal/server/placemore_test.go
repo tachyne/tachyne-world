@@ -22,7 +22,6 @@ func placeLine(lines []string, id string) string {
 // treasure's stocked chest; the temples need ground above sea level, and
 // the nether fossil is not built on demand.
 func TestCommandPlaceCodeStructures(t *testing.T) {
-	skipHeavy(t) // whole structures stamped on the hub: too slow for the one-core race shards
 	s, h, ps, logs := feedbackServer(t)
 	alice := ps["alice"]
 	for _, c := range []string{
@@ -88,7 +87,6 @@ func TestCommandPlaceCodeStructures(t *testing.T) {
 // The big structures: the monument with its elder guardians, and the rest
 // either built or refused when they reach unloaded chunks.
 func TestCommandPlaceBigStructures(t *testing.T) {
-	skipHeavy(t) // whole structures stamped on the hub: too slow for the one-core race shards
 	s, h, ps, logs := feedbackServer(t)
 	alice := ps["alice"]
 	for _, c := range []string{
@@ -141,7 +139,6 @@ func TestPlacePieceMobsVillage(t *testing.T) {
 // blob in stone, a sand disk in dirt, a water spring in a wall, a monster
 // room with its spawner's mob; an unmodelled feature is refused by name.
 func TestCommandPlaceFeatureStamps(t *testing.T) {
-	skipHeavy(t) // whole structures stamped on the hub: too slow for the one-core race shards
 	s, h, ps, logs := feedbackServer(t)
 	alice := ps["alice"]
 	stone, dirt := worldgen.BlockBase("stone"), worldgen.BlockBase("dirt")
