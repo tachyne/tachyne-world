@@ -667,6 +667,14 @@ type mob struct {
 	syaw        float32 // last broadcast head yaw (only resend on change)
 	headYaw     float32 // where the head is pointed (LookControl); the body yaw when nothing is watched
 	sheadYaw    float32 // last broadcast head yaw
+	lookYaw     float32 // the head as it has turned so far toward headYaw (LookControl, mobturn.go)
+	lookInit    bool    // lookYaw has been seated
+	trTicks     int32   // the tracker's tickCount (ServerEntity): ticks since tracking began
+	ctlSpeed    float64 // the speed a stateful move control carries between ticks (TurtleMoveControl)
+	stepBX      float64 // where the last goal update's footsteps were counted from
+	stepBY      float64
+	stepBZ      float64
+	stepInit    bool
 	wasWet      bool    // last step's water state, for the splash on entry
 	lookTicks   int32   // ticks left on a look goal (0 = neither is running)
 	lookEID     int32   // the player being watched (0 = a fixed direction)
@@ -1288,6 +1296,11 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		h.mobAfterMove(players, m)
 	}
+	// ChunkMap's tracker, after the entities have ticked: each mob's
+	// ServerEntity.sendChanges on its own cadence (mobturn.go).
+	for _, m := range h.mobs {
+		h.mobTrack(players, m)
+	}
 }
 
 // goalTurn counts a tick of the mob and reports whether its goal selectors
@@ -1334,6 +1347,7 @@ func (h *hub) mobMoveTick(players map[int32]*tracked, m *mob, goal bool) bool {
 	if goal {
 		h.applyFluidPush(m) // a current carries whatever is standing in it (a goal update's worth)
 	}
+	m.turnBody() // the move control's turn toward the heading, before it moves (mobturn.go)
 
 	// Move, by locomotion mode: walkers travel (mobtravel.go), fliers float
 	// free, swimmers stay inside their water column, anchored mobs hold.
@@ -1385,13 +1399,11 @@ func (h *hub) mobMoveTick(players map[int32]*tracked, m *mob, goal bool) bool {
 	return false
 }
 
-// mobFaceAndBroadcast turns the body to its heading and tells the viewers
-// what moved, once per goal update (vanilla's tracker sends a mob's
-// position every few ticks, not every tick).
+// mobFaceAndBroadcast is the rest of a goal update's facing: a standing NPC
+// turns to its listener, the look goals point the head, and the walk since
+// the last update is heard. The body turns with the move control every tick
+// (turnBody) and the viewers hear of it on the tracker's cadence (mobTrack).
 func (h *hub) mobFaceAndBroadcast(players map[int32]*tracked, m *mob) {
-	if (m.vx != 0 || m.vz != 0) && !m.kbFlight { // a knocked body does not turn to face its flight
-		m.yaw = float32(math.Atan2(-m.vx, m.vz) * 180 / math.Pi)
-	}
 	// A standing NPC turns to face the nearest player (it's listening to you).
 	if _, isNPC := h.npcs[m.eid]; isNPC && math.Hypot(m.vx, m.vz) < 0.02 {
 		if t := h.nearestPlayer(players, m.x, m.z, npcFaceRange); t != nil {
@@ -1404,37 +1416,18 @@ func (h *hub) mobFaceAndBroadcast(players map[int32]*tracked, m *mob) {
 	if m.etype == entityEnderman {
 		h.endermanFaceTarget(players, m) // a held enderman looks its starer in the eye
 	}
-
-	// Only emit when the mob actually moved — broadcasting a no-op move
-	// every tick for every mob overflows slow clients' send queues. The
-	// event carries the absolute position; each viewer's renderer derives
-	// its own relative deltas.
-	if m.x != m.sx || m.y != m.sy || m.z != m.sz {
-		h.mobFootsteps(players, m, m.x-m.sx, m.y-m.sy, m.z-m.sz)
+	if !m.stepInit {
+		m.stepBX, m.stepBY, m.stepBZ, m.stepInit = m.sx, m.sy, m.sz, true
+	}
+	if m.x != m.stepBX || m.y != m.stepBY || m.z != m.stepBZ {
+		h.mobFootsteps(players, m, m.x-m.stepBX, m.y-m.stepBY, m.z-m.stepBZ)
 		// A walking or swimming mob's STEP/SWIM vibration (Entity.move →
 		// gameEvent), throttled like a player's; fliers make none.
-		if (m.x != m.sx || m.z != m.sz) && !m.flies && !flyerSpecies(m.etype) && h.tick.Load() >= h.sculkStep[m.eid] {
+		if (m.x != m.stepBX || m.z != m.stepBZ) && !m.flies && !flyerSpecies(m.etype) && h.tick.Load() >= h.sculkStep[m.eid] {
 			h.sculkStep[m.eid] = h.tick.Load() + 3
 			h.vibStep(m.dim, m.x, m.y, m.z, m.eid)
 		}
-		m.sx, m.sy, m.sz = m.x, m.y, m.z
-		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
-	}
-	// Facing only when it changed meaningfully (saves packets). BOTH the head
-	// rotation and a zero-delta move ride the same latch: the move carries the
-	// BODY yaw, without which a mob turning in place (tracking a target while
-	// stationary) renders with a frozen torso — visible as a direction snap at
-	// a shard crossing, where the shadow pipeline had been streaming the live
-	// body yaw all along.
-	if math.Abs(float64(m.yaw-m.syaw)) > 8 {
-		m.syaw = m.yaw
-		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
-	}
-	// The head is its own rotation: a mob watching a player turns it
-	// without turning the body (vanilla's ClientboundRotateHeadPacket).
-	if math.Abs(float64(m.headYaw-m.sheadYaw)) > 8 {
-		m.sheadYaw = m.headYaw
-		h.toTracking(players, m.eid, m.dim, m.x, m.z, entHead(m.eid, m.headYaw))
+		m.stepBX, m.stepBY, m.stepBZ = m.x, m.y, m.z
 	}
 }
 

@@ -88,7 +88,9 @@ func (h *hub) cmdRotate(players map[int32]*tracked, e evRotate) {
 		tp.yaw, tp.pitch = float32(yaw), float32(pitch)
 		tp.p.sendEv(teleportEv(tp.x, tp.y, tp.z, tp.yaw, tp.pitch))
 	} else {
-		m.yaw = float32(yaw)
+		m.yaw, m.headYaw = float32(yaw), float32(yaw)
+		m.syaw = m.yaw
+		m.snapLook() // the head turns with it at once, not at the look control's pace
 		h.toTracking(players, m.eid, dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, float32(pitch), false))
 		h.toTracking(players, m.eid, dim, m.x, m.z, entHead(m.eid, m.yaw))
 	}

@@ -886,6 +886,8 @@ func (h *hub) setMobNBT(players map[int32]*tracked, m *mob, old, tag map[string]
 		}
 	}
 	if moved {
+		m.syaw = m.yaw
+		m.snapLook()
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, false))
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entHead(m.eid, m.yaw))
 	}

@@ -53,7 +53,10 @@ func TestFrogIdleRunOne(t *testing.T) {
 	croaks, strolls := 0, 0
 	var last *idleWalk
 	wasCroaking := false
-	for i := 0; i < 1500; i++ {
+	// A frog ashore walks at SmoothSwimmingMoveControl's 0.1 of its speed (a
+	// few blocks a stroll take it hundreds of ticks), so the run is long
+	// enough for the RunOne's picks to show their weights.
+	for i := 0; i < 5000; i++ {
 		h.tick.Add(mobMoveInterval)
 		h.mobUpdate(players)
 		if f.croakLeft > 0 && !wasCroaking {

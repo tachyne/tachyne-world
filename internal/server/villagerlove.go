@@ -27,7 +27,7 @@ const (
 	villagerExcessFood  = 24  // hasExcessFood
 	breedSeekRange      = 8.0 // InteractWith(VILLAGER, 8, canBreed, canBreed, BREED_TARGET)
 	breedMeetDistSq     = 5.0 // VillagerMakeLove.tick: distanceToSqr(target) <= 5
-	breedWalkSpeed      = 0.5 // lockGazeAndWalkToEachOther(.., 0.5F, 2)
+	breedWalkSpeed      = 1.0 // lockGazeAndWalkToEachOther(.., 0.5F, 2): the villager's own pace (walkBaseMod)
 	breedDurationMin    = 275 // 275 + nextInt(50)
 	breedDurationRand   = 50  //
 	breedHappyOdds      = 35  // nextInt(35) == 0: happy particles while courting
