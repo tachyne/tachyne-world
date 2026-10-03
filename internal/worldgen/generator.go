@@ -68,6 +68,10 @@ type Generator struct {
 	// editAt, for the build guard's area checks (buildguard.go).
 	editsIn func(cx, cz int32, fn func(x, y, z int, state uint32))
 
+	// vdim is the vanilla generator's Nether or End (vanilladimgen.go),
+	// installed by useVanillaDimension; nil in native mode.
+	vdim VanillaDimension
+
 	// spikes is the End's pillar layout (EndSpikes), worked out on first use
 	// from the seed and the build guard; spikeMu guards it.
 	spikeMu sync.Mutex
@@ -282,6 +286,9 @@ func (g *Generator) Height(wx, wz int) int {
 		return g.NetherFloor(wx, wz)
 	}
 	if g.end {
+		if v := g.vEnd(); v != nil {
+			return int(v.SurfaceY(wx, wz))
+		}
 		return EndSurfaceY + 2
 	}
 	h := g.landHeight(wx, wz)
@@ -611,6 +618,9 @@ func (g *Generator) GenerateChunk(cx, cz int32) *Chunk {
 	if g.vw != nil {
 		return g.vw.generateChunk(cx, cz)
 	}
+	if g.vdim != nil {
+		return g.vdim.GenerateChunk(cx, cz)
+	}
 	if g.nether {
 		return g.generateNetherChunk(cx, cz)
 	}
@@ -685,6 +695,9 @@ func (ch *Chunk) MaxHeight() int {
 func (g *Generator) SurfaceY(wx, wz int) float64 {
 	if g.vw != nil {
 		return g.vw.surfaceY(wx, wz)
+	}
+	if g.vdim != nil {
+		return g.vdim.SurfaceY(wx, wz)
 	}
 	if g.nether {
 		return float64(g.NetherFloor(wx, wz))

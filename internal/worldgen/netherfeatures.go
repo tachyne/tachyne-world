@@ -20,8 +20,6 @@ var (
 
 const vanillaNetherLava = 31 // vanilla's lava level; absolute anchors shift onto ours
 
-func netherY(vanillaY int) int { return vanillaY - vanillaNetherLava + NetherLavaSea }
-
 // baseStoneNether is #base_stone_nether: what the ores replace.
 func baseStoneNether(s uint32) bool { return s == Netherrack || s == Basalt || s == Blackstone }
 
@@ -35,11 +33,11 @@ type netherOreSpec struct {
 	triangle       bool
 }
 
-func netherOreSpecs() []netherOreSpec {
-	top := NetherCeiling
+func netherOreSpecs(f netherFrame) []netherOreSpec {
+	top := f.ceiling
 	return []netherOreSpec{
-		{AncientDebris, 1, 3, netherY(8), netherY(24), true}, // ORE_ANCIENT_DEBRIS_LARGE
-		{AncientDebris, 1, 2, MinY + 8, top - 8, false},      // ORE_ANCIENT_DEBRIS_SMALL
+		{AncientDebris, 1, 3, f.y(8), f.y(24), true},       // ORE_ANCIENT_DEBRIS_LARGE
+		{AncientDebris, 1, 2, f.floor + 8, top - 8, false}, // ORE_ANCIENT_DEBRIS_SMALL
 	}
 }
 
@@ -52,23 +50,30 @@ func netherOreSpecs() []netherOreSpec {
 var (
 	netherNotDeltas = biomeSet("nether_wastes", "soul_sand_valley", "crimson_forest", "warped_forest")
 	netherDeltas    = biomeSet("basalt_deltas")
-	netherOreBand   = oreUniform(oreAboveBottom(10), oreAbs(NetherCeiling-10)) // above_bottom 10 .. below_top 10
 
-	netherOrePlacements = []orePlacement{
-		{name: "ore_magma", cfg: netherrackOre(MagmaBlock, 33), count: 4,
-			height: oreUniform(oreAbs(netherY(27)), oreAbs(netherY(36))), salt: 0x4E_01},
-		{name: "ore_soul_sand", cfg: netherrackOre(SoulSand, 12), count: 12,
-			height: oreUniform(oreAboveBottom(0), oreAbs(netherY(31))), biomes: biomeSet("soul_sand_valley"), salt: 0x4E_02},
-		{name: "ore_gravel_nether", cfg: netherrackOre(Gravel, 33), count: 2,
-			height: oreUniform(oreAbs(netherY(5)), oreAbs(netherY(41))), biomes: netherNotDeltas, salt: 0x4E_03},
-		{name: "ore_blackstone", cfg: netherrackOre(Blackstone, 33), count: 2,
-			height: oreUniform(oreAbs(netherY(5)), oreAbs(netherY(31))), biomes: netherNotDeltas, salt: 0x4E_04},
-		{name: "ore_gold_nether", cfg: netherrackOre(NetherGoldOre, 10), count: 10, height: netherOreBand, biomes: netherNotDeltas, salt: 0x4E_05},
-		{name: "ore_quartz_nether", cfg: netherrackOre(NetherQuartzOre, 14), count: 16, height: netherOreBand, biomes: netherNotDeltas, salt: 0x4E_06},
-		{name: "ore_gold_deltas", cfg: netherrackOre(NetherGoldOre, 10), count: 20, height: netherOreBand, biomes: netherDeltas, salt: 0x4E_07},
-		{name: "ore_quartz_deltas", cfg: netherrackOre(NetherQuartzOre, 14), count: 32, height: netherOreBand, biomes: netherDeltas, salt: 0x4E_08},
-	}
+	netherOrePlacements        = netherOrePlacementsIn(nativeNetherFrame)
+	vanillaNetherOrePlacements = netherOrePlacementsIn(vanillaNetherFrame)
 )
+
+// netherOrePlacementsIn is the ore list on a frame: above_bottom anchors
+// count from its floor, absolute ones shift with its lava sea.
+func netherOrePlacementsIn(f netherFrame) []orePlacement {
+	band := oreUniform(oreAbs(f.floor+10), oreAbs(f.ceiling-10)) // above_bottom 10 .. below_top 10
+	return []orePlacement{
+		{name: "ore_magma", cfg: netherrackOre(MagmaBlock, 33), count: 4,
+			height: oreUniform(oreAbs(f.y(27)), oreAbs(f.y(36))), salt: 0x4E_01},
+		{name: "ore_soul_sand", cfg: netherrackOre(SoulSand, 12), count: 12,
+			height: oreUniform(oreAbs(f.floor), oreAbs(f.y(31))), biomes: biomeSet("soul_sand_valley"), salt: 0x4E_02},
+		{name: "ore_gravel_nether", cfg: netherrackOre(Gravel, 33), count: 2,
+			height: oreUniform(oreAbs(f.y(5)), oreAbs(f.y(41))), biomes: netherNotDeltas, salt: 0x4E_03},
+		{name: "ore_blackstone", cfg: netherrackOre(Blackstone, 33), count: 2,
+			height: oreUniform(oreAbs(f.y(5)), oreAbs(f.y(31))), biomes: netherNotDeltas, salt: 0x4E_04},
+		{name: "ore_gold_nether", cfg: netherrackOre(NetherGoldOre, 10), count: 10, height: band, biomes: netherNotDeltas, salt: 0x4E_05},
+		{name: "ore_quartz_nether", cfg: netherrackOre(NetherQuartzOre, 14), count: 16, height: band, biomes: netherNotDeltas, salt: 0x4E_06},
+		{name: "ore_gold_deltas", cfg: netherrackOre(NetherGoldOre, 10), count: 20, height: band, biomes: netherDeltas, salt: 0x4E_07},
+		{name: "ore_quartz_deltas", cfg: netherrackOre(NetherQuartzOre, 14), count: 32, height: band, biomes: netherDeltas, salt: 0x4E_08},
+	}
+}
 
 // placeNetherOres runs the nether's ores into this chunk: the blob ores as
 // OreFeature ellipsoids from the 3×3 origin chunks, each origin's placement
@@ -81,8 +86,12 @@ func (g *Generator) placeNetherOres(ch *Chunk, cx, cz int32) {
 	reg := &owRegion{g: g, ch: ch, baseX: int(cx) * 16, baseZ: int(cz) * 16, cols: map[[2]int]column{}}
 	guard := g.newBuildIndex(cx, cz, 2)
 	top := MinY + len(ch.Sections)*16
-	for i := range netherOrePlacements {
-		p := &netherOrePlacements[i]
+	f, placements := g.nf(), netherOrePlacements
+	if g.vNether() != nil {
+		placements = vanillaNetherOrePlacements
+	}
+	for i := range placements {
+		p := &placements[i]
 		for dcx := int32(-1); dcx <= 1; dcx++ {
 			for dcz := int32(-1); dcz <= 1; dcz++ {
 				g.runNetherOrePlacement(reg, guard, p, int(cx+dcx)*16, int(cz+dcz)*16, top)
@@ -98,7 +107,7 @@ func (g *Generator) placeNetherOres(ch *Chunk, cx, cz int32) {
 		}
 		return sectionBlockAt(ch, lx, y, lz)
 	}
-	for _, spec := range netherOreSpecs() {
+	for _, spec := range netherOreSpecs(f) {
 		for a := 0; a < spec.attempts; a++ {
 			lx, lz := rng.Intn(16), rng.Intn(16)
 			span := spec.maxY - spec.minY + 1
@@ -106,7 +115,7 @@ func (g *Generator) placeNetherOres(ch *Chunk, cx, cz int32) {
 			if spec.triangle {
 				y = spec.minY + (rng.Intn(span)+rng.Intn(span))/2
 			}
-			y = clampInt(y, MinY+1, maxY)
+			y = clampInt(y, f.floor+1, maxY)
 			// ScatteredOreFeature: up to size blocks about the origin, none
 			// touching air.
 			tries := rng.Intn(spec.size + 1)
@@ -117,7 +126,7 @@ func (g *Generator) placeNetherOres(ch *Chunk, cx, cz int32) {
 				}
 				off := func() int { return int(roundF((rng.Float32() - rng.Float32()) * float32(d))) }
 				px, py, pz := lx+off(), y+off(), lz+off()
-				if px < 0 || px > 15 || pz < 0 || pz > 15 || py <= MinY || py >= maxY || !baseStoneNether(at(px, py, pz)) {
+				if px < 0 || px > 15 || pz < 0 || pz > 15 || py <= f.floor || py >= maxY || !baseStoneNether(at(px, py, pz)) {
 					continue
 				}
 				exposed := false
@@ -174,9 +183,10 @@ func (g *Generator) netherChunkFeatures2(reg *netherRegion, ncx, ncz int32) {
 	r := newTreeRNG(g.seed^0x4E7F, ox, oz)
 	d := reg.driver()
 	biome := g.netherBiome(ox+8, oz+8)
-	fullRangeY := func() int { return MinY + 1 + r.Intn(NetherCeiling-MinY-2) }
-	range44 := func() int { return MinY + 4 + r.Intn(NetherCeiling-MinY-8) }
-	range1010 := func() int { return MinY + 10 + r.Intn(NetherCeiling-MinY-20) }
+	f := g.nf()
+	fullRangeY := func() int { return f.floor + 1 + r.Intn(f.ceiling-f.floor-2) }
+	range44 := func() int { return f.floor + 4 + r.Intn(f.ceiling-f.floor-8) }
+	range1010 := func() int { return f.floor + 10 + r.Intn(f.ceiling-f.floor-20) }
 	inBiome := func(x, z int) bool { return g.netherBiome(x, z) == biome }
 	// LOCAL_MODIFICATIONS: basalt pillars (soul sand valley) ×10 FULL_RANGE
 	if biome == "minecraft:soul_sand_valley" {
@@ -289,7 +299,8 @@ func triangleOffset(r TreeRNG, spread int) int {
 func (g *Generator) firePatches(r TreeRNG, ox, oz int, fire, on uint32, inBiome func(x, z int) bool, d FungusDriver) {
 	for i, n := 0, r.Intn(6); i < n; i++ {
 		x, z := ox+r.Intn(16), oz+r.Intn(16)
-		y := MinY + 4 + r.Intn(NetherCeiling-MinY-8)
+		f := g.nf()
+		y := f.floor + 4 + r.Intn(f.ceiling-f.floor-8)
 		if !inBiome(x, z) {
 			continue
 		}
@@ -341,9 +352,9 @@ func (g *Generator) basaltPillar(r TreeRNG, x, y, z int, d FungusDriver) {
 	}
 	sides := [4][2]int{{0, -1}, {0, 1}, {-1, 0}, {1, 0}}
 	keep := [4]bool{true, true, true, true}
-	py := y
+	py, floor := y, g.nf().floor
 	for d.Read(x, py, z) == Air {
-		if py <= MinY {
+		if py <= floor {
 			return
 		}
 		d.Set(x, py, z, Basalt)
@@ -438,9 +449,10 @@ func (g *Generator) basaltColumns(r TreeRNG, x, y, z, reach, minH, maxH int, d F
 	cannotPlaceOn := func(s uint32) bool {
 		return s == Lava || s == Bedrock || s == MagmaBlock || s == SoulSand || s == NetherBricks || s == NetherWart
 	}
+	f := g.nf()
 	airOrLavaOcean := func(px, py, pz int) bool {
 		s := d.Read(px, py, pz)
-		return s == Air || (s == Lava && py <= NetherLavaSea)
+		return s == Air || (s == Lava && py <= f.lava)
 	}
 	canPlaceAt := func(px, py, pz int) bool {
 		if !airOrLavaOcean(px, py, pz) {
@@ -473,7 +485,7 @@ func (g *Generator) basaltColumns(r TreeRNG, x, y, z, reach, minH, maxH int, d F
 				var cy int
 				found := false
 				if airOrLavaOcean(cx, y, cz) { // findSurface
-					for cy = y; cy > MinY+1 && step >= 0; step-- {
+					for cy = y; cy > f.floor+1 && step >= 0; step-- {
 						if canPlaceAt(cx, cy, cz) {
 							found = true
 							break
@@ -481,7 +493,7 @@ func (g *Generator) basaltColumns(r TreeRNG, x, y, z, reach, minH, maxH int, d F
 						cy--
 					}
 				} else { // findAir
-					for cy = y; cy < NetherCeiling && step >= 0; step-- {
+					for cy = y; cy < f.ceiling && step >= 0; step-- {
 						s := d.Read(cx, cy, cz)
 						if cannotPlaceOn(s) {
 							break
@@ -513,9 +525,10 @@ func (g *Generator) basaltColumns(r TreeRNG, x, y, z, reach, minH, maxH int, d F
 // below the origin, a manhattan blob (radius 3–7 each axis) of the
 // replacement.
 func (g *Generator) replaceBlobs(r TreeRNG, x, y, z int, target, with uint32, d FungusDriver) {
+	floor := g.nf().floor
 	for d.Read(x, y, z) != target {
 		y--
-		if y <= MinY+1 {
+		if y <= floor+1 {
 			return
 		}
 	}

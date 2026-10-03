@@ -39,7 +39,8 @@ func (g *Generator) netherFossilFrom(ox, oz int, anyBiome bool) NetherFossil {
 	if !anyBiome && g.netherBiome(x, z) != "minecraft:soul_sand_valley" {
 		return NetherFossil{}
 	}
-	lo, hi := netherY(32), NetherCeiling-2
+	f := g.nf()
+	lo, hi := f.y(32), f.ceiling-2
 	y := lo + int(hash01(g.seed, ox, oz, 0xF003)*float64(hi-lo+1))
 	col := g.netherColumn(x, z)
 	at := func(py int) uint32 {
@@ -48,14 +49,14 @@ func (g *Generator) netherFossilFrom(ox, oz int, anyBiome bool) NetherFossil {
 		}
 		return col[py-MinY]
 	}
-	for y > NetherLavaSea {
+	for y > f.lava {
 		cur, below := at(y), at(y-1)
 		if cur == Air && (below == SoulSand || (below != Air && !IsFluid(below) && Collides(below))) {
 			break
 		}
 		y--
 	}
-	if y <= NetherLavaSea {
+	if y <= f.lava {
 		return NetherFossil{}
 	}
 	n := 1 + int(hash01(g.seed, ox, oz, 0xF004)*14)

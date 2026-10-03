@@ -34,6 +34,35 @@ var (
 	Obsidian        = blockBase("obsidian")
 )
 
+// netherFrame is where the Nether's levels sit on the canvas, for the code
+// the native and vanilla Nethers share (features, structures, landings):
+// the native Nether's floor is the canvas bottom, its lava sea tops out at
+// NetherLavaSea and its caverns close at NetherCeiling; vanilla mode's
+// stand at their true heights — the floor at 0, the lava sea's top at 31,
+// the noise's top at 128.
+type netherFrame struct {
+	floor   int // the bottom cell (bedrock)
+	ceiling int // where the caverns close: feature ranges and roof scans top out
+	lava    int // the lava sea's top cell
+}
+
+var (
+	nativeNetherFrame  = netherFrame{MinY, NetherCeiling, NetherLavaSea}
+	vanillaNetherFrame = netherFrame{0, vdmH, vdmNSeaLevel - 1}
+)
+
+// nf is the generator's Nether frame.
+func (g *Generator) nf() netherFrame {
+	if g.vNether() != nil {
+		return vanillaNetherFrame
+	}
+	return nativeNetherFrame
+}
+
+// y is a vanilla absolute height in the frame: vanilla's anchors sit on its
+// lava level of 31.
+func (f netherFrame) y(vanillaY int) int { return vanillaY - vanillaNetherLava + f.lava }
+
 // NewNetherGenerator builds a Generator in nether mode (same seed noise
 // family, different assembly).
 func NewNetherGenerator(seed int64) *Generator {
@@ -63,7 +92,12 @@ func (g *Generator) netherDensity(x, y, z int) float64 {
 }
 
 // netherBlock assembles one nether column cell.
-func (g *Generator) netherBlock(x, y, z int) uint32 { return g.netherCell(x, y, z, true) }
+func (g *Generator) netherBlock(x, y, z int) uint32 {
+	if v := g.vNether(); v != nil {
+		return v.BlockAt(x, y, z)
+	}
+	return g.netherCell(x, y, z, true)
+}
 
 // netherCell is netherBlock with the roof optional: roof=false is the open
 // void above the caverns that the Nether had before it had a roof, which a
@@ -166,7 +200,8 @@ func (g *Generator) NetherFloor(x, z int) int {
 func (g *Generator) NetherFloorOK(x, z int) (int, bool) { return g.netherFloorOK(x, z) }
 
 func (g *Generator) netherFloorOK(x, z int) (int, bool) {
-	for y := NetherLavaSea + 1; y < NetherCeiling-4; y++ {
+	f := g.nf()
+	for y := f.lava + 1; y < f.ceiling-4; y++ {
 		if g.netherBlock(x, y, z) == Air && g.netherBlock(x, y+1, z) == Air &&
 			g.netherBlock(x, y-1, z) != Air && g.netherBlock(x, y-1, z) != Lava {
 			return y, true
@@ -210,5 +245,5 @@ func (g *Generator) NetherLanding(x, z int) (int, int, int, bool) {
 			}
 		}
 	}
-	return x, NetherLavaSea + 1, z, false // refuge: an obsidian island on the sea
+	return x, g.nf().lava + 1, z, false // refuge: an obsidian island on the sea
 }

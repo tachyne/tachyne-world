@@ -185,6 +185,23 @@ func (w *World) SetGenerator(m worldgen.GeneratorMode, p worldgen.WorldPreset) e
 // GeneratorMode is the world's generator.
 func (w *World) GeneratorMode() worldgen.GeneratorMode { return w.gen.GeneratorMode() }
 
+// UseVanillaDimension switches a Nether or End world to the vanilla
+// generator's (worldgen/vanilladimgen.go). Must be called at boot, before
+// any chunk is generated. Its chunks key the cache with a "GV." prefix so
+// they never collide with a native world's of the same seed (the Nether
+// keeps its "n." under it).
+func (w *World) UseVanillaDimension() bool {
+	if !w.gen.UseVanillaDimension(w.seed) {
+		return false
+	}
+	tag := w.dimTag
+	if tag == "" && w.noSky {
+		tag = "n."
+	}
+	w.dimTag = "GV." + tag
+	return true
+}
+
 // Caves is the world's cave generator.
 func (w *World) Caves() worldgen.CaveMode { return w.gen.CaveMode() }
 

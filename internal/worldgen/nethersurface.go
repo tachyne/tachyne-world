@@ -66,6 +66,9 @@ func (g *Generator) netherColumn(x, z int) []uint32 { return g.netherColumnRoof(
 
 // netherColumnRoof is netherColumn with the roof optional (netherCell).
 func (g *Generator) netherColumnRoof(x, z int, roof bool) []uint32 {
+	if v := g.vNether(); v != nil {
+		return v.column(x, z)
+	}
 	n := g.sections * 16
 	col := make([]uint32, n)
 	for i := range col {

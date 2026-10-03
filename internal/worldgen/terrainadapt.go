@@ -461,7 +461,8 @@ func (g *Generator) adaptNetherTerrain(ch *Chunk, cx, cz int32) {
 	if len(rs) == 0 {
 		return
 	}
-	top := min(NetherCeiling, MinY+len(ch.Sections)*16) - 1
+	f := g.nf()
+	top := min(f.ceiling, MinY+len(ch.Sections)*16) - 1
 	var local []beardRigid
 	for lx := 0; lx < 16; lx++ {
 		for lz := 0; lz < 16; lz++ {
@@ -481,7 +482,7 @@ func (g *Generator) adaptNetherTerrain(ch *Chunk, cx, cz int32) {
 			if len(local) == 0 {
 				continue
 			}
-			y0, y1 = max(y0, MinY+5), min(y1, top) // above the bedrock floor, below the roof
+			y0, y1 = max(y0, f.floor+5), min(y1, top) // above the bedrock floor, below the roof
 			for y := y0; y <= y1; y++ {
 				cur := sectionBlockAt(ch, lx, y, lz)
 				ground := netherAdaptGround[cur]
@@ -498,7 +499,7 @@ func (g *Generator) adaptNetherTerrain(ch *Chunk, cx, cz int32) {
 				switch {
 				case ground && v < 0:
 					cut := Air
-					if y <= NetherLavaSea {
+					if y <= f.lava {
 						cut = Lava
 					}
 					setSectionBlock(ch, lx, y, lz, cut, true)
