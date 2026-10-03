@@ -120,3 +120,41 @@ func TestBlockEntityTypeNamesCanonical(t *testing.T) {
 		t.Errorf("chest's block entity type %d", id)
 	}
 }
+
+// A 26.2 creative client keeps a sign's text in block_entity_data (the
+// gateway folds 26.3's sign components into it): sent back, the stack
+// carries the text, and goes out again as 26.3's sign components.
+func TestSignTextFromBlockEntityData(t *testing.T) {
+	h, _, _ := pickDataHub(t)
+	tag := protocol.NBTString(protocol.NBTRoot(), "id", "minecraft:sign")
+	tag = protocol.NBTCompound(tag, "front_text")
+	tag = protocol.NBTCompoundList(tag, "messages", 4)
+	for _, l := range []string{"Hello", "", "world", ""} {
+		tag = protocol.NBTEnd(protocol.NBTString(tag, "text", l))
+	}
+	tag = protocol.NBTString(tag, "color", "red")
+	tag = protocol.NBTEnd(protocol.NBTBool(tag, "has_glowing_text", true))
+	tag = protocol.NBTEnd(protocol.NBTBool(tag, "is_waxed", true))
+	patch := protocol.AppendVarInt(protocol.AppendVarInt(nil, 1), 0)
+	patch = protocol.AppendVarInt(patch, componentBlockEntityData)
+	patch = append(patch, tag...)
+	st := h.creativeStack(itemByName["oak_sign"], 1, patch)
+	seen := map[int32][]byte{}
+	protocol.WalkCanonicalComponents(stackComponents(st), func(id int32, payload []byte) { seen[id] = payload })
+	var want []byte
+	for _, l := range []string{"Hello", "", "world", ""} {
+		want = append(want, chatNBT(l)...)
+	}
+	want = append(want, 0)
+	want = protocol.AppendVarInt(want, int32(dyeIndex("red")))
+	want = append(want, 1)
+	if !bytes.Equal(seen[componentSignTextFront], want) {
+		t.Errorf("sign_text_front %x, want %x (beData %q)", seen[componentSignTextFront], want, st.beData)
+	}
+	if _, ok := seen[componentWaxed]; !ok {
+		t.Error("the wax was lost")
+	}
+	if _, ok := seen[componentBlockEntityData]; ok {
+		t.Error("the text stayed in block_entity_data")
+	}
+}

@@ -692,6 +692,7 @@ func TestItemTripsWireForTenTicks(t *testing.T) {
 	h.playersRef = players
 	w := h.world
 	a, b := blockPos{0, 180, 0}, blockPos{4, 180, 0}
+	w.ForceLoad(0, 0, 1) // block ticks run in ticking chunks
 	w.SetBlock(a.x-1, a.y, a.z, worldgen.Stone)
 	w.SetBlock(b.x+1, b.y, b.z, worldgen.Stone)
 	w.SetBlock(a.x, a.y, a.z, withProps(t, tripwireHookMin, map[string]string{"facing": "east", "attached": "false", "powered": "false"}))
@@ -704,7 +705,7 @@ func TestItemTripsWireForTenTicks(t *testing.T) {
 		h.calcHook(players, b, w.At(b.x, b.y, b.z))
 	})
 	it := h.spawnItemAt(players, 0, itemByName["stick"], 1, 2.5, 180.05, 0.5, 0, 0, 0)
-	step := func() { h.tick.Add(1); h.updateTripwires(players) }
+	step := func() { stepTicks(h, players, 1); h.updateTripwires(players) } // the re-check is the string's scheduled tick
 	step()
 	if !boolProp(w.At(a.x, a.y, a.z), "powered") {
 		t.Fatal("an item on the string should trip the hooks")
@@ -780,7 +781,7 @@ func TestPlateReleasesOnItsOwnCadence(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
 	w.SetBlock(x, y, z, worldgen.BlockID("oak_pressure_plate"))
 	it := h.spawnItemAt(players, 0, itemByName["stick"], 1, float64(x)+0.5, float64(y), float64(z)+0.5, 0, 0, 0)
-	step := func() { h.tick.Add(1); h.inDim(0, func() { h.updatePlatesIn(players, 0) }) }
+	step := func() { stepTicks(h, players, 1); h.inDim(0, func() { h.updatePlatesIn(players, 0) }) } // the re-check is the plate's scheduled tick
 	h.inDim(0, func() { h.updatePlatesIn(players, 0) })
 	if platePower(w.At(x, y, z)) == 0 {
 		t.Fatal("the item presses the plate")

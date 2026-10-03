@@ -15,12 +15,12 @@ func TestSkeletonDrawsBow(t *testing.T) {
 	h.playersRef = players
 	pl.x, pl.y, pl.z = 8.5, 180, 0.5
 	s := h.spawnMob(players, entitySkeleton, 0.5, 180, 0.5)
-	s.attackCD = 19
+	s.attackCD = 38 // ticks to the shot
 	h.bowDrawTick(players, s)
 	if s.handActive {
 		t.Fatal("thirty-eight ticks out, the bow hangs")
 	}
-	s.attackCD = 10
+	s.attackCD = 20
 	h.bowDrawTick(players, s)
 	if !s.handActive {
 		t.Fatal("twenty ticks out, it draws")
@@ -51,7 +51,7 @@ func TestSkeletonDrawsAtItsGolem(t *testing.T) {
 	s := h.spawnMob(players, entitySkeleton, 0.5, 180, 0.5)
 	g := h.spawnMob(players, entityIronGolem, 8.5, 180, 0.5)
 	s.preyTarget = g.eid
-	s.attackCD = 10
+	s.attackCD = 20
 	h.bowDrawTick(players, s)
 	if !s.handActive {
 		t.Fatal("a skeleton about to shoot its golem draws the bow")

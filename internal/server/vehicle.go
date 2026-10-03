@@ -600,11 +600,12 @@ func (h *hub) updateVehicles(players map[int32]*tracked) {
 			h.checkDetector(players, sp)
 		}
 	}
-	now := h.tick.Load()
-	for sp, due := range h.detectorsOn {
-		if now >= due {
-			h.checkDetector(players, sp)
-		}
+}
+
+// detectorTick is DetectorRailBlock.tick: a pressed rail checks again.
+func (h *hub) detectorTick(players map[int32]*tracked, pos blockPos, state uint32) {
+	if railPowered(state) {
+		h.checkDetector(players, h.rsKey(pos))
 	}
 }
 
@@ -635,7 +636,6 @@ func (h *hub) checkDetector(players map[int32]*tracked, sp simPos) {
 		pos := sp.blockPos
 		s := h.rsWorld().At(pos.x, pos.y, pos.z)
 		if !isDetectorRail(s) {
-			delete(h.detectorsOn, sp)
 			return
 		}
 		was := railPowered(s)
@@ -645,9 +645,7 @@ func (h *hub) checkDetector(players map[int32]*tracked, sp simPos) {
 			h.scheduleSignalAround(players, pos)
 		}
 		if should {
-			h.detectorsOn[sp] = h.tick.Load() + detectorCheckTicks
-		} else {
-			delete(h.detectorsOn, sp)
+			h.scheduleTick(pos, detectorCheckTicks, tickNormal) // the next check
 		}
 		h.updateNeighbourForOutputSignal(players, pos)
 	})

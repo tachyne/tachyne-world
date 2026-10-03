@@ -404,11 +404,16 @@ func (h *hub) updateDaylight(players map[int32]*tracked, pos blockPos, state uin
 		h.rsSet(players, pos, daylightWith(daylightInverted(state), n))
 		h.scheduleSignalAround(players, pos)
 	}
-	h.rsSchedule(pos, 20) // vanilla re-checks every 20 ticks
 }
 
-// updatePlates is the per-tick occupancy scan: entities standing on plates
-// press them; empty pressed plates release. platesOn tracks what's pressed.
+// updatePlates is BasePressurePlateBlock.entityInside for every entity: one
+// standing in the cell of an UNPRESSED plate makes it check at once. A
+// pressed plate checks again only on its scheduled tick, getPressedTime
+// (20, weighted 10) after the last check (plateTick, on the block tick
+// list). A check counts the entities whose box meets TOUCH_AABB — the
+// plate's 14x14 middle, 4/16 tall — leaving spectators out; stone plates
+// feel only living things. A weighted plate's power changes only on those
+// checks.
 func (h *hub) updatePlates(players map[int32]*tracked) {
 	for dim := range h.allDims() {
 		h.inDim(dim, func() { h.updatePlatesIn(players, dim) })
@@ -421,14 +426,8 @@ type plateToucher struct {
 	living                bool
 }
 
-// updatePlatesIn is one dimension's plate pass (the simulation is pointed at
-// it): BasePressurePlateBlock.entityInside and tick. An entity in the cell of
-// an UNPRESSED plate makes it check at once; a pressed plate checks only on
-// its own scheduled tick, getPressedTime (20, weighted 10) after the last
-// check. A check counts the entities whose box meets TOUCH_AABB — the plate's
-// 14x14 middle, 4/16 tall — leaving spectators out; stone plates feel only
-// living things. A weighted plate's power changes only on those checks.
-func (h *hub) updatePlatesIn(players map[int32]*tracked, dim int) {
+// plateEntities are the entities of a dimension a plate check counts.
+func (h *hub) plateEntities(players map[int32]*tracked, dim int) []plateToucher {
 	var ents []plateToucher
 	for _, t := range players {
 		if t.dim == dim && !t.dead && t.gamemode != gmSpectator {
@@ -462,27 +461,69 @@ func (h *hub) updatePlatesIn(players map[int32]*tracked, dim int) {
 			ents = append(ents, plateToucher{v.x, v.y, v.z, w / 2, ht, false})
 		}
 	}
-	now := h.tick.Load()
-	// entityInside: an entity in an unpressed plate's cell.
-	inside := map[blockPos]bool{}
-	for _, e := range ents {
-		pos := blockPos{floorInt(e.x), floorInt(e.y + 0.01), floorInt(e.z)}
-		if s := h.rsWorld().At(pos.x, pos.y, pos.z); isPlate(s) && platePower(s) == 0 {
-			inside[pos] = true
+	return ents
+}
+
+// updatePlatesIn is one dimension's entityInside pass (the simulation is
+// pointed at it). The entity list a check counts is gathered only when a
+// plate is stood on.
+func (h *hub) updatePlatesIn(players map[int32]*tracked, dim int) {
+	w := h.rsWorld()
+	var inside []blockPos
+	seen := map[blockPos]bool{}
+	mark := func(x, y, z float64) {
+		pos := blockPos{floorInt(x), floorInt(y + 0.01), floorInt(z)}
+		if seen[pos] {
+			return
+		}
+		if s := w.At(pos.x, pos.y, pos.z); isPlate(s) && platePower(s) == 0 {
+			seen[pos] = true
+			inside = append(inside, pos)
 		}
 	}
-	for pos := range inside {
+	for _, t := range players {
+		if t.dim == dim && !t.dead && t.gamemode != gmSpectator {
+			mark(t.x, t.y, t.z)
+		}
+	}
+	for _, m := range h.mobs {
+		if m.dim == dim && m.dying == 0 && !ignoresBlockTriggers(m) {
+			mark(m.x, m.y, m.z)
+		}
+	}
+	for _, st := range h.armorStands {
+		if st.dim == dim {
+			mark(st.x, st.y, st.z)
+		}
+	}
+	for _, it := range h.items {
+		if it.dim == dim {
+			mark(it.x, it.y, it.z)
+		}
+	}
+	for _, a := range h.arrows {
+		if a.dim == dim {
+			mark(a.x, a.y, a.z)
+		}
+	}
+	for _, v := range h.vehicles {
+		if v.dim == dim {
+			mark(v.x, v.y, v.z)
+		}
+	}
+	if len(inside) == 0 {
+		return
+	}
+	ents := h.plateEntities(players, dim)
+	for _, pos := range inside {
 		h.plateCheckPressed(players, pos, ents)
 	}
-	// tick: each pressed plate's scheduled re-check.
-	for key, due := range h.platesOn {
-		if key.dim != h.rsDim || due > now {
-			continue // another dimension's plates are that dimension's business
-		}
-		delete(h.platesOn, key)
-		if s := h.rsWorld().At(key.x, key.y, key.z); isPlate(s) && platePower(s) > 0 {
-			h.plateCheckPressed(players, key.blockPos, ents)
-		}
+}
+
+// plateTick is BasePressurePlateBlock.tick: a pressed plate checks again.
+func (h *hub) plateTick(players map[int32]*tracked, pos blockPos, state uint32) {
+	if platePower(state) > 0 {
+		h.plateCheckPressed(players, pos, h.plateEntities(players, h.rsDim))
 	}
 }
 
@@ -518,7 +559,7 @@ func (h *hub) plateCheckPressed(players map[int32]*tracked, pos blockPos, ents [
 		h.vib(h.rsDim, freqBlockActivate, pos.x, pos.y, pos.z, 0)
 	}
 	if platePower(ns) > 0 {
-		h.platesOn[h.rsKey(pos)] = h.tick.Load() + platePressedTime(ns)
+		h.scheduleTick(pos, platePressedTime(ns), tickNormal) // the next check
 	}
 }
 

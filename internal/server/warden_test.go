@@ -14,7 +14,7 @@ func TestWardenTimersMatchVanilla(t *testing.T) {
 	if got := (wardenSonicRunUpd + wardenSonicCoolUpd) * mobMoveInterval; got != 100 {
 		t.Errorf("booms every %d ticks, want vanilla's 60 duration + 40 cooldown", got)
 	}
-	if got := (wardenMeleeCD + 1) * mobMoveInterval; got != 18 {
+	if got := wardenMeleeCD; got != 18 { // attackCD counts ticks
 		t.Errorf("melee every %d ticks, want MeleeAttack.create(18)", got)
 	}
 }

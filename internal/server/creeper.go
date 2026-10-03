@@ -48,6 +48,12 @@ func (creeperBehavior) steer(h *hub, m *mob) (float64, float64) {
 // up to the bang, or back down to nothing. Walking away from a half-swollen
 // creeper and coming back finds it still half-swollen.
 func (h *hub) creeperFuse(players map[int32]*tracked, m *mob) {
+	h.creeperFuseStep(players, m, mobMoveInterval)
+}
+
+// creeperFuseStep is SwellGoal.tick and Creeper.tick's swell for step ticks
+// (one: the goal runs every tick, requiresUpdateEveryTick).
+func (h *hub) creeperFuseStep(players map[int32]*tracked, m *mob, step int) {
 	dir := int8(-1)
 	if m.swellDir > 0 {
 		dir = 1
@@ -80,7 +86,7 @@ func (h *hub) creeperFuse(players map[int32]*tracked, m *mob) {
 		h.playSoundDim(players, m.dim, "minecraft:entity.creeper.primed", sndHostile, m.x, m.y, m.z, 1, 0.5)
 		h.vibAt(m.dim, freqPrimeFuse, m.x, m.y, m.z, m.eid)
 	}
-	m.swell += int(dir) * mobMoveInterval
+	m.swell += int(dir) * step
 	if m.swell < 0 {
 		m.swell = 0
 	}

@@ -124,9 +124,9 @@ func (h *hub) hoglinBiteStart(players map[int32]*tracked, m *mob) {
 
 func hoglinAttackCD(m *mob) int {
 	if m.baby {
-		return hoglinBabyAttack/mobMoveInterval - 1
+		return hoglinBabyAttack // ticks, as attackCD counts them
 	}
-	return hoglinAttackTicks/mobMoveInterval - 1
+	return hoglinAttackTicks
 }
 
 // isHoglinRepellent is #hoglin_repellents.

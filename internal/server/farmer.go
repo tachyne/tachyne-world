@@ -25,7 +25,7 @@ const (
 	farmWorkTicks     = 200 // HarvestFarmland.HARVEST_DURATION
 	farmRestTicks     = 40  // stop(): nextOkStartTime = now + 40
 	farmSwitchTicks   = 20  // a new plot mid-session: nextOkStartTime = now + 20
-	farmSpeed         = 0.5 // SPEED_MODIFIER
+	farmSpeed         = 1.0 // SPEED_MODIFIER 0.5: the villager's own pace (walkBaseMod)
 	farmReach         = 1.0 // closerToCenterThan(pos, 1.0)
 	farmFieldRange    = 8   // the secondary job site: farmland within this of the villager (vanilla walks to it first)
 	bonemealSession   = 80  // UseBonemeal.BONEMEALING_DURATION

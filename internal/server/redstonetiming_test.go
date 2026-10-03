@@ -89,13 +89,13 @@ func TestPlateReleasesAfterPressedTime(t *testing.T) {
 		}
 		delete(h.items, it.eid)
 		for i := 0; i < c.ticks-1; i++ {
-			h.tick.Add(1)
+			stepTicks(h, players, 1) // the plate's re-check is its scheduled tick
 			h.inDim(0, func() { h.updatePlatesIn(players, 0) })
 			if platePower(w.At(x, y, z)) == 0 {
 				t.Fatalf("%s released %d ticks after the item left, want %d", c.plate, i+1, c.ticks)
 			}
 		}
-		h.tick.Add(1)
+		stepTicks(h, players, 1)
 		h.inDim(0, func() { h.updatePlatesIn(players, 0) })
 		if platePower(w.At(x, y, z)) != 0 {
 			t.Fatalf("%s should release at %d ticks", c.plate, c.ticks)

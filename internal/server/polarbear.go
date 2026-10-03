@@ -70,7 +70,7 @@ func (h *hub) polarBearStep(players map[int32]*tracked, m *mob) {
 	}
 	reach := 0.6 + bearStandReach // the player's width plus three
 	if dist3sq(t.x, t.y, t.z, m.x, m.y, m.z) < reach*reach {
-		if m.attackCD*mobMoveInterval <= bearStandCD {
+		if m.attackCD <= bearStandCD { // attackCD counts ticks
 			h.setBearStanding(players, m, true) // rearing up, the warning
 		}
 		return

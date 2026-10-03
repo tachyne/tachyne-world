@@ -49,6 +49,12 @@ func (h *hub) redstoneTick(players map[int32]*tracked, pos blockPos, state uint3
 		h.crafterTick(players, simPos{dim: h.rsDim, blockPos: pos}, state)
 	case isButton(state):
 		h.buttonTick(players, pos, state)
+	case isPlate(state):
+		h.plateTick(players, pos, state)
+	case isTripwire(state):
+		h.tripwireTick(players, pos, state)
+	case isDetectorRail(state):
+		h.detectorTick(players, pos, state)
 	case isLightningRod(state), isLectern(state):
 		h.poweredPulseEnds(players, pos, state)
 	default:
@@ -366,7 +372,8 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 	case isObserver(state):
 		h.updateObserver(players, pos, state)
 	case isDaylight(state):
-		h.updateDaylight(players, pos, state)
+		// No neighbour reaction: the detector reads the sky on its block
+		// entity's twenty-tick beat (betickers.go) and when flipped.
 	case isPistonBase(state):
 		h.updatePiston(players, pos, state)
 	case isMovingPiston(state):

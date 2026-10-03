@@ -75,8 +75,8 @@ func TestParchedIsASlowerSkeleton(t *testing.T) {
 		if len(h.arrows) == before {
 			t.Fatalf("a %s in range never shot", advEntityName[et])
 		}
-		if m.attackCD != 34 {
-			t.Errorf("%s cooldown %d mob-updates, want 34 (70 ticks)", advEntityName[et], m.attackCD)
+		if m.attackCD != 70 {
+			t.Errorf("%s cooldown %d ticks, want 70", advEntityName[et], m.attackCD)
 		}
 		h.removeMob(players, m)
 	}

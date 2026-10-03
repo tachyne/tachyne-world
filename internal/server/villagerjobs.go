@@ -16,7 +16,7 @@ import (
 // handed a profession at the village's birth and never changed.
 
 const (
-	jobWalkSpeed    = 0.5 // GoToPotentialJobSite speedModifier
+	jobWalkSpeed    = 1.0 // GoToPotentialJobSite(speedModifier): the brain's 0.5, the villager's own pace (walkBaseMod)
 	jobClaimDist    = 2.0 // AssignProfessionFromJobSite: closerToCenterThan(pos, 2.0)
 	jobValidateDist = 16.0
 	profUnemployed  = -1

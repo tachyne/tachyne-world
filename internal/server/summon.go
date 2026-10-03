@@ -315,7 +315,8 @@ func (h *hub) summonAt(players map[int32]*tracked, e evSummon) {
 			m.custom = tagCopy(e.data).(map[string]any)
 		}
 		if hasRot {
-			m.yaw, m.headYaw = yaw, yaw
+			m.yaw, m.headYaw, m.syaw = yaw, yaw, yaw
+			m.snapLook()
 			h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, yaw, pitch, false))
 			h.toTracking(players, m.eid, m.dim, m.x, m.z, entHead(m.eid, yaw))
 		}

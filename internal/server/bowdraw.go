@@ -10,7 +10,7 @@ import "github.com/tachyne/tachyne-common/protocol"
 const (
 	metaIndexLivingFlags = 8  // LivingEntity DATA_LIVING_ENTITY_FLAGS (byte; stable across versions)
 	livingFlagUsing      = 1  // LIVING_ENTITY_FLAG_IS_USING
-	bowDrawUpdates       = 10 // twenty ticks of pull before the release
+	bowDrawTicks         = 20 // twenty ticks of pull before the release
 )
 
 func livingFlagsMeta(eid int32, using bool) []byte {
@@ -40,5 +40,5 @@ func (h *hub) setHandActive(players map[int32]*tracked, m *mob, on bool) {
 // shot is twenty ticks or less away.
 func (h *hub) bowDrawTick(players map[int32]*tracked, m *mob) {
 	_, ok := h.rangedQuarry(players, m, shootRange)
-	h.setHandActive(players, m, m.attackCD <= bowDrawUpdates && ok)
+	h.setHandActive(players, m, m.attackCD <= bowDrawTicks && ok)
 }

@@ -330,6 +330,7 @@ func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, stat
 			h.scheduleCoralDeath(dim, pos)
 		}
 		h.fireOnPlace(players, dim, pos, old, state) // a fire inside an obsidian frame lights it
+		h.blockEntityOnPlace(dim, pos, state)        // a daylight detector joins the block-entity tickers
 		if isBubbleSource(state) && h.inWorldYIn(dim, pos.y+1) {
 			// LiquidBlock.updateShape from below: water over new soul sand
 			// or magma asks for the tick that raises its column.

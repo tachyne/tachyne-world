@@ -59,6 +59,13 @@ func (h *hub) travels(m *mob) bool {
 // wantedMove is the move control's output for this tick: the setSpeed
 // value and the unit heading, from what the goals asked for. Nothing while
 // a blow carries it.
+//
+// The goals ask in step units: the mob's moveSpeed (its MOVEMENT_SPEED in
+// the engine's scale, a tuned species' step) times the goal's speed
+// modifier. Undone, that is MoveControl's speedModifier × MOVEMENT_SPEED —
+// for every species, the tuned ones too (their step only sets the scale the
+// goals ask in), times the goal-speed base a species' engine goals are
+// relative to (walkBaseMod).
 func (m *mob) wantedMove() (speed, dx, dz float64) {
 	if m.kbFlight || m.springing() {
 		return 0, 0, 0
@@ -67,17 +74,45 @@ func (m *mob) wantedMove() (speed, dx, dz float64) {
 	if l < 1e-6 {
 		return 0, 0, 0
 	}
-	if sc := stepScaleFor(m.etype); sc != 1 {
-		// A species whose pace is tuned (its move control scales the
-		// attribute: a frog's 0.1 on land, an axolotl's, a villager's
-		// brain speeds): the speed that walks its tuned step a tick at
-		// travel's steady state on an ordinary block.
-		v := l / mobGoalInterval
-		speed = math.Sqrt(v * (1 - defaultFriction*mobAirDrag) / mobInputDrag)
-	} else {
-		speed = l / attrToStep
-	}
+	speed = l / (attrToStep * stepScaleFor(m.etype)) * walkBaseMod(m.etype)
 	return speed, m.vx / l, m.vz / l
+}
+
+// walkBaseMod is the vanilla speed modifier one of a species' engine goal
+// paces stands for. The villager's goals are written against its brain's
+// speedModifier 0.5 (VillagerGoalPackages: a stroll at "1" is 0.5 of
+// MOVEMENT_SPEED); every other species' goals carry vanilla's modifiers.
+func walkBaseMod(etype int) float64 {
+	if etype == entityVillager {
+		return 0.5
+	}
+	return 1
+}
+
+// landMoveControl is the speed a species' own move control sets on land
+// for the speed its goal asked (MoveControl.setSpeed's argument), where
+// that is not the plain value: a frog's SmoothSwimmingMoveControl walks at
+// outsideWaterSpeedModifier 0.1, slowed while it is still turning
+// (getTurningSpeedFactor); a turtle's TurtleMoveControl halves its speed on
+// the ground each tick (to no less than 0.06) and closes an eighth of the
+// way to the asked speed.
+func (m *mob) landMoveControl(target, wx, wz float64) float64 {
+	switch m.etype {
+	case entityFrog:
+		want := float32(math.Atan2(-wx, wz) * 180 / math.Pi)
+		left := math.Abs(float64(wrapDeg(m.yaw - want)))
+		turning := 1 - math.Min(1, math.Max(0, (left-10)/50))
+		return target * 0.1 * turning
+	case entityTurtle:
+		s := m.ctlSpeed
+		if m.onGround {
+			s = math.Max(s/2, 0.06)
+		}
+		s += (target - s) * 0.125
+		m.ctlSpeed = s
+		return s
+	}
+	return target
 }
 
 // mobFluidHeight is how deep the body stands in water (or lava): the
@@ -146,10 +181,22 @@ func (h *hub) mobTravel(players map[int32]*tracked, m *mob, goal bool) bool {
 		m.airFall = 0 // aiStep: either keeps the fall distance at nothing
 	}
 
-	speed, hx, hz := m.wantedMove()
+	speed, wx, wz := m.wantedMove()
+	hx, hz := wx, wz
 	if speed > 0 {
-		h.walkGuard(players, m, speed, hx, hz)
-		speed, hx, hz = m.wantedMove()
+		speed = m.landMoveControl(speed, wx, wz)
+	} else if m.etype == entityTurtle {
+		m.ctlSpeed = 0 // TurtleMoveControl: no wanted position, setSpeed(0)
+	}
+	if speed > 0 {
+		// moveRelative turns the input by yRot: the walker goes the way its
+		// body faces, which the move control turns toward the heading at
+		// its turn a tick (turnBody).
+		hx, hz = m.facing()
+		aligned := hx*wx+hz*wz > 0.9998 // within about a degree of the heading
+		if h.walkGuard(players, m, hx, hz, aligned) {
+			speed = 0 // refused: it stands while it turns away
+		}
 	}
 
 	water := h.mobFluidHeight(m, false)
@@ -563,21 +610,26 @@ func (h *hub) mobBlockEffects(players map[int32]*tracked, m *mob) {
 }
 
 // walkGuard is what a path would have refused: before the walker steps
-// into the next column it checks that column the way mobStepOK always has —
-// no water, no hazard its kind avoids, no drop deeper than three — and on a
-// refusal it stops and turns away.
-func (h *hub) walkGuard(players map[int32]*tracked, m *mob, speed, hx, hz float64) {
+// into the next column the way it faces it checks that column the way
+// mobStepOK always has — no water, no hazard its kind avoids, no drop
+// deeper than three — and on a refusal it stops, and, if it was facing the
+// way it wants to go, turns away (one still turning toward its heading
+// only waits). It reports a refusal.
+func (h *hub) walkGuard(players map[int32]*tracked, m *mob, hx, hz float64, aligned bool) bool {
 	// Where the centre will be a little ahead of the body.
 	ahead := math.Max(0.6, m.box().w/2+0.3)
 	px, pz := m.x+hx*ahead, m.z+hz*ahead
 	if floorInt(px) == floorInt(m.x) && floorInt(pz) == floorInt(m.z) {
-		return
+		return false
 	}
 	if h.walkSoftOK(m, px, pz) {
-		return
+		return false
 	}
 	m.dmx, m.dmz = 0, 0
-	h.turnAway(m)
+	if aligned {
+		h.turnAway(m)
+	}
+	return true
 }
 
 // walkSoftOK is mobStepOK's rules that the collision does not already

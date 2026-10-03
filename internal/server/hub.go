@@ -677,11 +677,9 @@ type hub struct {
 	// chunk data (edits, containers, mobs) pause until /save-on (savecmd.go).
 	saveOff atomic.Bool
 
-	obsSeen  map[simPos]uint32 // observer last-seen watched state
-	compOut  map[simPos]int    // comparator output levels (vanilla block entity)
-	platesOn map[simPos]uint64 // pressed pressure plates → the tick of their next checkPressed (20, weighted 10)
-	wiresOn  map[simPos]uint64 // tripwire strings' scheduled ticks (10-tick re-check, 1-tick release hold), by dimension
-	fireAge  map[simPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
+	obsSeen map[simPos]uint32 // observer last-seen watched state
+	compOut map[simPos]int    // comparator output levels (vanilla block entity)
+	fireAge map[simPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
 
 	// Sculk vibration system (overworld). sculkList/catalysts are POI sets kept
 	// current on block change; the rest is per-block runtime state.
@@ -737,6 +735,10 @@ type hub struct {
 	lastPose         int8            // …and its pose + 1, for the drop that follows (copy_state)
 	hopperTicking    map[simPos]bool // hoppers among the block-entity tickers (tickHoppers)…
 	hopperOrder      []simPos        // …in the order they joined
+	shulkerColliders []*mob          // this tick's shulkers: colliders to a mob's move (mobcollide.go)
+	daylightTicking  map[simPos]bool // daylight detectors among the block-entity tickers (betickers.go)…
+	daylightOrder    []simPos        // …in the order they joined
+	crafterArms      map[simPos]int  // crafters with the arm out → craftingTicksRemaining
 	lastBoxPos       simPos          // a shulker box just removed…
 	lastBoxID        int32           // …and the stowed contents its drop carries
 	lastBannerLayers []attachproto.BannerLayer
@@ -749,7 +751,6 @@ type hub struct {
 	potSherds        *potSherdStore          // …and of the decorated pots' faces
 	blockNames       *blockNameStore         // custom names of placed containers, banners, heads
 	skulls           *skullStore             // placed player heads' owners (skullprofile.go)
-	detectorsOn      map[simPos]uint64       // pressed detector rails, by dimension → the tick of their next 20-tick checkPressed
 	spawnerDelays    map[simPos]int          // placed spawners' spawnDelay (spawnerbe.go)
 	spawnerNext      map[simPos]uint64       // spawner cooldowns, per dimension:
 	// an overworld dungeon and a Nether fortress spawner can share coordinates
@@ -914,8 +915,6 @@ func newHub(w *world.World) *hub {
 		rules:         defaultRules(),
 		obsSeen:       map[simPos]uint32{},
 		compOut:       map[simPos]int{},
-		platesOn:      map[simPos]uint64{},
-		wiresOn:       map[simPos]uint64{},
 		fireAge:       map[simPos]int{},
 		sculkList:     map[simPos]bool{},
 		catalysts:     map[simPos]bool{},
@@ -952,7 +951,6 @@ func newHub(w *world.World) *hub {
 		cfStore:       newCampfireStore(""), // replaced by Run when CampfireFile is set
 		banners:       newBannerStore(""),
 
-		detectorsOn:    map[simPos]uint64{},
 		spawnerNext:    map[simPos]uint64{},
 		spawnerDelays:  map[simPos]int{},
 		raids:          map[blockPos]*raid{},
@@ -1113,8 +1111,9 @@ func (h *hub) run() {
 		}
 	}
 	h.reconcileFurnaceBlocks()
-	h.repairMultiface()    // lichen/vines placed from the wrong default state
-	h.rescheduleRedstone() // dust left powered by a source that is no longer there
+	h.registerBlockEntityTickers() // daylight detectors and crafter arms in the saved world
+	h.repairMultiface()            // lichen/vines placed from the wrong default state
+	h.rescheduleRedstone()         // dust left powered by a source that is no longer there
 	h.ticker = time.NewTicker(h.ticks.interval())
 	defer h.ticker.Stop()
 
@@ -1261,12 +1260,13 @@ func (h *hub) run() {
 					h.sendInventory(t) // self-heal a dropped mode-switch inventory push
 				}
 			}
-			h.updateEffects(players)      // status effects at 20 Hz (vanilla per-effect cadence)
-			h.shoulderTick(players)       // shoulder parrots: chatter, and what knocks them off
-			h.tickHoppers(players)        // HopperBlockEntity.pushItemsTick, every hopper, every tick
-			h.updateMobEffects(players)   // …and the mobs', on the same cadence
-			h.syncMobHealth(players)      // changed mob health to viewers (golem cracks, mount hearts)
-			h.riptideSpinAttacks(players) // a riptiding player strikes what it passes through
+			h.updateEffects(players)          // status effects at 20 Hz (vanilla per-effect cadence)
+			h.shoulderTick(players)           // shoulder parrots: chatter, and what knocks them off
+			h.tickHoppers(players)            // HopperBlockEntity.pushItemsTick, every hopper, every tick
+			h.tickBlockEntityTickers(players) // daylight detectors (every 20th game tick) and crafter arms
+			h.updateMobEffects(players)       // …and the mobs', on the same cadence
+			h.syncMobHealth(players)          // changed mob health to viewers (golem cracks, mount hearts)
+			h.riptideSpinAttacks(players)     // a riptiding player strikes what it passes through
 			if age%10 == 0 {
 				h.fastRegen(players)         // saturation regen at vanilla's 10-tick cadence
 				h.playerContactTick(players) // lava, fire, campfire, cactus: two hits a second
@@ -3000,6 +3000,7 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	pos := blockPos{e.x, e.y, e.z}
 	h.observersSee(players, e.dim, pos, e.state)
 	h.composterOnPlace(e.dim, pos, e.state) // a full composter set by a command or a paste
+	h.blockEntityOnPlace(e.dim, pos, e.state)
 	if e.broken == 0 {
 		h.fireOnPlace(players, e.dim, pos, worldgen.Air, e.state) // a placed fire in a frame lights it
 	}
