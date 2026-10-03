@@ -6,9 +6,9 @@ import "github.com/tachyne/tachyne-world/internal/worldgen"
 // An entity crossing any string in the line trips it; each end hook then emits
 // a redstone signal. Reimplemented from TripWireBlock / TripWireHookBlock.
 //
-// Model: the per-tick occupancy scan presses strings an entity stands in and
-// keeps each one's scheduled tick (h.wiresOn); a changed string re-evaluates
-// the hooks along its axes. A hook's
+// Model: each entity standing in a string presses it (entityInside); a
+// pressed string re-checks on its scheduled tick (the block tick list); a
+// changed string re-evaluates the hooks along its axes. A hook's
 // calcHook walks up to 42 blocks along its facing for the opposite hook,
 // marking itself attached (a valid line exists) and powered (some string in the
 // line is tripped and not disarmed).
@@ -33,76 +33,90 @@ func tripwireDefaultState() uint32 {
 
 const tripwireReach = 42
 
-// updateTripwires is TripWireBlock.entityInside and tick. Any entity in a
-// string's cell — a player (not a spectator), a mob, a dropped item, an
-// arrow, a cart or a boat — presses an unpowered string at once, unless its
-// scheduled tick is pending; a pressed string re-checks only on its own
-// 10-tick tick (so a pulse lasts at least 10 ticks), and on release it
-// holds a 1-tick tick, which is what stops it re-pressing that same tick.
+// updateTripwires is TripWireBlock.entityInside for every entity: any
+// entity in a string's cell — a player (not a spectator), a mob, a dropped
+// item, an arrow, a cart or a boat — presses an unpowered string at once,
+// unless the string has a tick pending. A pressed string re-checks only on
+// its own 10-tick tick (so a pulse lasts at least 10 ticks), and on release
+// it holds a 1-tick tick, which is what stops it re-pressing that same tick
+// (tripwireTick).
 func (h *hub) updateTripwires(players map[int32]*tracked) {
-	now := h.tick.Load()
-	touched := map[simPos]bool{}
+	var touched []simPos
+	seen := map[simPos]bool{}
 	mark := func(dim int, x, y, z float64) {
 		if w := h.worldFor(dim); w != nil {
-			p := blockPos{floorInt(x), floorInt(y + 0.01), floorInt(z)}
-			if isTripwire(w.At(p.x, p.y, p.z)) {
-				touched[simPos{dim, p}] = true
+			p := simPos{dim, blockPos{floorInt(x), floorInt(y + 0.01), floorInt(z)}}
+			if !seen[p] && isTripwire(w.At(p.x, p.y, p.z)) {
+				seen[p] = true
+				touched = append(touched, p)
 			}
 		}
 	}
+	h.eachTripwireToucher(players, mark)
+	for _, p := range touched {
+		h.inDim(p.dim, func() {
+			if s := h.rsWorld().At(p.x, p.y, p.z); isTripwire(s) && !boolProp(s, "powered") && !h.hasScheduledTick(p.blockPos) {
+				h.tripwireCheckPressed(players, p.blockPos, true)
+			}
+		})
+	}
+}
+
+// eachTripwireToucher calls fn with the position of every entity that
+// presses a string it stands in (none ignoring block triggers).
+func (h *hub) eachTripwireToucher(players map[int32]*tracked, fn func(dim int, x, y, z float64)) {
 	for _, t := range players {
 		if t.gamemode != gmSpectator && !t.dead {
-			mark(t.dim, t.x, t.y, t.z)
+			fn(t.dim, t.x, t.y, t.z)
 		}
 	}
 	for _, m := range h.mobs {
 		if m.dying == 0 && !ignoresBlockTriggers(m) {
-			mark(m.dim, m.x, m.y, m.z)
+			fn(m.dim, m.x, m.y, m.z)
 		}
 	}
 	for _, st := range h.armorStands {
-		mark(st.dim, st.x, st.y, st.z)
+		fn(st.dim, st.x, st.y, st.z)
 	}
 	for _, it := range h.items {
-		mark(it.dim, it.x, it.y, it.z)
+		fn(it.dim, it.x, it.y, it.z)
 	}
 	for _, a := range h.arrows {
-		mark(a.dim, a.x, a.y, a.z)
+		fn(a.dim, a.x, a.y, a.z)
 	}
 	for _, v := range h.vehicles {
-		mark(v.dim, v.x, v.y, v.z)
+		fn(v.dim, v.x, v.y, v.z)
 	}
-	// entityInside: an unpowered string with no tick pending is pressed.
-	for p := range touched {
-		if _, pending := h.wiresOn[p]; pending {
-			continue
-		}
-		h.inDim(p.dim, func() {
-			if s := h.rsWorld().At(p.x, p.y, p.z); isTripwire(s) && !boolProp(s, "powered") {
-				h.setWirePressed(players, p.blockPos, true)
-				h.wiresOn[p] = now + tripwirePressTicks
-			}
-		})
+}
+
+// tripwireTick is TripWireBlock.tick: a pressed string checks again for
+// anything still in it.
+func (h *hub) tripwireTick(players map[int32]*tracked, pos blockPos, state uint32) {
+	if !boolProp(state, "powered") {
+		return
 	}
-	// tick: a pressed string re-checks on its schedule; a released one's
-	// 1-tick hold runs out.
-	for p, due := range h.wiresOn {
-		if due > now {
-			continue
+	in := false
+	h.eachTripwireToucher(players, func(dim int, x, y, z float64) {
+		if dim == h.rsDim && floorInt(x) == pos.x && floorInt(y+0.01) == pos.y && floorInt(z) == pos.z {
+			in = true
 		}
-		delete(h.wiresOn, p)
-		h.inDim(p.dim, func() {
-			s := h.rsWorld().At(p.x, p.y, p.z)
-			if !isTripwire(s) || !boolProp(s, "powered") {
-				return
-			}
-			if touched[p] {
-				h.wiresOn[p] = now + tripwirePressTicks
-				return
-			}
-			h.setWirePressed(players, p.blockPos, false)
-			h.wiresOn[p] = now + 1
-		})
+	})
+	h.tripwireCheckPressed(players, pos, in)
+}
+
+// tripwireCheckPressed is TripWireBlock.checkPressed: the string takes the
+// pressed state, its hooks re-evaluate, and its next tick is booked — ten
+// ticks while pressed, one on the release.
+func (h *hub) tripwireCheckPressed(players map[int32]*tracked, pos blockPos, pressed bool) {
+	was := boolProp(h.rsWorld().At(pos.x, pos.y, pos.z), "powered")
+	if pressed != was {
+		h.setWirePressed(players, pos, pressed)
+	}
+	switch {
+	case pressed:
+		h.scheduleTick(pos, tripwirePressTicks, tickNormal)
+	case was:
+		h.scheduleTick(pos, 1, tickNormal)
 	}
 }
 

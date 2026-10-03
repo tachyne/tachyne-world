@@ -677,11 +677,9 @@ type hub struct {
 	// chunk data (edits, containers, mobs) pause until /save-on (savecmd.go).
 	saveOff atomic.Bool
 
-	obsSeen  map[simPos]uint32 // observer last-seen watched state
-	compOut  map[simPos]int    // comparator output levels (vanilla block entity)
-	platesOn map[simPos]uint64 // pressed pressure plates → the tick of their next checkPressed (20, weighted 10)
-	wiresOn  map[simPos]uint64 // tripwire strings' scheduled ticks (10-tick re-check, 1-tick release hold), by dimension
-	fireAge  map[simPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
+	obsSeen map[simPos]uint32 // observer last-seen watched state
+	compOut map[simPos]int    // comparator output levels (vanilla block entity)
+	fireAge map[simPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
 
 	// Sculk vibration system (overworld). sculkList/catalysts are POI sets kept
 	// current on block change; the rest is per-block runtime state.
@@ -752,7 +750,6 @@ type hub struct {
 	potSherds        *potSherdStore          // …and of the decorated pots' faces
 	blockNames       *blockNameStore         // custom names of placed containers, banners, heads
 	skulls           *skullStore             // placed player heads' owners (skullprofile.go)
-	detectorsOn      map[simPos]uint64       // pressed detector rails, by dimension → the tick of their next 20-tick checkPressed
 	spawnerDelays    map[simPos]int          // placed spawners' spawnDelay (spawnerbe.go)
 	spawnerNext      map[simPos]uint64       // spawner cooldowns, per dimension:
 	// an overworld dungeon and a Nether fortress spawner can share coordinates
@@ -917,8 +914,6 @@ func newHub(w *world.World) *hub {
 		rules:         defaultRules(),
 		obsSeen:       map[simPos]uint32{},
 		compOut:       map[simPos]int{},
-		platesOn:      map[simPos]uint64{},
-		wiresOn:       map[simPos]uint64{},
 		fireAge:       map[simPos]int{},
 		sculkList:     map[simPos]bool{},
 		catalysts:     map[simPos]bool{},
@@ -955,7 +950,6 @@ func newHub(w *world.World) *hub {
 		cfStore:       newCampfireStore(""), // replaced by Run when CampfireFile is set
 		banners:       newBannerStore(""),
 
-		detectorsOn:    map[simPos]uint64{},
 		spawnerNext:    map[simPos]uint64{},
 		spawnerDelays:  map[simPos]int{},
 		raids:          map[blockPos]*raid{},

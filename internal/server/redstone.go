@@ -49,6 +49,12 @@ func (h *hub) redstoneTick(players map[int32]*tracked, pos blockPos, state uint3
 		h.crafterTick(players, simPos{dim: h.rsDim, blockPos: pos}, state)
 	case isButton(state):
 		h.buttonTick(players, pos, state)
+	case isPlate(state):
+		h.plateTick(players, pos, state)
+	case isTripwire(state):
+		h.tripwireTick(players, pos, state)
+	case isDetectorRail(state):
+		h.detectorTick(players, pos, state)
 	case isLightningRod(state), isLectern(state):
 		h.poweredPulseEnds(players, pos, state)
 	default:
