@@ -123,8 +123,7 @@ func (h *hub) windPush(players map[int32]*tracked, dim int, cx, cy, cz, radius f
 		if n < 1e-9 || power <= 0 {
 			continue
 		}
-		m.vx, m.vz, m.kb, m.reroute = m.vx+ex/n*power, m.vz+ez/n*power, 3, 0
-		h.mobKnockVelocity(players, m)
+		h.mobShove(players, m, 1, ex/n*power, ez/n*power, 0, 3) // the burst's push, per tick
 	}
 }
 

@@ -321,11 +321,13 @@ func (h *hub) golemMelee(players map[int32]*tracked, m *mob) {
 	if o != nil {
 		m.attackCD = 5                                                                         // mob-updates between swings
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusAttack)) // the arm swing
-		if kdx, kdz := o.x-m.x, o.z-m.z; kdx != 0 || kdz != 0 {
+		if kdx, kdz := o.x-m.x, o.z-m.z; (kdx != 0 || kdz != 0) && o.kbScale() > 0 {
+			// The blow's default knockback (0.4, halving what the victim
+			// had), and IronGolem.doHurtTarget's 0.4 straight up on top —
+			// the lift is what launches a golem's victims.
 			d := math.Hypot(kdx, kdz)
-			o.vx, o.vz = kdx/d*1.2, kdz/d*1.2 // golems launch their victims
-			o.kb = 4
-			h.mobKnockVelocity(players, o)
+			s := o.kbScale()
+			h.mobShove(players, o, 0.5, kdx/d*0.4*s, kdz/d*0.4*s, 0.4*s, 4)
 		}
 		h.playSoundDim(players, m.dim, "minecraft:entity.iron_golem.attack", sndNeutral, m.x, m.y, m.z, 1, 1)
 		// Golem punches respect the target's armor.

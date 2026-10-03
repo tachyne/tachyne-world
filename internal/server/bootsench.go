@@ -72,11 +72,23 @@ func (h *hub) frostWalk(players map[int32]*tracked, t *tracked) {
 			if w.At(x, fy+1, z) != worldgen.Air {
 				continue // BlockPredicate.matchesTag(above, AIR)
 			}
+			// The write's FrostedIceBlock.onPlace (setBlockAt) schedules
+			// the first melt attempt.
 			h.setBlockAt(players, t.dim, blockPos{x, fy, z}, frostedIceMin)
-			// FrostedIceBlock.onPlace schedules the first melt attempt.
-			h.scheduleIn(t.dim, blockPos{x, fy, z}, uint64(frostedFirstMin+h.rng.Intn(frostedFirstSpan)))
 		}
 	}
+}
+
+// isFrostedIce is any age of frosted ice.
+func isFrostedIce(s uint32) bool { return s >= frostedIceMin && s <= frostedIceMax }
+
+// frostedOnPlace is FrostedIceBlock.onPlace, which runs on every write of a
+// frosted ice state (a new block, or an age step): its tick 60-120 ticks
+// out, unless one is pending. That is why a step of ageing waits 60-120 and
+// not the tick's own 20-40: the onPlace booking comes first, and the tick's
+// later schedule finds it pending.
+func (h *hub) frostedOnPlace(dim int, pos blockPos) {
+	h.scheduleBlockTickIn(dim, pos, uint64(frostedFirstMin+h.rng.Intn(frostedFirstSpan)))
 }
 
 // tickFrostedIce ports FrostedIceBlock.tick: mostly it just ages, and it ages
@@ -102,12 +114,12 @@ func (h *hub) tickFrostedIce(players map[int32]*tracked, dim int, pos blockPos, 
 			n := blockPos{pos.x + d.x, pos.y + d.y, pos.z + d.z}
 			ns := h.worldFor(dim).Block(n.x, n.y, n.z)
 			if ns >= frostedIceMin && ns <= frostedIceMax && !h.slightlyMelt(players, dim, n, int(ns-frostedIceMin)) {
-				h.scheduleIn(dim, n, uint64(frostedRetryMin+h.rng.Intn(frostedRetrySpan)))
+				h.scheduleBlockTickIn(dim, n, uint64(frostedRetryMin+h.rng.Intn(frostedRetrySpan)))
 			}
 		}
 		return true
 	}
-	h.scheduleIn(dim, pos, uint64(frostedRetryMin+h.rng.Intn(frostedRetrySpan)))
+	h.scheduleBlockTickIn(dim, pos, uint64(frostedRetryMin+h.rng.Intn(frostedRetrySpan)))
 	return true
 }
 

@@ -18,6 +18,7 @@ const (
 	maceHeavyThreshold = 5.0 // fall > 5 doubles the shockwave and plays the heavy sound
 	maceKnockRadius    = 3.5 // shockwave reaches this far
 	maceKnockPower     = 0.7 // vanilla SMASH_ATTACK_KNOCKBACK_POWER
+	maceKnockLift      = 0.7 // MaceItem.knockback: push(x, 0.7, z)
 
 	// Mace-only enchantment ids (our declared registry order).
 	enchBreach    = 4
@@ -130,8 +131,8 @@ func (h *hub) smashAround(players map[int32]*tracked, t *tracked, cx, cy, cz flo
 			return
 		}
 		p := power(dist, o.kbScale())
-		o.vx, o.vz, o.kb, o.reroute = dx/dist*p, dz/dist*p, 3, 0
-		h.mobKnockVelocity(players, o)
+		// push(x, 0.7, z): added to its motion, with the shockwave's lift.
+		h.mobShove(players, o, 1, dx/dist*p, dz/dist*p, maceKnockLift, 3)
 	})
 
 	for _, v := range players {

@@ -741,6 +741,26 @@ func (h *hub) onArmSwing(players map[int32]*tracked, e evArmSwing) {
 // the same velocity (set_entity_velocity) so the client plays the flight
 // between our moves — which now follow the same arc.
 func (h *hub) mobKnockVelocity(players map[int32]*tracked, m *mob) {
+	h.mobKnockVelocityLift(players, m, 0)
+}
+
+// mobShove is a shove in vanilla's units: vx, vz are per TICK (what
+// LivingEntity.knockback and Entity.push add to deltaMovement), keep is the
+// share of the mob's own motion that survives it — 0.5 for knockback, which
+// halves what the mob had, 1 for push, which adds to it — and lift is a
+// vertical impulse on top of the hop (MaceItem's 0.7, an iron golem's 0.4).
+// m.v* holds per-update steps, so the shove is stored × mobMoveInterval:
+// every knock site goes through here or does the same sum (melee, sweep,
+// spear), and none shoves at half strength.
+func (h *hub) mobShove(players map[int32]*tracked, m *mob, keep, vx, vz, lift float64, kb int) {
+	m.vx = m.vx*keep + vx*mobMoveInterval
+	m.vz = m.vz*keep + vz*mobMoveInterval
+	m.kb, m.reroute = kb, 0
+	h.mobKnockVelocityLift(players, m, lift)
+}
+
+// mobKnockVelocityLift is mobKnockVelocity with an extra vertical impulse.
+func (h *hub) mobKnockVelocityLift(players map[int32]*tracked, m *mob, lift float64) {
 	// The hop is vanilla's min(0.4, vy/2 + strength) on a grounded victim.
 	// Any real hit already clears 0.4, so in practice it is the ceiling — the
 	// point of computing it rather than hardcoding is the SMALL shoves, where
@@ -748,10 +768,13 @@ func (h *hub) mobKnockVelocity(players map[int32]*tracked, m *mob) {
 	// 0.36 before, just under vanilla's ceiling for every hit. The strength is
 	// read back off the impulse, so every knockback source gets it for free.
 	vx, vz := m.vx/mobMoveInterval, m.vz/mobMoveInterval
-	vy := math.Min(0.4, math.Hypot(vx, vz))
+	vy := math.Min(0.4, math.Hypot(vx, vz)) + lift
 	if h.knockLaunches(m) {
 		if m.airborne {
-			vy = m.vy // off the ground already: the blow leaves its rise or fall alone
+			// Off the ground already: the blow leaves its rise or fall
+			// alone, bar a push's own lift.
+			vy = m.vy + lift
+			m.vy = vy
 		} else {
 			m.airborne, m.vy, m.airFall = true, vy, 0
 		}

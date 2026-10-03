@@ -294,9 +294,8 @@ func (h *hub) nautilusChargeHit(players map[int32]*tracked, m *mob, x, y, z floa
 		return false
 	}
 	h.hurtMobOf(players, hit, float64(dmg), dtMobAttack)
-	kb := power * hit.kbScale()
-	hit.vx, hit.vz, hit.kb, hit.reroute = fx*kb, fz*kb, 3, 0
-	h.mobKnockVelocity(players, hit)
+	kb := power * hit.kbScale() // causeExtraKnockback: LivingEntity.knockback along the heading
+	h.mobShove(players, hit, 0.5, fx*kb, fz*kb, 0, 3)
 	return true
 }
 

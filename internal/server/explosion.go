@@ -150,8 +150,7 @@ func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power
 		if kb := impact * om.kbScale(); kb > 0 {
 			ex, ez := om.x-cx, om.z-cz
 			if n := math.Hypot(ex, ez); n > 1e-9 {
-				om.vx, om.vz, om.kb, om.reroute = om.vx+ex/n*kb, om.vz+ez/n*kb, 3, 0
-				h.mobKnockVelocity(players, om)
+				h.mobShove(players, om, 1, ex/n*kb, ez/n*kb, 0, 3) // ServerExplosion's push, per tick
 			}
 		}
 	}

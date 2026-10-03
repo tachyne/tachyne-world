@@ -789,9 +789,11 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 		if dmg0 := projectileHitDamage(a, m); dmg0 > 0 {
 			h.hurtByShot(players, m, a)
 			if d := math.Hypot(a.vx, a.vz); d > 1e-6 && m.kbScale() > 0 { // ride the arrow's momentum
-				kbp := (0.5 + 0.6*float64(a.punch)) * m.kbScale() // Punch adds 0.6/level
-				m.vx, m.vz, m.kb, m.reroute = a.vx/d*kbp, a.vz/d*kbp, 3, 0
-				h.mobKnockVelocity(players, m)
+				// The hurt's own knockback (0.4 along the arrow's flight,
+				// halving what the mob had), then Punch's push of 0.6 a
+				// level (AbstractArrow.doKnockback) along the same line.
+				kbp := (0.4 + 0.6*float64(a.punch)) * m.kbScale()
+				h.mobShove(players, m, 0.5, a.vx/d*kbp, a.vz/d*kbp, 0, 3)
 			}
 			if shooter := players[a.shooter]; shooter != nil && a.playerShot {
 				h.traderLlamasDefend(m, shooter)

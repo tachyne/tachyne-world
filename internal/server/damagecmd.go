@@ -160,7 +160,12 @@ func (h *hub) commandHurt(players map[int32]*tracked, en cmdEntity, amount float
 		if !h.hurtFrom(players, t, amount, dt, cause, from) {
 			return false
 		}
-		if knock && !t.dead {
+		// A player's own client hears of a shove only through markHurt's
+		// motion sync (syncVelocity, sent to self as well as trackers);
+		// LivingEntity.knockback alone marks needsSync, which goes to the
+		// trackers. #no_impact skips markHurt, so a player takes no shove
+		// from such a type, whatever its knockback.
+		if knock && !t.dead && !dt.has(tagNoImpact) {
 			h.knockback(t, fx, fz)
 		}
 		return true

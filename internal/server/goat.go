@@ -205,9 +205,8 @@ func (h *hub) goatStep(players map[int32]*tracked, m *mob) bool {
 			}
 			if math.Abs(o.x-m.x) < 0.9 && math.Abs(o.z-m.z) < 0.9 && math.Abs(o.y-m.y) < 1.5 {
 				h.hurtMobOf(players, o, float64(dmg), dtMobAttackNoAggro)
-				kb := f3 * force * o.kbScale()
-				o.vx, o.vz, o.kb, o.reroute = m.ramDX*kb, m.ramDZ*kb, 3, 0
-				h.mobKnockVelocity(players, o)
+				kb := f3 * force * o.kbScale() // RamTarget: LivingEntity.knockback along the ram
+				h.mobShove(players, o, 0.5, m.ramDX*kb, m.ramDZ*kb, 0, 3)
 				h.playSoundDim(players, m.dim, goatSound(m, "ram_impact"), sndNeutral, m.x, m.y, m.z, 1, 1)
 				h.goatRamFinish(m)
 				return true
