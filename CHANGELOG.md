@@ -14,6 +14,34 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-10-03
 
 ### Added
+- **The vanilla world generator, per world.** A new world started with
+  `-generator vanilla` is built exactly as Minecraft 26.3 builds it, from
+  the game's own data: continents and mountains, aquifers, caves and
+  ravines, surface blocks, badlands bands, icebergs, ore veins, bedrock
+  and deepslate; 26.3's biomes quart by quart; structures sited on vanilla's
+  grids (`/locate` answers as a 26.3 server does for the seed) with terrain
+  shaped around them by vanilla's rules; chunks decorated through the
+  eleven decoration steps in the server's order and seeding; the Nether at
+  its true 0–128 heights and the End's islands, rings and End cities; and
+  the world spawn the server picks. `-preset` chooses normal,
+  large_biomes, amplified, single_biome_surface, caves, floating_islands
+  or flat. The choice is kept in `worldgen.json` and never changes after.
+  Some features are not placed in vanilla mode yet (dungeons, geodes,
+  fossils, coral, dripstone, sculk and a few more). Existing worlds,
+  including this server's, keep generating exactly as before.
+- **Mobs turn and pace as vanilla's do.** The body turns at most 90° a
+  tick (the swimmers 10°) and walks the way it faces, the head at its look
+  speed; viewers get mob updates on vanilla's tracker beat. Villagers
+  (which walked at half speed), traders, illagers, breezes, frogs and
+  turtles walk at vanilla's speeds. Boats and shulkers block mobs, and
+  melee, bow and creeper-swell goals run every tick.
+- **Redstone blocks on vanilla's clocks.** Pressure plates, tripwire and
+  detector rails re-check on scheduled ticks; the daylight detector reads
+  the sky every second and the crafter's arm resets after five ticks, as
+  block-entity tickers.
+- **Brewing slots and old clients.** A data pack's brewing reagents reach
+  the brewing stand's slots, and a 26.2 player copying a 26.3 sign keeps
+  its text.
 - **Mobs tick at 20 Hz and walk by vanilla's physics.** The mob loop runs
   every tick, each mob's goals taking their turn every other tick as
   vanilla's do. Walking mobs accelerate and slide with each block's
