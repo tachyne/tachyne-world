@@ -120,27 +120,16 @@ func (h *hub) lavaMeetsWater(players map[int32]*tracked, dim int, pos blockPos, 
 		}
 		h.setBlockAt(players, dim, pos, to)
 		h.fizz(players, dim, pos)
-		h.scheduleAroundIn(dim, pos, 1) // setBlockAndUpdate: the neighbours hear it
+		h.notifyAround(players, dim, pos) // setBlockAndUpdate: the neighbours hear it
 		return true
 	}
 	return false
 }
 
 // liquidNotifyNeighbors is the neighbour half of a fluid tick's own
-// setBlockAndUpdate: a water or lava neighbour hears it at once (and asks
-// for its tick); any other neighbour gets the simulation's next-tick look,
-// as a neighbour update to a block with no redstone behaviour does.
+// setBlockAndUpdate: the six neighbours hear it at once — a water or lava
+// neighbour asks for its tick, any other block reacts (neighborChanged).
 func (h *hub) liquidNotifyNeighbors(players map[int32]*tracked, dim int, pos blockPos) {
-	w := h.worldFor(dim)
-	for _, d := range allNeighbors {
-		n := blockPos{pos.x + d.x, pos.y + d.y, pos.z + d.z}
-		if !h.inWorldYIn(dim, n.y) {
-			continue
-		}
-		if s := w.Block(n.x, n.y, n.z); isLiquidBlock(s) {
-			h.liquidOnPlace(players, dim, n, s)
-			continue
-		}
-		h.scheduleIn(dim, n, 1)
-	}
+	h.inDim(dim, func() { h.nbAround(pos, 0, false) })
+	h.nbRun(players)
 }

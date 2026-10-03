@@ -122,7 +122,7 @@ func (h *hub) endermanTakeBlock(players map[int32]*tracked, m *mob) {
 	}
 	pos := blockPos{x, y, z}
 	h.setBlockAt(players, m.dim, pos, worldgen.Air)
-	h.scheduleAroundIn(m.dim, pos, 1) // let neighbours (fluids/falling blocks) react
+	h.notifyAround(players, m.dim, pos) // the neighbours (fluids, falling blocks) react
 	h.vib(m.dim, freqBlockDestroy, x, y, z, m.eid)
 	m.carriedBlock = def
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(enderCarryMeta(m.eid, def)))
@@ -204,7 +204,7 @@ func (h *hub) endermanPlaceBlock(players map[int32]*tracked, m *mob) {
 	}
 	if carried != worldgen.Air {
 		h.setBlockAt(players, m.dim, pos, carried)
-		h.scheduleAroundIn(m.dim, pos, 1)
+		h.notifyAround(players, m.dim, pos)
 	}
 	h.vib(m.dim, freqBlockPlace, x, y, z, m.eid)
 	m.carriedBlock = 0

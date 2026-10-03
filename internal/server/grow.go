@@ -356,7 +356,7 @@ func (h *hub) tickCactus(players map[int32]*tracked, dim, x, y, z int, state uin
 	case age == 15 && height < 3:
 		h.setBlockAt(players, dim, above, cactusMin)
 		h.setBlockAt(players, dim, blockPos{x, y, z}, cactusMin)
-		h.scheduleAroundIn(dim, above, fallDelay) // the new stalk checks its neighbours
+		h.notifyAround(players, dim, above) // the new stalk's neighbour update
 	}
 	if age < 15 {
 		h.setBlockAt(players, dim, blockPos{x, y, z}, cactusMin+uint32(age)+1)
@@ -381,9 +381,9 @@ func (h *hub) tickStackPlant(players map[int32]*tracked, dim, x, y, z int, state
 		return
 	}
 	if age := state - min; age >= 15 {
-		h.setBlockAt(players, dim, blockPos{x, y, z}, min)        // reset this stalk
-		h.setBlockAt(players, dim, blockPos{x, y + 1, z}, min)    // new stalk above
-		h.scheduleAroundIn(dim, blockPos{x, y + 1, z}, fallDelay) // support/neighbour recheck
+		h.setBlockAt(players, dim, blockPos{x, y, z}, min)     // reset this stalk
+		h.setBlockAt(players, dim, blockPos{x, y + 1, z}, min) // new stalk above
+		h.notifyAround(players, dim, blockPos{x, y + 1, z})    // the new stalk's neighbour update
 	} else {
 		h.setBlockAt(players, dim, blockPos{x, y, z}, min+age+1)
 	}
@@ -471,8 +471,8 @@ func (h *hub) tickThaw(players map[int32]*tracked, dim, x, y, z int, state uint3
 		return true
 	}
 	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.WaterBase)
-	h.scheduleAroundIn(dim, blockPos{x, y, z}, waterDelay)
-	h.vib(dim, freqBlockDestroy, x, y, z, 0) // IceBlock.melt: BLOCK_DESTROY
+	h.notifyAround(players, dim, blockPos{x, y, z}) // setBlockAndUpdate; the water asks for its own tick
+	h.vib(dim, freqBlockDestroy, x, y, z, 0)        // IceBlock.melt: BLOCK_DESTROY
 	return true
 }
 
@@ -597,7 +597,7 @@ func (h *hub) updateLeafDistance(players map[int32]*tracked, dim, x, y, z int, s
 		// (updateNeighborShapes → LeavesBlock.updateShape schedules a 1-tick
 		// recompute). Without this the wave stopped one leaf in and a felled
 		// trunk left its canopy standing forever.
-		h.scheduleAroundIn(dim, blockPos{x, y, z}, 1)
+		h.notifyAround(players, dim, blockPos{x, y, z})
 	}
 	return true
 }
@@ -621,7 +621,7 @@ func (h *hub) tickLeaf(players map[int32]*tracked, dim, x, y, z int, state uint3
 		return
 	}
 	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
-	h.scheduleAroundIn(dim, blockPos{x, y, z}, fallDelay)
+	h.nbFrom(state, func() { h.notifyAround(players, dim, blockPos{x, y, z}) }) // removeBlock
 	h.rollLeafDrops(players, dim, x, y, z, state)
 }
 

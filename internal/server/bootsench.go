@@ -151,7 +151,7 @@ func (h *hub) iceMeltsOnBreak(players map[int32]*tracked, dim int, pos blockPos,
 		return
 	}
 	h.setBlockAt(players, dim, pos, worldgen.WaterBase)
-	h.scheduleAroundIn(dim, pos, 1)
+	h.notifyAround(players, dim, pos) // setBlockAndUpdate
 }
 
 // slightlyMelt ages the ice one step, or turns it back to water at the last
@@ -176,7 +176,7 @@ const frostedDampening = 1
 // once in turn.
 func (h *hub) frostedMelt(players map[int32]*tracked, dim int, pos blockPos) {
 	h.setBlockAt(players, dim, pos, worldgen.WaterBase)
-	h.scheduleAroundIn(dim, pos, waterDelay)
+	h.notifyAround(players, dim, pos) // setBlockAndUpdate; the water asks for its own tick
 	for _, d := range sixDirs {
 		n := blockPos{pos.x + d.x, pos.y + d.y, pos.z + d.z}
 		if s := h.worldFor(dim).Block(n.x, n.y, n.z); s >= frostedIceMin && s <= frostedIceMax &&

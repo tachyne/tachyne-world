@@ -24,10 +24,13 @@ import (
 // notification waited a tick: a lamp at the end of dust lit two ticks late
 // and a line of repeaters ran at 3 ticks a stage instead of 2.
 //
-// The fluid, falling-block, fire and growth simulation keeps the older
-// hub.pending queue (sim.go) and its timing: a neighbour update that reaches
-// a block with no redstone behaviour is handed to that queue for the next
-// tick, exactly as before.
+// Every other block answers a neighbour update the same way, at once
+// (neighbourReaction, sim.go): a fire that lost its fuel goes out, concrete
+// powder that water reached sets, frogspawn whose water went is gone. The
+// blocks whose vanilla answer is to schedule their own tick — leaves, a
+// chorus plant, a creaking heart, a bubble column — schedule it. The older
+// hub.pending queue (sim.go) is left with the fluid ticks and the re-checks
+// that wait for a chunk to tick.
 //
 // Everything here runs on the hub goroutine.
 
@@ -380,7 +383,7 @@ func (h *hub) neighborChanged(players map[int32]*tracked, sp simPos) {
 	if reactsToNeighbors(st) {
 		h.inDim(sp.dim, func() { h.updateRedstone(players, sp.blockPos, st) })
 		if worldgen.IsWaterlogged(st) {
-			h.scheduleIn(sp.dim, sp.blockPos, 1) // its water's own re-check
+			h.scheduleFluidTick(sp.dim, sp.blockPos, waterDelay) // its water's tick (updateShape)
 		}
 		return
 	}
@@ -399,7 +402,7 @@ func (h *hub) neighborChanged(players map[int32]*tracked, sp simPos) {
 		// and the fluid's tick is asked for its own delay away.
 		h.liquidOnPlace(players, sp.dim, sp.blockPos, st)
 	} else {
-		h.scheduleIn(sp.dim, sp.blockPos, 1)
+		h.neighbourReaction(players, sp.dim, sp.blockPos, st)
 	}
 	// The quasi-connectivity relay (updateRedstone does the same for the
 	// redstone blocks): an update at the cell above a piston reaches it.
@@ -408,9 +411,9 @@ func (h *hub) neighborChanged(players map[int32]*tracked, sp simPos) {
 	}
 }
 
-// notifyAround is a block change's own notification: the cell itself and
-// its six neighbours hear of it now (redstone) or next tick (the rest of
-// the simulation, as before).
+// notifyAround is a block change's own notification (setBlockAndUpdate's
+// neighbour update, and the cell's own look at itself): the cell and its
+// six neighbours hear of it now, inside the change's cascade.
 func (h *hub) notifyAround(players map[int32]*tracked, dim int, pos blockPos) {
 	h.inDim(dim, func() {
 		h.nbAdd(pos)

@@ -159,6 +159,38 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 	h.reactAt(players, dim, pos, ft)
 }
 
+// bubbleColumnDelay is the tick BubbleColumnBlock.updateShape schedules for
+// the column itself.
+const bubbleColumnDelay = 5
+
+// neighbourReaction is a neighbour update reaching a block with no redstone
+// behaviour (blockticks.go neighborChanged). Vanilla's neighborChanged and
+// updateShape run inside the change that caused them, so this runs now —
+// except for the blocks whose answer is to schedule their own tick: a leaf
+// recomputing its distance, a chorus plant that lost its footing, a
+// creaking heart re-reading its logs (each 1 tick out) and a bubble column
+// (5, beside its water's tick).
+func (h *hub) neighbourReaction(players map[int32]*tracked, dim int, pos blockPos, st uint32) {
+	switch {
+	case isLeaf(st), isChorusPlant(st), isCreakingHeartBlock(st):
+		h.scheduleBlockTickIn(dim, pos, 1)
+		if worldgen.IsWaterlogged(st) {
+			h.scheduleFluidTick(dim, pos, waterDelay)
+		}
+	case worldgen.IsBubbleColumn(st):
+		h.scheduleFluidTick(dim, pos, waterDelay)
+		h.scheduleBlockTickIn(dim, pos, bubbleColumnDelay)
+	default:
+		h.reactAt(players, dim, pos, false)
+	}
+}
+
+// isLeaf is any leaves block.
+func isLeaf(s uint32) bool {
+	_, _, _, ok := leafInfo(s)
+	return ok
+}
+
 // reactAt is a neighbour's change reaching the block at pos — vanilla's
 // neighborChanged and updateShape — or, when ft, the cell's fluid tick.
 func (h *hub) reactAt(players map[int32]*tracked, dim int, pos blockPos, ft bool) {
@@ -388,8 +420,8 @@ func (h *hub) updateFluid(players map[int32]*tracked, dim int, pos blockPos, sta
 	} else {
 		for _, d := range lavaContactDirs {
 			n := blockPos{pos.x + d.x, pos.y + d.y, pos.z + d.z}
-			if worldgen.IsLava(h.worldFor(dim).Block(n.x, n.y, n.z)) {
-				h.scheduleIn(dim, n, 1)
+			if s := h.worldFor(dim).Block(n.x, n.y, n.z); worldgen.IsLava(s) {
+				h.liquidOnPlace(players, dim, n, s) // it meets the water now, as its neighborChanged would
 			}
 		}
 	}
@@ -440,9 +472,6 @@ func (h *hub) updateFluid(players map[int32]*tracked, dim int, pos blockPos, sta
 	if h.inWorldY(below.y) && fluidPassable(belowB) && !same(belowB) && worldgen.FluidPassesFace(worldgen.FaceDown, state, belowB) {
 		h.fluidInto(players, dim, below, base+8, water) // falling
 		h.scheduleFluidTick(dim, below, delay)
-		if water {
-			h.wakePowder(dim, below) // flowing water solidifies concrete powder it reaches
-		}
 		// Vanilla only pools sideways over a drop when boxed by 3+ sources.
 		if h.sourceNeighborCount(dim, pos, base) >= 3 {
 			h.spreadSides(players, dim, pos, base, level, dropOff, delay, slopeFind)
@@ -541,25 +570,6 @@ func (h *hub) fluidHoleBelow(dim int, pos blockPos, same func(uint32) bool) bool
 	return same(belowB) || worldgen.IsReplaceable(belowB)
 }
 
-// powderWakeDirs are the cells that may hold concrete powder a fluid at the
-// centre touches: the cell below the fluid and the four horizontal neighbours
-// (powder converts on water above or beside it, never below).
-var powderWakeDirs = [5]blockPos{{0, -1, 0}, {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}}
-
-// wakePowder re-checks concrete powder touching a freshly-placed WATER cell so
-// FLOWING water solidifies it, not only hand-placed water. tachyne's sim
-// setBlock doesn't fire neighbour updates the way vanilla's flag-3 setBlock
-// does, so the powder must be woken explicitly (vanilla neighbourChanged →
-// ConcretePowderBlock.touchesLiquid).
-func (h *hub) wakePowder(dim int, pos blockPos) {
-	for _, d := range powderWakeDirs {
-		n := blockPos{pos.x + d.x, pos.y + d.y, pos.z + d.z}
-		if worldgen.IsConcretePowder(h.worldFor(dim).Block(n.x, n.y, n.z)) {
-			h.scheduleIn(dim, n, 1)
-		}
-	}
-}
-
 // spreadSides is vanilla FlowingFluid.spreadToSides: place flowing fluid one
 // step weaker in the direction(s) with the shortest slope-distance to a drop
 // (flowDirections). A falling cell spreads at full strength on landing.
@@ -581,9 +591,6 @@ func (h *hub) spreadSides(players map[int32]*tracked, dim int, pos blockPos, bas
 		np := blockPos{pos.x + d.x, pos.y, pos.z + d.z}
 		h.fluidInto(players, dim, np, out, waterFlow)
 		h.scheduleFluidTick(dim, np, delay)
-		if waterFlow {
-			h.wakePowder(dim, np) // flowing water solidifies concrete powder beside it
-		}
 	}
 }
 

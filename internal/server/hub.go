@@ -3120,12 +3120,12 @@ func (h *hub) setBlockLive(players map[int32]*tracked, dim, x, y, z int, state u
 	if dim == dimOverworld {
 		h.rodIndexOnBlockChange(x, y, z, state) // storms strike only the overworld
 	}
-	h.scheduleAroundIn(dim, blockPos{x, y, z}, 1)
 	if old != state {
 		h.observersSee(players, dim, blockPos{x, y, z}, state)
 	}
 	h.afterRemoval(players, dim, blockPos{x, y, z}, old, state)
 	h.potentSulfurChanged(players, dim, blockPos{x, y, z}, old, state)
+	h.nbFrom(old, func() { h.notifyAround(players, dim, blockPos{x, y, z}) }) // setBlockAndUpdate's neighbour update
 	h.bus.publish("block_change", map[string]any{"x": x, "y": y, "z": z, "state": state, "by": "world"})
 }
 

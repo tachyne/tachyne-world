@@ -89,7 +89,10 @@ func (h *hub) afterRemovalIn(players map[int32]*tracked, dim int, pos blockPos, 
 		h.nbFrom(old, func() { h.scheduleSignalAround(players, pos) })
 	}
 	if isAnyRail(old) && railShape(old) >= 2 && railShape(old) <= 5 {
-		h.scheduleAroundIn(h.rsDim, blockPos{pos.x, pos.y + 1, pos.z}, 1) // the rail this slope climbed to
+		// BaseRailBlock.affectNeighborsAfterRemoval: updateNeighborsAt(above),
+		// for the rail this slope climbed to.
+		h.nbFrom(old, func() { h.nbAround(blockPos{pos.x, pos.y + 1, pos.z}, 0, false) })
+		h.nbRun(players)
 	}
 	if hasComparatorOutput(old) {
 		h.updateNeighbourForOutputSignal(players, pos)

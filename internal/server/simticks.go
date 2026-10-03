@@ -1,5 +1,7 @@
 package server
 
+import "github.com/tachyne/tachyne-world/internal/worldgen"
+
 // Scheduled block ticks for the blocks outside the redstone family.
 //
 // Vanilla keeps two different things apart:
@@ -80,6 +82,16 @@ func (h *hub) simBlockTick(players map[int32]*tracked, dim int, pos blockPos, st
 		h.tickDripleaf(players, dim, pos, state)
 	case isTarget(state):
 		h.inDim(dim, func() { h.tickTarget(players, pos, state) })
+	case isLeaf(state):
+		// LeavesBlock.tick: the distance recomputed, written with a
+		// neighbour update — the next leaf's tick, a tick later: the wave.
+		h.updateLeafDistance(players, dim, pos.x, pos.y, pos.z, state)
+	case isChorusPlant(state):
+		h.tickChorusPlant(players, dim, pos.x, pos.y, pos.z, state) // ChorusPlantBlock.tick: no footing, it pops
+	case isCreakingHeartBlock(state):
+		h.creakingHeartTick(players, dim, pos, state)
+	case worldgen.IsBubbleColumn(state):
+		h.updateBubbleColumn(players, dim, pos) // BubbleColumnBlock.tick: updateColumn
 	default:
 		if _, ok := coralDead[state]; ok {
 			h.tickCoral(players, dim, pos, state, true)
