@@ -45,6 +45,12 @@ func (g *Generator) useVanillaDimension(ctx VanillaGenContext) bool {
 	return g.vdim != nil
 }
 
+// UseVanillaDimension is useVanillaDimension for the world package: the
+// Nether or End of a vanilla-mode world, from the world's seed.
+func (g *Generator) UseVanillaDimension(worldSeed int64) bool {
+	return g.useVanillaDimension(VanillaGenContext{Seed: worldSeed})
+}
+
 // vNether and vEnd are the generator's vanilla dimension (nil in native
 // mode, or in the other dimension).
 func (g *Generator) vNether() *vanillaNether {
@@ -75,7 +81,7 @@ func (v *vanillaEnd) withPlacement(ctx VanillaGenContext) *vanillaEnd {
 	return v
 }
 
-// column is the terrain's column on the canvas (MinY..ceiling), as the
+// vdmColumn is the terrain's column on the canvas (MinY..ceiling), as the
 // engine's pure column functions give it.
 func vdmColumn(t *vdmTerrain, sections, lx, lz int) []uint32 {
 	col := make([]uint32, sections*16)
