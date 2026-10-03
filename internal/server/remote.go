@@ -97,7 +97,7 @@ func (r *remotePlayer) Gamemode() int32 {
 func (s *Server) ResumeRemote(id attach.Identity, token string, emit func(typ byte, payload []byte)) (attach.Remote, error) {
 	name, uuid := id.Name, id.UUID
 	ids.learn(name, uuid, id.Edition)
-	ps, ok := s.hub.claimPending(token)
+	ps, chat, ok := s.hub.claimPendingResume(token)
 	if !ok {
 		return nil, fmt.Errorf("resume: no pending handover for token %q", token)
 	}
@@ -106,6 +106,9 @@ func (s *Server) ResumeRemote(id attach.Identity, token string, emit func(typ by
 	}
 	p := newPlayer(ps.EID, name, uuid)
 	s.adoptIdentity(p, id)
+	if chat != nil { // the session crossed with them: listed with it, as before the seam
+		p.chatSession.Store(chat)
+	}
 	p.x, p.y, p.z = ps.X, ps.Y, ps.Z
 	r := &remotePlayer{s: s, p: p, emit: emit, x: ps.X, y: ps.Y, z: ps.Z, gm: ps.Gamemode}
 	go r.decodeLoop()
@@ -141,7 +144,7 @@ func (r *remotePlayer) Action(v any) {
 	case attachproto.SwingAction:
 		h.post(evArmSwing{eid: p.eid, hand: e.Hand}) // handleAnimate → LivingEntity.swing
 	case attachproto.CustomClickAction:
-		h.post(evCustomClick{eid: p.eid, e: e}) // MinecraftServer.handleCustomClickAction
+		h.post(evCustomClick{p: p, e: e}) // MinecraftServer.handleCustomClickAction, in play or configuration
 	case attachproto.UseItem:
 		p.noteAck(e.Seq) // vanilla acks use_item's prediction sequence too
 		// The client says which hand it used; the offhand is where a shield

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -26,6 +27,10 @@ type packContent struct {
 	modifiers  map[string]itemModifier
 	predRaw    map[string]any // the decoded predicate files (inline predicates name them)
 	modRaw     map[string]any // the decoded item modifier files
+
+	// dialogs are the dialog registry entries the packs add or replace
+	// (packdialog.go), by id, each in its data-pack JSON form.
+	dialogs map[string]json.RawMessage
 }
 
 // activePack is the installed load. The engine runs one server per process;
@@ -54,6 +59,7 @@ type packDataFiles struct {
 	loot      map[string]packFile
 	preds     map[string]packFile
 	modifiers map[string]packFile
+	dialogs   map[string]packFile
 }
 
 func newPackDataFiles() *packDataFiles {
@@ -63,6 +69,7 @@ func newPackDataFiles() *packDataFiles {
 		loot:      map[string]packFile{},
 		preds:     map[string]packFile{},
 		modifiers: map[string]packFile{},
+		dialogs:   map[string]packFile{},
 	}
 }
 
@@ -101,6 +108,7 @@ func (d *packDataFiles) take(packID, ns, rest string, read func() ([]byte, error
 		{"loot_table/", d.loot},
 		{"predicate/", d.preds},
 		{"item_modifier/", d.modifiers},
+		{"dialog/", d.dialogs},
 	} {
 		if id, ok := idOf(kind.prefix); ok {
 			if data, err := read(); err == nil {
@@ -116,7 +124,8 @@ func (d *packDataFiles) take(packID, ns, rest string, read func() ([]byte, error
 // registry reads them.
 func buildPackContent(d *packDataFiles, unapplied map[string]map[string]bool) *packContent {
 	pc := &packContent{}
-	pc.tags = buildTagRegistry(d.tags)
+	pc.dialogs = buildPackDialogs(d.dialogs, d.tags["dialog"])
+	pc.tags = buildTagRegistry(d.tags, map[string]map[string]bool{"dialog": dialogIDSet(pc.dialogs)})
 	pc.recipes = buildPackRecipes(d.recipes, pc.tags, unapplied)
 	buildPackLoot(pc, d.preds, d.modifiers, d.loot)
 	return pc
@@ -128,8 +137,8 @@ func (pc *packContent) summary() string {
 	for _, ids := range pc.tags.changed {
 		changed += len(ids)
 	}
-	return fmt.Sprintf("%d changed tags, %d recipes, %d loot tables, %d predicates, %d item modifiers",
-		changed, pc.recipes.count, len(pc.loot), len(pc.predicates)-len(vanillaPredicates), len(pc.modifiers))
+	return fmt.Sprintf("%d changed tags, %d recipes, %d loot tables, %d predicates, %d item modifiers, %d dialogs",
+		changed, pc.recipes.count, len(pc.loot), len(pc.predicates)-len(vanillaPredicates), len(pc.modifiers), len(pc.dialogs))
 }
 
 // applyPackContent installs a reloaded load on the hub: the recipe books
@@ -139,5 +148,5 @@ func (h *hub) applyPackContent(players map[int32]*tracked, pc *packContent) {
 	old := currentPack()
 	installPackContent(pc)
 	h.remapRecipeBooks(players, old, pc)
-	h.onPackRegistriesChanged(players, pc)
+	h.onPackRegistriesChanged(players, old, pc)
 }

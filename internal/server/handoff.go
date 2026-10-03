@@ -60,12 +60,23 @@ func (h *hub) beginHandover(t *tracked, dest int32) {
 	// before send returns, and finishHandover must find the pending handoff.
 	t.migrating = migID
 	h.handoffs[migID] = &handoff{t: t, dest: dest}
-	if err := h.peers.send(dest, handover.MsgMigrate, handover.MigrateEntity{
+	if err := h.peers.send(dest, handover.MsgMigrate, migrateFrame{MigrateEntity: handover.MigrateEntity{
 		Kind: handover.KindPlayer, MigID: migID, Player: &snap,
-	}); err != nil {
+	}, ChatSession: t.p.chatSession.Load()}); err != nil {
 		delete(h.handoffs, migID) // link dropped after connected() — roll back, keep the player
 		t.migrating = ""
 	}
+}
+
+// migrateFrame is MsgMigrate as pods of this engine send it: the shared
+// handover snapshot, and beside it what the snapshot does not model — the
+// player's secure-chat session (RemoteChatSession), so the destination
+// lists the player with it and every client can still verify their signed
+// messages without a relog. The player's gateway keeps the message chain;
+// only the world's copy of the session has to cross.
+type migrateFrame struct {
+	handover.MigrateEntity
+	ChatSession *attachproto.ChatSession `json:"chat_session,omitempty"`
 }
 
 // migrationDim is the dimension a migrating entity arrives in.
@@ -83,7 +94,8 @@ func migrationDim(me handover.MigrateEntity) (int, bool) {
 // player we recreate it from the snapshot (same eid), announce it to everyone
 // already here, and ack. The player's gateway session binds later, on resume
 // (Hello{Purpose:"resume", token}) — PR4.
-func (h *hub) applyMigration(players map[int32]*tracked, from int32, me handover.MigrateEntity) {
+func (h *hub) applyMigration(players map[int32]*tracked, from int32, mf migrateFrame) {
+	me := mf.MigrateEntity
 	if dim, ok := migrationDim(me); ok && h.worldFor(dim) == nil {
 		// A dimension this pod does not run: refuse it, and the sender keeps it.
 		h.peers.send(from, handover.MsgAck, handover.Ack{MigID: me.MigID, OK: false, Err: fmt.Sprintf("dimension %d not run here", dim)})
@@ -97,7 +109,7 @@ func (h *hub) applyMigration(players map[int32]*tracked, from int32, me handover
 		// Hold the state pending until the player's gateway reconnects here with
 		// Hello{Purpose:"resume", token} (ResumeRemote claims it). The player goes
 		// live on this pod only when its session binds — no orphaned entity.
-		h.setPending(me.MigID, *me.Player)
+		h.setPending(me.MigID, *me.Player, mf.ChatSession)
 		h.peers.send(from, handover.MsgAck, handover.Ack{MigID: me.MigID, OK: true})
 	case handover.KindMob:
 		if me.Mob == nil {
@@ -197,31 +209,43 @@ func (h *hub) finishHandover(players map[int32]*tracked, migID string, ok bool) 
 // setPending stores a migrated player's snapshot for its gateway to claim on
 // resume (hub goroutine). TODO: a deadline/TTL so an abandoned handover (client
 // vanished mid-crossing) doesn't leak — SHARDING.md §9.3's 10s window.
-func (h *hub) setPending(token string, ps handover.PlayerState) {
+func (h *hub) setPending(token string, ps handover.PlayerState, chat *attachproto.ChatSession) {
 	h.pendingMu.Lock()
 	h.pendingResume[token] = ps
+	if chat != nil {
+		h.pendingChat[token] = chat
+	}
 	h.pendingMu.Unlock()
 }
 
 // claimPending pops a pending migrated snapshot by token (attach-session
 // goroutine). ok is false if there is no such pending resume (stale/duplicate).
 func (h *hub) claimPending(token string) (handover.PlayerState, bool) {
+	ps, _, ok := h.claimPendingResume(token)
+	return ps, ok
+}
+
+// claimPendingResume is claimPending with the chat session that crossed
+// with the player (nil: none).
+func (h *hub) claimPendingResume(token string) (handover.PlayerState, *attachproto.ChatSession, bool) {
 	h.pendingMu.Lock()
 	defer h.pendingMu.Unlock()
 	ps, ok := h.pendingResume[token]
+	chat := h.pendingChat[token]
 	if ok {
 		delete(h.pendingResume, token)
+		delete(h.pendingChat, token)
 	}
-	return ps, ok
+	return ps, chat, ok
 }
 
 // handlePeerFrame decodes and dispatches a peer frame on the hub goroutine.
 func (h *hub) handlePeerFrame(players map[int32]*tracked, from int32, typ byte, payload []byte) {
 	switch typ {
 	case handover.MsgMigrate:
-		var me handover.MigrateEntity
-		if json.Unmarshal(payload, &me) == nil {
-			h.applyMigration(players, from, me)
+		var mf migrateFrame
+		if json.Unmarshal(payload, &mf) == nil {
+			h.applyMigration(players, from, mf)
 		}
 	case handover.MsgAck:
 		var ack handover.Ack

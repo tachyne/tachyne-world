@@ -10,8 +10,8 @@ import (
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
-// Data pack tags for the item, block, entity_type, fluid and worldgen/biome
-// registries, as TagLoader loads them: for each tag id, the vanilla pack's
+// Data pack tags for the item, block, entity_type, fluid, worldgen/biome,
+// enchantment, potion and dialog registries, as TagLoader loads them: for each tag id, the vanilla pack's
 // file (vanillatags_gen.go) and then every selected pack's file, bottom to
 // top — a "replace": true file dropping what came before — and each tag
 // resolved after the tags it names. A tag missing a required element or tag
@@ -30,7 +30,7 @@ import (
 
 // tagRegistries are the registries whose tags packs may change, by their
 // folder under data/<ns>/tags/.
-var tagRegistries = []string{"item", "block", "entity_type", "fluid", "worldgen/biome"}
+var tagRegistries = []string{"item", "block", "entity_type", "fluid", "worldgen/biome", "enchantment", "potion", "dialog"}
 
 // packTagSet is one load's resolved tags: registry → tag id → member ids, both
 // as namespaced ids ("minecraft:planks" → "minecraft:oak_planks", …).
@@ -104,7 +104,7 @@ func vanillaTags() packTagSet {
 			for id, ents := range vanillaTagFiles[reg] {
 				entries[id] = vanillaTagRefs(ents)
 			}
-			vanillaTagsBuilt[reg] = resolveTags(reg, entries, true)
+			vanillaTagsBuilt[reg] = resolveTags(reg, entries, true, nil)
 		}
 	})
 	return vanillaTagsBuilt
@@ -135,6 +135,14 @@ func tagElementExists(reg, id string) bool {
 			return true
 		}
 		return false
+	case "enchantment":
+		_, ok := enchByName[p]
+		return ns == "minecraft" && ok
+	case "potion":
+		_, ok := potionByVanillaName[p]
+		return ns == "minecraft" && ok
+	case "dialog": // the built-in ones; a load's own come as its extra elements
+		return registryDialogs[id]
 	case "worldgen/biome":
 		biomeSetOnce.Do(func() {
 			biomeSet = map[string]bool{}
@@ -151,7 +159,7 @@ func tagElementExists(reg, id string) bool {
 // tags it names (a tag in a cycle never builds), its members in first
 // order, once each. A tag missing a required reference is left out, and
 // said so unless quiet.
-func resolveTags(reg string, entries map[string][]tagRef, quiet bool) map[string][]string {
+func resolveTags(reg string, entries map[string][]tagRef, quiet bool, extra map[string]bool) map[string][]string {
 	built := map[string][]string{}
 	failed := map[string]bool{}
 	visiting := map[string]bool{}
@@ -189,7 +197,7 @@ func resolveTags(reg string, entries map[string][]tagRef, quiet bool) map[string
 				}
 				continue
 			}
-			if tagElementExists(reg, r.id) {
+			if tagElementExists(reg, r.id) || extra[r.id] {
 				add(r.id)
 			} else if r.required {
 				missing = append(missing, r.String())
@@ -218,7 +226,8 @@ func resolveTags(reg string, entries map[string][]tagRef, quiet bool) map[string
 
 // buildTagRegistry merges the packs' tag files (registry → tag id → files,
 // bottom pack first) onto the vanilla files and resolves every registry.
-func buildTagRegistry(files map[string]map[string][]packFile) *tagRegistry {
+// extra is the elements the load's packs add to a registry (its dialogs).
+func buildTagRegistry(files map[string]map[string][]packFile, extra map[string]map[string]bool) *tagRegistry {
 	r := &tagRegistry{tags: packTagSet{}, changed: map[string]map[string]bool{}}
 	van := vanillaTags()
 	for _, reg := range tagRegistries {
@@ -250,7 +259,7 @@ func buildTagRegistry(files map[string]map[string][]packFile) *tagRegistry {
 			r.tags[reg] = van[reg] // nothing touched: the vanilla resolution as it is
 			continue
 		}
-		built := resolveTags(reg, entries, false)
+		built := resolveTags(reg, entries, false, extra[reg])
 		r.tags[reg] = built
 		ch := map[string]bool{}
 		for id := range entries {

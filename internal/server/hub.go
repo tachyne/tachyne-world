@@ -544,7 +544,10 @@ type hub struct {
 	// (applyMigration) and claimed on attach-session goroutines (ResumeRemote),
 	// so it is mutex-guarded.
 	pendingResume map[string]handover.PlayerState
-	pendingMu     sync.Mutex
+	// pendingChat is the secure-chat session that crossed with a pending
+	// player (migrateFrame), by the same token.
+	pendingChat map[string]*attachproto.ChatSession
+	pendingMu   sync.Mutex
 
 	// Redstone torch toggles of the last 60 ticks (RedstoneTorchBlock
 	// RECENT_TOGGLES): eight at one position burn the torch out.
@@ -904,6 +907,7 @@ func newHub(w *world.World) *hub {
 		waveWet:       map[blockPos]uint32{},
 		handoffs:      map[string]*handoff{},
 		pendingResume: map[string]handover.PlayerState{},
+		pendingChat:   map[string]*attachproto.ChatSession{},
 		shadowOut:     map[int32]map[int32]bool{},
 		shadowIn:      map[int32]*shadowEnt{},
 		hud:           defaultHud(),

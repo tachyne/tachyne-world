@@ -18,7 +18,8 @@ import (
 )
 
 // registryDialogs are the dialogs the dialog registry holds (the core pack's,
-// as the gateways declare it), and the tags naming them.
+// as the gateways declare it), and the tags naming them; data packs add
+// their own (packDialogs).
 var registryDialogs = map[string]bool{
 	"minecraft:custom_options": true,
 	"minecraft:quick_actions":  true,
@@ -94,7 +95,7 @@ func parseDialogArg(arg string) (attachproto.ShowDialog, string) {
 		return attachproto.ShowDialog{Dialog: raw}, ""
 	}
 	id := qualifyID(arg)
-	if !registryDialogs[id] {
+	if !dialogExists(id) {
 		return attachproto.ShowDialog{}, fmt.Sprintf("Can't find element '%s' in registry 'minecraft:dialog'", id)
 	}
 	return attachproto.ShowDialog{Ref: id}, ""
@@ -118,7 +119,32 @@ func typeOf(m map[string]any) string {
 
 // checkDialog is Dialog.DIRECT_CODEC's shape: the type, CommonDialogData
 // (title, body, inputs, after_action) and each type's own required fields.
-func checkDialog(m map[string]any) string {
+func checkDialog(m map[string]any) string { return (*dialogScope)(nil).check(m) }
+
+// dialogScope is the dialogs and dialog tags a dialog's references may name
+// while a pack load is checked (its own entries beside the built-in ones);
+// nil is the installed registry.
+type dialogScope struct {
+	ids  map[string]bool
+	tags map[string]bool
+}
+
+func (sc *dialogScope) hasID(id string) bool {
+	if sc != nil && sc.ids[id] {
+		return true
+	}
+	return dialogExists(id)
+}
+
+func (sc *dialogScope) hasTag(id string) bool {
+	if sc != nil {
+		return sc.tags[id] || dialogTags["#"+id]
+	}
+	_, ok := tagMembers("dialog", id)
+	return ok
+}
+
+func (sc *dialogScope) check(m map[string]any) string {
 	if _, ok := m["title"]; !ok {
 		return "No key title in MapLike"
 	}
@@ -146,7 +172,7 @@ func checkDialog(m map[string]any) string {
 	switch t := typeOf(m); t {
 	case "minecraft:notice":
 		if a, ok := m["action"]; ok {
-			return checkButton(a)
+			return sc.checkButton(a)
 		}
 	case "minecraft:confirmation":
 		for _, k := range []string{"yes", "no"} {
@@ -154,7 +180,7 @@ func checkDialog(m map[string]any) string {
 			if !ok {
 				return "No key " + k + " in MapLike"
 			}
-			if why := checkButton(b); why != "" {
+			if why := sc.checkButton(b); why != "" {
 				return why
 			}
 		}
@@ -164,7 +190,7 @@ func checkDialog(m map[string]any) string {
 			return "actions must be a non-empty list"
 		}
 		for _, a := range acts {
-			if why := checkButton(a); why != "" {
+			if why := sc.checkButton(a); why != "" {
 				return why
 			}
 		}
@@ -174,7 +200,7 @@ func checkDialog(m map[string]any) string {
 			return "No key dialogs in MapLike"
 		}
 		for _, e := range listOf(d) {
-			if why := checkDialogRef(e); why != "" {
+			if why := sc.checkDialogRef(e); why != "" {
 				return why
 			}
 		}
@@ -185,7 +211,7 @@ func checkDialog(m map[string]any) string {
 		return "Unknown dialog type " + t
 	}
 	if e, ok := m["exit_action"]; ok {
-		return checkButton(e)
+		return sc.checkButton(e)
 	}
 	return ""
 }
@@ -200,21 +226,21 @@ func listOf(v any) []any {
 
 // checkDialogRef is a Holder<Dialog> inside a dialog: a registry id, a tag
 // (in a list field) or an inline dialog.
-func checkDialogRef(v any) string {
+func (sc *dialogScope) checkDialogRef(v any) string {
 	switch x := v.(type) {
 	case string:
 		if strings.HasPrefix(x, "#") {
-			if !dialogTags["#"+qualifyID(x[1:])] {
+			if !sc.hasTag(qualifyID(x[1:])) {
 				return "Unknown dialog tag " + x
 			}
 			return ""
 		}
-		if !registryDialogs[qualifyID(x)] {
+		if !sc.hasID(qualifyID(x)) {
 			return "Unknown dialog " + x
 		}
 		return ""
 	case map[string]any:
-		return checkDialog(x)
+		return sc.check(x)
 	}
 	return "Not a dialog"
 }
@@ -287,7 +313,7 @@ var dialogActions = map[string]bool{
 
 // checkButton is ActionButton: CommonButtonData's label and the optional
 // action.
-func checkButton(v any) string {
+func (sc *dialogScope) checkButton(v any) string {
 	x, ok := v.(map[string]any)
 	if !ok {
 		return "Not a button"
@@ -315,7 +341,7 @@ func checkButton(v any) string {
 		if s, isStr := d.(string); isStr && strings.HasPrefix(s, "#") {
 			return "Not a dialog" // a single holder, not a set
 		}
-		return checkDialogRef(d)
+		return sc.checkDialogRef(d)
 	}
 	return ""
 }
@@ -361,23 +387,48 @@ func (h *hub) onDialog(players map[int32]*tracked, e evDialog) {
 	h.cmdSuccess(players, e.by, msg, true)
 }
 
-// evCustomClick is a player's custom click action.
+// evCustomClick is a player's custom click action: from play, or from a
+// configuration phase (ServerCommonPacketListenerImpl handles it in both),
+// when the player is out of the level.
 type evCustomClick struct {
-	eid int32
-	e   attachproto.CustomClickAction
+	p *player
+	e attachproto.CustomClickAction
 }
 
 func (evCustomClick) isHubEvent() {}
 
 // onCustomClick is handleCustomClickAction: vanilla logs it; here plugins
-// hear it (PlayerCustomClickEvent), and through them the bus.
+// hear it (PlayerCustomClickEvent), and through them the bus. A dialog
+// shown by a configuration task (or still open across a reconfiguration)
+// answers while its player is between levels; that action counts too.
 func (h *hub) onCustomClick(players map[int32]*tracked, e evCustomClick) {
-	t := players[e.eid]
-	if t == nil {
+	p := e.p
+	if p == nil {
 		return
 	}
-	log.Printf("custom click action %s from %s (payload %s)", e.e.ID, t.p.name, e.e.Payload)
-	if plugin.Has[*plugin.PlayerCustomClickEvent](h.plugins) {
-		h.plugins.Fire(&plugin.PlayerCustomClickEvent{EID: t.p.eid, Name: t.p.name, ID: e.e.ID, Payload: e.e.Payload})
+	t := players[p.eid]
+	phase := "play"
+	if t == nil || t.p != p {
+		if !p.configuring.Load() {
+			return // gone
+		}
+		phase = "configuration"
 	}
+	log.Printf("custom click action %s from %s in %s (payload %s)", e.e.ID, p.name, phase, e.e.Payload)
+	if plugin.Has[*plugin.PlayerCustomClickEvent](h.plugins) {
+		h.plugins.Fire(&plugin.PlayerCustomClickEvent{EID: p.eid, Name: p.name, ID: e.e.ID, Payload: e.e.Payload})
+	}
+}
+
+// dialogExists is whether the dialog registry holds id: a built-in dialog
+// or one the installed packs add.
+func dialogExists(id string) bool {
+	if registryDialogs[id] {
+		return true
+	}
+	if pc := currentPack(); pc != nil {
+		_, ok := pc.dialogs[id]
+		return ok
+	}
+	return false
 }
