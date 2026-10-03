@@ -219,3 +219,22 @@ func TestGeneratorRefusesToGuess(t *testing.T) {
 		t.Error("an unknown stored generator was accepted")
 	}
 }
+
+// A vanilla world's spawn origin is the server's (NoiseSpawnFinder over
+// the overworld's spawn targets; the 26.3 server's getOrigin for these
+// seeds).
+func TestVanillaWorldSpawnOrigin(t *testing.T) {
+	for _, c := range []struct {
+		seed   int64
+		cx, cz int
+	}{{1, 10, 10}, {5, 0, 0}, {-42, -7, -38}} {
+		w := world.New(c.seed)
+		if err := w.SetGenerator(worldgen.GeneratorVanilla, worldgen.PresetNormal); err != nil {
+			t.Fatal(err)
+		}
+		x, z := noiseSpawnOrigin(w)
+		if x>>4 != c.cx || z>>4 != c.cz {
+			t.Errorf("seed %d: origin chunk %d,%d, the server's %d,%d", c.seed, x>>4, z>>4, c.cx, c.cz)
+		}
+	}
+}

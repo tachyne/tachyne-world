@@ -167,3 +167,28 @@ func TestVanillaClimateQuantizes(t *testing.T) {
 		t.Errorf("depth %d, want %d", p.Depth, want)
 	}
 }
+
+// The spawn targets' fitness on the router's climate against the 26.3
+// server's SpawnTargetPoint.sampleFitness, over a lattice (seed 1).
+func TestVanillaSpawnFitnessMatchesServer(t *testing.T) {
+	g := NewGenerator(1)
+	if err := g.SetGenerator(GeneratorVanilla, PresetNormal); err != nil {
+		t.Fatal(err)
+	}
+	h := uint64(vtFNVBasis)
+	for x := -3000; x <= 3000; x += 97 {
+		for z := -3000; z <= 3000; z += 89 {
+			f, ok := g.VanillaSpawnFitness(x, z)
+			if !ok {
+				t.Fatal("no spawn targets")
+			}
+			h = vtFNV(h, uint64(f))
+		}
+	}
+	if h != 3332146208064911510 {
+		t.Errorf("fitness hash %d, the server's 3332146208064911510", h)
+	}
+	if _, ok := NewGenerator(1).VanillaSpawnFitness(0, 0); ok {
+		t.Error("a native generator scored vanilla spawn targets")
+	}
+}

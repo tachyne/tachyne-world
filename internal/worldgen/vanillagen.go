@@ -463,6 +463,17 @@ func (w *vtWorld) surfaceY(x, z int) float64 {
 	return float64(max(w.landHeight(x, z), w.seaLevel()))
 }
 
+// VanillaSpawnFitness is the vanilla generator's NoiseSpawnFinder fitness
+// at a column: its noise settings' spawn targets scored on the router's
+// climate (0 where a target is met). ok is false in native mode, or for a
+// preset without spawn targets.
+func (g *Generator) VanillaSpawnFitness(x, z int) (fitness int64, ok bool) {
+	if g.vw == nil || g.vw.gen == nil {
+		return 0, false
+	}
+	return g.vw.gen.spawnFitness(x, z)
+}
+
 // String names the mode and preset for logs.
 func (w *vtWorld) String() string {
 	return fmt.Sprintf("vanilla %s (%s)", dimName(w.dim), w.preset)

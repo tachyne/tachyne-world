@@ -24,6 +24,7 @@ type vtSettings struct {
 	materialRule               string
 	router                     map[string]*vdFn
 	aquifers                   map[string]*vdFn // nil: Aquifer.createDisabled
+	spawnTarget                []vtSpawnTarget
 }
 
 // loadVTSettings reads worldgen/noise_settings/<name>.
@@ -44,6 +45,7 @@ func loadVTSettings(name string) (*vtSettings, error) {
 		MaterialRule string                     `json:"material_rule"`
 		Router       map[string]json.RawMessage `json:"noise_router"`
 		Aquifers     map[string]json.RawMessage `json:"aquifers"`
+		SpawnTarget  []map[string][2]float64    `json:"spawn_target"`
 	}
 	if err := json.Unmarshal([]byte(raw), &d); err != nil {
 		return nil, fmt.Errorf("noise settings %q: %w", name, err)
@@ -70,7 +72,52 @@ func loadVTSettings(name string) (*vtSettings, error) {
 			}
 		}
 	}
+	for _, t := range d.SpawnTarget {
+		var st vtSpawnTarget
+		for fn, r := range t {
+			st.fns = append(st.fns, fn)
+			st.mins = append(st.mins, QuantizeClimate(float32(r[0])))
+			st.maxs = append(st.maxs, QuantizeClimate(float32(r[1])))
+		}
+		s.spawnTarget = append(s.spawnTarget, st)
+	}
 	return s, nil
+}
+
+// vtSpawnTarget is a SpawnTargetPoint: climate functions and their spans.
+type vtSpawnTarget struct {
+	fns        []string
+	mins, maxs []int64
+	samplers   []vdSampler
+}
+
+// spawnFitness is the best SpawnTargetPoint.sampleFitness over the
+// settings' spawn targets at a block (NoiseSpawnFinder): how far the
+// column's climate misses each target, squared and summed, in quantised
+// units; ok false when the settings have none.
+func (g *vtGen) spawnFitness(x, z int) (int64, bool) {
+	if len(g.set.spawnTarget) == 0 {
+		return 0, false
+	}
+	ctx := newVDCtx()
+	best := int64(math.MaxInt64)
+	for _, t := range g.spawn {
+		var f int64
+		for i, s := range t.samplers {
+			v := QuantizeClimate(s.value(ctx, x, 0, z))
+			d := int64(0)
+			if above := v - t.maxs[i]; above > 0 {
+				d = above
+			} else if below := t.mins[i] - v; below > 0 {
+				d = below
+			}
+			f += d * d
+		}
+		if f < best {
+			best = f
+		}
+	}
+	return best, true
 }
 
 // vtParseState reads a 26.x block state: a bare name (the default state) or
@@ -127,6 +174,7 @@ type vtGen struct {
 	final, temperature, vegetation, continents, erosion, depth, ridges, chunkSurface vdSampler
 	aqBarrier, aqFlood, aqSpread, aqLava, aqExclusion, aqSurface                     vdSampler
 	aqRandom                                                                         vtPositional
+	spawn                                                                            []vtSpawnTarget // the spawn targets, compiled
 
 	water, lava, air uint32
 }
@@ -170,6 +218,16 @@ func newVTGen(settings string, seed int64) (*vtGen, error) {
 			}
 		}
 		g.aqRandom = g.rs.randomFactory("minecraft:aquifer")
+	}
+	for _, t := range set.spawnTarget {
+		for _, fn := range t.fns {
+			smp, err := g.rs.compileNamed(fn)
+			if err != nil {
+				return nil, fmt.Errorf("noise settings %q spawn target %s: %w", settings, fn, err)
+			}
+			t.samplers = append(t.samplers, smp)
+		}
+		g.spawn = append(g.spawn, t)
 	}
 	return g, nil
 }
