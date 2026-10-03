@@ -166,3 +166,103 @@ func TestTurtleLandMoveControl(t *testing.T) {
 		t.Errorf("turtle settles at %.5f, want %.5f", s, want)
 	}
 }
+
+// Entity.collide with getEntityCollisions: a shulker is a wall to a walker
+// and a boat a step it climbs onto (canBeCollidedWith, its 0.5625 under the
+// 0.6 STEP_HEIGHT); a minecart is neither — the walker goes through it.
+func TestWalkerCollidesWithBoatsAndShulkers(t *testing.T) {
+	for _, c := range []struct {
+		what  string
+		place func(h *hub, players map[int32]*tracked)
+		face  float64 // the collider's near side
+		top   float64 // how high a walker over it stands (0: not over it)
+	}{
+		{"boat", func(h *hub, players map[int32]*tracked) {
+			h.vehicles[9001] = &vehicle{eid: 9001, etype: entityByName["oak_boat"], x: 4.5, y: 180, z: 0.5}
+		}, 4.5 - 1.375/2, 180.5625},
+		{"shulker", func(h *hub, players map[int32]*tracked) {
+			s := h.spawnMob(players, entityShulker, 4.5, 180, 0.5)
+			s.statik = true
+		}, 4, 0},
+		{"minecart", func(h *hub, players map[int32]*tracked) {
+			h.vehicles[9001] = &vehicle{eid: 9001, etype: entityMinecart, x: 4.5, y: 180, z: 0.5}
+		}, 0, 0},
+	} {
+		h, players := idleFloor(t)
+		c.place(h, players)
+		m := strollCow(t, h, players, 1, 0)
+		m.yaw = -90 // facing +x already
+		maxFront, maxY := 0.0, 0.0
+		for i := 0; i < 60; i++ {
+			m.vx, m.vz, m.reroute = m.moveSpeed(), 0, 1000
+			h.updateMobs(players)
+			maxFront, maxY = math.Max(maxFront, m.x+m.box().w/2), math.Max(maxY, m.y)
+		}
+		switch {
+		case c.face == 0:
+			if maxFront < 6 || maxY > 180+1e-9 {
+				t.Errorf("%s: the cow stopped at %.3f (y up to %.3f): it is no collider", c.what, maxFront, maxY)
+			}
+		case c.top == 0:
+			if maxFront > c.face+1e-6 {
+				t.Errorf("%s: the cow's front reached %.3f, past its side at %.3f", c.what, maxFront, c.face)
+			}
+		default:
+			if math.Abs(maxY-c.top) > 1e-6 {
+				t.Errorf("%s: the cow stood at most at y %.4f, want on top at %.4f", c.what, maxY, c.top)
+			}
+		}
+	}
+}
+
+// MeleeAttackGoal runs every tick (requiresUpdateEveryTick): a zombie
+// beside a player bites on the tick its twenty-tick cooldown runs out —
+// odd ticks too, not only on its goal updates — and twenty ticks apart.
+func TestMeleeGoalRunsEveryTick(t *testing.T) {
+	h, players := idleFloor(t)
+	var pl *tracked
+	for _, p := range players {
+		pl = p
+	}
+	pl.gamemode = gmSurvival
+	initSurvival(pl)
+	pl.x, pl.y, pl.z = 1.5, 180, 0.5
+	h.dayTime.Store(18000)
+	z := h.spawnHostileY(players, entityZombie, 0.5, 180, 0.5)
+	z.attackCD = 2 // runs out on tick 2, between its goal updates (ticks 1, 3, 5…)
+	var bites []int
+	for tick := 1; tick <= 45; tick++ {
+		pl.x, pl.y, pl.z = z.x+1, z.y, z.z // stays in reach
+		pl.health, pl.dead = 20, false
+		before := z.attackCD
+		h.updateMobs(players)
+		if z.attackCD == attackCooldown && before != attackCooldown { // the swing resets the clock
+			bites = append(bites, tick)
+		}
+	}
+	if len(bites) < 2 || bites[0] != 2 || bites[1]-bites[0] != attackCooldown {
+		t.Fatalf("bites on ticks %v, want the first on 2 and the next %d later", bites, attackCooldown)
+	}
+}
+
+// The creeper's swell runs every tick: thirty ticks from a primed start
+// to the bang, whatever the goal cadence.
+func TestCreeperSwellsEveryTick(t *testing.T) {
+	h, players := idleFloor(t)
+	var pl *tracked
+	for _, p := range players {
+		pl = p
+	}
+	pl.gamemode = gmSurvival
+	initSurvival(pl)
+	h.dayTime.Store(18000)
+	c := h.spawnHostileY(players, entityCreeper, 0.5, 180, 0.5)
+	pl.x, pl.y, pl.z = 2.5, 180, 0.5
+	for tick := 1; tick <= 6; tick++ {
+		pl.x, pl.y, pl.z = c.x+2, c.y, c.z
+		h.updateMobs(players)
+		if c.swell != tick {
+			t.Fatalf("tick %d: swell %d, want one a tick", tick, c.swell)
+		}
+	}
+}

@@ -165,11 +165,15 @@ func (h *hub) mobCollide(w *world.World, m *mob, c *collider, dx, dy, dz float64
 	if dx == 0 && dy == 0 && dz == 0 {
 		return 0, 0, 0
 	}
+	step := m.stepHeight()
+	// Level.getEntityCollisions over the move and its step-up: the entities
+	// a body cannot pass (a boat, a shulker), gathered once for both sweeps.
+	ents := h.entityColliders(m, b.expandTowards(dx, dy, dz).expandTowards(0, math.Max(step, 0), 0))
 	c.gather(w, m, b.expandTowards(dx, dy, dz))
+	c.boxes = append(c.boxes, ents...)
 	mx, my, mz := collideWithShapes(dx, dy, dz, b, c.boxes)
 	xColl, yColl, zColl := mx != dx, my != dy, mz != dz
 	landing := yColl && dy < 0
-	step := m.stepHeight()
 	if step <= 0 || !(landing || m.onGround) || !(xColl || zColl) {
 		return mx, my, mz
 	}
@@ -183,6 +187,7 @@ func (h *hub) mobCollide(w *world.World, m *mob, c *collider, dx, dy, dz float64
 	}
 	var cs collider
 	cs.gather(w, m, up)
+	cs.boxes = append(cs.boxes, ents...)
 	skip := float32(my)
 	cands := make([]float64, 0, 4)
 	for _, s := range cs.boxes {
@@ -217,4 +222,50 @@ func (h *hub) mobCollide(w *world.World, m *mob, c *collider, dx, dy, dz float64
 // modifier says otherwise).
 func (m *mob) stepHeight() float64 {
 	return m.mobAttrs().Value(attr.StepHeight)
+}
+
+// entityColliders is Level.getEntityCollisions for a mob's move: the boxes
+// of the entities whose canBeCollidedWith holds — a boat or a raft (always),
+// a shulker while it is alive — that meet r (inflated by 1.0E-7). Minecarts
+// are not among them (no canBeCollidedWith of their own: they are pushed,
+// not stood against); a happy ghast is one only to a player on its back or
+// a ghast it carries, neither of which walks here.
+func (h *hub) entityColliders(m *mob, r cbounds) []cbounds {
+	if ((r[3]-r[0])+(r[4]-r[1])+(r[5]-r[2]))/3 < 1e-7 { // AABB.getSize
+		return nil
+	}
+	const in = 1e-7
+	meets := func(b cbounds) bool {
+		return b[3] > r[0]-in && b[0] < r[3]+in && b[4] > r[1]-in && b[1] < r[4]+in && b[5] > r[2]-in && b[2] < r[5]+in
+	}
+	var out []cbounds
+	for _, v := range h.vehicles {
+		if v.dim != m.dim || !v.isBoat() || v.eid == m.cart { // not the boat it sits in
+			continue
+		}
+		w, ht := v.box()
+		if b := (cbounds{v.x - w/2, v.y, v.z - w/2, v.x + w/2, v.y + ht, v.z + w/2}); meets(b) {
+			out = append(out, b)
+		}
+	}
+	for _, s := range h.shulkerColliders {
+		if s == m || s.dim != m.dim || s.dying > 0 || s.health <= 0 || h.mobs[s.eid] != s {
+			continue
+		}
+		if b := mobAABB(s); meets(b) {
+			out = append(out, b)
+		}
+	}
+	return out
+}
+
+// collectEntityColliders lists the mobs that are colliders (the shulkers)
+// for this tick's moves.
+func (h *hub) collectEntityColliders() {
+	h.shulkerColliders = h.shulkerColliders[:0]
+	for _, m := range h.mobs {
+		if m.etype == entityShulker {
+			h.shulkerColliders = append(h.shulkerColliders, m)
+		}
+	}
 }

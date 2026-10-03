@@ -620,7 +620,7 @@ type mob struct {
 	blazeLiftIn                     int        // ticks until the offset is re-rolled (nextHeightOffsetChangeTick)
 	living                                     // attributes + status effects, shared with players
 	dmgFrac                         float64    // fractional damage carry (vanilla HP is float, ours int)
-	attackCD                        int        // mob-updates left before this mob can melee again
+	attackCD                        int        // before this mob can attack again: ticks for the every-tick attack goals (melee, bow), mob-updates for the rest
 	hasTarget                       bool       // a player is within aggro range this update
 	portalCool                      int        // ticks before it may take a portal again (Entity.portalCooldown)
 	guardMoving                     bool       // guardian: DATA_ID_MOVING as last broadcast (spikes folded)
@@ -769,6 +769,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		h.golemChestSweep(players) // a golem gone with a chest open leaves it
 	}
 	h.mobTicks++
+	h.collectEntityColliders() // the shulkers a body cannot walk through (mobcollide.go)
 	if h.mobTicks%mobGoalInterval == 0 {
 		h.pushMobs(players) // crowding: mobs standing in one another shove apart (per goal update)
 	}
@@ -782,6 +783,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				continue
 			}
 			h.mobMoveTick(players, m, false)
+			if h.mobs[m.eid] == m && !(m.etype == entityEnderman && m.enderHeld) {
+				h.attackEveryTick(players, m) // MeleeAttackGoal, RangedBowAttackGoal, SwellGoal: every tick
+			}
 			continue
 		}
 		m.moveHeld = true // until the goals below let it move this tick
@@ -1480,11 +1484,8 @@ func (h *hub) mobAfterMove(players map[int32]*tracked, m *mob) {
 	if !m.hostile && isLlama(m.etype) {
 		h.llamaWolfTick(players, m) // LlamaAttackWolfGoal: spits at wild wolves
 	}
-	if m.hostile {
+	if m.hostile && !h.attackEveryTick(players, m) {
 		switch m.etype {
-		case entitySkeleton, entityStray, entityBogged, entityParched:
-			h.bowDrawTick(players, m)   // the pull before the shot
-			h.skeletonShoot(players, m) // ranged: arrows from bow distance
 		case entityPillager:
 			if !m.holdingGround { // the crossbow goal waits out the stand-off
 				h.pillagerTick(players, m) // the crossbow: draw, aim, fire
@@ -1509,16 +1510,10 @@ func (h *hub) mobAfterMove(players map[int32]*tracked, m *mob) {
 			h.wardenTick(players, m) // darkness aura + sonic boom + dig-away
 		case entityGuardian, entityElderGuardian:
 			h.guardianTick(players, m) // beam attack (+ elder mining-fatigue aura)
-		case entityCreeper:
-			h.creeperFuse(players, m) // fuse + swell + bang
 		case entityWitch:
 			h.witchTick(players, m) // splash potions from a distance
 		case entityDrowned:
-			if m.trident {
-				h.drownedThrow(players, m) // ranged: hurl a trident
-			} else {
-				h.mobMelee(players, m)
-			}
+			h.drownedThrow(players, m) // ranged: hurl a trident (melee is an every-tick goal)
 		case entityPiglin:
 			switch {
 			case m.held == itemCrossbow:
@@ -1529,17 +1524,51 @@ func (h *hub) mobAfterMove(players map[int32]*tracked, m *mob) {
 				// SpearAttack's lowered spear is the whole attack: MeleeAttack
 				// skips a piglin holding a kinetic weapon (canUseNonMeleeWeapon).
 				h.mobSpearTick(players, m)
-			default:
-				h.mobMelee(players, m)
 			}
 		default:
 			if m.spearGoal != nil {
 				h.mobSpearTick(players, m) // SpearUseGoal outranks the melee goal: the charge is its attack
-			} else {
-				h.mobMelee(players, m) // bite a player in reach (on cooldown)
 			}
 		}
 	}
+}
+
+// attackEveryTick runs the attack goals vanilla ticks every tick
+// (Goal.requiresUpdateEveryTick) — MeleeAttackGoal, RangedBowAttackGoal and
+// the creeper's SwellGoal — for a hostile whose attack is one of them, and
+// reports whether it was. They run on every tick the mob moves itself, the
+// ticks between its goal updates too; their clocks count ticks.
+func (h *hub) attackEveryTick(players map[int32]*tracked, m *mob) bool {
+	if !m.hostile {
+		return false
+	}
+	switch m.etype {
+	case entitySkeleton, entityStray, entityBogged, entityParched:
+		h.bowDrawTick(players, m)          // the pull before the shot
+		h.skeletonShootStep(players, m, 1) // ranged: arrows from bow distance
+	case entityCreeper:
+		h.creeperFuseStep(players, m, 1) // fuse + swell + bang
+	case entityPillager, entityIllusioner, entityBlaze, entityGhast, entityWither, entityShulker,
+		entityLlama, entityTraderLlama, entityEvoker, entityVex, entityWarden,
+		entityGuardian, entityElderGuardian, entityWitch:
+		return false // their own goals and brains, on the goal update
+	case entityDrowned:
+		if m.trident {
+			return false
+		}
+		h.meleeTick(players, m)
+	case entityPiglin:
+		if m.held == itemCrossbow || m.baby || spearOf(m.held) != nil {
+			return false
+		}
+		h.meleeTick(players, m)
+	default:
+		if m.spearGoal != nil {
+			return false
+		}
+		h.meleeTick(players, m) // bite a player in reach (on cooldown)
+	}
+	return true
 }
 
 // mobStepOK is the whole-column walk rule a walker stopped across consults

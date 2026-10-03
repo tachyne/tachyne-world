@@ -735,6 +735,7 @@ type hub struct {
 	lastPose         int8            // …and its pose + 1, for the drop that follows (copy_state)
 	hopperTicking    map[simPos]bool // hoppers among the block-entity tickers (tickHoppers)…
 	hopperOrder      []simPos        // …in the order they joined
+	shulkerColliders []*mob          // this tick's shulkers: colliders to a mob's move (mobcollide.go)
 	daylightTicking  map[simPos]bool // daylight detectors among the block-entity tickers (betickers.go)…
 	daylightOrder    []simPos        // …in the order they joined
 	crafterArms      map[simPos]int  // crafters with the arm out → craftingTicksRemaining

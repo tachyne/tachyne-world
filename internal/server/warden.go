@@ -30,9 +30,8 @@ const (
 	// Warden.setAttackTarget: a fresh target holds the boom off for 200
 	// ticks, TIME_TO_USE_MELEE_UNTIL_SONIC_BOOM — it walks up and hits first.
 	wardenSonicFreshUpd = 200 / mobMoveInterval
-	// MeleeAttack.create(18): 18 ticks between blows. mobMelee counts the
-	// biting update itself, so this is one short of the nine updates.
-	wardenMeleeCD = 18/mobMoveInterval - 1
+	// MeleeAttack.create(18): 18 ticks between blows (attackCD counts ticks).
+	wardenMeleeCD = 18
 	// WardenAi.DIGGING_COOLDOWN: 1200 ticks after the last interaction before
 	// it burrows away. This counted 300 updates — 600 ticks, half of vanilla —
 	// and the comment claiming ~60 s was reading updates as ticks.

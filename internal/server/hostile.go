@@ -45,8 +45,8 @@ const (
 	deaggroSlack     = 8.0  // keep chasing this far past aggro before giving up (edge hysteresis)
 	attackReach      = 2.0  // horizontal distance at which a bite lands
 	attackReachY     = 2.0  // vertical tolerance (can't hit a player up a cliff)
-	attackCooldown   = 9    // mob-updates between bites; +the biting update = 20 ticks
-	creakingAttackCD = 19   // the creaking's 40 ticks, counted the same way
+	attackCooldown   = 20   // ticks from one bite to the next (MeleeAttackGoal.resetAttackCooldown: adjustedTickDelay(20))
+	creakingAttackCD = 40   // Creaking.ATTACK_INTERVAL, in ticks the same way
 	//                          (vanilla-measured 995 ms cadence; 10 gave 1.1 s)
 	standoffDist = 1.1 // stop closing here so it bites from the front, not buried
 	//                       inside the player (where the player couldn't click it)
@@ -226,11 +226,21 @@ func (b holdRangedBehavior) steer(h *hub, m *mob) (float64, float64) {
 	return dx / d * m.moveSpeed(), dz / d * m.moveSpeed()
 }
 
-// skeletonShoot fires an arrow at the nearest huntable player, on a cooldown.
+// skeletonShoot is a goal update's turn of the bow (a skeleton jockey's,
+// an illusioner's): the shot clock counts down the update's two ticks.
 func (h *hub) skeletonShoot(players map[int32]*tracked, m *mob) {
+	h.skeletonShootStep(players, m, mobMoveInterval)
+}
+
+// skeletonShootStep fires an arrow at the nearest huntable player when the
+// shot clock (attackCD, in ticks) has run out, step ticks having passed
+// since the last call — RangedBowAttackGoal, which runs every tick.
+func (h *hub) skeletonShootStep(players map[int32]*tracked, m *mob, step int) {
 	if m.attackCD > 0 {
-		m.attackCD--
-		return
+		if m.attackCD -= step; m.attackCD > 0 {
+			return
+		}
+		m.attackCD = 0
 	}
 	q, ok := h.rangedQuarry(players, m, shootRange)
 	if !ok {
@@ -245,18 +255,18 @@ func (h *hub) skeletonShoot(players map[int32]*tracked, m *mob) {
 	// RangedBowAttackGoal cadence (AbstractSkeleton.getAttackInterval): 40
 	// ticks on easy/normal, 20 on hard; a parched or a bogged draws slower,
 	// 70 and 50 (Bogged/Parched.getAttackInterval, getHardAttackInterval).
-	// attackCD counts mob-updates (2 ticks) incl. this one.
-	m.attackCD = 19
+	// attackCD counts ticks to the next shot.
+	m.attackCD = 40
 	if h.rules.Difficulty == diffHard {
-		m.attackCD = 9
+		m.attackCD = 20
 	}
 	if m.etype == entityIllusioner {
-		m.attackCD = 9 // Illusioner's RangedBowAttackGoal(this, 0.5, 20, 15): twenty ticks, any difficulty
+		m.attackCD = 20 // Illusioner's RangedBowAttackGoal(this, 0.5, 20, 15): twenty ticks, any difficulty
 	}
 	if m.etype == entityParched || m.etype == entityBogged {
-		m.attackCD = 34
+		m.attackCD = 70
 		if h.rules.Difficulty == diffHard {
-			m.attackCD = 24
+			m.attackCD = 50
 		}
 	}
 }
@@ -544,15 +554,34 @@ func (h *hub) nearestHuntable(players map[int32]*tracked, dim int, x, z, maxDist
 	return best
 }
 
-// mobMelee bites a survival player standing within reach, on an attack cooldown.
-// Damage flows through the normal player-damage path (hurt flash, death drops).
+// mobMelee is a goal update's melee: the bite, from code that runs once a
+// goal update (a blaze's attack goal, a warden's brain); the cooldown counts
+// down the update's two ticks. The MeleeAttackGoal itself runs every tick
+// (meleeTick).
 func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
+	h.meleeAttack(players, m, mobMoveInterval)
+}
+
+// meleeTick is MeleeAttackGoal.tick, which runs every tick
+// (requiresUpdateEveryTick): the cooldown counts down a tick, and a target
+// in reach is bitten the tick it runs out.
+func (h *hub) meleeTick(players map[int32]*tracked, m *mob) {
+	h.meleeAttack(players, m, 1)
+}
+
+// meleeAttack bites a survival player standing within reach, on an attack
+// cooldown counted in ticks (attackCD: ticks until the next bite may land),
+// step ticks having passed since the last call. Damage flows through the
+// normal player-damage path (hurt flash, death drops).
+func (h *hub) meleeAttack(players map[int32]*tracked, m *mob, step int) {
 	if m.etype == entityBee && m.beeStingDie > 0 {
 		return // vanilla: a bee that has stung attacks no more (it dies of it)
 	}
 	if m.attackCD > 0 {
-		m.attackCD--
-		return
+		if m.attackCD -= step; m.attackCD > 0 {
+			return
+		}
+		m.attackCD = 0
 	}
 	t := h.nearestHuntable(players, m.dim, m.x, m.z, attackReach)
 	if m.etype == entityPiglin {

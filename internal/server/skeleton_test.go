@@ -21,7 +21,7 @@ func TestSkeletonShootsAndArrowHits(t *testing.T) {
 	if len(h.arrows) != 1 {
 		t.Fatalf("skeleton should have fired exactly one arrow, got %d", len(h.arrows))
 	}
-	if m.attackCD != 19 { // 40-tick vanilla cadence on normal (incl. this update)
+	if m.attackCD != 40 { // 40-tick vanilla cadence on normal (attackCD counts ticks)
 		t.Fatal("firing must start the shot cooldown")
 	}
 

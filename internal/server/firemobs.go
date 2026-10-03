@@ -117,6 +117,7 @@ func (h *hub) blazeTick(players map[int32]*tracked, m *mob) {
 		}
 		if m.blazeTime <= 0 {
 			m.blazeTime = 20
+			m.attackCD = 0         // BlazeAttackGoal's attackTime is the only clock on the bite
 			h.mobMelee(players, m) // doHurtTarget
 		}
 		return
