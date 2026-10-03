@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -73,9 +74,12 @@ func TestNoteBlockAndJukeboxFlow(t *testing.T) {
 	// particle from it), and so did the note itself: NoteBlock.triggerEvent
 	// runs on the server (ServerLevel.doBlockEvent) and broadcasts the sound —
 	// the client's own triggerEvent plays nothing, its playSeededSound being
-	// for the local player only. Records, volume 3, note 2's pitch.
+	// for the local player only. Records, volume 3, and the note's pitch:
+	// each tune plays (NoteBlock.useWithoutItem cycles the note, then
+	// playNote), so note 1's sound arrives first and note 2's second.
 	deadline := time.After(hubTestWait)
 	gotEvent, gotSound := false, false
+	notes := 0
 	for !gotEvent || !gotSound {
 		select {
 		case pkt := <-p.out:
@@ -86,10 +90,12 @@ func TestNoteBlockAndJukeboxFlow(t *testing.T) {
 				}
 			case attachproto.Sound:
 				if ev.Name == "minecraft:block.note_block.basedrum" {
-					if ev.Category != sndRecord || ev.Volume != 3 || ev.Pitch < 0.56 || ev.Pitch > 0.57 {
-						t.Fatalf("note sound %+v, want records/3/2^(-10/12)", ev)
+					notes++
+					want := float32(math.Pow(2, float64(notes-12)/12)) // getPitchFromNote
+					if ev.Category != sndRecord || ev.Volume != 3 || math.Abs(float64(ev.Pitch-want)) > 1e-4 {
+						t.Fatalf("note %d sound %+v, want records/3/%v", notes, ev, want)
 					}
-					gotSound = true
+					gotSound = notes == 2
 				}
 			}
 		case <-deadline:
