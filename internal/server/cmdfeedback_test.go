@@ -32,33 +32,72 @@ func recordChat(t *testing.T, p *player) *chatLog {
 	c := &chatLog{}
 	stop := make(chan struct{})
 	t.Cleanup(func() { close(stop) })
+	record := func(pkt outPkt) {
+		if pa, ok := pkt.ev.(attachproto.Particles); ok {
+			c.mu.Lock()
+			c.particles = append(c.particles, pa)
+			c.mu.Unlock()
+		}
+		if cb, ok := pkt.ev.(attachproto.ChunksBiomes); ok {
+			c.mu.Lock()
+			c.biomes = append(c.biomes, cb)
+			c.mu.Unlock()
+		}
+		// The HUD's once-a-second action bar is not a reply; on a slow
+		// runner it lands between a command and its marker.
+		if ch, ok := pkt.ev.(attachproto.Chat); ok && !ch.ActionBar {
+			c.mu.Lock()
+			c.lines = append(c.lines, ch.Text)
+			c.mu.Unlock()
+		}
+	}
+	// The drain is remote.go's decodeLoop: out first, then the reliable
+	// overflow. A chat line is a reliable frame, so once a burst (a placed
+	// structure's block and entity frames) fills out, the lines after it
+	// park in crit — and a drain that never reads crit never sees them.
 	go func() {
 		for {
 			select {
 			case pkt := <-p.out:
-				if pa, ok := pkt.ev.(attachproto.Particles); ok {
-					c.mu.Lock()
-					c.particles = append(c.particles, pa)
-					c.mu.Unlock()
-				}
-				if cb, ok := pkt.ev.(attachproto.ChunksBiomes); ok {
-					c.mu.Lock()
-					c.biomes = append(c.biomes, cb)
-					c.mu.Unlock()
-				}
-				// The HUD's once-a-second action bar is not a reply; on a slow
-				// runner it lands between a command and its marker.
-				if ch, ok := pkt.ev.(attachproto.Chat); ok && !ch.ActionBar {
-					c.mu.Lock()
-					c.lines = append(c.lines, ch.Text)
-					c.mu.Unlock()
-				}
+				record(pkt)
+				continue
+			default:
+			}
+			for _, pkt := range p.takeCrit() {
+				record(pkt)
+			}
+			select {
+			case pkt := <-p.out:
+				record(pkt)
+			case <-p.critWake:
 			case <-stop:
 				return
 			}
 		}
 	}()
 	return c
+}
+
+// A chat line that overflowed into the reliable queue still reaches the
+// log: the drain reads crit as the session pump does. (The /place tests
+// lost their settle marker this way whenever a structure filled out.)
+func TestRecordChatDrainsReliableOverflow(t *testing.T) {
+	p := newPlayer(1, "alice", [16]byte{1})
+	for len(p.out) < cap(p.out) {
+		p.out <- outPkt{ev: attachproto.Particles{}}
+	}
+	p.trySendEv(chatEv("after the burst"))
+	if len(p.crit) != 1 {
+		t.Fatalf("the line did not overflow into crit: crit=%d", len(p.crit))
+	}
+	c := recordChat(t, p)
+	deadline := time.Now().Add(hubTestWait)
+	for !hasLine(c.all(), "after the burst") {
+		if time.Now().After(deadline) {
+			t.Fatal("the overflowed chat line never reached the log")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
 }
 
 // feedbackServer is a live hub with two operators and one ordinary player.
