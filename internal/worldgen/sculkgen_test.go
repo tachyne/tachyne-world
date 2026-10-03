@@ -197,3 +197,36 @@ func TestSculkKeepsLaterBlocks(t *testing.T) {
 	}
 	t.Skip("the plan wrote nothing in its own chunk")
 }
+
+// sculk_patch_ancient_city is the deep dark's patch with the catalyst and
+// one to three can-summon shriekers overlaid: on the same stream it leaves
+// what the deep dark's leaves, and its extra shriekers stand within two
+// blocks of the start, in air over a sturdy floor.
+func TestSculkPatchAncientCityShriekers(t *testing.T) {
+	g := NewGenerator(1)
+	x, y0, z := 2000, -50, 2000
+	extra := 0
+	for seed := int64(0); seed < 16; seed++ {
+		deep := caveWorld(g, x, y0, z)
+		city := caveWorld(g, x, y0, z)
+		origin := [3]int{x, y0 + 1, z}
+		if !deep.patch(origin, newTreeRNG(seed, x, z)) || !city.patchAncientCity(origin, newTreeRNG(seed, x, z)) {
+			t.Fatal("a patch refused an air cell on a cave floor")
+		}
+		for c, s := range city.view.capture {
+			if d := deep.view.capture[c]; d == s {
+				continue
+			}
+			if s != sculkShriekerState {
+				t.Fatalf("seed %d: %v is %d in the city's patch, %d in the deep dark's", seed, c, s, deep.view.capture[c])
+			}
+			if abs(c[0]-x) > 2 || abs(c[1]-origin[1]) > 2 || abs(c[2]-z) > 2 {
+				t.Fatalf("seed %d: a shrieker at %v, beyond the overlay's offset", seed, c)
+			}
+			extra++
+		}
+	}
+	if extra == 0 {
+		t.Fatal("16 ancient-city patches overlaid no shrieker")
+	}
+}

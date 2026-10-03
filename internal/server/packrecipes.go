@@ -18,16 +18,14 @@ import (
 // ingredient) removes it, which is how a pack takes a vanilla recipe away.
 //
 // Applied: crafting_shaped and crafting_shapeless (the crafting grid, the
-// crafter, limited_crafting, the recipe book and its place-recipe), and
+// crafter, limited_crafting, the recipe book and its place-recipe),
 // smelting, blasting, smoking and campfire_cooking (the cookers, the
-// campfire, the furnace book). A pack recipe is tried before the vanilla
-// ones. The other types — stonecutting, smithing_*, the special and
-// transmute crafting recipes, brewing — are listed by /datapack as not
-// applied and leave vanilla's recipe of their id in place: a stonecutter's
-// and a smithing table's choices are drawn by the client from the recipe
-// lists the gateway sends at login, so changing them needs those lists sent
-// again (PlayerList.reloadResources' update_recipes), which no attach frame
-// carries yet — onPackRegistriesChanged sends the tags alone.
+// campfire, the furnace book), and stonecutting, smithing_transform,
+// smithing_trim and brewing (packstations.go: the stonecutter's rows and
+// the smithing table's item sets go to the clients again when a load
+// changes them). A pack recipe is tried before the vanilla ones. The
+// special and transmute crafting types are listed by /datapack as not
+// applied and leave vanilla's recipe of their id in place.
 //
 // Pack crafting recipes use the generated recipes' own form: ingredient
 // sets are indices into ingredientSets, continued past its end by the
@@ -80,6 +78,8 @@ type packRecipes struct {
 	removedBook map[int32]bool     // generated display ids no longer in the game
 	removed     map[string]bool    // vanilla recipe names a pack replaced or removed
 	count       int                // recipes applied
+	station     *stationRecipes    // stonecutting, smithing and brewing (packstations.go)
+	setOverride map[uint16][]int32 // vanilla ingredient sets re-resolved for changed tags (packretag.go)
 }
 
 func newPackRecipes() *packRecipes {
@@ -92,6 +92,7 @@ func newPackRecipes() *packRecipes {
 		idsByName:   map[string][]int32{},
 		removedBook: map[int32]bool{},
 		removed:     map[string]bool{},
+		station:     newStationRecipes(),
 	}
 	for i := range pr.cook {
 		pr.cook[i] = map[int32]cookEntry{}
@@ -112,6 +113,11 @@ func (pc *packContent) recipeSet() *packRecipes {
 // pack recipe's.
 func ingredientSet(set uint16) []int32 {
 	if int(set) < len(ingredientSets) {
+		if pr := currentPack().recipeSet(); pr != nil && pr.setOverride != nil {
+			if s, ok := pr.setOverride[set]; ok {
+				return s
+			}
+		}
 		return ingredientSets[set]
 	}
 	if pr := currentPack().recipeSet(); pr != nil {
@@ -156,8 +162,7 @@ var recipeUnsupportedTypes = map[string]bool{
 	"minecraft:crafting_special_mapextending": true, "minecraft:crafting_special_firework_rocket": true,
 	"minecraft:crafting_special_firework_star": true, "minecraft:crafting_special_firework_star_fade": true,
 	"minecraft:crafting_special_bannerduplicate": true, "minecraft:crafting_special_shielddecoration": true,
-	"minecraft:crafting_special_repairitem": true, "minecraft:stonecutting": true,
-	"minecraft:smithing_transform": true, "minecraft:smithing_trim": true, "minecraft:brewing": true,
+	"minecraft:crafting_special_repairitem": true,
 }
 
 // errRecipeUnsupported marks a recipe of a type the server does not apply.
@@ -194,6 +199,8 @@ func buildPackRecipes(files map[string]packFile, tags *tagRegistry, unapplied ma
 			pr.removeVanilla(bookRecipeName(id))
 		}
 	}
+	pr.retagVanilla(tags)
+	pr.finishStations()
 	return pr
 }
 
@@ -201,6 +208,7 @@ func buildPackRecipes(files map[string]packFile, tags *tagRegistry, unapplied ma
 // entry and match, or its cook entries and the inputs it cooked.
 func (pr *packRecipes) removeVanilla(name string) {
 	pr.removed[name] = true
+	pr.removeVanillaStation(name)
 	if id, ok := recipeIDByName[name]; ok && id < cookBookFirstID {
 		pr.removedBook[id] = true
 	}
@@ -253,6 +261,9 @@ func (pr *packRecipes) add(id string, data []byte, tags *tagRegistry) (typ strin
 		}
 		pr.addCraft(id, c)
 	default:
+		if ok, err := pr.addStation(id, typ, top, tags); ok {
+			return typ, err
+		}
 		for kind, t := range cookTables {
 			if t.typ == typ {
 				return typ, pr.addCook(id, int8(kind), top, tags)

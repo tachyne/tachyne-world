@@ -676,6 +676,7 @@ func (s *Server) Serve() error {
 				return f&loginNoRespawnScreen != 0, f&loginLimitedCrafting != 0, f&loginReducedDebug != 0
 			},
 			ConfigData: s.configData,
+			Recipes:    func() *attachproto.UpdateRecipes { return packUpdateRecipes(currentPack()) },
 			Token:      s.AttachToken,
 			Spawn:      attachproto.Pos{X: 0.5, Y: s.world.SurfaceY(0, 0), Z: 0.5},
 			Join:       s.JoinRemote,

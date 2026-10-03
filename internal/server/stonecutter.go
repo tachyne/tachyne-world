@@ -58,7 +58,7 @@ func (h *hub) stonecutResult(t *tracked) invStack {
 	if in.item == 0 || in.count <= 0 || t.stoneSel < 0 {
 		return invStack{}
 	}
-	list := stonecutIndex[in.item]
+	list := stonecutList(in.item)
 	if t.stoneSel >= len(list) {
 		return invStack{}
 	}
@@ -85,7 +85,7 @@ func (h *hub) sendStonecutWindow(t *tracked) {
 
 // stonecutSelect applies a recipe-button click (container_button_click).
 func (h *hub) stonecutSelect(t *tracked, button int32) {
-	list := stonecutIndex[t.anvil[0].item]
+	list := stonecutList(t.anvil[0].item)
 	if button < 0 || int(button) >= len(list) || int(button) == t.stoneSel {
 		return
 	}

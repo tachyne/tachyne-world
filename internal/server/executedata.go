@@ -162,8 +162,7 @@ func (h *hub) execDataTest(players map[int32]*tracked, s *execSource, a []string
 }
 
 // execSlotHolders reads `entity <targets>` or `block <pos>` for the slot
-// conditions (ItemCommands' SOURCE_PROVIDERS); rest is what follows. Only
-// players' slots are modelled among entities.
+// conditions (ItemCommands' SOURCE_PROVIDERS); rest is what follows.
 func (h *hub) execSlotHolders(players map[int32]*tracked, s *execSource, a []string) ([]itemTarget, []string, string) {
 	if len(a) < 2 {
 		return nil, nil, execIncomplete
@@ -179,9 +178,7 @@ func (h *hub) execSlotHolders(players map[int32]*tracked, s *execSource, a []str
 		}
 		var targets []itemTarget
 		for _, en := range ens {
-			if en.t != nil {
-				targets = append(targets, h.playerItemTarget(en.t))
-			}
+			targets = append(targets, h.entityItemTarget(en))
 		}
 		return targets, a[2:], ""
 	case "block":
@@ -206,8 +203,8 @@ func (h *hub) execSlotHolders(players map[int32]*tracked, s *execSource, a []str
 // source's own entity is this.
 func (h *hub) execSlots(players map[int32]*tracked, s *execSource, targets []itemTarget, src slotSrc) []slotAccess {
 	var this *itemTarget
-	if en, ok := h.execSelf(players, s.self); ok && en.t != nil {
-		tg := h.playerItemTarget(en.t)
+	if en, ok := h.execSelf(players, s.self); ok {
+		tg := h.entityItemTarget(en)
 		this = &tg
 	}
 	var out []slotAccess

@@ -1,12 +1,15 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
 	"sync/atomic"
 
 	"github.com/tachyne/tachyne-world/internal/worldgen"
+
+	attachproto "github.com/tachyne/tachyne-common/attach"
 )
 
 // packContent is what a data pack load applies beyond functions, as
@@ -26,6 +29,14 @@ type packContent struct {
 	modifiers  map[string]itemModifier
 	predRaw    map[string]any // the decoded predicate files (inline predicates name them)
 	modRaw     map[string]any // the decoded item modifier files
+
+	// dialogs are the dialog registry entries the packs add or replace
+	// (packdialog.go), by id, each in its data-pack JSON form.
+	dialogs map[string]json.RawMessage
+
+	// adv is the advancement tree with the packs' advancements merged in
+	// (packadv.go); nil when the packs carry none.
+	adv *advRegistry
 }
 
 // activePack is the installed load. The engine runs one server per process;
@@ -40,9 +51,11 @@ func currentPack() *packContent { return activePack.Load() }
 func installPackContent(pc *packContent) {
 	activePack.Store(pc)
 	if pc == nil {
+		activeAdv.Store(nil)
 		worldgen.SetTagOverlay(nil)
 		return
 	}
+	activeAdv.Store(pc.adv)
 	worldgen.SetTagOverlay(pc.tags.worldgenTagOverlay())
 }
 
@@ -54,6 +67,8 @@ type packDataFiles struct {
 	loot      map[string]packFile
 	preds     map[string]packFile
 	modifiers map[string]packFile
+	dialogs   map[string]packFile
+	advs      map[string]packFile
 }
 
 func newPackDataFiles() *packDataFiles {
@@ -63,6 +78,8 @@ func newPackDataFiles() *packDataFiles {
 		loot:      map[string]packFile{},
 		preds:     map[string]packFile{},
 		modifiers: map[string]packFile{},
+		dialogs:   map[string]packFile{},
+		advs:      map[string]packFile{},
 	}
 }
 
@@ -101,6 +118,8 @@ func (d *packDataFiles) take(packID, ns, rest string, read func() ([]byte, error
 		{"loot_table/", d.loot},
 		{"predicate/", d.preds},
 		{"item_modifier/", d.modifiers},
+		{"dialog/", d.dialogs},
+		{"advancement/", d.advs},
 	} {
 		if id, ok := idOf(kind.prefix); ok {
 			if data, err := read(); err == nil {
@@ -116,8 +135,10 @@ func (d *packDataFiles) take(packID, ns, rest string, read func() ([]byte, error
 // registry reads them.
 func buildPackContent(d *packDataFiles, unapplied map[string]map[string]bool) *packContent {
 	pc := &packContent{}
-	pc.tags = buildTagRegistry(d.tags)
+	pc.dialogs = buildPackDialogs(d.dialogs, d.tags["dialog"])
+	pc.tags = buildTagRegistry(d.tags, map[string]map[string]bool{"dialog": dialogIDSet(pc.dialogs)})
 	pc.recipes = buildPackRecipes(d.recipes, pc.tags, unapplied)
+	pc.adv = buildAdvRegistry(d.advs, pc.tags)
 	buildPackLoot(pc, d.preds, d.modifiers, d.loot)
 	return pc
 }
@@ -128,8 +149,8 @@ func (pc *packContent) summary() string {
 	for _, ids := range pc.tags.changed {
 		changed += len(ids)
 	}
-	return fmt.Sprintf("%d changed tags, %d recipes, %d loot tables, %d predicates, %d item modifiers",
-		changed, pc.recipes.count, len(pc.loot), len(pc.predicates)-len(vanillaPredicates), len(pc.modifiers))
+	return fmt.Sprintf("%d changed tags, %d recipes, %d loot tables, %d predicates, %d item modifiers, %d dialogs",
+		changed, pc.recipes.count, len(pc.loot), len(pc.predicates)-len(vanillaPredicates), len(pc.modifiers), len(pc.dialogs))
 }
 
 // applyPackContent installs a reloaded load on the hub: the recipe books
@@ -139,5 +160,38 @@ func (h *hub) applyPackContent(players map[int32]*tracked, pc *packContent) {
 	old := currentPack()
 	installPackContent(pc)
 	h.remapRecipeBooks(players, old, pc)
-	h.onPackRegistriesChanged(players, pc)
+	h.onPackRegistriesChanged(players, old, pc)
+	h.onPackRecipesChanged(players, old, pc)
+	h.onPackAdvancementsChanged(players, old, pc)
+}
+
+// onPackRecipesChanged sends the clients the recipe data a load changed
+// (reloadResources' update_recipes): the stonecutter's rows and the
+// smithing table's item sets, to every Java session — a nil half is
+// vanilla's, which a load that drops a pack's recipes goes back to.
+func (h *hub) onPackRecipesChanged(players map[int32]*tracked, old, pc *packContent) {
+	before, after := packUpdateRecipes(old), packUpdateRecipes(pc)
+	b1, _ := json.Marshal(before)
+	b2, _ := json.Marshal(after)
+	if string(b1) == string(b2) {
+		return
+	}
+	upd := attachproto.UpdateRecipes{}
+	if after != nil {
+		upd = *after
+	}
+	for _, t := range players {
+		if !t.p.bedrock && t.p.exec == nil {
+			t.p.trySendEv(upd)
+		}
+	}
+	// A menu open on the old list is closed by the client's own recipe
+	// refresh; the engine forgets the selection so a take cannot cut by the
+	// old list's index.
+	for _, t := range players {
+		if t.winKind == winStonecut {
+			t.stoneSel = -1
+			h.sendStonecutWindow(t)
+		}
+	}
 }

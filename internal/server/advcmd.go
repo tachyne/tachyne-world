@@ -47,7 +47,7 @@ func (s *Server) cmdAdvancement(p *player, args []string) {
 			return
 		}
 		e.adv = nsID(args[3])
-		n := advByID[e.adv]
+		n := curAdv().byID[e.adv]
 		if n == nil {
 			p.tell("Unknown advancement: " + e.adv)
 			return
@@ -101,24 +101,24 @@ func advCommandSet(mode, id string) []*advNode {
 	var out []*advNode
 	var subtree func(n *advNode)
 	subtree = func(n *advNode) {
-		for _, c := range advChildren[n.id] {
+		for _, c := range curAdv().children[n.id] {
 			out = append(out, c)
 			subtree(c)
 		}
 	}
 	if mode == "everything" {
-		for _, r := range advRoots {
+		for _, r := range curAdv().roots {
 			out = append(out, r)
 			subtree(r)
 		}
 		return out
 	}
-	n := advByID[id]
+	n := curAdv().byID[id]
 	if n == nil {
 		return nil
 	}
 	if mode == "until" || mode == "through" {
-		for p := advByID[n.parent]; p != nil; p = advByID[p.parent] {
+		for p := curAdv().byID[n.parent]; p != nil; p = curAdv().byID[p.parent] {
 			out = append(out, p)
 		}
 	}
@@ -157,7 +157,7 @@ func (h *hub) applyAdvancementCommand(players map[int32]*tracked, e evAdvancemen
 	}
 	var tally cmdTally
 	if e.crit != "" {
-		n := advByID[e.adv]
+		n := curAdv().byID[e.adv]
 		for _, t := range targets {
 			var b advCommandBatch
 			tally.track(t.p.name, b2i(b.apply(t, e.grant, n, []string{e.crit})))

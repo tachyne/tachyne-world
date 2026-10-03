@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"sort"
 	"strconv"
 	"strings"
@@ -43,7 +44,8 @@ import (
 // A stack inside a copied block entity keeps every component the engine
 // models: its tag carries, beside the vanilla id/count/components fields,
 // the stack's whole canonical component patch under pickComponentsKey,
-// which placement reads back with the creative-slot decoder.
+// which placement reads back with the creative-slot decoder, and its own
+// block entity data and hive record (pickBEDataKey, pickHiveKey).
 
 // pickComponentsKey is the engine's own field on a copied stack's tag: the
 // stack's canonical component patch (stackComponents), base64.
@@ -67,24 +69,45 @@ func opOnlyBlockEntity(state uint32) bool {
 // sign is placed (BlockItem.updateBlockEntityComponents), not op-gated.
 var signComponentKeys = []string{"front_text", "back_text", "is_waxed"}
 
+// Two more of the engine's own fields carry what the patch does not, or
+// carries only as the client sees it: a stack's own beData whole (its
+// nested stacks' patches included, which the client's block_entity_data
+// leaves out) and a carried hive's bees and honey (no bees component is
+// sent).
+const (
+	pickBEDataKey = "tachyne:block_entity_data"
+	pickHiveKey   = "tachyne:hive"
+)
+
 // pickStackNBT is stackNBT for a stack inside a copied block entity: the
-// vanilla fields, and the whole component patch under pickComponentsKey.
-func pickStackNBT(st invStack) map[string]any {
+// vanilla fields, the whole component patch under pickComponentsKey, and
+// its block entity data and hive record whole.
+func (h *hub) pickStackNBT(st invStack) map[string]any {
 	m := stackNBT(st)
 	if p := stackComponents(st); len(p) > 2 { // more than the two empty counts
 		m[pickComponentsKey] = base64.StdEncoding.EncodeToString(p)
+	}
+	if st.beData != "" {
+		m[pickBEDataKey] = st.beData
+	}
+	if st.hiveID != 0 {
+		if hs, ok := h.hiveItems[st.hiveID]; ok {
+			if raw, err := json.Marshal(hs); err == nil {
+				m[pickHiveKey] = string(raw)
+			}
+		}
 	}
 	return m
 }
 
 // pickItemsNBT is itemsNBT with pickStackNBT's stacks.
-func pickItemsNBT(slots []invStack) []any {
+func (h *hub) pickItemsNBT(slots []invStack) []any {
 	out := []any{}
 	for i, st := range slots {
 		if st.item == 0 || st.count <= 0 {
 			continue
 		}
-		m := pickStackNBT(st)
+		m := h.pickStackNBT(st)
 		m["Slot"] = int64(i)
 		out = append(out, m)
 	}
@@ -96,15 +119,33 @@ func pickItemsNBT(slots []invStack) []any {
 // creative-slot decoder reads every component the engine models, minting
 // fresh records for a box's, bundle's or book's contents.
 func (h *hub) fullStackFromNBT(m map[string]any, st invStack) invStack {
-	s, ok := m[pickComponentsKey].(string)
-	if !ok || st.item == 0 {
+	if st.item == 0 {
 		return st
 	}
-	patch, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
-		return st
+	if s, ok := m[pickComponentsKey].(string); ok {
+		if patch, err := base64.StdEncoding.DecodeString(s); err == nil {
+			st = h.creativeStack(st.item, st.count, patch)
+		}
 	}
-	return h.creativeStack(st.item, st.count, patch)
+	if s, ok := m[pickBEDataKey].(string); ok {
+		if v, err := parseSNBT(s); err == nil {
+			if _, isMap := v.(map[string]any); isMap {
+				st.beData = s
+			}
+		}
+	}
+	if s, ok := m[pickHiveKey].(string); ok {
+		var hs hiveStow
+		if json.Unmarshal([]byte(s), &hs) == nil && (hs.Honey > 0 || len(hs.Occ) > 0) {
+			if h.hiveItems == nil {
+				h.hiveItems = map[int32]hiveStow{}
+			}
+			h.nextHiveID++ // a record of its own: the copy is not the original
+			h.hiveItems[h.nextHiveID] = hs
+			st.hiveID = h.nextHiveID
+		}
+	}
+	return st
 }
 
 // fullItemsFromNBT is itemsFromNBT with each slot completed by
@@ -179,11 +220,11 @@ func (h *hub) addBlockDataToItem(pos simPos, state uint32, st invStack) invStack
 	c := h.peekBlockEntity(pos, false)
 	switch { // the stacks inside, with every component they carry
 	case c.chest != nil:
-		nbt["Items"] = pickItemsNBT(c.chest.slots[:])
+		nbt["Items"] = h.pickItemsNBT(c.chest.slots[:])
 	case c.bin != nil:
-		nbt["Items"] = pickItemsNBT(c.bin.slots)
+		nbt["Items"] = h.pickItemsNBT(c.bin.slots)
 	case c.furnace != nil:
-		nbt["Items"] = pickItemsNBT(c.furnace.slots[:])
+		nbt["Items"] = h.pickItemsNBT(c.furnace.slots[:])
 	}
 	// sign_text_front, sign_text_back, waxed: kept beside the rest (see
 	// signComponentKeys) unless the sign is blank and unwaxed.
@@ -197,11 +238,11 @@ func (h *hub) addBlockDataToItem(pos simPos, state uint32, st invStack) invStack
 		st.noteSound = h.skulls.note(pos)
 	}
 	if c.lectern != nil && c.lectern.book.item != 0 && c.lectern.book.count > 0 {
-		nbt["Book"] = pickStackNBT(c.lectern.book) // LecternBlockEntity.saveAdditional
+		nbt["Book"] = h.pickStackNBT(c.lectern.book) // LecternBlockEntity.saveAdditional
 		nbt["Page"] = int64(c.lectern.page)
 	}
 	if c.jukebox != nil && c.jukebox.disc.item != 0 && c.jukebox.disc.count > 0 {
-		nbt["RecordItem"] = pickStackNBT(c.jukebox.disc) // JukeboxBlockEntity.saveAdditional
+		nbt["RecordItem"] = h.pickStackNBT(c.jukebox.disc) // JukeboxBlockEntity.saveAdditional
 		if now := h.tick.Load(); c.jukebox.playing(now) {
 			// JukeboxSongPlayer: how far into the song, while one plays.
 			nbt["ticks_since_song_started"] = int64(now - c.jukebox.started)
@@ -214,7 +255,7 @@ func (h *hub) addBlockDataToItem(pos simPos, state uint32, st invStack) invStack
 				slots[i] = invStack{item: it, count: 1}
 			}
 		}
-		nbt["Items"] = pickItemsNBT(slots[:])
+		nbt["Items"] = h.pickItemsNBT(slots[:])
 		times, totals := make([]any, 4), make([]any, 4)
 		for i := range times {
 			times[i], totals[i] = int64(c.campfire.prog[i]), int64(c.campfire.total[i])
@@ -222,7 +263,7 @@ func (h *hub) addBlockDataToItem(pos simPos, state uint32, st invStack) invStack
 		nbt["CookingTimes"], nbt["CookingTotalTimes"] = times, totals
 	}
 	if c.shelf != nil && isBookshelf(state) { // ChiseledBookShelfBlockEntity.saveAdditional
-		nbt["Items"] = pickItemsNBT(c.shelf[:])
+		nbt["Items"] = h.pickItemsNBT(c.shelf[:])
 		last := int64(-1)
 		if c.shelfLast != nil {
 			last = int64(*c.shelfLast)
@@ -234,7 +275,7 @@ func (h *hub) addBlockDataToItem(pos simPos, state uint32, st invStack) invStack
 			st.sherds = *c.sherds
 		}
 		if c.pot != nil && c.pot.item != 0 && c.pot.count > 0 {
-			nbt["item"] = pickStackNBT(*c.pot) // the container component's one stack
+			nbt["item"] = h.pickStackNBT(*c.pot) // the container component's one stack
 		}
 	}
 	if isBeeHome(state) {

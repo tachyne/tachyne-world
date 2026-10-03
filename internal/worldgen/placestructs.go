@@ -41,7 +41,7 @@ var PlaceStampNames = []string{
 	"swamp_hut", "desert_pyramid", "jungle_pyramid", "shipwreck", "shipwreck_beached", "buried_treasure",
 	"ruined_portal", "ruined_portal_desert", "ruined_portal_jungle", "ruined_portal_mountain",
 	"ruined_portal_ocean", "ruined_portal_swamp", "ruined_portal_nether", "ocean_ruin_cold", "ocean_ruin_warm",
-	"mansion", "monument", "fortress", "stronghold", "mineshaft", "mineshaft_mesa",
+	"mansion", "monument", "fortress", "stronghold", "mineshaft", "mineshaft_mesa", "nether_fossil",
 }
 
 // portalVariantSetups are the ruined portal structures' setups by id.
@@ -59,6 +59,24 @@ func (g *Generator) PlaceStructureStamp(name string, x, z int) (StructureStamp, 
 	name = trimNS(name)
 	bx, bz := x>>4<<4, z>>4<<4
 	switch name {
+	case "nether_fossil":
+		// NetherFossilStructure: a spot in the chunk dropped onto the first
+		// air over soul sand or solid ground above the lava sea; the
+		// Nether's column, so only the Nether places one.
+		if !g.nether || TemplateByName("nether_fossils/fossil_1") == nil {
+			return StructureStamp{}, false
+		}
+		f := g.netherFossilFrom(bx, bz, true)
+		t := TemplateByName("nether_fossils/fossil_" + itoaW(f.N))
+		if !f.Exists || t == nil {
+			return StructureStamp{}, false
+		}
+		reach := max(t.Size[0], t.Size[2])
+		st := StructureStamp{X0: f.X - reach, Z0: f.Z - reach, X1: f.X + reach, Z1: f.Z + reach}
+		st.Stamp = func(ch *Chunk, cx, cz int32) {
+			t.StampTemplateProc(ch, cx, cz, f.X, f.Y, f.Z, f.Rot, nil, true)
+		}
+		return st, true
 	case "swamp_hut":
 		r := newJigsawRNG(g.seed, bx^0x5A000000, bz)
 		p := scatteredPiece{X: bx, Z: bz, W: swampHutWidth, D: swampHutDepth, Dir: r.intn(4), Exists: true}

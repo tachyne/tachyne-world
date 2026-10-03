@@ -446,6 +446,7 @@ type hub struct {
 	fnKick       func(fnJob)
 	sched        timerQueue
 	runConsole   func(string) ([]string, error)   // runs a line as the console (Server.runAsConsole); nil = none
+	advFunction  func(p *player, id string)       // runs an advancement's reward function as the player; nil = none
 	eidCounter   int64                            // per-pod eid mint counter, fed through shard.MintEID when sharded
 	tick         atomic.Uint64                    // world age (ticks); atomic so connections can read it
 	lastTick     atomic.Int64                     // unix nanos of the last COMPLETED tick — the liveness heartbeat (health.go)
@@ -541,7 +542,10 @@ type hub struct {
 	// (applyMigration) and claimed on attach-session goroutines (ResumeRemote),
 	// so it is mutex-guarded.
 	pendingResume map[string]handover.PlayerState
-	pendingMu     sync.Mutex
+	// pendingChat is the secure-chat session that crossed with a pending
+	// player (migrateFrame), by the same token.
+	pendingChat map[string]*attachproto.ChatSession
+	pendingMu   sync.Mutex
 
 	// Redstone torch toggles of the last 60 ticks (RedstoneTorchBlock
 	// RECENT_TOGGLES): eight at one position burn the torch out.
@@ -890,6 +894,7 @@ func newHub(w *world.World) *hub {
 		waveWet:       map[blockPos]uint32{},
 		handoffs:      map[string]*handoff{},
 		pendingResume: map[string]handover.PlayerState{},
+		pendingChat:   map[string]*attachproto.ChatSession{},
 		shadowOut:     map[int32]map[int32]bool{},
 		shadowIn:      map[int32]*shadowEnt{},
 		hud:           defaultHud(),
@@ -1350,6 +1355,7 @@ func (h *hub) run() {
 			h.updateItemSpawners(players)
 			h.updatePortalDwell(players) // nether portal wait, counted every tick
 			h.updateBrewing(players)     // BrewingStandBlockEntity.serverTick: the brew counts down every tick
+			h.advTickTrigger(players)    // minecraft:tick criteria (data pack advancements)
 			if age%survivalTickN == 0 {
 				h.runNPCs(players)  // LLM NPCs: throttled perceive → decide → act
 				h.advTick(players)  // polled advancement criteria (inventory, biome)

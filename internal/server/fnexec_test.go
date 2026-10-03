@@ -269,7 +269,7 @@ func TestMaxCommandSequenceLength(t *testing.T) {
 func TestDatapackCommand(t *testing.T) {
 	s, h, ps, logs := functionServer(t, map[string]string{
 		"data/test/function/a.mcfunction":  "say a",
-		"data/test/advancement/thing.json": "{}",
+		"data/test/enchantment/thing.json": "{}",
 	})
 	writeZipPack(t, s.DataPackDir, "z.zip", "", nil)
 	writePack(t, s.DataPackDir, "old", `{"pack":{"description":"old","pack_format":48}}`, nil)
@@ -281,7 +281,7 @@ func TestDatapackCommand(t *testing.T) {
 	a := linesBetween(logs["alice"], "D0", "D1")
 	for _, want := range []string{
 		"There are 2 data pack(s) enabled: [vanilla (built-in)], [file/fp (world)]",
-		"[file/fp (world)] also carries advancement: this server does not apply that data",
+		"[file/fp (world)] also carries enchantment: this server does not apply that data",
 		"There are 2 data pack(s) available: [file/old (world)] (Made for an older version of Minecraft), [file/z.zip (world)]",
 	} {
 		if !hasLine(a, want) {

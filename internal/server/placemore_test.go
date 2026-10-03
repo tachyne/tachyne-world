@@ -137,7 +137,8 @@ func TestPlacePieceMobsVillage(t *testing.T) {
 
 // /place feature grows the configured features decoration grows: an ore
 // blob in stone, a sand disk in dirt, a water spring in a wall, a monster
-// room with its spawner's mob; an unmodelled feature is refused by name.
+// room with its spawner's mob; an unmodelled feature (a noise-driven
+// flower provider) is refused by name.
 func TestCommandPlaceFeatureStamps(t *testing.T) {
 	s, h, ps, logs := feedbackServer(t)
 	alice := ps["alice"]
@@ -187,7 +188,7 @@ func TestCommandPlaceFeatureStamps(t *testing.T) {
 		"place feature minecraft:spring_water 30 130 30",
 		"place feature minecraft:monster_room -10 150 -10",
 		"place feature minecraft:amethyst_geode -20 0 20",
-		"place feature minecraft:flower_default 0 100 0",
+		"place feature minecraft:flower_meadow 0 100 0",
 	} {
 		s.handleCommand(alice, c)
 	}
@@ -198,7 +199,7 @@ func TestCommandPlaceFeatureStamps(t *testing.T) {
 		`Placed "minecraft:disk_sand" at 20, 120, 20`,
 		`Placed "minecraft:spring_water" at 30, 130, 30`,
 		`Placed "minecraft:monster_room" at -10, 150, -10`,
-		"Can't find element 'minecraft:flower_default' in registry 'minecraft:worldgen/feature'",
+		"Can't find element 'minecraft:flower_meadow' in registry 'minecraft:worldgen/feature'",
 	} {
 		if !hasLine(a, want) {
 			t.Errorf("missing %q in\n%s", want, strings.Join(a, "\n"))

@@ -208,7 +208,7 @@ func isLifecycleFrame(ev any) bool {
 	case attachproto.EntityAdd, attachproto.EntityRemove,
 		attachproto.PlayerInfo, attachproto.PlayerInfoMode, attachproto.PlayerGone:
 		return true
-	case attachproto.StartConfiguration, attachproto.Rejoin, attachproto.UpdateTags:
+	case attachproto.StartConfiguration, attachproto.Rejoin, attachproto.UpdateTags, attachproto.UpdateRecipes:
 		// One-shot phase changes and the tag set: nothing re-sends them, and
 		// a lost start or rejoin strands the client between phases.
 		return true

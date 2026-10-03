@@ -28,10 +28,15 @@ func (g *Generator) NetherFossilIn(wx, wz int) NetherFossil {
 // netherFossilAt is the cell's fossil: a spot in the cell's first chunk,
 // soul sand valley only, dropped from a random height to the first air
 // over soul sand or solid ground above the lava.
-func (g *Generator) netherFossilAt(ox, oz int) NetherFossil {
+func (g *Generator) netherFossilAt(ox, oz int) NetherFossil { return g.netherFossilFrom(ox, oz, false) }
+
+// netherFossilFrom is NetherFossilStructure.findGenerationPoint from the
+// chunk at (ox, oz); anyBiome skips the biome check (/place structure
+// accepts every biome).
+func (g *Generator) netherFossilFrom(ox, oz int, anyBiome bool) NetherFossil {
 	x := ox + int(hash01(g.seed, ox, oz, 0xF001)*16) // the cell's first chunk (spacing − separation = 1)
 	z := oz + int(hash01(g.seed, ox, oz, 0xF002)*16)
-	if g.netherBiome(x, z) != "minecraft:soul_sand_valley" {
+	if !anyBiome && g.netherBiome(x, z) != "minecraft:soul_sand_valley" {
 		return NetherFossil{}
 	}
 	lo, hi := netherY(32), NetherCeiling-2

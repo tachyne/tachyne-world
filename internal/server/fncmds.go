@@ -139,7 +139,7 @@ func (s *Server) cmdFunction(p *player, args []string) {
 	}
 
 	if e := s.execFor(p); e != nil {
-		s.functionInContext(e, fns, fargs)
+		s.functionInContext(e, p, fns, fargs)
 		return
 	}
 
@@ -181,9 +181,10 @@ func (s *Server) cmdFunction(p *player, args []string) {
 }
 
 // functionInContext is a /function run by a function: the calls join the
-// running context, silently. Under `return run` the calls' results become
+// running context, silently, their lines run as src (the source that ran
+// the /function — under execute as/at, its stand-in). Under `return run` the calls' results become
 // the result of the frame that ran the return.
-func (s *Server) functionInContext(e *fnExec, fns []*mcFunction, fargs map[string]any) {
+func (s *Server) functionInContext(e *fnExec, src *player, fns []*mcFunction, fargs map[string]any) {
 	returnMode := e.returnRun
 	e.returnRun = false
 	parent := e.top()
@@ -192,7 +193,7 @@ func (s *Server) functionInContext(e *fnExec, fns []*mcFunction, fargs map[strin
 		if err != nil {
 			return // FunctionInstantiationException: the command fails, silently
 		}
-		fr := s.fnCall(e, fnInstance{id: f.id, lines: lines})
+		fr := s.fnCallAs(e, src, fnInstance{id: f.id, lines: lines})
 		if returnMode && parent != nil && fr.returned {
 			parent.returned, parent.success, parent.value = true, fr.success, fr.value
 		}

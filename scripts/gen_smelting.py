@@ -89,6 +89,7 @@ STATION = {
 }
 tables = {t: [] for t, _, _, _ in COOKERS}
 recipe_keys = {}  # vanilla recipe name -> the engine's cook/<station>/<input> keys
+tag_recipes = {}  # vanilla recipe name -> (kind, refs, out, cook, xp, cat), for the ones naming a #tag
 for path, r in sorted(recipes.items()):
     for rtype, _, default, _ in COOKERS:
         if r.get("type") != rtype:
@@ -111,6 +112,9 @@ for path, r in sorted(recipes.items()):
             else:
                 names.append(i.removeprefix("minecraft:"))
         rname = path.removeprefix("data/minecraft/recipe/").removesuffix(".json")
+        if any(i.startswith("#") for i in ings):
+            kind = [c[0] for c in COOKERS].index(rtype)
+            tag_recipes[rname] = (kind, sorted(ings), item_id[result], cook, xp, cat)
         for n in names:
             if n in item_id:
                 tables[rtype].append((item_id[n], item_id[result], cook, xp, cat))
@@ -204,6 +208,25 @@ L += [
 for rname in sorted(recipe_keys):
     keys = ", ".join(f'"{k}"' for k in recipe_keys[rname])
     L.append(f'\t"{rname}": {{{keys}}},')
+L.append("}")
+L += [
+    "",
+    "// cookTagRecipe is a vanilla cooking recipe whose ingredient names an",
+    "// item tag: its cook kind, its ingredient as written and its entry. A",
+    "// data pack that changes the tag re-resolves its inputs (packretag.go).",
+    "type cookTagRecipe struct {",
+    "\tKind  int8",
+    "\tRefs  []string",
+    "\tEntry cookEntry",
+    "}",
+    "",
+    "// cookTagRecipes are vanilla's cooking recipes that name an item tag.",
+    "var cookTagRecipes = map[string]cookTagRecipe{",
+]
+for rname in sorted(tag_recipes):
+    kind, refs, out, cook, xp, cat = tag_recipes[rname]
+    rs = ", ".join(f'"{r}"' for r in refs)
+    L.append(f'\t"{rname}": {{{kind}, []string{{{rs}}}, cookEntry{{{out}, {cook}, {xp:g}, {cat}}}}},')
 L.append("}")
 L += [
     "",

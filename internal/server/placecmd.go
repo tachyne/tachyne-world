@@ -14,14 +14,15 @@ import (
 // and they go into the live world as edits: StructureTemplate.placeInWorld
 // with UPDATE_CLIENTS, so the viewers see them and no neighbour updates
 // run. Features are the trees and huge mushrooms the engine grows and the
-// ores, disks, springs, monster room, amethyst geode and sculk it decorates
-// with; structures are the jigsaw-built ones, the igloo and the End city,
-// and the code-built ones (temples, huts, wrecks, buried treasure, ruined
-// portals, ocean ruins, the mansion, the monument, the fortress, the
-// stronghold and mineshafts) — with their loot, their spawners' mobs and
-// the entities their generation places; jigsaws and templates are every
-// pool and template the engine has. Not here: the nether fossil, the Nether
-// ores, flower and vegetation patches.
+// ores (the Overworld's and the Nether's), disks, springs, monster room,
+// amethyst geode and sculk it decorates with, and the single plants 26.3's
+// vegetation features are (placeveg.go); structures are the jigsaw-built
+// ones, the igloo and the End city, and the code-built ones (temples, huts,
+// wrecks, buried treasure, ruined portals, ocean ruins, the mansion, the
+// monument, the fortress, the stronghold, mineshafts and the nether
+// fossil) — with their loot, their spawners' mobs and the entities their
+// generation places; jigsaws and templates are every pool and template the
+// engine has.
 
 const placeUsage = "Usage: /place feature <feature> [<pos>] | jigsaw <pool> <target> <max_depth> [<position>] | " +
 	"structure <structure> [<pos>] | template <template> [<pos> [<rotation> [<mirror> [<integrity> [<seed> [strict]]]]]]"
@@ -201,7 +202,8 @@ func (h *hub) runPlace(players map[int32]*tracked, r placeReq) string {
 		_, tree := worldgen.TreeFeatures[name]
 		mushroom := name == "huge_brown_mushroom" || name == "huge_red_mushroom"
 		stamped := placeFeatureNames[name]
-		if !tree && !mushroom && !stamped || !strings.HasPrefix(r.id, "minecraft:") {
+		veg := vegetationFeature(name)
+		if !tree && !mushroom && !stamped && !veg || !strings.HasPrefix(r.id, "minecraft:") {
 			return fmt.Sprintf("Can't find element '%s' in registry 'minecraft:worldgen/feature'", r.id)
 		}
 		if !loaded(r.pos.x-16, r.pos.z-16, r.pos.x+16, r.pos.z+16) {
@@ -213,6 +215,8 @@ func (h *hub) runPlace(players map[int32]*tracked, r placeReq) string {
 			ok = h.placeLiveTree(players, dim, r.pos.x, r.pos.y, r.pos.z, name)
 		case mushroom:
 			ok = h.growHugeMushroom(players, dim, r.pos.x, r.pos.y, r.pos.z, name == "huge_brown_mushroom")
+		case veg:
+			ok = h.placeVegetation(players, dim, r.pos, name)
 		default:
 			fs, _ := w.Gen().PlaceFeatureStamp(name, r.pos.x, r.pos.y, r.pos.z, h.rng.Int63(), w.At)
 			ok = h.placeFeatureStamp(players, dim, fs) > 0 // Feature.place: whether it set anything

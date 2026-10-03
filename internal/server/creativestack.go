@@ -59,6 +59,23 @@ type stackDecode struct {
 	fish        [3]int32
 	fishSeen    bool
 	ominousName bool
+
+	// be is the block entity tag block_entity_data, sign_text_front,
+	// sign_text_back and waxed build (beitemcomp.go), the stack's beData.
+	be map[string]any
+}
+
+// setBE is a copy of the block entity tag with key set (copied, so a
+// component that fails later leaves the tag as it was).
+func (d *stackDecode) setBE(kv map[string]any) {
+	m := make(map[string]any, len(d.be)+len(kv))
+	for k, v := range d.be {
+		m[k] = v
+	}
+	for k, v := range kv {
+		m[k] = v
+	}
+	d.be = m
 }
 
 // creativeStack is the stack a creative client set: item, count and the
@@ -548,6 +565,35 @@ func (d *stackDecode) component(id int32, r *bytes.Reader) bool {
 		if st.item == itemPlayerHead {
 			st.profile = profileString(p)
 		}
+	case componentBlockEntityData:
+		v, ok := readNetNBT(r)
+		m, isMap := v.(map[string]any)
+		if !ok || !isMap {
+			return false
+		}
+		name, _ := m["id"].(string)
+		id, ok := blockEntityTypeByName(name)
+		if !ok {
+			return false
+		}
+		kv := map[string]any{}
+		for k, e := range m {
+			kv[k] = e
+		}
+		kv["id"] = int64(id)
+		d.setBE(kv)
+	case componentSignTextFront, componentSignTextBack:
+		side, ok := readSignText(r)
+		if !ok {
+			return false
+		}
+		key := "front_text"
+		if id == componentSignTextBack {
+			key = "back_text"
+		}
+		d.setBE(map[string]any{key: side})
+	case componentWaxed:
+		d.setBE(map[string]any{"is_waxed": true})
 	case componentNoteBlockSound:
 		s, err := protocol.ReadString(r) // Identifier.STREAM_CODEC
 		if err != nil {
@@ -649,6 +695,16 @@ func readEffectDetails(r *bytes.Reader, depth int) (amp, ticks int32, ok bool) {
 // finish settles what needed the whole patch.
 func (d *stackDecode) finish() invStack {
 	st := d.st
+	if len(d.be) > 0 {
+		if _, has := d.be["id"]; !has { // sign components alone: the sign's own type
+			if id, ok := signItemBlockEntity(st.item); ok {
+				d.setBE(map[string]any{"id": int64(id)})
+			}
+		}
+		if _, has := d.be["id"]; has {
+			st.beData = writeSNBT(d.be)
+		}
+	}
 	if d.potSeen && st.item != itemOminousBottle {
 		st.potion = d.potionKind(st)
 		if d.potHeld > 0 && st.name == "" && st.potion != potNone &&

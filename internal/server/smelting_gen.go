@@ -392,6 +392,22 @@ var cookRecipeKeys = map[string][]string{
 	"yellow_glazed_terracotta":                        {"cook/furnace/yellow_terracotta"},
 }
 
+// cookTagRecipe is a vanilla cooking recipe whose ingredient names an
+// item tag: its cook kind, its ingredient as written and its entry. A
+// data pack that changes the tag re-resolves its inputs (packretag.go).
+type cookTagRecipe struct {
+	Kind  int8
+	Refs  []string
+	Entry cookEntry
+}
+
+// cookTagRecipes are vanilla's cooking recipes that name an item tag.
+var cookTagRecipes = map[string]cookTagRecipe{
+	"charcoal":    {0, []string{"#minecraft:logs_that_burn"}, cookEntry{1011, 200, 0.15, 6}},
+	"glass":       {0, []string{"#minecraft:smelts_to_glass"}, cookEntry{231, 200, 0.1, 5}},
+	"leaf_litter": {0, []string{"#minecraft:leaves"}, cookEntry{331, 200, 0.1, 5}},
+}
+
 // cookingFuel is a fuel item's cooking_fuel component, resolved for each
 // furnace block (indexed by cooker kind: furnace, blast furnace, smoker):
 // how long one burns (ticks) and how much faster it cooks.

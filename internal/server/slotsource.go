@@ -18,9 +18,13 @@ import (
 //	{type:"limit_slots", slot_source:…, limit:N}   the first N
 //	{type:"empty"}
 //
-// No data pack adds registry entries, so an id names nothing. The contents
-// source (the items inside a shulker box, a bundle or a loaded crossbow)
-// is refused.
+// No data pack adds registry entries, so an id names nothing.
+//
+//	{type:"contents", slot_source:…, component:"container"|"bundle_contents"|"charged_projectiles"}
+//	                                               the items inside each slot's stack
+//
+// A contents slot is read-only here: only /execute's counts read slot
+// sources.
 
 // slotSrc is one slot source provided for a holder (the loot context's
 // CONTAINER); this is the source entity's own slots, nil when it has none.
@@ -166,7 +170,34 @@ func decodeSlotSource(v any, typedOnly bool) (slotSrc, error) {
 		case "minecraft:empty":
 			return func(itemTarget, *itemTarget) []slotAccess { return nil }, nil
 		case "minecraft:contents":
-			return nil, slotSrcRefusal("The contents slot source can't be read on this server yet")
+			inner, err := decodeSlotHolder(t)
+			if err != nil {
+				return nil, err
+			}
+			c, has := t["component"]
+			if !has {
+				return nil, fmt.Errorf("No key component in MapLike")
+			}
+			name, _ := c.(string)
+			comp := nsID(name)
+			if !dataComponentTypes[strings.TrimPrefix(comp, "minecraft:")] {
+				return nil, fmt.Errorf("Unknown registry key in minecraft:data_component_type: %s", comp)
+			}
+			switch comp { // ContainerComponentManipulators.ALL_MANIPULATORS
+			case "minecraft:container", "minecraft:bundle_contents", "minecraft:charged_projectiles":
+			default:
+				return nil, fmt.Errorf("No items in component")
+			}
+			return func(cn itemTarget, self *itemTarget) []slotAccess { // SlotCollection.flatMap
+				var out []slotAccess
+				for _, sl := range inner(cn, self) {
+					for _, st := range componentContents(sl.get(), comp) {
+						st := st
+						out = append(out, slotAccess{get: func() invStack { return st }, set: func(invStack) bool { return false }})
+					}
+				}
+				return out
+			}, nil
 		}
 		return nil, fmt.Errorf("Unknown registry key in minecraft:slot_source_type: %s", nsID(typ))
 	}
@@ -269,4 +300,57 @@ func decodeItemFilter(v any) (func(invStack) bool, error) {
 		}
 		return true
 	}, nil
+}
+
+// componentContents is a ContainerComponent's itemCopies for a stack: a
+// shulker box's slots up to its last filled one (ItemContainerContents
+// keeps no trailing empties), a bundle's stacks, a crossbow's loaded
+// projectiles. nil when the stack lacks the component.
+func componentContents(st invStack, comp string) []invStack {
+	if st.item == 0 || st.count <= 0 {
+		return nil
+	}
+	switch comp {
+	case "minecraft:container":
+		if st.boxID == 0 {
+			return nil
+		}
+		bs := globalBoxes.Load()
+		if bs == nil {
+			return nil
+		}
+		c, ok := bs.get(st.boxID)
+		if !ok {
+			return nil
+		}
+		last := -1
+		for i, s := range c.slots {
+			if s.item != 0 && s.count > 0 {
+				last = i
+			}
+		}
+		out := make([]invStack, last+1)
+		for i := 0; i <= last; i++ {
+			if s := c.slots[i]; s.item != 0 && s.count > 0 {
+				out[i] = s
+			}
+		}
+		return out
+	case "minecraft:bundle_contents":
+		if st.bundleID == 0 {
+			return nil
+		}
+		bs := globalBundles.Load()
+		if bs == nil {
+			return nil
+		}
+		return append([]invStack(nil), bs.get(st.bundleID)...)
+	case "minecraft:charged_projectiles":
+		var out []invStack
+		for i := 0; i < int(st.load.n) && st.load.item != 0; i++ {
+			out = append(out, st.load.ammo())
+		}
+		return out
+	}
+	return nil
 }

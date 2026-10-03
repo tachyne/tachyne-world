@@ -93,6 +93,10 @@ func extraComponents(st invStack) (int32, []byte) {
 		b = protocol.AppendString(b, st.noteSound)
 		n++
 	}
+	if c, cb := beDataComponents(st); c > 0 { // block_entity_data, a sign's text and wax
+		n += c
+		b = append(b, cb...)
+	}
 	if c, cb := tagComponents(st); c > 0 {
 		n += c
 		b = append(b, cb...)

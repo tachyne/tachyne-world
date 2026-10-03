@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Generate internal/server/vanillatags_gen.go — the vanilla pack's own tag
 FILES (not their resolution) for the registries a data pack's tags are
-applied to: item, block, entity_type, fluid and worldgen/biome.
+applied to: item, block, entity_type, fluid, worldgen/biome, enchantment,
+potion and dialog.
 
 A data pack's tag file merges onto the vanilla file of the same id the way
 TagLoader merges every pack's file for an id, bottom to top, before any tag
@@ -24,7 +25,7 @@ import canon
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "vanillatags_gen.go")
 
-REGISTRIES = ["item", "block", "entity_type", "fluid", "worldgen/biome"]
+REGISTRIES = ["item", "block", "entity_type", "fluid", "worldgen/biome", "enchantment", "potion", "dialog"]
 
 
 def entries(data):

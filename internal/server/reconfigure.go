@@ -66,9 +66,10 @@ func packTagSets(pc *packContent) []attachproto.TagSet {
 }
 
 // currentConfigData is what a configuration phase is given now: the
-// dimension table and the installed pack load's tags.
+// dimension table and the installed pack load's registry entries and tags.
 func currentConfigData() attachproto.ConfigData {
-	return attachproto.ConfigData{Dimensions: dimensionTable(), Tags: packTagSets(currentPack())}
+	pc := currentPack()
+	return attachproto.ConfigData{Dimensions: dimensionTable(), Registries: packRegistryEntries(pc), Tags: packTagSets(pc)}
 }
 
 // reconfigure is switchToConfig for one player: false when their gateway
@@ -128,29 +129,40 @@ func (r *remotePlayer) Configured(c attachproto.Configured, welcome func() attac
 	r.s.hub.post(evJoin{p: p, x: st.x, y: st.y, z: st.z, yaw: st.yaw, pitch: st.pitch, dim: st.dim, gamemode: st.gamemode})
 }
 
-// onPackRegistriesChanged is where a reload's tags reach the clients
-// (PlayerList.reloadResources broadcasts ClientboundUpdateTagsPacket): every
-// session whose gateway can take them is sent the load's whole tag set,
-// which the gateway merges over its built-in tags. A reload changes no
-// registry entries here (packs add none the engine loads), so — as in
-// vanilla, where /reload and /datapack enable only resend tags and recipes
-// — nobody is reconfigured; a later load that adds registry entries is what
-// would call reconfigure for each player. Players who join or reconfigure
-// later are given the same set in their configuration data.
-func (h *hub) onPackRegistriesChanged(players map[int32]*tracked, pc *packContent) {
+// onPackRegistriesChanged is where a reload's tags and registry entries
+// reach the clients. When the load's registry entries (its dialogs) are
+// the ones the players were configured with, every session whose gateway
+// can take them is sent the load's whole tag set (PlayerList.reloadResources
+// broadcasts ClientboundUpdateTagsPacket), which the gateway merges over its
+// built-in tags. When they differ, a client can only take the new entries
+// in a configuration phase, so each player who can be is sent back through
+// one (reconfigure) and is given the entries and the tags there; one whose
+// gateway cannot is sent the tags alone. Players who join or reconfigure
+// later are given the same data in their configuration.
+func (h *hub) onPackRegistriesChanged(players map[int32]*tracked, old, pc *packContent) {
 	upd := attachproto.UpdateTags{Tags: packTagSets(pc)}
-	sent := 0
+	regs := packRegistriesDiffer(old, pc)
+	sent, again := 0, 0
+	ts := make([]*tracked, 0, len(players))
 	for _, t := range players {
-		if t.p.reconfigure && !t.p.bedrock && t.p.exec == nil {
-			t.p.trySendEv(upd)
-			sent++
+		ts = append(ts, t)
+	}
+	for _, t := range ts {
+		if !t.p.reconfigure || t.p.bedrock || t.p.exec != nil {
+			continue
 		}
+		if regs && h.reconfigure(players, t) {
+			again++
+			continue
+		}
+		t.p.trySendEv(upd)
+		sent++
 	}
 	changed := 0
 	for _, set := range upd.Tags {
 		changed += len(set.Tags)
 	}
-	log.Printf("datapacks: %d changed tags sent to %d of %d players", changed, sent, len(players))
+	log.Printf("datapacks: %d changed tags sent to %d of %d players, %d reconfigured for new registry entries", changed, sent, len(ts), again)
 }
 
 // ---- /debugconfig ----------------------------------------------------------------

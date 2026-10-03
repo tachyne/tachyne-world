@@ -133,7 +133,6 @@ func TestExecuteIfSlots(t *testing.T) {
 		{`execute if slots entity alice {type:"empty"}`, "Test failed"},
 		{`execute unless slots entity alice {type:"empty"}`, "Test passed"},
 		{"execute if slots entity alice foo", "Can't find element 'minecraft:foo' in registry 'minecraft:slot_source'"},
-		{`execute if slots entity alice {type:"contents",slot_source:{type:"slot_range",slots:"hotbar.0"},component:"minecraft:container"}`, "The contents slot source can't be read on this server yet"},
 		{"execute if slots block 20 100 20 container.*", "Source position 20, 100, 20 is not a container"},
 	} {
 		if got := run(c.cmd); !hasLine(got, c.want) {

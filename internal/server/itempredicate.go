@@ -26,7 +26,9 @@ import (
 // itemComponentPresent); asking about any other is refused by name rather
 // than answered wrongly. Of the predicate types, count, damage,
 // enchantments, stored_enchantments, potion_contents (its potions) and
-// custom_data (no engine stack carries custom data) are tested.
+// custom_data (no engine stack carries custom data) are tested. The
+// enchantment and potion sets may name tags (vanilla's, merged with the
+// data packs').
 
 // itemPredicateTypes is 26.3's minecraft:data_component_predicate_type
 // registry.
@@ -440,7 +442,16 @@ func itemPredicateTest(key string, v any) (func(invStack) bool, string) {
 				p.ids = map[int8]bool{}
 				for _, n := range holderSetNames(x) {
 					if strings.HasPrefix(n, "#") {
-						return nil, malformed(fmt.Sprintf("Can't find tag '%s' of type 'minecraft:enchantment'", nsID(n[1:])))
+						members, ok := tagMembers("enchantment", nsID(n[1:])) // vanilla's tags, merged with the data packs'
+						if !ok {
+							return nil, malformed(fmt.Sprintf("Can't find tag '%s' of type 'minecraft:enchantment'", nsID(n[1:])))
+						}
+						for _, m := range members {
+							if id, ok := enchByName[strings.TrimPrefix(m, "minecraft:")]; ok {
+								p.ids[id] = true
+							}
+						}
+						continue
 					}
 					id, ok := enchByName[strings.TrimPrefix(nsID(n), "minecraft:")]
 					if !ok {
@@ -503,7 +514,16 @@ func itemPredicateTest(key string, v any) (func(invStack) bool, string) {
 			want = map[int8]bool{}
 			for _, n := range holderSetNames(x) {
 				if strings.HasPrefix(n, "#") {
-					return nil, malformed(fmt.Sprintf("Can't find tag '%s' of type 'minecraft:potion'", nsID(n[1:])))
+					members, ok := tagMembers("potion", nsID(n[1:]))
+					if !ok {
+						return nil, malformed(fmt.Sprintf("Can't find tag '%s' of type 'minecraft:potion'", nsID(n[1:])))
+					}
+					for _, m := range members {
+						if id, ok := potionByVanillaName[strings.TrimPrefix(m, "minecraft:")]; ok {
+							want[id] = true
+						}
+					}
+					continue
 				}
 				id, ok := potionByVanillaName[strings.TrimPrefix(nsID(n), "minecraft:")]
 				if !ok {
