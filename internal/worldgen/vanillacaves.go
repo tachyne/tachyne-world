@@ -1,6 +1,9 @@
 package worldgen
 
-import "sync/atomic"
+import (
+	"math"
+	"sync/atomic"
+)
 
 // Vanilla caves — the overworld's cave generator as 26.3 has it, chosen per
 // world (CaveMode) in place of the engine's own tunnel field (carve in
@@ -190,7 +193,35 @@ func vcClamp(v, lo, hi float32) float32 {
 	if v < lo {
 		return lo
 	}
-	return min(v, hi)
+	return vcMin(v, hi)
+}
+
+// vcMin and vcMax are Java's Math.min/max on floats: NaN wins, and -0 is
+// below +0. (The package's own min and max take ints.)
+func vcMin(a, b float32) float32 {
+	if a != a {
+		return a
+	}
+	if a == 0 && b == 0 && math.Signbit(float64(b)) {
+		return b
+	}
+	if a <= b {
+		return a
+	}
+	return b
+}
+
+func vcMax(a, b float32) float32 {
+	if a != a {
+		return a
+	}
+	if a == 0 && b == 0 && math.Signbit(float64(a)) {
+		return b
+	}
+	if a >= b {
+		return a
+	}
+	return b
 }
 
 func vcAbs(v float32) float32 {
@@ -231,7 +262,7 @@ func (v *vanillaCaves) entrances(x, y, z int, rough float32) float32 {
 	s1 := vcAbs(vcSpaghetti3D(v.s3d1, rarity, x, y, z))
 	s2 := vcAbs(vcSpaghetti3D(v.s3d2, rarity, x, y, z))
 	thick := vcSample(v.s3dThick, x, y, z, 1, 1)*-0.011500001 + -0.0765
-	return min(open, rough+vcClamp(max(s1, s2)+thick, -1, 1))
+	return vcMin(open, rough+vcClamp(vcMax(s1, s2)+thick, -1, 1))
 }
 
 // spaghetti2D is overworld/caves/spaghetti_2d.
@@ -252,7 +283,7 @@ func (v *vanillaCaves) spaghetti2D(x, y, z int) float32 {
 		sel = vcSample(v.s2d, x, y, z, 0.3333333333333333, 0.3333333333333333) * 3
 	}
 	elev := vcSample(v.s2dElev, x, y, z, 1, 0) * 8
-	return vcClamp(max(vcAbs(sel)+tm*0.083, vcCube(vcAbs(elev+vcGradient(y, -64, 320, 8, -40))+tm)), -1, 1)
+	return vcClamp(vcMax(vcAbs(sel)+tm*0.083, vcCube(vcAbs(elev+vcGradient(y, -64, 320, 8, -40))+tm)), -1, 1)
 }
 
 // pillars is overworld/caves/pillars.
@@ -274,7 +305,7 @@ func (v *vanillaCaves) corner(x, y, z, h int, factor float32) float32 {
 	ent := v.entrances(x, y, z, rough)
 	var inner float32
 	if sloped >= -1000000 && sloped < 1.5625 {
-		inner = min(sloped, ent*5)
+		inner = vcMin(sloped, ent*5)
 	} else {
 		layer := vcSample(v.caveLayer, x, y, z, 1, 8)
 		cheese := layer*layer*4 + (vcClamp(vcSample(v.cheese, x, y, z, 1, 0.6666666666666666)+0.27, -1, 1) +
@@ -283,7 +314,7 @@ func (v *vanillaCaves) corner(x, y, z, h int, factor float32) float32 {
 		if p >= -1000000 && p < 0.03 {
 			p = -1000000
 		}
-		inner = max(min(min(cheese, ent), v.spaghetti2D(x, y, z)+rough), p)
+		inner = vcMax(vcMin(vcMin(cheese, ent), v.spaghetti2D(x, y, z)+rough), p)
 	}
 	// The top slide (y 240 → 256) toward -0.078125, then the bottom slide
 	// (y -64 → -40) toward 0.1171875.
@@ -406,7 +437,7 @@ func (v *vanillaCaves) build(g *Generator, cx, cz int32) *vcChunk {
 							j := (lx*4+lz)*8 + ly
 							noodle := float32(64)
 							if !(fd[j] >= -1000000 && fd[j] < 0) {
-								noodle = ft[j] + 1.5*max(vcAbs(fa[j]), vcAbs(fb[j]))
+								noodle = ft[j] + 1.5*vcMax(vcAbs(fa[j]), vcAbs(fb[j]))
 							}
 							// final_density = min(squeeze(interpolated), noodle) +
 							// beardifier: squeeze keeps the sign, so a cell is

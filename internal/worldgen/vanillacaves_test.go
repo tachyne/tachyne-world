@@ -72,7 +72,7 @@ func (v *vanillaCaves) noodleAt(x, y, z int) float32 {
 	if n >= -1000000 && n < 0 {
 		return 64
 	}
-	return th + 1.5*max(vcAbs(a), vcAbs(b))
+	return th + 1.5*vcMax(vcAbs(a), vcAbs(b))
 }
 
 func TestVanillaCaveDensityMatchesVanilla(t *testing.T) {
