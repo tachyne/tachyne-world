@@ -482,6 +482,9 @@ func (s *Server) runStandIn(origin *player, src *execSource, forked bool, level 
 	proxy.yaw, proxy.pitch, proxy.dim = src.yaw, src.pitch, src.dim
 	ctx := &execCtx{origin: origin, self: src.self, display: src.display, forked: forked}
 	proxy.exec = ctx
+	if origin != nil && origin.fnSilent.Load() > 0 {
+		proxy.fnSilent.Store(1) // withEntity/withPosition keep a silent source silent
+	}
 	t := &tracked{living: living{attrs: newPlayerAttributes()}, p: proxy, x: src.x, y: src.y, z: src.z, dim: src.dim, gamemode: gmCreative, hudOn: true}
 	t.yaw, t.pitch = src.yaw, src.pitch
 	initSurvival(t)

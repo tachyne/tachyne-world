@@ -446,6 +446,7 @@ type hub struct {
 	fnKick       func(fnJob)
 	sched        timerQueue
 	runConsole   func(string) ([]string, error)   // runs a line as the console (Server.runAsConsole); nil = none
+	advFunction  func(p *player, id string)       // runs an advancement's reward function as the player; nil = none
 	eidCounter   int64                            // per-pod eid mint counter, fed through shard.MintEID when sharded
 	tick         atomic.Uint64                    // world age (ticks); atomic so connections can read it
 	lastTick     atomic.Int64                     // unix nanos of the last COMPLETED tick — the liveness heartbeat (health.go)
@@ -1372,6 +1373,7 @@ func (h *hub) run() {
 			h.updateItemSpawners(players)
 			h.updatePortalDwell(players) // nether portal wait, counted every tick
 			h.updateBrewing(players)     // BrewingStandBlockEntity.serverTick: the brew counts down every tick
+			h.advTickTrigger(players)    // minecraft:tick criteria (data pack advancements)
 			if age%survivalTickN == 0 {
 				h.runNPCs(players)  // LLM NPCs: throttled perceive → decide → act
 				h.advTick(players)  // polled advancement criteria (inventory, biome)

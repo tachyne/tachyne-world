@@ -124,8 +124,8 @@ func (s advState) snapshot() attach.AdvProgress {
 	p := attach.AdvProgress{Reset: true}
 	ids := make([]string, 0, len(s))
 	for id := range s {
-		if _, ok := advByID[id]; !ok {
-			continue // advancement gone from the table (data upgrade)
+		if _, ok := curAdv().byID[id]; !ok {
+			continue // advancement gone from the table (data upgrade, or a data pack's gone)
 		}
 		ids = append(ids, id)
 	}
@@ -253,7 +253,7 @@ func stateHasProps(state uint32, props map[string]string) bool {
 // blockMatches: the state is in the criterion's block set (an empty set is
 // "any block") and carries the required properties.
 func (c *advCriterion) blockMatches(state uint32) bool {
-	if rs := advBlockSets[c]; len(rs) > 0 && !inRanges(rs, state) {
+	if rs := curAdv().blockSets[c]; len(rs) > 0 && !inRanges(rs, state) {
 		return false
 	}
 	return stateHasProps(state, c.props)
@@ -351,7 +351,7 @@ func (m advMatch) criterion(c *advCriterion) bool {
 			}
 			return false
 		}
-		r, ok := advBlockRanges[c]
+		r, ok := curAdv().blockRanges[c]
 		return ok && m.blockState >= r[0] && m.blockState <= r[1]
 	case "item_used_on_block":
 		if !c.blockMatches(m.blockState) || !m.itemIn(c) {
@@ -367,7 +367,7 @@ func (m advMatch) criterion(c *advCriterion) bool {
 	case "changed_dimension":
 		return !c.hasDim || c.dim == m.dim
 	case "location":
-		if !c.biomeMatches(m.biome) {
+		if !c.biomeMatches(m.biome) || (c.hasDim && c.dim != m.dim) {
 			return false
 		}
 		if c.structure != "" && c.structure != m.structure {
@@ -502,7 +502,7 @@ func (m advMatch) criterion(c *advCriterion) bool {
 		return m.count >= c.minCount
 	case "slept_in_bed", "villager_trade", "enchanted_item", "brewed_potion",
 		"cured_zombie_villager", "avoid_vibration", "hero_of_the_village",
-		"kill_mob_near_sculk_catalyst":
+		"kill_mob_near_sculk_catalyst", "tick":
 		return true
 	}
 	return false
@@ -589,6 +589,7 @@ func advRuleFor(n *advNode, done bool) advVisRule {
 // vanilla evaluator: DFS with an ancestor-rule stack; an unfinished subtree
 // is visible when the nearest decisive rule within self+2 ancestors is SHOW.
 func (s advState) visible() map[string]bool {
+	reg := curAdv()
 	out := make(map[string]bool, 32)
 	stack := []advVisRule{advVisNoChange, advVisNoChange, advVisNoChange}
 	var walk func(n *advNode) bool
@@ -596,7 +597,7 @@ func (s advState) visible() map[string]bool {
 		selfDone := s.done(n)
 		stack = append(stack, advRuleFor(n, selfDone))
 		anyDone := selfDone
-		for _, c := range advChildren[n.id] {
+		for _, c := range reg.children[n.id] {
 			anyDone = walk(c) || anyDone
 		}
 		vis := anyDone
@@ -619,7 +620,7 @@ func (s advState) visible() map[string]bool {
 		}
 		return anyDone
 	}
-	for _, r := range advRoots {
+	for _, r := range reg.roots {
 		walk(r)
 	}
 	return out
@@ -629,16 +630,17 @@ func (s advState) visible() map[string]bool {
 // parent-before-child order.
 func visibleTree(vis map[string]bool, skip map[string]bool) attach.AdvTree {
 	t := attach.AdvTree{}
+	reg := curAdv()
 	var walk func(n *advNode)
 	walk = func(n *advNode) {
 		if vis[n.id] && !skip[n.id] {
 			t.Nodes = append(t.Nodes, advTreeNode(n))
 		}
-		for _, c := range advChildren[n.id] {
+		for _, c := range reg.children[n.id] {
 			walk(c)
 		}
 	}
-	for _, r := range advRoots {
+	for _, r := range reg.roots {
 		walk(r)
 	}
 	return t

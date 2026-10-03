@@ -430,7 +430,7 @@ func parseSelectorBool(s string) (bool, bool) {
 // the server fails, as does a criterion it does not have.
 func advancementsMatch(st advState, preds []advSelPred) bool {
 	for _, p := range preds {
-		n := advByID[p.id]
+		n := curAdv().byID[p.id]
 		if n == nil {
 			return false
 		}

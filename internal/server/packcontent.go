@@ -33,6 +33,10 @@ type packContent struct {
 	// dialogs are the dialog registry entries the packs add or replace
 	// (packdialog.go), by id, each in its data-pack JSON form.
 	dialogs map[string]json.RawMessage
+
+	// adv is the advancement tree with the packs' advancements merged in
+	// (packadv.go); nil when the packs carry none.
+	adv *advRegistry
 }
 
 // activePack is the installed load. The engine runs one server per process;
@@ -47,9 +51,11 @@ func currentPack() *packContent { return activePack.Load() }
 func installPackContent(pc *packContent) {
 	activePack.Store(pc)
 	if pc == nil {
+		activeAdv.Store(nil)
 		worldgen.SetTagOverlay(nil)
 		return
 	}
+	activeAdv.Store(pc.adv)
 	worldgen.SetTagOverlay(pc.tags.worldgenTagOverlay())
 }
 
@@ -62,6 +68,7 @@ type packDataFiles struct {
 	preds     map[string]packFile
 	modifiers map[string]packFile
 	dialogs   map[string]packFile
+	advs      map[string]packFile
 }
 
 func newPackDataFiles() *packDataFiles {
@@ -72,6 +79,7 @@ func newPackDataFiles() *packDataFiles {
 		preds:     map[string]packFile{},
 		modifiers: map[string]packFile{},
 		dialogs:   map[string]packFile{},
+		advs:      map[string]packFile{},
 	}
 }
 
@@ -111,6 +119,7 @@ func (d *packDataFiles) take(packID, ns, rest string, read func() ([]byte, error
 		{"predicate/", d.preds},
 		{"item_modifier/", d.modifiers},
 		{"dialog/", d.dialogs},
+		{"advancement/", d.advs},
 	} {
 		if id, ok := idOf(kind.prefix); ok {
 			if data, err := read(); err == nil {
@@ -129,6 +138,7 @@ func buildPackContent(d *packDataFiles, unapplied map[string]map[string]bool) *p
 	pc.dialogs = buildPackDialogs(d.dialogs, d.tags["dialog"])
 	pc.tags = buildTagRegistry(d.tags, map[string]map[string]bool{"dialog": dialogIDSet(pc.dialogs)})
 	pc.recipes = buildPackRecipes(d.recipes, pc.tags, unapplied)
+	pc.adv = buildAdvRegistry(d.advs, pc.tags)
 	buildPackLoot(pc, d.preds, d.modifiers, d.loot)
 	return pc
 }
@@ -152,6 +162,7 @@ func (h *hub) applyPackContent(players map[int32]*tracked, pc *packContent) {
 	h.remapRecipeBooks(players, old, pc)
 	h.onPackRegistriesChanged(players, old, pc)
 	h.onPackRecipesChanged(players, old, pc)
+	h.onPackAdvancementsChanged(players, old, pc)
 }
 
 // onPackRecipesChanged sends the clients the recipe data a load changed

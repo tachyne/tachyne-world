@@ -311,8 +311,8 @@ func (h *hub) argCandidates(players map[int32]*tracked, cmd string, prev []strin
 			return []string{"everything", "from", "only", "through", "until"}
 		case 3:
 			var out []string
-			for _, a := range advTable {
-				out = append(out, "minecraft:"+a.id)
+			for _, a := range curAdv().nodes {
+				out = append(out, a.id)
 			}
 			return out
 		}

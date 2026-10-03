@@ -148,7 +148,12 @@ func (s *Server) fnLimitsFor(p *player) (fnLimits, bool) {
 
 // fnCall is CallFunction: one call on the stack, its lines run in order
 // until they end, a /return discards the rest, or the budget runs out.
-func (s *Server) fnCall(e *fnExec, fi fnInstance) *fnFrame {
+func (s *Server) fnCall(e *fnExec, fi fnInstance) *fnFrame { return s.fnCallAs(e, e.src, fi) }
+
+// fnCallAs is fnCall with the lines run as src: the source the /function
+// that made the call ran as (an execute as/at stand-in sharing the
+// context), as CallFunction runs a function with its caller's source.
+func (s *Server) fnCallAs(e *fnExec, src *player, fi fnInstance) *fnFrame {
 	f := &fnFrame{id: fi.id}
 	if !e.spend() {
 		return f
@@ -159,7 +164,7 @@ func (s *Server) fnCall(e *fnExec, fi fnInstance) *fnFrame {
 		if f.done || !e.spend() {
 			break
 		}
-		s.handleCommand(e.src, line)
+		s.handleCommand(src, line)
 	}
 	return f
 }
@@ -239,6 +244,7 @@ func (s *Server) startFunctionRunner() {
 			s.runFunctionJob(j)
 		}
 	}()
+	s.hub.advFunction = func(p *player, id string) { go s.runRewardFunction(p, id) } // advancement rewards (packadv.go)
 }
 
 // runFunctionJob runs one tick's calls, each in its own execution context

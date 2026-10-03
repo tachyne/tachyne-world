@@ -363,6 +363,32 @@ func (h *hub) selectEntitiesAll(players map[int32]*tracked, from *tracked, spec 
 	var out []cmdEntity
 	switch spec.kind {
 	case 0: // a plain name: that online player (PlayerList.getPlayerByName ignores case)
+		if u, ok := parseUUIDString(spec.name); ok {
+			// EntitySelector's entityUUID: the entity with that UUID, of
+			// whatever kind (ServerLevel.getEntity).
+			if withPlayers {
+				for _, t := range players {
+					if t.p.exec == nil && t != h.console && t.p.uuid == u {
+						return append(out, cmdEntity{t: t})
+					}
+				}
+			}
+			if withMobs {
+				for _, m := range h.mobs {
+					if m.dying == 0 && m.uuid == u {
+						return append(out, cmdEntity{m: m})
+					}
+				}
+			}
+			if withOthers {
+				for _, o := range h.otherEntities() {
+					if o.uuid == u {
+						return append(out, cmdEntity{o: o})
+					}
+				}
+			}
+			return out
+		}
 		if withPlayers {
 			for _, t := range players {
 				if t.p.exec == nil && strings.EqualFold(t.p.name, spec.name) {

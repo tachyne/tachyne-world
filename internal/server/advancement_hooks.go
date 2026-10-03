@@ -43,7 +43,7 @@ func (h *hub) advance(players map[int32]*tracked, t *tracked, trigger string, m 
 			m.playerArmor[i] = t.armor[i].item
 		}
 	}
-	for _, ref := range advByTrigger[trigger] {
+	for _, ref := range curAdv().byTrigger[trigger] {
 		if !m.criterion(ref.crit) {
 			continue
 		}
@@ -108,6 +108,20 @@ func (h *hub) advDeliver(players map[int32]*tracked, t *tracked, granted, comple
 		if n.xp > 0 {
 			h.addXP(t, int(n.xp))
 		}
+		h.advPayRewards(players, t, n.rewards)
+	}
+}
+
+// advTickTrigger is TickTrigger: every tick, for every player, when a
+// data pack's advancement listens for it.
+func (h *hub) advTickTrigger(players map[int32]*tracked) {
+	if len(curAdv().byTrigger["tick"]) == 0 {
+		return
+	}
+	for _, t := range players {
+		if t.adv != nil && !t.dead && t.p.exec == nil {
+			h.advance(players, t, "tick", advMatch{})
+		}
 	}
 }
 
@@ -170,7 +184,7 @@ func (h *hub) advTick(players map[int32]*tracked) {
 		if worldgen.IsWater(w.At(bx, by, bz)) || worldgen.IsWater(w.At(bx, int(math.Floor(t.y+playerEyeStand)), bz)) {
 			h.recipeUnlocksInWater(t)
 		}
-		loc := advMatch{feet: t.armor[3].item, biome: w.BiomeAt3D(bx, by, bz)}
+		loc := advMatch{feet: t.armor[3].item, biome: w.BiomeAt3D(bx, by, bz), dim: int32(t.dim)}
 		if t.dim == 0 {
 			loc.structure = h.structureAt(bx, bz)
 		}

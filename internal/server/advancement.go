@@ -117,5 +117,6 @@ type advNode struct {
 	criteria   []advCriterion
 	reqs       [][]string
 	display    *advDisplay
-	xp         int32 // rewards.experience
+	xp         int32       // rewards.experience
+	rewards    *advRewards // a data pack's function, loot and recipes (packadv.go)
 }
