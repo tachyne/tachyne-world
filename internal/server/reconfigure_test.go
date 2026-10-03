@@ -202,7 +202,7 @@ func TestReloadSendsUpdateTags(t *testing.T) {
 			}
 		}
 	}
-	if cd := s.configData(); len(cd.Tags) != 2 || cd.Tags[1].Registry != "item" || len(cd.Dimensions) != 3 {
+	if cd := s.configData(); len(cd.Tags) != 2 || cd.Tags[1].Registry != "item" || len(cd.Dimensions) != len(world.Dimensions) {
 		t.Errorf("join configuration data %+v", cd)
 	}
 	for _, ev := range []any{attachproto.UpdateTags{}, attachproto.StartConfiguration{}, attachproto.Rejoin{}} {
