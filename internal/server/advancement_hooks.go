@@ -198,7 +198,9 @@ func (h *hub) advTick(players map[int32]*tracked) {
 // Vanilla visibility: an empty state means an empty advancement screen.
 func (h *hub) advSendAll(t *tracked) {
 	t.advVisible = t.adv.visible()
-	t.p.sendEv(visibleTree(t.advVisible, nil))
+	tree := visibleTree(t.advVisible, nil)
+	tree.Reset = true // the client's tree is replaced: an advancement a reload removed goes
+	t.p.sendEv(tree)
 	snap := t.adv.snapshot()
 	entries := snap.Entries[:0]
 	for _, e := range snap.Entries {

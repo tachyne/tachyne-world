@@ -420,11 +420,28 @@ func smithingItemSets(st *stationRecipes) []attachproto.RecipePropertySet {
 		sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
 		return out
 	}
-	return []attachproto.RecipePropertySet{
-		{Key: "minecraft:smithing_template", Items: list(tmpl)},
-		{Key: "minecraft:smithing_base", Items: list(base)},
-		{Key: "minecraft:smithing_addition", Items: list(add)},
+	// All of vanilla's property sets go out (a frame's item sets replace the
+	// gateway's whole table), the three smithing ones with the packs' items.
+	ours := map[string][]int32{
+		"minecraft:smithing_template": list(tmpl),
+		"minecraft:smithing_base":     list(base),
+		"minecraft:smithing_addition": list(add),
 	}
+	out := make([]attachproto.RecipePropertySet, 0, len(protocol.RecipePropertySets))
+	for _, ps := range protocol.RecipePropertySets {
+		if items, ok := ours[ps.Key]; ok {
+			out = append(out, attachproto.RecipePropertySet{Key: ps.Key, Items: items})
+			continue
+		}
+		items := make([]int32, 0, len(ps.Items))
+		for _, n := range ps.Items {
+			if it, ok := itemByName[n]; ok {
+				items = append(items, it)
+			}
+		}
+		out = append(out, attachproto.RecipePropertySet{Key: ps.Key, Items: items})
+	}
+	return out
 }
 
 func containsItem(set []int32, it int32) bool {
