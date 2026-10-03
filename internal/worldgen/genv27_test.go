@@ -15,8 +15,8 @@ func netherrackChunk(g *Generator) *Chunk {
 	return ch
 }
 
-// countIn counts a block in a chunk.
-func countIn(ch *Chunk, b uint32) int {
+// chunkBlockCount counts a block in a chunk.
+func chunkBlockCount(ch *Chunk, b uint32) int {
 	n := 0
 	for s := range ch.Sections {
 		for _, v := range ch.Sections[s] {
@@ -72,7 +72,7 @@ func TestNetherOreBlobAndBuildGuard(t *testing.T) {
 		ch := netherrackChunk(g)
 		reg := &owRegion{g: g, ch: ch, baseX: 0, baseZ: 0, cols: map[[2]int]column{}}
 		oreBlob(reg, guard, netherrackOre(NetherQuartzOre, 14), newTreeRNG(5, 8, 8), 8, 40, 8, top, 5, 1)
-		return countIn(ch, NetherQuartzOre)
+		return chunkBlockCount(ch, NetherQuartzOre)
 	}
 	if n := blob(&buildIndex{}); n < 3 {
 		t.Fatalf("a size-14 quartz blob in netherrack placed %d ore", n)
@@ -95,7 +95,7 @@ func TestNetherOrePlacementBiomes(t *testing.T) {
 		return ch
 	}
 	if cx, cz, ok := netherBiomeArea(g, "minecraft:soul_sand_valley"); ok {
-		if n := countIn(run(cx, cz), SoulSand); n == 0 {
+		if n := chunkBlockCount(run(cx, cz), SoulSand); n == 0 {
 			t.Error("no soul sand ore in a soul sand valley chunk")
 		}
 	} else {
@@ -103,10 +103,10 @@ func TestNetherOrePlacementBiomes(t *testing.T) {
 	}
 	if cx, cz, ok := netherBiomeArea(g, "minecraft:nether_wastes"); ok {
 		ch := run(cx, cz)
-		if n := countIn(ch, SoulSand); n != 0 {
+		if n := chunkBlockCount(ch, SoulSand); n != 0 {
 			t.Errorf("%d soul sand ore in the nether wastes", n)
 		}
-		if countIn(ch, NetherQuartzOre) == 0 || countIn(ch, NetherGoldOre) == 0 {
+		if chunkBlockCount(ch, NetherQuartzOre) == 0 || chunkBlockCount(ch, NetherGoldOre) == 0 {
 			t.Error("the wastes should hold gold and quartz")
 		}
 	} else {
@@ -114,10 +114,10 @@ func TestNetherOrePlacementBiomes(t *testing.T) {
 	}
 	if cx, cz, ok := netherBiomeArea(g, "minecraft:basalt_deltas"); ok {
 		ch := run(cx, cz)
-		if n := countIn(ch, Gravel) + countIn(ch, Blackstone); n != 0 {
+		if n := chunkBlockCount(ch, Gravel) + chunkBlockCount(ch, Blackstone); n != 0 {
 			t.Errorf("%d gravel or blackstone ore in the basalt deltas", n)
 		}
-		if countIn(ch, NetherQuartzOre) == 0 {
+		if chunkBlockCount(ch, NetherQuartzOre) == 0 {
 			t.Error("the deltas should hold their own quartz")
 		}
 	} else {
