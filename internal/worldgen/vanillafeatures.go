@@ -190,6 +190,9 @@ func (e *vpExec) inChunk(x, y, z int) bool {
 // set records a feature's write and makes it in the chunk if it lies
 // there and no structure holds the cell.
 func (e *vpExec) set(x, y, z int, s uint32) {
+	if e.terrain != nil && (y < e.terrain.MinY() || y >= e.terrain.Ceiling()) {
+		return // outside the world's build height: WorldGenRegion refuses it
+	}
 	if e.ov == nil {
 		e.ov = map[vpPos]uint32{}
 	}
@@ -907,6 +910,16 @@ func (e *vpExec) canSurvive(s uint32, p vpPos) bool {
 		return vpWouldSurvive{block: name}.test(&c, p)
 	case "seagrass", "tall_seagrass", "kelp", "kelp_plant", "sea_pickle":
 		return HoldsWater(e.get(p.x, p.y, p.z))
+	case "brown_mushroom", "red_mushroom":
+		// MushroomBlock.canSurvive: on a block that overrides the light
+		// rule, or in the dark on a solid one (the dark: under the
+		// terrain's surface, or a dimension with no sky).
+		below := e.get(p.x, p.y-1, p.z)
+		if vpTagHas("overrides_mushroom_light_requirement", below) {
+			return true
+		}
+		dark := e.terrain == nil || e.terrain.SeaLevel() != SeaLevel || p.y < e.ctx.lv.Height(HeightWorldSurfaceWG, p.x, p.z)-1
+		return dark && IsFullCube(below)
 	}
 	if NeedsGroundSupport(s) || IsFlower(s) {
 		return vpWouldSurvive{block: name}.test(&c, p)
