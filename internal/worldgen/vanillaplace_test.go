@@ -378,3 +378,73 @@ func TestVanillaLocateMatchesServer(t *testing.T) {
 	}
 	t.Logf("%d of %d locates match the server", n-bad, n)
 }
+
+// TestVanillaOresMatchServer compares the ore cells of eight chunks a
+// 26.3 server generated in full for seed 1 (testdata/vanilla_ores_seed1.txt)
+// with the vanilla generator's. Ores read the terrain they replace, so with
+// the terrain core's terrain they land cell for cell; the few that differ
+// are near air (the discard roll asks whether a cell is exposed, and the
+// server's air includes features this generator places differently or not
+// at all). It needs the whole vanilla generator and skips without it.
+func TestVanillaOresMatchServer(t *testing.T) {
+	g := NewGenerator(1)
+	sg, ok := any(g).(interface {
+		SetGenerator(GeneratorMode, WorldPreset) error
+	})
+	if !ok || vanillaBiomesCtor == nil {
+		t.Skip("the vanilla terrain core or biome source is not in this tree")
+	}
+	if err := sg.SetGenerator(GeneratorVanilla, PresetNormal); err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Open("testdata/vanilla_ores_seed1.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	type cell struct {
+		x, y, z int
+		name    string
+	}
+	want := map[[2]int32]map[cell]bool{}
+	var cur [2]int32
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		fs := strings.Fields(sc.Text())
+		switch {
+		case len(fs) == 3 && fs[0] == "C":
+			cur = [2]int32{int32(atoi64(t, fs[1])), int32(atoi64(t, fs[2]))}
+			want[cur] = map[cell]bool{}
+		case len(fs) == 4 && fs[0] != "#":
+			want[cur][cell{int(atoi64(t, fs[1])), int(atoi64(t, fs[2])), int(atoi64(t, fs[3])), fs[0]}] = true
+		}
+	}
+	both, server, ours := 0, 0, 0
+	for c, cells := range want {
+		ch := g.GenerateChunk(c[0], c[1])
+		got := map[cell]bool{}
+		for s := range ch.Sections {
+			for i, st := range ch.Sections[s] {
+				nm, _ := StateName(st)
+				if strings.HasSuffix(nm, "_ore") || nm == "raw_iron_block" || nm == "raw_copper_block" {
+					got[cell{int(c[0])*16 + i&15, MinY + s*16 + i>>8, int(c[1])*16 + (i>>4)&15, nm}] = true
+				}
+			}
+		}
+		for w := range cells {
+			server++
+			if got[w] {
+				both++
+			}
+		}
+		for gk := range got {
+			if !cells[gk] {
+				ours++
+			}
+		}
+	}
+	t.Logf("%d of the server's %d ore cells placed alike; %d placed only here", both, server, ours)
+	if both < server*95/100 || ours > server*5/100 {
+		t.Errorf("ores: %d of %d alike, %d extra — want 95%% alike and under 5%% extra", both, server, ours)
+	}
+}
