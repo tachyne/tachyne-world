@@ -13,7 +13,7 @@ func flyKnocked(t *testing.T, h *hub, players map[int32]*tracked, m *mob) (peak 
 	t.Helper()
 	peak = m.y
 	for updates = 0; updates < 60 && m.kbFlight; updates++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		h.tick.Add(mobMoveInterval)
 		peak = math.Max(peak, m.y)
 	}
@@ -65,7 +65,7 @@ func TestKnockbackStopsAtAWall(t *testing.T) {
 	}
 	h.attackMob(players, 1, m.eid)
 	for i := 0; i < 60 && m.kbFlight; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		h.tick.Add(mobMoveInterval)
 		if m.x >= 44 {
 			t.Fatalf("update %d: the knocked zombie passed through the wall to x=%.3f", i, m.x)

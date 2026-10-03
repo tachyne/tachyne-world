@@ -72,7 +72,7 @@ func TestBatFliesToItsTarget(t *testing.T) {
 	moved := false
 	for i := 0; i < 40; i++ {
 		x0, z0 := b.x, b.z
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if b.x != x0 || b.z != z0 {
 			moved = true
 		}
@@ -143,7 +143,7 @@ func TestParrotWandersToATree(t *testing.T) {
 	perched := false
 	for i := 0; i < 3000 && !perched; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		perched = !p.parrotWandering && math.Abs(p.x-2.5) < 1.2 && math.Abs(p.z-0.5) < 1.2 && p.y > 184.5 && p.y < 186
 	}
 	if !perched {
@@ -153,7 +153,7 @@ func TestParrotWandersToATree(t *testing.T) {
 	x0, z0 := p.x, p.z
 	for i := 0; i < 20; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if p.parrotWandering {
 			return // a new wander began: that is the goal, not a drift
 		}

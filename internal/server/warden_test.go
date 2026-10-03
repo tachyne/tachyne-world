@@ -44,7 +44,7 @@ func TestWardenLeavesAPlayerItIsNotAngryAtAlone(t *testing.T) {
 	m.rest = 1 << 20 // no strolling up to them
 	for i := 0; i < 150; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if m.wardenTarget != 0 || m.wardenPose == poseRoaring || m.hasTarget {
 			t.Fatalf("update %d: it went for a player it was never angry at (target %d, pose %d, hunting %v)",
 				i, m.wardenTarget, m.wardenPose, m.hasTarget)
@@ -66,7 +66,7 @@ func TestWardenMeleesEveryEighteenTicks(t *testing.T) {
 		pl.x, pl.y, pl.z = m.x+1.2, 180, m.z // keep them in reach
 		before := pl.health
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if pl.health < before {
 			hits = append(hits, i)
 		}
@@ -99,7 +99,7 @@ func TestWardenSonicBoomChargesAndWaits(t *testing.T) {
 		before := pl.health
 		run := m.sonicRun
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		roaring := m.wardenPose == poseRoaring
 		if lastPose && !roaring && roarEnd < 0 {
 			roarEnd = i
@@ -140,7 +140,7 @@ func TestWardenStruckGoesStraightForTheAttacker(t *testing.T) {
 		t.Fatalf("the attacker should be its target, got %d", m.wardenTarget)
 	}
 	h.tick.Add(mobMoveInterval)
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if m.wardenPose == poseRoaring {
 		t.Error("struck directly, it should not stop to roar")
 	}
@@ -197,7 +197,7 @@ func TestWardenDarknessPulses(t *testing.T) {
 	m.rest = 1 << 20
 	for i := 0; i < 130/mobMoveInterval; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	e := pl.effects[effDarkness]
 	if e == nil {

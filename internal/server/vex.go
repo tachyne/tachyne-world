@@ -66,8 +66,18 @@ func vexQuarryEyes(q quarry) float64 {
 	return q.y + mobEyeHeight(q.o)
 }
 
-// vexFlight runs one mob update (two ticks) of the vex's goals and flight.
+// vexFlight runs one goal update of the vex: its goals, then the
+// mobGoalInterval ticks of flight the update covers.
 func (h *hub) vexFlight(players map[int32]*tracked, m *mob) {
+	h.vexGoals(players, m)
+	for i := 0; i < mobGoalInterval; i++ {
+		h.vexFlyTick(players, m)
+	}
+}
+
+// vexGoals is the vex's goal update: VexChargeAttackGoal and
+// VexRandomMoveGoal deciding where it wants to be.
+func (h *hub) vexGoals(players map[int32]*tracked, m *mob) {
 	q, has := h.vexTarget(players, m)
 	if m.vexCharging && (!has || !m.vexWant) {
 		h.setVexCharging(players, m, false)
@@ -81,33 +91,37 @@ func (h *hub) vexFlight(players map[int32]*tracked, m *mob) {
 			h.vexDrift(m)
 		}
 	}
-	for tick := 0; tick < mobMoveInterval; tick++ {
-		if m.vexCharging && has {
-			if vexTouches(m, q) {
-				if q.t != nil {
-					m.attackCD = 0
-					h.mobMelee(players, m) // doHurtTarget
-				} else {
-					h.vexStrikeMob(players, m, q.o)
-				}
-				h.setVexCharging(players, m, false)
-			} else if dist3sq(m.x, m.y, m.z, q.x, q.y, q.z) < 9 {
-				m.vexWX, m.vexWY, m.vexWZ = q.x, vexQuarryEyes(q), q.z
-			}
-		}
-		if m.vexWant {
-			dx, dy, dz := m.vexWX-m.x, m.vexWY-m.y, m.vexWZ-m.z
-			if d := math.Sqrt(dx*dx + dy*dy + dz*dz); d < vexStopRadius {
-				m.vexWant = false
-				m.vexVX, m.vexVY, m.vexVZ = m.vexVX*0.5, m.vexVY*0.5, m.vexVZ*0.5
+}
+
+// vexFlyTick is one tick of the vex's flight (VexMoveControl, noPhysics),
+// with the charge's touch test.
+func (h *hub) vexFlyTick(players map[int32]*tracked, m *mob) {
+	q, has := h.vexTarget(players, m)
+	if m.vexCharging && has {
+		if vexTouches(m, q) {
+			if q.t != nil {
+				m.attackCD = 0
+				h.mobMelee(players, m) // doHurtTarget
 			} else {
-				k := m.vexSpeed * vexAccel / d
-				m.vexVX, m.vexVY, m.vexVZ = m.vexVX+dx*k, m.vexVY+dy*k, m.vexVZ+dz*k
+				h.vexStrikeMob(players, m, q.o)
 			}
+			h.setVexCharging(players, m, false)
+		} else if dist3sq(m.x, m.y, m.z, q.x, q.y, q.z) < 9 {
+			m.vexWX, m.vexWY, m.vexWZ = q.x, vexQuarryEyes(q), q.z
 		}
-		m.x, m.y, m.z = m.x+m.vexVX, m.y+m.vexVY, m.z+m.vexVZ // noPhysics: through blocks
-		m.vexVX, m.vexVY, m.vexVZ = m.vexVX*vexAirDrag, m.vexVY*vexVertDrag, m.vexVZ*vexAirDrag
 	}
+	if m.vexWant {
+		dx, dy, dz := m.vexWX-m.x, m.vexWY-m.y, m.vexWZ-m.z
+		if d := math.Sqrt(dx*dx + dy*dy + dz*dz); d < vexStopRadius {
+			m.vexWant = false
+			m.vexVX, m.vexVY, m.vexVZ = m.vexVX*0.5, m.vexVY*0.5, m.vexVZ*0.5
+		} else {
+			k := m.vexSpeed * vexAccel / d
+			m.vexVX, m.vexVY, m.vexVZ = m.vexVX+dx*k, m.vexVY+dy*k, m.vexVZ+dz*k
+		}
+	}
+	m.x, m.y, m.z = m.x+m.vexVX, m.y+m.vexVY, m.z+m.vexVZ // noPhysics: through blocks
+	m.vexVX, m.vexVY, m.vexVZ = m.vexVX*vexAirDrag, m.vexVY*vexVertDrag, m.vexVZ*vexAirDrag
 	if has {
 		m.yaw = float32(math.Atan2(-(q.x-m.x), q.z-m.z) * 180 / math.Pi)
 	} else if m.vexVX != 0 || m.vexVZ != 0 {

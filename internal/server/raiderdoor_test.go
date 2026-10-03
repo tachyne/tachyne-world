@@ -50,7 +50,7 @@ func TestRaidingVindicatorGetsThroughDoors(t *testing.T) {
 		}
 		for i := 0; i < 600; i++ {
 			h.tick.Add(mobMoveInterval)
-			h.updateMobs(players)
+			h.mobUpdate(players)
 			if s := w.At(4, 180, 0); !worldgen.IsClosedDoor(s) {
 				return true
 			}
@@ -86,7 +86,7 @@ func TestRaiderRoamsTheVillageHomes(t *testing.T) {
 	visited := false
 	for i := 0; i < 600 && !visited; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		for _, p := range v.raidVisited {
 			visited = visited || p == bed
 		}

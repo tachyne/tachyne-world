@@ -52,7 +52,7 @@ func flierRun(t *testing.T, set func(h *hub, players map[int32]*tracked)) (dist 
 	}
 	for i := 0; i < 200; i++ {
 		ox, oz := m.x, m.z
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		dist += math.Hypot(m.x-ox, m.z-oz)
 	}
 	return dist, m
@@ -134,7 +134,7 @@ func TestZeroGravityMobHangsInTheAir(t *testing.T) {
 			h.applyAttributeCommand(players, evAttributeCmd{by: 1, target: "@e[type=pig]", id: attr.Gravity, op: "base set", value: 0})
 		}
 		h.world.SetBlock(10, 179, 10, 0) // dig it out
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		return m.y
 	}
 	if y := drop(false); y > 172 {
@@ -198,7 +198,7 @@ func TestSlowFallingMobTakesNoFallDamage(t *testing.T) {
 		}
 		before := m.health
 		h.world.SetBlock(10, 179, 10, 0)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		return m.health < before
 	}
 	if !hurt(false) {
@@ -300,7 +300,7 @@ func TestPiglinMeleeSparesGold(t *testing.T) {
 	h, players, pg, gold, _ := piglinFixture(t)
 	for i := 0; i < 6; i++ {
 		pg.x, pg.y, pg.z = 8.5, 180, 8.5 // held in place beside the bystander
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if gold.health < 20 {
 			t.Fatalf("the piglin hit the player in gold (update %d)", i)
 		}
@@ -320,7 +320,7 @@ func TestPiglinRetaliatesAgainstGold(t *testing.T) {
 	for i := 0; i < 20 && gold.health >= hp; i++ {
 		pg.x, pg.y, pg.z = 8.5, 180, 8.5
 		pg.attackCD = 0
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if gold.health >= hp {
 		t.Fatal("the piglin never hit back at the player in gold who struck it")

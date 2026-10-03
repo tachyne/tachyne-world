@@ -16,7 +16,7 @@ func TestFarmerWorksTheComposter(t *testing.T) {
 	v.hoard = []invStack{{item: itemWheat, count: 9}, {item: seeds, count: 40}}
 	for i := 0; i < 400 && villagerCount(v, itemBread) == 0; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if got := villagerCount(v, itemBread); got != 3 || villagerCount(v, itemWheat) != 0 {
 		t.Fatalf("three loaves from nine wheat: bread %d wheat %d", got, villagerCount(v, itemWheat))
@@ -42,7 +42,7 @@ func TestFarmerWorksTheComposter(t *testing.T) {
 	v.hoard = []invStack{{item: itemWheat, count: 9}}
 	for i := 0; i < (workCheckCooldown-20)/mobMoveInterval; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if villagerCount(v, itemBread) != 0 {
 		t.Fatal("it worked again inside the three-hundred-tick cooldown")
@@ -61,7 +61,7 @@ func TestNoWorkAwayFromTheSite(t *testing.T) {
 	v.x, v.y, v.z = 1.5, 180, 0.5
 	for i := 0; i < 400; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		v.x, v.z = 1.5, 0.5
 	}
 	if villagerCount(v, itemBread) != 0 {
@@ -90,7 +90,7 @@ func TestVillagerShowsTrades(t *testing.T) {
 	step := func(n int) {
 		for i := 0; i < n; i++ {
 			h.tick.Add(mobMoveInterval)
-			h.updateMobs(players)
+			h.mobUpdate(players)
 			pl.x, pl.y, pl.z = v.x+2, v.y, v.z // keep beside it
 		}
 	}
@@ -121,7 +121,7 @@ func TestVillagerShowsTrades(t *testing.T) {
 	}
 	pl.x = v.x + 10
 	h.tick.Add(mobMoveInterval)
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if v.showTrades.showing || v.showTrades.player != 0 {
 		t.Fatal("a player ten blocks off is no longer being shown anything")
 	}

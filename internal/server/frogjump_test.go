@@ -37,7 +37,7 @@ func TestFrogLongJumpsAGap(t *testing.T) {
 	jumped := false
 	for i := 0; i < 1500 && !jumped; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		jumped = !f.goatJumping && floorInt(f.x) == 3 && floorInt(f.z) == 0 && f.y == 180
 		if f.y < 179 {
 			t.Fatalf("the frog fell off: (%.2f, %.2f, %.2f)", f.x, f.y, f.z)

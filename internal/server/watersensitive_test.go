@@ -31,7 +31,7 @@ func TestEndermanInWaterIsHurtAndTeleports(t *testing.T) {
 		m := h.spawnHostileY(players, entityEnderman, 0.5, 180, 0.5)
 		hp := m.health
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if m.health >= hp {
 			t.Errorf("enderman %d: the water did not hurt it (health %v)", i, m.health)
 		}
@@ -54,7 +54,7 @@ func TestBlazeInWaterTakesOneEveryTenTicks(t *testing.T) {
 	for i := 0; i < 10; i++ { // 20 ticks
 		m.x, m.y, m.z = 0.5, 180, 0.5
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if got := hp - m.health; got != 2 {
 		t.Errorf("20 ticks in water cost %v health, want 2", got)

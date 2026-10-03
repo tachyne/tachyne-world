@@ -96,7 +96,7 @@ func TestDaylightBurnsHostiles(t *testing.T) {
 		t.Fatal("a sky-exposed hostile should start dying (burn) in daylight")
 	}
 	for h.mobs[m.eid] != nil { // death animation plays out → despawn
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 }
 
@@ -251,7 +251,7 @@ func TestClosedDoorBlocksZombie(t *testing.T) {
 	m := h.spawnZombie(players, cx, cz)
 	pl.x, pl.y, pl.z = float64(cx+5), m.y, float64(cz) // player outside the pen → zombie drives at the door
 	for i := 0; i < 2000; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if int(math.Floor(m.x)) != cx || int(math.Floor(m.z)) != cz {
 			t.Fatalf("zombie passed a closed door to (%v,%v) at step %d", m.x, m.z, i)
 		}

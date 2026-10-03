@@ -50,7 +50,7 @@ func TestSpeciesFollowRangeOverrides(t *testing.T) {
 		h.applySpecies(nil, m)
 		// Hand-tuned species set their range in their own update paths, so
 		// drive one update to let that happen.
-		h.updateMobs(map[int32]*tracked{})
+		h.mobUpdate(map[int32]*tracked{})
 		if got := m.followRange(); !closeTo(got, c.want) && !closeTo(got, aggroRange) {
 			t.Errorf("%s follow range %v, want %v (or the base %v before its update runs)",
 				c.what, got, c.want, aggroRange)

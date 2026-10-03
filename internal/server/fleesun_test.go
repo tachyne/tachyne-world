@@ -94,7 +94,7 @@ func TestSkeletonKeepsToTheShade(t *testing.T) {
 		for i := 0; i < 150; i++ {
 			h.tick.Add(mobMoveInterval)
 			pl.health, pl.dead = 20, false
-			h.updateMobs(players)
+			h.mobUpdate(players)
 			if sk.x > far {
 				far = sk.x
 			}

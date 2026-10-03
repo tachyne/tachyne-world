@@ -29,7 +29,7 @@ func TestTurtleTravelsAtSea(t *testing.T) {
 	legs, try := 0, 0
 	for i := 0; i < 500; i++ {
 		h.gridDirty()
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if m.turtleLeg && m.turtleLegTry <= try {
 			legs++ // a fresh leg
 		}
@@ -68,7 +68,7 @@ func TestTurtleStrollsOftenerAshore(t *testing.T) {
 		before := m.rest
 		m.x, m.z = 0.5, 0.5 // keep it in the middle of the beach
 		h.gridDirty()
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if m.rest > before {
 			rests++
 			longest = max(longest, m.rest)

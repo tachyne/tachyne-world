@@ -17,7 +17,7 @@ func TestMobStaysOnLand(t *testing.T) {
 
 	prevY := m.y
 	for i := 0; i < 400; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if d := math.Abs(m.y - prevY); d > 1 {
 			t.Fatalf("mob stepped off a ledge: y jumped %v in one step", d)
 		}
@@ -57,7 +57,7 @@ func TestMobPennedByFence(t *testing.T) {
 	m := h.spawnMob(players, entityCow, float64(cx), float64(g), float64(cz))
 	m.behavior = wanderBehavior{}
 	for i := 0; i < 2000; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if int(math.Floor(m.x)) != cx || int(math.Floor(m.z)) != cz {
 			t.Fatalf("mob escaped its fenced pen to (%v,%v) at step %d", m.x, m.z, i)
 		}
@@ -76,7 +76,7 @@ func TestFenceAboveMobDoesNotTeleport(t *testing.T) {
 	oakFence := worldgen.BlockBase("oak_fence") + 31
 	w.SetBlock(cx, feet, cz, oakFence) // fence dropped right where the cow stands
 
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if int(math.Floor(m.y)) > feet {
 		t.Fatalf("mob was teleported up onto the fence: y=%v (feet was %d)", m.y, feet)
 	}

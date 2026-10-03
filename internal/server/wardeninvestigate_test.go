@@ -11,7 +11,7 @@ func stepWarden(h *hub, players map[int32]*tracked, m *mob, n int) float64 {
 	top := 0.0
 	for i := 0; i < n; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		top = math.Max(top, math.Hypot(m.vx, m.vz))
 	}
 	return top

@@ -47,7 +47,7 @@ func TestPiglinBruteKeepsHome(t *testing.T) {
 	closest := math.Inf(1)
 	for i := 0; i < 600; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		closest = math.Min(closest, math.Hypot(b.x-120.5, b.z+319.5))
 	}
 	if closest > 4 {
@@ -68,7 +68,7 @@ func TestPiglinsOpenDoors(t *testing.T) {
 		}
 		for i := 0; i < 2; i++ {
 			h.tick.Add(mobMoveInterval)
-			h.updateMobs(players)
+			h.mobUpdate(players)
 		}
 		if worldgen.IsClosedDoor(nw.At(x+1, y, z)) {
 			t.Errorf("%s: the door beside it stayed shut", speciesTable[et].name)

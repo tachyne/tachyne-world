@@ -28,7 +28,7 @@ func TestJockeys(t *testing.T) {
 		t.Fatalf("mount: zombie.mount=%d chicken.rider=%d drives=%v", zombie.mount, chicken.mobRider, zombie.mountDrives)
 	}
 	zombie.x, zombie.z = x+4, z+4
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if chicken.x != zombie.x || chicken.z != zombie.z {
 		t.Errorf("the chicken should be carried under its rider: chicken %.1f,%.1f zombie %.1f,%.1f", chicken.x, chicken.z, zombie.x, zombie.z)
 	}
@@ -47,7 +47,7 @@ func TestJockeys(t *testing.T) {
 	}
 	// The rider dies: the chicken sheds it.
 	delete(h.mobs, zombie.eid)
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if chicken.mobRider != 0 {
 		t.Error("a chicken whose rider is gone carries nobody")
 	}
@@ -74,7 +74,7 @@ func TestJockeys(t *testing.T) {
 	sk := h.spawnHostileY(players, entitySkeleton, x, y, z)
 	h.mountMobOn(players, sk, spider, false)
 	spider.x, spider.z = x+3, z-2
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if sk.x != spider.x || sk.z != spider.z || sk.mountDrives {
 		t.Errorf("the skeleton should ride the spider: sk %.1f,%.1f spider %.1f,%.1f", sk.x, sk.z, spider.x, spider.z)
 	}

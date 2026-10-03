@@ -162,7 +162,7 @@ func (h *hub) fallAfterResets(m *mob, fx, fz int, fromY, toY float64) float64 {
 	return fell
 }
 
-// mobAirborneStep runs the integrator for one mob update, if the mob needs
+// mobAirborneStep runs the integrator for one tick, if the mob needs
 // it: already in the air on it, or in a bubble column, or caught in a web
 // or against a honey wall with a drop beneath. Reports whether it moved the
 // mob's height (the caller then leaves the floor alone).
@@ -178,9 +178,7 @@ func (h *hub) mobAirborneStep(players map[int32]*tracked, m *mob, fx, fz int, fl
 		}
 		m.airborne, m.vy = true, 0
 	}
-	for i := 0; i < mobMoveInterval && m.airborne; i++ {
-		h.mobAirTick(players, m, fx, fz)
-	}
+	h.mobAirTick(players, m, fx, fz)
 	return true
 }
 

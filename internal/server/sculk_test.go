@@ -180,7 +180,7 @@ func TestMobFootstepsAreVibrations(t *testing.T) {
 		m.vx, m.kb = 0.25, 3 // a shove carries it: no steering in the way
 		for i := 0; i < 8; i++ {
 			h.tick.Add(1)
-			h.updateMobs(players)
+			h.mobUpdate(players)
 			if v, ok := h.sculkVib[pos]; ok && v.src == m.eid {
 				if v.freq != freqStep {
 					t.Fatalf("heard at %d, want STEP (1)", v.freq)
@@ -422,7 +422,7 @@ func TestNetherSensorHearsFootsteps(t *testing.T) {
 	for i := 0; i < 8 && !heard; i++ {
 		m.vx, m.kb = 0.25, 3
 		h.tick.Add(1)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if v, ok := h.sculkVib[pos]; ok && v.src == m.eid {
 			heard = true
 		}

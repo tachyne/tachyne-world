@@ -41,7 +41,7 @@ func TestCamelStepsOverFences(t *testing.T) {
 		h.tick.Store(10000)
 		for i := 0; i < 3000; i++ {
 			m.poseTick = int64(h.tick.Load()) - camelStandUpTicks - 1 // standing, and too lately to sit
-			h.updateMobs(players)
+			h.mobUpdate(players)
 			fx, fz := int(math.Floor(m.x)), int(math.Floor(m.z))
 			if worldgen.IsTallCollision(h.world.Block(fx, h.world.SurfaceFeet(fx, fz)-1, fz)) &&
 				m.y-math.Floor(m.y) == 0.5 {

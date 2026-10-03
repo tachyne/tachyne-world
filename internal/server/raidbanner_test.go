@@ -36,7 +36,7 @@ func TestRaiderTakesUpADroppedBanner(t *testing.T) {
 		it.noPickupUntil = 0
 		for i := 0; i < 300 && h.items[it.eid] != nil; i++ {
 			h.tick.Add(mobMoveInterval)
-			h.updateMobs(players)
+			h.mobUpdate(players)
 		}
 		return v, it, h
 	}

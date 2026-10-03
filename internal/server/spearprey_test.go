@@ -20,7 +20,7 @@ func TestSpearZombieChargesItsVillager(t *testing.T) {
 	for i := 0; i < 200 && v.health == hp; i++ {
 		h.tick.Add(mobMoveInterval)
 		z.preyTarget, z.hasTarget = v.eid, true // keep the fixture's target
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		lowered = lowered || z.handActive
 		if v.dying > 0 {
 			break

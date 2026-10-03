@@ -55,7 +55,7 @@ func TestFrogIdleRunOne(t *testing.T) {
 	wasCroaking := false
 	for i := 0; i < 1500; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if f.croakLeft > 0 && !wasCroaking {
 			croaks++
 		}
@@ -89,7 +89,7 @@ func TestCamelIdleRunOne(t *testing.T) {
 	sat, stood, gazed := false, false, false
 	for i := 0; i < 6000 && !(sat && stood); i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if c.camelSitting() {
 			sat = true
 		} else if sat {
@@ -115,7 +115,7 @@ func TestStriderRestsHalfAsLong(t *testing.T) {
 	most := 0
 	for i := 0; i < 3000; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		most = max(most, s.rest)
 	}
 	if most == 0 || most > restMax*striderStrollEvery/120 {
@@ -146,7 +146,7 @@ func TestFishSwimGoal(t *testing.T) {
 	for i := 0; i < 1500; i++ {
 		was := f.fishSwimSet
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if f.fishSwimSet && !was {
 			swims++
 			if math.Abs(f.fishSwimX-f.x) > fishSwimXZ+1 || math.Abs(f.fishSwimY-f.y) > fishSwimY+1 {

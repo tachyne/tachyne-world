@@ -41,7 +41,7 @@ func TestIronGolemStrollsTheVillage(t *testing.T) {
 	for i := 0; i < 1500; i++ {
 		px, pz := g.x, g.z
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if d := math.Hypot(g.x-px, g.z-pz); d > cap {
 			t.Fatalf("update %d: an idle golem walks at 0.6 (%.3f), not %.3f", i, cap, d)
 		}

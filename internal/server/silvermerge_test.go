@@ -14,7 +14,7 @@ func TestSilverfishMergesOnlyWhenIdle(t *testing.T) {
 	m := h.spawnHostileY(players, entitySilverfish, 0.5, 180, 0.5)
 	for i := 0; i < 150; i++ {
 		m.stroll, m.rest = 1000, 0 // mid-walk
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if h.mobs[m.eid] == nil {
 			t.Fatalf("update %d: a strolling silverfish burrowed into the stone", i)
 		}
@@ -22,7 +22,7 @@ func TestSilverfishMergesOnlyWhenIdle(t *testing.T) {
 	m.x, m.z = 0.5, 0.5
 	for i := 0; i < 400 && h.mobs[m.eid] != nil; i++ {
 		m.stroll, m.rest = 0, 1000 // standing idle
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if h.mobs[m.eid] != nil {
 		t.Fatal("an idle silverfish on stone should burrow into it")

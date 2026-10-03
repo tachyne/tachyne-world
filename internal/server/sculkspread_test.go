@@ -46,7 +46,7 @@ func killNear(t *testing.T, h *hub, players map[int32]*tracked, x, y, z float64)
 	h.killMob(players, m)
 	for i := 0; i < deathAnimTicks+2 && h.mobs[m.eid] != nil; i++ {
 		h.tick.Add(1)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if h.mobs[m.eid] != nil {
 		t.Fatal("the blaze never finished dying")

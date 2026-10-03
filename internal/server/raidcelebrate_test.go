@@ -34,7 +34,7 @@ func TestLostRaidRaidersCelebrate(t *testing.T) {
 	h.raids[center] = &raid{center: center, uuid: raidUUID(center), wave: 1, numGroups: 5,
 		alive: map[int32]bool{m.eid: true}, shown: map[int32]bool{}}
 
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if m.celebrating {
 		t.Fatal("an ongoing raid is nothing to celebrate")
 	}
@@ -47,7 +47,7 @@ func TestLostRaidRaidersCelebrate(t *testing.T) {
 	x0, z0 := m.x, m.z
 	jumped := false
 	for i := 0; i < 200; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		jumped = jumped || m.leaping
 	}
 	if !m.celebrating {
@@ -72,7 +72,7 @@ func TestLostRaidRaidersCelebrate(t *testing.T) {
 	for i := 0; i < raidDefeatSecs; i++ {
 		h.updateRaids(players)
 	}
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if m.celebrating {
 		t.Error("the celebration ends with the raid")
 	}

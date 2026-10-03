@@ -107,7 +107,7 @@ func TestPiglinBruteDoesNotAvoid(t *testing.T) {
 	h.spawnMob(players, entityZombifiedPiglin, 0.5, 180, -1.5)
 	for i := 0; i < 5; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if b.piglinFlee > 0 {
 			t.Fatalf("update %d: the brute started a retreat", i)
 		}

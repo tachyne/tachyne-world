@@ -27,7 +27,7 @@ func TestVillagersHideAndCelebrate(t *testing.T) {
 	hidden := false
 	for i := 0; i < 400 && !hidden; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		hidden = v.vRaidHideSet && v.vRaidHide == bed && dist3(v.x, 180, v.z, 12.5, 180, 4.5) <= 1.5
 	}
 	if !hidden {
@@ -36,7 +36,7 @@ func TestVillagersHideAndCelebrate(t *testing.T) {
 	r.wonLeft = 30
 	for i := 0; i < 300 && len(h.rockets) == 0; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		h.updateRockets(players)
 	}
 	if len(h.rockets) == 0 && v.vCelebrate == 0 {

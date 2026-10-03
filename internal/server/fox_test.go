@@ -35,7 +35,7 @@ func TestFoxStalksCrouchesAndPounces(t *testing.T) {
 	hen := h.spawnMob(players, entityChicken, 9.5, y, 0.5)
 	hen.frozen, hen.health = true, 1000
 	h.gridDirty()
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if fox.foxFlags&(foxFlagCrouching|foxFlagInterested) != 0 || fox.vx <= 0 {
 		t.Fatalf("far off, the fox walks in upright: vx=%.3f flags=%#x", fox.vx, fox.foxFlags)
 	}
@@ -45,7 +45,7 @@ func TestFoxStalksCrouchesAndPounces(t *testing.T) {
 	crouched := false
 	for i := 0; i < 60 && !crouched; i++ {
 		h.gridDirty()
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		crouched = fox.foxFlags&foxFlagCrouching != 0
 	}
 	if !crouched || fox.foxFlags&foxFlagInterested == 0 {
@@ -57,7 +57,7 @@ func TestFoxStalksCrouchesAndPounces(t *testing.T) {
 	x0, held := fox.x, 0
 	for fox.foxFlags&foxFlagPouncing == 0 && held < 40 {
 		h.gridDirty()
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if fox.foxFlags&foxFlagPouncing == 0 {
 			held++
 			if fox.x != x0 {
@@ -74,7 +74,7 @@ func TestFoxStalksCrouchesAndPounces(t *testing.T) {
 	bitten := false
 	for i := 0; i < 80 && !bitten; i++ {
 		h.gridDirty()
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		bitten = hen.health < 1000
 	}
 	if !bitten {
@@ -104,7 +104,7 @@ func TestFoxFaceplantsInSnow(t *testing.T) {
 	planted := false
 	for i := 0; i < 60 && !planted; i++ {
 		h.gridDirty()
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		planted = fox.foxFlags&foxFlagFaceplanted != 0
 	}
 	if !planted {
@@ -116,7 +116,7 @@ func TestFoxFaceplantsInSnow(t *testing.T) {
 	x0, z0 := fox.x, fox.z
 	for i := 0; i < foxFaceplantTicks/mobMoveInterval-1; i++ {
 		h.gridDirty()
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if fox.foxFlags&foxFlagFaceplanted == 0 {
 			t.Fatalf("up again after %d ticks, want %d", (i+1)*mobMoveInterval, foxFaceplantTicks)
 		}
@@ -126,7 +126,7 @@ func TestFoxFaceplantsInSnow(t *testing.T) {
 	}
 	for i := 0; i < 3; i++ {
 		h.gridDirty()
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if fox.foxFlags&foxFlagFaceplanted != 0 {
 		t.Fatal("after forty ticks it is up")
@@ -146,14 +146,14 @@ func TestFoxPicksUpAndEats(t *testing.T) {
 	it.y, it.noPickupUntil = y, 0
 	for i := 0; i < 20 && fox.held != bread; i++ {
 		h.gridDirty()
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if fox.held != bread || h.items[it.eid] != nil {
 		t.Fatalf("the fox should take the bread into its mouth: held=%d", fox.held)
 	}
 	for i := 0; i < foxEatAfter/mobMoveInterval+2; i++ {
 		h.gridDirty()
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if fox.held != 0 {
 		t.Fatal("after 600 ticks the bread is eaten")
@@ -178,7 +178,7 @@ func TestFoxSleepsOnlyWhenQuietAndSheltered(t *testing.T) {
 	asleep := false
 	for i := 0; i < 120 && !asleep; i++ {
 		h.gridDirty()
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		asleep = fox.foxFlags&foxFlagSleeping != 0
 	}
 	if !asleep {
@@ -187,13 +187,13 @@ func TestFoxSleepsOnlyWhenQuietAndSheltered(t *testing.T) {
 	cow := h.spawnMob(players, entityCow, 6.5, y, 0.5)
 	cow.frozen = true
 	h.gridDirty()
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if fox.foxFlags&foxFlagSleeping != 0 {
 		t.Fatal("a cow wandering up wakes it")
 	}
 	for i := 0; i < 120; i++ {
 		h.gridDirty()
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if fox.foxFlags&foxFlagSleeping != 0 {
 			t.Fatal("with a cow about it does not lie down again")
 		}
@@ -231,7 +231,7 @@ func TestFoxSeeksShelter(t *testing.T) {
 			fox.foxShelterIn = 0 // look every update: the search is what is under test
 			fox.x, fox.z = 0.5, 0.5
 			h.gridDirty()
-			h.updateMobs(players)
+			h.mobUpdate(players)
 			found = fox.hidePos != (blockPos{})
 		}
 		if !found {
@@ -254,7 +254,7 @@ func TestFoxSeeksShelter(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		fox.foxShelterIn = 0
 		h.gridDirty()
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if fox.hidePos != (blockPos{}) {
 			t.Fatal("a clear night: no need for cover")
 		}
@@ -274,7 +274,7 @@ func TestFoxEatsBerries(t *testing.T) {
 	h.gridDirty()
 	for i := 0; i < 200 && h.world.At(6, 180, 0) != berryBase+1; i++ {
 		h.gridDirty()
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if got := h.world.At(6, 180, 0); got != berryBase+1 {
 		t.Fatalf("the bush should be picked back to age one: state %d (age 3 is %d)", got, berryBase+3)
@@ -305,7 +305,7 @@ func TestFoxEatsBerries(t *testing.T) {
 	h2.gridDirty()
 	for i := 0; i < 200 && caveVineHasBerries(h2.world.At(5, 180, 0)); i++ {
 		h2.gridDirty()
-		h2.updateMobs(players)
+		h2.mobUpdate(players)
 	}
 	if caveVineHasBerries(h2.world.At(5, 180, 0)) {
 		t.Fatal("the fox should pick the glow berries off the vine")
@@ -331,7 +331,7 @@ func TestFoxPerchesAndLooksAround(t *testing.T) {
 	sat := false
 	for i := 0; i < 3000 && !sat; i++ {
 		h.gridDirty()
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		sat = fox.foxFlags&foxFlagSitting != 0
 	}
 	if !sat {
@@ -342,7 +342,7 @@ func TestFoxPerchesAndLooksAround(t *testing.T) {
 	}
 	x0, z0 := fox.x, fox.z
 	h.gridDirty()
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if fox.foxFlags&foxFlagSitting != 0 && (fox.x != x0 || fox.z != z0) {
 		t.Error("a sitting fox holds still")
 	}
@@ -363,7 +363,7 @@ func TestFoxLooksAtPlayerFromAfar(t *testing.T) {
 	for i := 0; i < 2000 && !watched; i++ {
 		fox.x, fox.z = 0.5, 0.5 // keep it where it is: only the head is under test
 		h.gridDirty()
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		watched = fox.lookEID == pl.p.eid
 	}
 	if !watched {

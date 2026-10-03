@@ -36,7 +36,7 @@ func TestPanicGoalWearsOffAfterFortyTicks(t *testing.T) {
 		t.Fatalf("a hurt is remembered forty ticks: panic %d updates", cow.panic)
 	}
 	for i := 0; i < 40/mobMoveInterval+panicLegMax+1; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if cow.panic != 0 || cow.panicHasT {
 		t.Fatalf("the cow should have stopped panicking: panic %d, leg %v", cow.panic, cow.panicHasT)

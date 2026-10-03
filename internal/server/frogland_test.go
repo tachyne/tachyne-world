@@ -29,7 +29,7 @@ func TestFrogFindsLand(t *testing.T) {
 	out := -1
 	for i := 0; i < 300; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if !worldgen.IsWater(h.world.At(floorInt(f.x), floorInt(f.y), floorInt(f.z))) {
 			out = i
 			break
@@ -80,7 +80,7 @@ func TestFrogSwimStrollSpeed(t *testing.T) {
 	for i := 0; i < 400; i++ {
 		px, pz := f.x, f.z
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		d := dist3(f.x, 0, f.z, px, 0, pz)
 		if d > limit && f.kb == 0 {
 			t.Fatalf("update %d: a swimming frog strolls at 0.75 (%.3f), moved %.3f", i, limit, d)

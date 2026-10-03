@@ -39,7 +39,7 @@ func TestNautilusChargesWhoeverHurtIt(t *testing.T) {
 	if m.panic == 0 || m.nautAngryAt != pl.p.eid {
 		t.Fatalf("a hurt nautilus both panics and grows angry: panic=%d angry=%d", m.panic, m.nautAngryAt)
 	}
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if !m.charging || m.nautTarget != pl.p.eid {
 		t.Fatalf("the fight should outrank the panic: charging=%v target=%d", m.charging, m.nautTarget)
 	}
@@ -48,7 +48,7 @@ func TestNautilusChargesWhoeverHurtIt(t *testing.T) {
 	}
 	before := pl.health
 	for i := 0; i < 10 && m.chargeCD == 0; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if pl.health >= before {
 		t.Fatalf("the charge should land: health %v -> %v", before, pl.health)
@@ -57,7 +57,7 @@ func TestNautilusChargesWhoeverHurtIt(t *testing.T) {
 		t.Fatalf("after the blow the target drops and the cooldown starts: cd=%d", m.chargeCD)
 	}
 	// On the cooldown it does not charge again, though still angry.
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if m.charging {
 		t.Fatal("charging again inside the eighty-tick cooldown")
 	}
@@ -84,7 +84,7 @@ func TestNautilusTemptation(t *testing.T) {
 		m := h.spawnSpecies(players, c.etype, 0, 0.5, 184, 0.5)
 		m.tamed = c.tamed
 		m.nautAngryAt, m.nautAngryUntil = pl.p.eid, h.tick.Load()+nautilusAngerTicks
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if m.charging {
 			t.Errorf("etype %d: a tempting player keeps the fight off", c.etype)
 		}
@@ -118,7 +118,7 @@ func TestZombieNautilusFightsOnlyWhenAngered(t *testing.T) {
 		t.Fatal("a zombie nautilus is an animal, not a monster")
 	}
 	for i := 0; i < 40; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		h.updateHostiles(players)
 	}
 	if pl.health < 20 || m.charging {
@@ -129,7 +129,7 @@ func TestZombieNautilusFightsOnlyWhenAngered(t *testing.T) {
 	if m.panic != 0 {
 		t.Fatal("ZombieNautilusAi has no AnimalPanic")
 	}
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if !m.charging || math.Abs(math.Hypot(m.chargeVX, m.chargeVZ)-0.5) > 1e-9 {
 		t.Fatalf("a hurt zombie nautilus charges at 0.5: charging=%v v=%.3f", m.charging, math.Hypot(m.chargeVX, m.chargeVZ))
 	}
@@ -201,7 +201,7 @@ func TestNautilusBreeds(t *testing.T) {
 			t.Fatal("a tamed adult should fall in love on a cod")
 		}
 	}
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if a.x <= -3.5 || b.x >= 3.5 {
 		t.Fatalf("the pair should swim together: %.3f %.3f", a.x, b.x)
 	}
@@ -212,7 +212,7 @@ func TestNautilusBreeds(t *testing.T) {
 	n := len(h.mobs)
 	for i := 0; i < 400 && len(h.mobs) == n; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if i%(survivalTickN/mobMoveInterval) == 0 {
 			h.updateBreeding(players)
 		}

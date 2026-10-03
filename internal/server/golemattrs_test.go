@@ -52,20 +52,20 @@ func TestGolemAttributesAndCrackSound(t *testing.T) {
 		}
 		return n
 	}
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	clanks()
 	g.health = 80 // still under a scratch: stage none
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if n := clanks(); n != 0 {
 		t.Fatalf("a blow within the stage should not clank, got %d", n)
 	}
 	g.health = 60 // under three quarters: low cracks
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if n := clanks(); n != 1 {
 		t.Fatalf("a blow that cracks the golem should clank once, got %d", n)
 	}
 	g.health = 90 // mended: silent
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if n := clanks(); n != 0 {
 		t.Fatalf("mending should not clank, got %d", n)
 	}

@@ -40,7 +40,7 @@ func TestFloatersBobInDeepWater(t *testing.T) {
 		t.Fatalf("float level %.2f ok=%v", want, ok)
 	}
 	for i := 0; i < 120; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if math.Abs(cow.y-want) > 0.01 {
 		t.Errorf("the cow rides at y=%.2f, want %.2f", cow.y, want)

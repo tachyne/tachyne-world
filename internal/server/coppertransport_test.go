@@ -78,7 +78,7 @@ func TestCopperGolemCarriesBetweenChests(t *testing.T) {
 	var lids []attachproto.BlockEvent
 	for i := 0; i < 1500; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if h.chestViewers(simPos{blockPos: src}, nil) == 1 {
 			sawOpen = true
 		}
@@ -136,7 +136,7 @@ func TestCopperGolemQueuesForAnOpenChest(t *testing.T) {
 	queued := false
 	for i := 0; i < 300; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		queued = queued || m.cgPhase == cgQueuing
 	}
 	if !queued || m.held != 0 || sc.slots[0].count != 5 {
@@ -145,7 +145,7 @@ func TestCopperGolemQueuesForAnOpenChest(t *testing.T) {
 	pl.winKind, pl.winPos = winPlayer, simPos{}
 	for i := 0; i < 300 && m.held == 0; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if m.held == 0 {
 		t.Fatal("once the chest is shut the golem takes its turn")
@@ -169,7 +169,7 @@ func TestCopperGolemSkipsAFullChest(t *testing.T) {
 	m.gearSure[gearSlotHand] = true
 	for i := 0; i < 1200 && m.held != 0; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	sp := h.chests[simPos{blockPos: spare}]
 	if m.held != 0 || sp == nil || chestCount(sp, iron) != 7 || chestCount(fc, iron) != 0 {
@@ -182,7 +182,7 @@ func TestCopperGolemSkipsAFullChest(t *testing.T) {
 func TestCopperGolemIdlesOnItsCooldown(t *testing.T) {
 	h, players, _, m := golemYard(t)
 	h.tick.Add(mobMoveInterval)
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if m.transportCD != cgIdleCooldown {
 		t.Fatalf("no chest in reach: cooldown %d, want %d", m.transportCD, cgIdleCooldown)
 	}
@@ -191,7 +191,7 @@ func TestCopperGolemIdlesOnItsCooldown(t *testing.T) {
 	for i := 0; i < 60; i++ {
 		x0, z0 := m.x, m.z
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if w := m.idleWalk; w != nil && !w.still && w != last {
 			last, walked = w, true
 			if d := dist3(w.x, 0, w.z, x0, 0, z0); d > 3.5 {

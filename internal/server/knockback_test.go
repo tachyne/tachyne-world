@@ -53,7 +53,7 @@ func TestKnockbackIsVanillaStrength(t *testing.T) {
 		t.Errorf("the shove is %.3f blocks a tick, want vanilla's 0.4", got)
 	}
 	for i := 0; i < 6; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		h.tick.Add(1)
 	}
 	// Vanilla's 0.4 impulse under ground friction carries a mob most of a

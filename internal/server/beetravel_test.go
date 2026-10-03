@@ -241,7 +241,7 @@ func TestAngryBeeChasesAtOnePointFour(t *testing.T) {
 	top := 0.0
 	for i := 0; i < 20; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		top = math.Max(top, math.Hypot(m.vx, m.vz))
 	}
 	if top <= m.moveSpeed()*1.05 {

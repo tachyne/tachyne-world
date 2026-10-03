@@ -150,7 +150,7 @@ func TestRealTargetOutranksTheErrand(t *testing.T) {
 	m := h.spawnHostileY(players, entityZombie, pl.x+2, pl.y, pl.z)
 	m.drifting, m.hasTarget = true, true
 	m.tx, m.tz = 500, 500 // a village spot far away
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if m.drifting {
 		t.Error("spotting a player ends the village walk")
 	}

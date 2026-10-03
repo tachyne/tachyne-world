@@ -51,7 +51,7 @@ func enderSteps(h *hub, players map[int32]*tracked, n int) {
 		for _, p := range players {
 			p.health = 20
 		}
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 }
 

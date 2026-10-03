@@ -37,7 +37,7 @@ func mobBlocksHub() (*hub, map[int32]*tracked) {
 func runMobs(h *hub, players map[int32]*tracked, n int, each func()) {
 	for i := 0; i < n; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if each != nil {
 			each()
 		}
@@ -151,7 +151,7 @@ func TestSnowWalkerClimbsOutOfPowderSnow(t *testing.T) {
 	fox.y = 180
 	for i := 0; i < 20; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if fox.y < 183 {
 		t.Fatalf("a fox buried in powder snow climbs onto it: y %.2f", fox.y)

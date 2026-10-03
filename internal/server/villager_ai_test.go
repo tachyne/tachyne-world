@@ -219,7 +219,7 @@ func TestVillagerEscapesDooredRoom(t *testing.T) {
 	opened := false
 	for i := 0; i < 800; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		h.updateOpenDoors(players)
 		if boolProp(w.At(5, fy, 3), "open") {
 			opened = true
