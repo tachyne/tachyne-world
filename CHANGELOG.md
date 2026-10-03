@@ -14,6 +14,39 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-10-03
 
 ### Added
+- **Mobs tick at 20 Hz and walk by vanilla's physics.** The mob loop runs
+  every tick, each mob's goals taking their turn every other tick as
+  vanilla's do. Walking mobs accelerate and slide with each block's
+  friction, fall under gravity, collide with real block shapes (slabs and
+  fences are their true size), step up half-block ledges and jump full
+  ones, and are knocked back in a true arc; webs, berry bushes, powder
+  snow, slime, honey and bubble columns act on that same motion. Route
+  searches got much cheaper too: the mob phase runs in about 5 ms a tick
+  with 550 mobs, down from over 20.
+- **Vanilla view and simulation distance.** Random ticks reach 10 chunks
+  around a player (was 4), and block and entity updates and the chunks
+  sent cover 10 (was 6), vanilla's server defaults. `-simradius` lowers the
+  random-tick reach on a box that can't take it.
+- **Vanilla-caves worlds fill their caves as 26.3 does**: the aquifer's
+  underground lakes, lava pockets and flooded sea caves, bit-exact with
+  the 26.3 server given the same inputs; the near-surface cave depth
+  follows vanilla's own terrain factor; and a carver cutting through grass
+  leaves grass on the dirt below.
+- **More data pack content.** Packs can add or remove stonecutting,
+  smithing and brewing recipes (the stonecutter list and the furnace,
+  smoker, campfire, brewing and smithing slots update for clients on
+  /reload), their advancements load with criteria, rewards and a laid-out
+  tree, and vanilla recipes follow item tags a pack changes. Operators
+  can add dialogs and pause-menu entries through packs.
+- **/execute and /item reach mobs' slots** (hands, armour, saddle, body,
+  villager inventories, a donkey's chest); the `contents` slot source
+  reads into shulker boxes, bundles and crossbows; item predicates take
+  enchantment and potion tags; selectors take `type=#tag`. /place adds the
+  nether fossil, Nether ores, single-plant vegetation and the ancient
+  city's sculk patch.
+- **Ctrl+pick tooltips.** A copied block shows its block entity data and a
+  sign's text in the item tooltip, and stacks inside a copied container
+  keep their own data.
 - **Vanilla caves, per world.** A new world can be started with
   `-caves vanilla` to get 26.3's own caves under the engine's terrain:
   cheese caverns, spaghetti and noodle tunnels, pillars and surface
@@ -53,6 +86,13 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Dimensions are a table end to end**, ready for a fourth dimension.
 
 ### Changed
+- **Scheduled ticks run as vanilla's.** Frogspawn, sniffer eggs,
+  composters, dried ghasts, big dripleaf, bubble columns, fire, target
+  blocks, buttons, lightning rods and lecterns use the one block tick list
+  in vanilla's order, and a second schedule no longer moves a pending tick.
+  Neighbour reactions are immediate: water poured beside concrete powder
+  sets it in the same tick, and a fire that loses its fuel goes out at
+  once.
 - **Knockback has vanilla strength for every source.** Arrows, wind
   charges, the mace shockwave, explosions, goat rams, nautilus charges and
   fishing reels shoved mobs at half strength; iron golems now toss their
@@ -69,6 +109,8 @@ the public history since the project was open-sourced on 2026-07-10.
   player has built in keep their layout.
 
 ### Fixed
+- **Secure chat across shard borders**: the shard a player crosses into
+  learns their chat session, so others there can verify their messages.
 - **Note blocks are audible again**: the server sends the note's sound, as
   vanilla does.
 - **Heads, banners and signs placed from an item keep their name, owner
