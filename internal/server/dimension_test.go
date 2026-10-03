@@ -48,7 +48,11 @@ func TestDimSwitchIsolation(t *testing.T) {
 	// dimension now, so what isolation means here is that a nether edit
 	// schedules NETHER updates and nothing else.
 	// (Player isolation is by the t.dim filter; b.dim==0 so b got nothing.)
-	h.onBlock(players, evBlock{x: 10, y: 40, z: 10, dim: 1, state: 1, by: 1})
+	// Lava's own tick is still queued (fluid ticks), per dimension; block
+	// neighbour reactions run at once and queue nothing.
+	lava := worldgen.LavaBase
+	h.worldFor(dimNether).SetBlock(10, 40, 10, lava)
+	h.onBlock(players, evBlock{x: 10, y: 40, z: 10, dim: 1, state: lava, by: 1})
 	byDim := func() map[int]int {
 		out := map[int]int{}
 		for _, batch := range h.pending {
@@ -60,13 +64,14 @@ func TestDimSwitchIsolation(t *testing.T) {
 	}
 	got := byDim()
 	if got[dimNether] == 0 {
-		t.Fatal("a nether edit should schedule nether simulation")
+		t.Fatal("a nether lava edit should queue nether simulation")
 	}
 	if got[dimOverworld] != 0 {
 		t.Fatalf("a nether edit scheduled %d overworld updates", got[dimOverworld])
 	}
-	// An overworld edit still schedules its own.
-	h.onBlock(players, evBlock{x: 5, y: 64, z: 5, dim: 0, state: 1, by: 1})
+	// An overworld edit queues its own.
+	h.world.SetBlock(5, 64, 5, lava)
+	h.onBlock(players, evBlock{x: 5, y: 64, z: 5, dim: 0, state: lava, by: 1})
 	if byDim()[dimOverworld] == 0 {
 		t.Fatal("overworld edits should schedule simulation")
 	}

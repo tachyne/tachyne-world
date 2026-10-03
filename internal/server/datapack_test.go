@@ -289,8 +289,9 @@ func TestLibraryPackOrderAndUnappliedData(t *testing.T) {
 	if lib.function("test:broken") != nil || lib.function("Bad:upper") != nil {
 		t.Error("a bad function loaded")
 	}
-	// Recipes, loot tables and block tags are applied now (packcontent.go).
-	want := []string{"advancement", "worldgen/biome"}
+	// Recipes, loot tables, tags and advancements are applied now
+	// (packcontent.go, packadv.go).
+	want := []string{"worldgen/biome"}
 	if got := lib.unapplied["file/low"]; !reflect.DeepEqual(got, want) {
 		t.Errorf("unapplied %v, want %v", got, want)
 	}

@@ -92,6 +92,12 @@ func TestWoodShelfChainsOnPower(t *testing.T) {
 	w := h.worldFor(0)
 	y := 180
 	a := shelfState("oak_shelf", "north", true, "unconnected")
+	// Real power under each shelf: a neighbour change re-reads a shelf's
+	// signal at once (ShelfBlock.neighborChanged), so a shelf merely marked
+	// powered would switch off and let go mid-test.
+	for x := 3; x <= 6; x++ {
+		w.SetBlock(x, y-1, 5, worldgen.BlockBase("redstone_block"))
+	}
 	w.SetBlock(5, y, 5, a)
 	w.SetBlock(6, y, 5, a) // to the "left" (east) of x=5
 	h.shelfPowerUp(players, 0, blockPos{5, y, 5}, a, worldgen.Air)
@@ -109,6 +115,7 @@ func TestWoodShelfChainsOnPower(t *testing.T) {
 		t.Fatal("a fourth shelf cannot join a full chain")
 	}
 	// Unpowering the middle breaks the chain.
+	w.SetBlock(5, y-1, 5, worldgen.Stone)
 	off := setBoolProp(w.At(5, y, 5), "powered", false)
 	h.shelfPowerDown(players, 0, blockPos{5, y, 5}, off)
 	if shelfPart(w.At(6, y, 5)) != "unconnected" || shelfPart(w.At(4, y, 5)) != "unconnected" {
