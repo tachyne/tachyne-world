@@ -30,6 +30,9 @@ type vanillaPlacer struct {
 
 	bmu    sync.Mutex
 	bcache map[[2]int32][]string // a chunk's noise biomes (short names)
+
+	hmu    sync.Mutex
+	hcache map[[2]int32][2]int16 // a column's decoration heights (surface, ocean floor)
 }
 
 // vpPlacers finds a generator's placement pass (the structure code asks
@@ -48,7 +51,7 @@ func newVanillaPlacer(ctx VanillaGenContext) VanillaPlacement {
 		return nil
 	}
 	p := &vanillaPlacer{g: ctx.Gen, dim: ctx.Dim, terrain: newVPHeightCache(ctx.Terrain), biomes: ctx.Biomes,
-		zoom: vpObfuscateSeed(ctx.Seed), bcache: map[[2]int32][]string{}}
+		zoom: vpObfuscateSeed(ctx.Seed), bcache: map[[2]int32][]string{}, hcache: map[[2]int32][2]int16{}}
 	decor, err := newVanillaDecor(ctx.Seed, "overworld")
 	if err != nil {
 		return nil
@@ -150,12 +153,51 @@ func (l vpTerrainLevel) Block(x, y, z int) uint32 {
 	return l.p.terrain.BlockAt(x, y, z)
 }
 
+// Height is the heightmap decoration reads: the terrain's own column as
+// the earlier steps left it (noise, surface and carvers — the WG
+// heightmaps a chunk keeps up as it is carved), one above its highest
+// block (WORLD_SURFACE and the motion-blocking kinds, fluids counting) or
+// its highest non-fluid block (OCEAN_FLOOR).
 func (l vpTerrainLevel) Height(hm HeightmapType, x, z int) int {
-	switch hm {
-	case HeightOceanFloor, HeightOceanFloorWG:
-		return l.p.terrain.Height(HeightOceanFloorWG, x, z)
+	h := l.p.decoHeights(x, z)
+	if hm == HeightOceanFloor || hm == HeightOceanFloorWG {
+		return int(h[1])
 	}
-	return l.p.terrain.Height(HeightWorldSurfaceWG, x, z)
+	return int(h[0])
+}
+
+// decoHeights scans a column of the terrain before features, once.
+func (p *vanillaPlacer) decoHeights(x, z int) [2]int16 {
+	k := [2]int32{int32(x), int32(z)}
+	p.hmu.Lock()
+	h, ok := p.hcache[k]
+	p.hmu.Unlock()
+	if ok {
+		return h
+	}
+	lo := p.terrain.MinY()
+	h = [2]int16{int16(lo), int16(lo)}
+	surface := false
+	for y := p.terrain.Ceiling() - 1; y >= lo; y-- {
+		s := p.terrain.BlockAt(x, y, z)
+		if s == Air {
+			continue
+		}
+		if !surface {
+			h[0], surface = int16(y+1), true
+		}
+		if !IsFluid(s) {
+			h[1] = int16(y + 1)
+			break
+		}
+	}
+	p.hmu.Lock()
+	if len(p.hcache) >= 1<<20 {
+		p.hcache = map[[2]int32][2]int16{}
+	}
+	p.hcache[k] = h
+	p.hmu.Unlock()
+	return h
 }
 
 func (l vpTerrainLevel) Biome(x, y, z int) string {
