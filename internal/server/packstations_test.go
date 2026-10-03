@@ -183,3 +183,66 @@ func TestDataPackBrewingRecipes(t *testing.T) {
 		}
 	})
 }
+
+// With no packs, the brewing sets built from vanilla's brewing recipes are
+// exactly vanilla's property sets (the gateway's own table).
+func TestBrewingItemSetsVanilla(t *testing.T) {
+	in, rg := brewingItemSets(newStationRecipes())
+	for _, tc := range []struct {
+		key string
+		got []int32
+	}{{"minecraft:brewing_input", in}, {"minecraft:brewing_reagent", rg}} {
+		var want []int32
+		for _, ps := range protocol.RecipePropertySets {
+			if ps.Key == tc.key {
+				for _, n := range ps.Items {
+					want = append(want, itemByName[n])
+				}
+			}
+		}
+		if len(tc.got) != len(want) {
+			t.Fatalf("%s: %d items, vanilla %d", tc.key, len(tc.got), len(want))
+		}
+		for i := range want {
+			if tc.got[i] != want[i] {
+				t.Errorf("%s[%d] = %s, vanilla %s", tc.key, i, itemNameOf[tc.got[i]], itemNameOf[want[i]])
+			}
+		}
+	}
+}
+
+// A pack's brewing reagent and input reach the client's property sets
+// through update_recipes, so the stand's slots take them; a vanilla brew a
+// pack took away keeps its reagent while another recipe still uses it.
+func TestDataPackBrewingPropertySets(t *testing.T) {
+	_, h, _, logs := functionServer(t, map[string]string{
+		"data/test/recipe/lucky.json": `{"type":"minecraft:brewing","input":{"item":"minecraft:glass_bottle"},` +
+			`"reagent":{"item":"minecraft:apple"},"output":{"id":"minecraft:potion","components":{"minecraft:potion_contents":{"potion":"minecraft:luck"}}}}`,
+		"data/minecraft/recipe/brewing/potion_awkward_sugar.json": `{}`,
+	})
+	settle(t, h, logs, "B1")
+	var u *attachproto.UpdateRecipes
+	onHub(t, h, func() { u = packUpdateRecipes(currentPack()) })
+	if u == nil || u.ItemSets == nil {
+		t.Fatalf("no property sets went out: %+v", u)
+	}
+	sets := map[string][]int32{}
+	for _, s := range u.ItemSets {
+		sets[s.Key] = s.Items
+	}
+	if len(sets) != len(protocol.RecipePropertySets) {
+		t.Errorf("%d sets, vanilla has %d", len(sets), len(protocol.RecipePropertySets))
+	}
+	if !containsItem(sets["minecraft:brewing_reagent"], itemByName["apple"]) {
+		t.Error("the pack's reagent is not in brewing_reagent")
+	}
+	if !containsItem(sets["minecraft:brewing_input"], itemByName["glass_bottle"]) {
+		t.Error("the pack's input is not in brewing_input")
+	}
+	if !containsItem(sets["minecraft:brewing_reagent"], itemByName["sugar"]) {
+		t.Error("sugar left brewing_reagent though splash and lingering awkward + sugar remain")
+	}
+	if !containsItem(sets["minecraft:smithing_base"], itemByName["diamond_sword"]) {
+		t.Error("the smithing sets lost vanilla's items")
+	}
+}

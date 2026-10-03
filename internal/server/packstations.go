@@ -76,15 +76,17 @@ type stationRecipes struct {
 	noTransform map[[2]int32]bool // vanilla (template, base) transforms taken away
 	noTrim      map[int32]bool    // vanilla trim templates taken away
 	noBrew      map[brewKey]bool
-	stoneDirty  bool // the stonecutter rows differ from vanilla's
+	noBrewName  map[string]bool // vanilla brewing recipes taken away, by id
+	stoneDirty  bool            // the stonecutter rows differ from vanilla's
 	smithDirty  bool
+	brewDirty   bool // the brewing recipes differ from vanilla's
 
 	rows  []attachproto.StonecutterRecipe         // the merged rows (stoneDirty)
 	index map[int32][]protocol.StonecuttingRecipe // by input item, in row order
 }
 
 func newStationRecipes() *stationRecipes {
-	return &stationRecipes{noTransform: map[[2]int32]bool{}, noTrim: map[int32]bool{}, noBrew: map[brewKey]bool{}}
+	return &stationRecipes{noTransform: map[[2]int32]bool{}, noTrim: map[int32]bool{}, noBrew: map[brewKey]bool{}, noBrewName: map[string]bool{}}
 }
 
 // setItems is a set index's items during a build (the pack's own sets are
@@ -185,6 +187,7 @@ func (pr *packRecipes) addStation(id, typ string, top map[string]json.RawMessage
 		}
 		st.brew = append(st.brew, r)
 		st.brewIDs = append(st.brewIDs, id)
+		st.brewDirty = true
 		return true, nil
 	}
 	return false, nil
@@ -300,6 +303,8 @@ func (pr *packRecipes) removeVanillaStation(name string) {
 		}
 	}
 	if b, ok := vanillaBrewing[name]; ok {
+		st.noBrewName[name] = true
+		st.brewDirty = true
 		var pot int8 = potNone
 		if b.potion != "" {
 			if k, ok := potionByVanillaName[b.potion]; ok {
@@ -371,22 +376,24 @@ func stonecutList(item int32) []protocol.StonecuttingRecipe {
 // (a nil half: vanilla's).
 func packUpdateRecipes(pc *packContent) *attachproto.UpdateRecipes {
 	st := stationsOf(pc)
-	if st == nil || (!st.stoneDirty && !st.smithDirty) {
+	if st == nil || (!st.stoneDirty && !st.smithDirty && !st.brewDirty) {
 		return nil
 	}
 	u := &attachproto.UpdateRecipes{}
 	if st.stoneDirty {
 		u.Stonecutter = st.rows
 	}
-	if st.smithDirty {
-		u.ItemSets = smithingItemSets(st)
+	if st.smithDirty || st.brewDirty {
+		u.ItemSets = stationItemSets(st)
 	}
 	return u
 }
 
-// smithingItemSets are the smithing table's property sets (the items each
-// slot takes): vanilla's, with the packs' recipes' items added.
-func smithingItemSets(st *stationRecipes) []attachproto.RecipePropertySet {
+// stationItemSets are the recipe property sets (the items each station slot
+// takes, RecipeManager.propertySets): vanilla's, the smithing table's three
+// and the brewing stand's two built from the recipes in the game — the
+// packs' added, vanilla's taken away dropping what only they used.
+func stationItemSets(st *stationRecipes) []attachproto.RecipePropertySet {
 	tmpl := map[int32]bool{protocol.SmithingUpgradeTemplate: true}
 	base, add := map[int32]bool{}, map[int32]bool{}
 	for t := range protocol.SmithingTrimTemplate {
@@ -422,10 +429,13 @@ func smithingItemSets(st *stationRecipes) []attachproto.RecipePropertySet {
 	}
 	// All of vanilla's property sets go out (a frame's item sets replace the
 	// gateway's whole table), the three smithing ones with the packs' items.
+	brewIn, brewReagent := brewingItemSets(st)
 	ours := map[string][]int32{
 		"minecraft:smithing_template": list(tmpl),
 		"minecraft:smithing_base":     list(base),
 		"minecraft:smithing_addition": list(add),
+		"minecraft:brewing_input":     brewIn,
+		"minecraft:brewing_reagent":   brewReagent,
 	}
 	out := make([]attachproto.RecipePropertySet, 0, len(protocol.RecipePropertySets))
 	for _, ps := range protocol.RecipePropertySets {
@@ -442,6 +452,54 @@ func smithingItemSets(st *stationRecipes) []attachproto.RecipePropertySet {
 		out = append(out, attachproto.RecipePropertySet{Key: ps.Key, Items: items})
 	}
 	return out
+}
+
+// brewingItemSets are BREWING_INPUTS and BREWING_REAGENTS over the brewing
+// recipes in the game: vanilla's (less those a pack took away) in vanilla's
+// set order, then the packs' own items.
+func brewingItemSets(st *stationRecipes) (inputs, reagents []int32) {
+	inUse, rgUse := map[int32]bool{}, map[int32]bool{}
+	for name, b := range vanillaBrewing {
+		if st.noBrewName[name] {
+			continue
+		}
+		inUse[b.in] = true
+		for _, rg := range b.reagents {
+			rgUse[rg] = true
+		}
+	}
+	for _, r := range st.brew {
+		for _, it := range r.in {
+			inUse[it] = true
+		}
+		for _, it := range r.reagent {
+			rgUse[it] = true
+		}
+	}
+	ordered := func(key string, use map[int32]bool) []int32 {
+		out := []int32{}
+		seen := map[int32]bool{}
+		for _, ps := range protocol.RecipePropertySets {
+			if ps.Key != key {
+				continue
+			}
+			for _, n := range ps.Items {
+				if it, ok := itemByName[n]; ok && use[it] && !seen[it] {
+					out = append(out, it)
+					seen[it] = true
+				}
+			}
+		}
+		var extra []int32
+		for it := range use {
+			if !seen[it] {
+				extra = append(extra, it)
+			}
+		}
+		sort.Slice(extra, func(i, j int) bool { return extra[i] < extra[j] })
+		return append(out, extra...)
+	}
+	return ordered("minecraft:brewing_input", inUse), ordered("minecraft:brewing_reagent", rgUse)
 }
 
 func containsItem(set []int32, it int32) bool {
