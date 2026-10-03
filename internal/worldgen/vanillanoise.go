@@ -110,7 +110,14 @@ type vnPerlin struct {
 	offX, offY, offZ float64
 }
 
-func newVNPerlin(r *vnXoroshiro) *vnPerlin {
+// vnPerlinSource is what a PerlinNoise draws its offsets and permutation
+// from (any RandomSource).
+type vnPerlinSource interface {
+	nextDouble() float64
+	nextInt(bound int32) int32
+}
+
+func newVNPerlin(r vnPerlinSource) *vnPerlin {
 	p := &vnPerlin{}
 	p.offX = r.nextDouble() * 256
 	p.offY = r.nextDouble() * 256
