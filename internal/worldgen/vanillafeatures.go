@@ -481,6 +481,21 @@ func (e *vpExec) writable(ox, oz, x, y, z int) bool {
 	return dx >= -1 && dx <= 1 && dz >= -1 && dz <= 1 && !e.ctx.outside(y)
 }
 
+// setOre writes an ore target's state. Whether the cell takes it was
+// decided from the terrain (so every chunk draws the blob the same way); a
+// cell of this chunk that an earlier feature already changed is asked
+// again, as the world would be — a granite blob does not eat the dirt an
+// earlier blob laid. The second asking draws from a throwaway source.
+func (e *vpExec) setOre(t vpOreTarget, x, y, z int) {
+	if e.inChunk(x, y, z) {
+		cur := sectionBlockAt(e.ch, x-e.baseX, y, z-e.baseZ)
+		if _, own := e.ov[vpPos{x, y, z}]; !own && cur != e.ctx.lv.Block(x, y, z) && !t.test(cur, y, newVWLegacySource(0)) {
+			return
+		}
+	}
+	e.set(x, y, z, t.state)
+}
+
 // placeOre is OreFeature.place.
 func (e *vpExec) placeOre(c *vpOreCfg, r *vwRandom, p vpPos) bool {
 	size := float32(c.size)
@@ -578,7 +593,7 @@ func (e *vpExec) doPlaceOre(c *vpOreCfg, r *vwRandom, origin vpPos, x0, x1, z0, 
 					s := e.get(x, y, z)
 					for _, t := range c.targets {
 						if e.canPlaceOre(c, s, t, x, y, z, r) {
-							e.set(x, y, z, t.state)
+							e.setOre(t, x, y, z)
 							placed++
 							break
 						}
@@ -606,7 +621,7 @@ func (e *vpExec) placeScatteredOre(c *vpOreCfg, r *vwRandom, p vpPos) bool {
 		s := e.get(x, y, z)
 		for _, t := range c.targets {
 			if e.canPlaceOre(c, s, t, x, y, z, r) {
-				e.set(x, y, z, t.state)
+				e.setOre(t, x, y, z)
 				break
 			}
 		}
