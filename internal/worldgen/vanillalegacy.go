@@ -16,20 +16,20 @@ import (
 // vanilla's is, so the same seed samples the same values; the Perlin octave
 // and NormalNoise stack are vanillanoise.go's.
 
-// vdLegacy is LegacyRandomSource (a BitRandomSource).
-type vdLegacy struct{ seed int64 }
+// vdmLegacy is LegacyRandomSource (a BitRandomSource).
+type vdmLegacy struct{ seed int64 }
 
-func newVDLegacy(seed int64) *vdLegacy {
-	return &vdLegacy{(seed ^ 0x5DEECE66D) & (1<<48 - 1)}
+func newVDMLegacy(seed int64) *vdmLegacy {
+	return &vdmLegacy{(seed ^ 0x5DEECE66D) & (1<<48 - 1)}
 }
 
-func (r *vdLegacy) next(bits uint) int32 {
+func (r *vdmLegacy) next(bits uint) int32 {
 	r.seed = (r.seed*0x5DEECE66D + 0xB) & (1<<48 - 1)
 	return int32(r.seed >> (48 - bits))
 }
 
 // nextInt is BitRandomSource.nextInt(bound).
-func (r *vdLegacy) nextInt(bound int32) int32 {
+func (r *vdmLegacy) nextInt(bound int32) int32 {
 	if bound&(bound-1) == 0 {
 		return int32((int64(bound) * int64(r.next(31))) >> 31)
 	}
@@ -42,46 +42,46 @@ func (r *vdLegacy) nextInt(bound int32) int32 {
 	}
 }
 
-func (r *vdLegacy) nextLong() int64 {
+func (r *vdmLegacy) nextLong() int64 {
 	hi := r.next(32)
 	lo := r.next(32)
 	return int64(hi)<<32 + int64(lo)
 }
 
-func (r *vdLegacy) nextFloat() float32 { return float32(r.next(24)) * float32(5.9604645e-8) }
+func (r *vdmLegacy) nextFloat() float32 { return float32(r.next(24)) * float32(5.9604645e-8) }
 
-func (r *vdLegacy) nextDouble() float64 {
+func (r *vdmLegacy) nextDouble() float64 {
 	hi := int64(r.next(26))
 	lo := int64(r.next(27))
 	return float64(hi<<27+lo) * vnDoubleUnit
 }
 
 // consume is RandomSource.consumeCount: n nextInt() calls.
-func (r *vdLegacy) consume(n int) {
+func (r *vdmLegacy) consume(n int) {
 	for i := 0; i < n; i++ {
 		r.next(32)
 	}
 }
 
 // forkPositional is LegacyRandomSource.forkPositional.
-func (r *vdLegacy) forkPositional() vdLegacyPos { return vdLegacyPos(r.nextLong()) }
+func (r *vdmLegacy) forkPositional() vdmLegacyPos { return vdmLegacyPos(r.nextLong()) }
 
-// vdLegacyPos is LegacyPositionalRandomFactory.
-type vdLegacyPos int64
+// vdmLegacyPos is LegacyPositionalRandomFactory.
+type vdmLegacyPos int64
 
 // fromHashOf seeds a source from String.hashCode(name) xored with the
 // factory's seed.
-func (p vdLegacyPos) fromHashOf(name string) *vdLegacy {
-	return newVDLegacy(int64(javaStringHash(name)) ^ int64(p))
+func (p vdmLegacyPos) fromHashOf(name string) *vdmLegacy {
+	return newVDMLegacy(int64(vdmStringHash(name)) ^ int64(p))
 }
 
 // at is LegacyPositionalRandomFactory.at: Mth.getSeed of the block.
-func (p vdLegacyPos) at(x, y, z int) *vdLegacy {
-	return newVDLegacy(mthGetSeed(int32(x), int32(y), int32(z)) ^ int64(p))
+func (p vdmLegacyPos) at(x, y, z int) *vdmLegacy {
+	return newVDMLegacy(mthGetSeed(int32(x), int32(y), int32(z)) ^ int64(p))
 }
 
-// javaStringHash is String.hashCode (UTF-16 units; the names are ASCII).
-func javaStringHash(s string) int32 {
+// vdmStringHash is String.hashCode (UTF-16 units; the names are ASCII).
+func vdmStringHash(s string) int32 {
 	var h int32
 	for i := 0; i < len(s); i++ {
 		h = 31*h + int32(s[i])
@@ -89,11 +89,11 @@ func javaStringHash(s string) int32 {
 	return h
 }
 
-// newVDPerlin is GradientNoise's constructor over a legacy source
+// newVDMPerlin is GradientNoise's constructor over a legacy source
 // (newVNPerlin's, drawn from java.util.Random's sequence): offsets scaled by
 // offScale (256, or 0 for a simplex noise that discards them — the draws
 // still happen).
-func newVDPerlin(r *vdLegacy, offScale float64) *vnPerlin {
+func newVDMPerlin(r *vdmLegacy, offScale float64) *vnPerlin {
 	p := &vnPerlin{}
 	p.offX = r.nextDouble() * offScale
 	p.offY = r.nextDouble() * offScale
@@ -108,14 +108,14 @@ func newVDPerlin(r *vdLegacy, offScale float64) *vnPerlin {
 	return p
 }
 
-// vdNormalFactor is NormalNoise's octave list and normalization factor for
+// vdmNormalFactor is NormalNoise's octave list and normalization factor for
 // a noise file (newVNNormal's arithmetic).
-type vdOctave struct {
+type vdmOctave struct {
 	index      int
 	freq, ampl float64
 }
 
-func vdNormalOctaves(np vnNoiseParams) ([]vdOctave, float64) {
+func vdmNormalOctaves(np vnNoiseParams) ([]vdmOctave, float64) {
 	n := np.octaves
 	if n == 0 {
 		n = 1
@@ -126,12 +126,12 @@ func vdNormalOctaves(np vnNoiseParams) ([]vdOctave, float64) {
 		}
 		return np.mods[i]
 	}
-	var octs []vdOctave
+	var octs []vdmOctave
 	freq := math.Pow(2, float64(np.baseOctave))
 	amp := np.baseAmp * (math.Pow(0.5, -float64(n-1)) / (math.Pow(0.5, -float64(n)) - 1))
 	for i := 0; i < n; i++ {
 		if m := mod(i); m != 0 {
-			octs = append(octs, vdOctave{np.baseOctave + i, freq, amp * m})
+			octs = append(octs, vdmOctave{np.baseOctave + i, freq, amp * m})
 		}
 		freq *= 2
 		amp *= 0.5
@@ -150,28 +150,28 @@ func vdNormalOctaves(np vnNoiseParams) ([]vdOctave, float64) {
 	return octs, norm
 }
 
-// newVDNormal is Noises.instantiate over a legacy positional factory:
+// newVDMNormal is Noises.instantiate over a legacy positional factory:
 // NormalNoise.create(world.fromHashOf("minecraft:" + name)).
-func newVDNormal(world vdLegacyPos, name string, np vnNoiseParams) *vnNormal {
-	octs, norm := vdNormalOctaves(np)
+func newVDMNormal(world vdmLegacyPos, name string, np vnNoiseParams) *vnNormal {
+	octs, norm := vdmNormalOctaves(np)
 	r := world.fromHashOf("minecraft:" + name)
 	first := r.forkPositional()
 	second := r.forkPositional()
 	out := &vnNormal{}
 	for _, o := range octs {
 		seed := "octave_" + strconv.Itoa(o.index)
-		f := newVDPerlin(first.fromHashOf(seed), 256)
-		s := newVDPerlin(second.fromHashOf(seed), 256)
+		f := newVDMPerlin(first.fromHashOf(seed), 256)
+		s := newVDMPerlin(second.fromHashOf(seed), 256)
 		vf := float32(norm * o.ampl)
 		out.layers = append(out.layers, vnLayer{f, o.freq, vf}, vnLayer{s, o.freq * 1.0181268882175227, vf})
 	}
 	return out
 }
 
-// newVDNetherBiomeNoise is NormalNoise.createForLegacyNetherBiome: two
+// newVDMNetherBiomeNoise is NormalNoise.createForLegacyNetherBiome: two
 // legacy octave stacks (LegacyFbmInitializer) drawn in turn from one
 // source, the second at 1.0181268882175227 times the frequency.
-func newVDNetherBiomeNoise(r *vdLegacy, np vnNoiseParams) *vnNormal {
+func newVDMNetherBiomeNoise(r *vdmLegacy, np vnNoiseParams) *vnNormal {
 	n := np.octaves
 	if n == 0 {
 		n = 1
@@ -183,10 +183,10 @@ func newVDNetherBiomeNoise(r *vdLegacy, np vnNoiseParams) *vnNormal {
 			amps[i] = np.mods[i]
 		}
 	}
-	_, norm := vdNormalOctaves(np)
+	_, norm := vdmNormalOctaves(np)
 	vf := float32(norm * np.baseAmp)
-	first := vdLegacyFbm(r, np.baseOctave, amps)
-	second := vdLegacyFbm(r, np.baseOctave, amps)
+	first := vdmLegacyFbm(r, np.baseOctave, amps)
+	second := vdmLegacyFbm(r, np.baseOctave, amps)
 	out := &vnNormal{}
 	for _, l := range first {
 		out.layers = append(out.layers, vnLayer{l.noise, l.freq, l.amp * vf})
@@ -197,20 +197,20 @@ func newVDNetherBiomeNoise(r *vdLegacy, np vnNoiseParams) *vnNormal {
 	return out
 }
 
-// vdLegacyFbm is LegacyFbmInitializer.createForLegacyNetherBiome: the zero
+// vdmLegacyFbm is LegacyFbmInitializer.createForLegacyNetherBiome: the zero
 // octave first, then the octaves below it from the highest down, a skipped
 // octave consuming its 262 draws; the layers run from the lowest frequency.
-func vdLegacyFbm(r *vdLegacy, firstOctave int, amps []float64) []vnLayer {
+func vdmLegacyFbm(r *vdmLegacy, firstOctave int, amps []float64) []vnLayer {
 	octaves := len(amps)
 	zero := -firstOctave
 	levels := make([]*vnPerlin, octaves)
-	z := newVDPerlin(r, 256)
+	z := newVDMPerlin(r, 256)
 	if zero >= 0 && zero < octaves && amps[zero] != 0 {
 		levels[zero] = z
 	}
 	for i := zero - 1; i >= 0; i-- {
 		if i < octaves && amps[i] != 0 {
-			levels[i] = newVDPerlin(r, 256)
+			levels[i] = newVDMPerlin(r, 256)
 		} else {
 			r.consume(262)
 		}
@@ -228,18 +228,18 @@ func vdLegacyFbm(r *vdLegacy, firstOctave int, amps []float64) []vnLayer {
 	return out
 }
 
-// vdSmeared is SmearedPerlinNoise: a Perlin octave whose y lattice is
+// vdmSmeared is SmearedPerlinNoise: a Perlin octave whose y lattice is
 // smeared in steps of fudge (the old terrain noise's y treatment).
-type vdSmeared struct {
+type vdmSmeared struct {
 	p     *vnPerlin
 	fudge float64
 }
 
-// vdFudgeEps is the float literal 1.0E-7F, widened.
-var vdFudgeEps = float64(float32(1e-7))
+// vdmFudgeEps is the float literal 1.0E-7F, widened.
+var vdmFudgeEps = float64(float32(1e-7))
 
 // get is SmearedPerlinNoise.get.
-func (s *vdSmeared) get(x0, y0, z0 float64) float32 {
+func (s *vdmSmeared) get(x0, y0, z0 float64) float32 {
 	p := s.p
 	x := vnWrap(x0) + p.offX
 	y := vnWrap(y0) + p.offY
@@ -253,13 +253,13 @@ func (s *vdSmeared) get(x0, y0, z0 float64) float32 {
 	if y0 >= 0 && y0 < ry {
 		limit = y0
 	}
-	fudged := float32(ry - math.Floor(limit/s.fudge+vdFudgeEps)*s.fudge)
-	return p.sampleAndLerp(ix, iy, iz, rx, fudged, rz, float32(ry))
+	fudged := float32(ry - math.Floor(limit/s.fudge+vdmFudgeEps)*s.fudge)
+	return vdmSampleAndLerp(p, ix, iy, iz, rx, fudged, rz, float32(ry))
 }
 
 // sampleAndLerp is PerlinNoise.sampleAndLerp: the gradients dotted with
 // the (possibly fudged) offset, smoothed on the true y fraction.
-func (p *vnPerlin) sampleAndLerp(ix, iy, iz int, rx, ry, rz, origRY float32) float32 {
+func vdmSampleAndLerp(p *vnPerlin, ix, iy, iz int, rx, ry, rz, origRY float32) float32 {
 	x0 := p.permute(ix)
 	x1 := p.permute(ix + 1)
 	xy00 := p.permute(x0 + iy)
@@ -277,18 +277,18 @@ func (p *vnPerlin) sampleAndLerp(ix, iy, iz int, rx, ry, rz, origRY float32) flo
 	return vnLerp3(vnSmoothstep(rx), vnSmoothstep(origRY), vnSmoothstep(rz), d000, d100, d010, d110, d001, d101, d011, d111)
 }
 
-// vdSmearStack is a NoiseStack of smeared octaves.
-type vdSmearStack struct {
-	layers []vdSmearLayer
+// vdmSmearStack is a NoiseStack of smeared octaves.
+type vdmSmearStack struct {
+	layers []vdmSmearLayer
 }
 
-type vdSmearLayer struct {
-	noise vdSmeared
+type vdmSmearLayer struct {
+	noise vdmSmeared
 	freq  float64
 	amp   float32
 }
 
-func (s *vdSmearStack) get(x, y, z float64) float32 {
+func (s *vdmSmearStack) get(x, y, z float64) float32 {
 	var v float32
 	for i := range s.layers {
 		l := &s.layers[i]
@@ -297,38 +297,38 @@ func (s *vdSmearStack) get(x, y, z float64) float32 {
 	return v
 }
 
-// vdBlended is BlendedNoise (old_blended_noise) compiled: a main noise
+// vdmBlended is BlendedNoise (old_blended_noise) compiled: a main noise
 // choosing, through clamp(main + 0.5, 0, 1), between two limit noises.
-type vdBlended struct {
-	minLimit, maxLimit, main *vdSmearStack
+type vdmBlended struct {
+	minLimit, maxLimit, main *vdmSmearStack
 	xzMul, yMul              float64 // the limit noises' block scales
 	xzMain, yMain            float64 // the main noise's
 }
 
-// newVDBlended is BlendedNoise.compileSampler for a legacy world: the
+// newVDMBlended is BlendedNoise.compileSampler for a legacy world: the
 // three octave stacks drawn in turn from LegacyRandomSource(seed).
-func newVDBlended(seed int64, xzScale, yScale, xzFactor, yFactor, smear float64) *vdBlended {
-	r := newVDLegacy(seed)
+func newVDMBlended(seed int64, xzScale, yScale, xzFactor, yFactor, smear float64) *vdmBlended {
+	r := newVDMLegacy(seed)
 	xzMul := 684.412 * xzScale
 	yMul := 684.412 * yScale
 	limitSmear := yMul * smear
 	mainSmear := limitSmear / yFactor
-	b := &vdBlended{xzMul: xzMul, yMul: yMul, xzMain: xzMul / xzFactor, yMain: yMul / yFactor}
-	b.minLimit = vdCreateFbm(r, -15, limitSmear, float64(float32(0.99998474)))
-	b.maxLimit = vdCreateFbm(r, -15, limitSmear, float64(float32(0.99998474)))
-	b.main = vdCreateFbm(r, -7, mainSmear, 12.75)
+	b := &vdmBlended{xzMul: xzMul, yMul: yMul, xzMain: xzMul / xzFactor, yMain: yMul / yFactor}
+	b.minLimit = vdmCreateFbm(r, -15, limitSmear, float64(float32(0.99998474)))
+	b.maxLimit = vdmCreateFbm(r, -15, limitSmear, float64(float32(0.99998474)))
+	b.main = vdmCreateFbm(r, -7, mainSmear, 12.75)
 	return b
 }
 
-// vdCreateFbm is BlendedNoise.createFbm.
-func vdCreateFbm(r *vdLegacy, firstOctave int, smearY, value float64) *vdSmearStack {
+// vdmCreateFbm is BlendedNoise.createFbm.
+func vdmCreateFbm(r *vdmLegacy, firstOctave int, smearY, value float64) *vdmSmearStack {
 	octaves := -firstOctave + 1
 	factor := 1.0
 	value /= math.Pow(2, float64(octaves)) - 1
-	s := &vdSmearStack{}
+	s := &vdmSmearStack{}
 	for i := octaves - 1; i >= 0; i-- {
-		p := newVDPerlin(r, 256)
-		s.layers = append(s.layers, vdSmearLayer{vdSmeared{p, smearY * factor}, factor, float32(value)})
+		p := newVDMPerlin(r, 256)
+		s.layers = append(s.layers, vdmSmearLayer{vdmSmeared{p, smearY * factor}, factor, float32(value)})
 		factor /= 2
 		value *= 2
 	}
@@ -336,7 +336,7 @@ func vdCreateFbm(r *vdLegacy, firstOctave int, smearY, value float64) *vdSmearSt
 }
 
 // sample is the compiled sampler at a block.
-func (b *vdBlended) sample(x, y, z int) float32 {
+func (b *vdmBlended) sample(x, y, z int) float32 {
 	fx, fy, fz := float64(x), float64(y), float64(z)
 	main := b.main.get(fx*b.xzMain, fy*b.yMain, fz*b.xzMain)
 	alpha := vcClamp(main+0.5, 0, 1)
@@ -351,16 +351,16 @@ func (b *vdBlended) sample(x, y, z int) float32 {
 	return vnLerp(alpha, lo, hi)
 }
 
-// vdSimplex is SimplexNoise (the End islands' 2-D noise).
-type vdSimplex struct{ p *vnPerlin }
+// vdmSimplex is SimplexNoise (the End islands' 2-D noise).
+type vdmSimplex struct{ p *vnPerlin }
 
 var (
-	vdSqrt3 = math.Sqrt(3)
-	vdF2    = 0.5 * (vdSqrt3 - 1)
-	vdG2    = (3 - vdSqrt3) / 6
+	vdmSqrt3 = math.Sqrt(3)
+	vdmF2    = 0.5 * (vdmSqrt3 - 1)
+	vdmG2    = (3 - vdmSqrt3) / 6
 )
 
-func (s *vdSimplex) corner(i int, x, y float64) float64 {
+func (s *vdmSimplex) corner(i int, x, y float64) float64 {
 	t := 0.5 - x*x - y*y - 0*0
 	if t < 0 {
 		return 0
@@ -371,24 +371,24 @@ func (s *vdSimplex) corner(i int, x, y float64) float64 {
 }
 
 // get2 is SimplexNoise.get(x, y).
-func (s *vdSimplex) get2(xin0, yin0 float64) float32 {
+func (s *vdmSimplex) get2(xin0, yin0 float64) float32 {
 	p := s.p
 	xin := xin0 + p.offX
 	yin := yin0 + p.offY
-	sk := (xin + yin) * vdF2
+	sk := (xin + yin) * vdmF2
 	i := int(math.Floor(xin + sk))
 	j := int(math.Floor(yin + sk))
-	t := float64(i+j) * vdG2
+	t := float64(i+j) * vdmG2
 	x0 := xin - (float64(i) - t)
 	y0 := yin - (float64(j) - t)
 	i1, j1 := 0, 1
 	if x0 > y0 {
 		i1, j1 = 1, 0
 	}
-	x1 := x0 - float64(i1) + vdG2
-	y1 := y0 - float64(j1) + vdG2
-	x2 := x0 - 1 + 2*vdG2
-	y2 := y0 - 1 + 2*vdG2
+	x1 := x0 - float64(i1) + vdmG2
+	y1 := y0 - float64(j1) + vdmG2
+	x2 := x0 - 1 + 2*vdmG2
+	y2 := y0 - 1 + 2*vdmG2
 	ii, jj := i&0xFF, j&0xFF
 	gi0 := p.permute(ii+p.permute(jj)) % 12
 	gi1 := p.permute(ii+i1+p.permute(jj+j1)) % 12

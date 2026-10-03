@@ -11,19 +11,19 @@ import (
 // the 26.3 server's own NoiseBasedChunkGenerator.doFill,
 // MaterialSystem.buildSurface and generateCarvers on a ProtoChunk (no
 // structures, so no beardifier) for each chunk below and hashed the result
-// after each stage — FNV-1a over a code per cell (vdAir … vdEndStone), y
+// after each stage — FNV-1a over a code per cell (vdmAir … vdmEndStone), y
 // from 0 to 127, then z, then x — along with the chunk's noise biomes (the
 // names of its 4×32×4 quarts) and its block biomes through BiomeManager's
 // zoom at six heights; and sampled final_density uncached at a few points.
 
-type vdOracleChunk struct {
+type vdmOracleChunk struct {
 	cx, cz                          int32
 	biomes, zoom, fill, surf, carve uint64
 }
 
-func vdHashCodes(t *vdTerrain) uint64 {
+func vdmHashCodes(t *vdmTerrain) uint64 {
 	h := uint64(1469598103934665603)
-	for y := 0; y < vdH; y++ {
+	for y := 0; y < vdmH; y++ {
 		for i := 0; i < 256; i++ {
 			h ^= uint64(t.codes[y*256+i])
 			h *= 1099511628211
@@ -32,7 +32,7 @@ func vdHashCodes(t *vdTerrain) uint64 {
 	return h
 }
 
-func vdHashName(h uint64, n string) uint64 {
+func vdmHashName(h uint64, n string) uint64 {
 	for i := 0; i < len(n); i++ {
 		h ^= uint64(n[i])
 		h *= 1099511628211
@@ -42,10 +42,10 @@ func vdHashName(h uint64, n string) uint64 {
 	return h
 }
 
-// vdPointDensity is final_density sampled uncached at a block:
+// vdmPointDensity is final_density sampled uncached at a block:
 // InterpolatedFunction.sampleValue's lerp3 over the cell's corners, then the
 // squeeze.
-func vdPointDensity(corner func(x, y, z int) float32, cxz, cy, x, y, z int) float32 {
+func vdmPointDensity(corner func(x, y, z int) float32, cxz, cy, x, y, z int) float32 {
 	ix, iy, iz := ((x%cxz)+cxz)%cxz, ((y%cy)+cy)%cy, ((z%cxz)+cxz)%cxz
 	var v float32
 	if ix == 0 && iy == 0 && iz == 0 {
@@ -59,9 +59,9 @@ func vdPointDensity(corner func(x, y, z int) float32, cxz, cy, x, y, z int) floa
 	return vcSqueeze(v) + 0
 }
 
-// vdDumpDiff compares a stage with the oracle's dump of it, when the dumps
+// vdmDumpDiff compares a stage with the oracle's dump of it, when the dumps
 // are at hand (VDIMS_DUMPS), naming the first cells that differ.
-func vdDumpDiff(t *testing.T, dim string, seed int64, cx, cz int32, stage string, got *vdTerrain) {
+func vdmDumpDiff(t *testing.T, dim string, seed int64, cx, cz int32, stage string, got *vdmTerrain) {
 	dir := os.Getenv("VDIMS_DUMPS")
 	if dir == "" {
 		return
@@ -72,7 +72,7 @@ func vdDumpDiff(t *testing.T, dim string, seed int64, cx, cz int32, stage string
 		return
 	}
 	n := 0
-	for y := 0; y < vdH; y++ {
+	for y := 0; y < vdmH; y++ {
 		for i := 0; i < 256; i++ {
 			if g, w := got.codes[y*256+i], want[y*256+i]; g != w {
 				if n < 12 {
@@ -87,7 +87,7 @@ func vdDumpDiff(t *testing.T, dim string, seed int64, cx, cz int32, stage string
 	}
 }
 
-var vnOracle = map[int64][]vdOracleChunk{
+var vdmNOracle = map[int64][]vdmOracleChunk{
 	1: {
 		{0, 0, 11987133322247101315, 15963302969041095555, 2832305118654747485, 5911810572222742563, 841575591735566595},
 		{3, -7, 11987133322247101315, 15963302969041095555, 5233400631039647501, 16069022898459225951, 15696135999358076907},
@@ -118,8 +118,8 @@ var vnOracle = map[int64][]vdOracleChunk{
 	},
 }
 
-// vnOracleDensity is final_density at a few blocks (float bits), per seed.
-var vnOracleDensity = map[int64][][4]int64{
+// vdmNOracleDensity is final_density at a few blocks (float bits), per seed.
+var vdmNOracleDensity = map[int64][][4]int64{
 	1: {
 		{0, 0, 0, 1055566507}, {100, 40, -37, -1119161573}, {-1234, 64, 5678, -1114185147},
 		{17, 127, -3, 1049588172}, {4, 8, 4, 1051942101}, {-8000, 100, 9000, -1132862744},
@@ -132,33 +132,33 @@ var vnOracleDensity = map[int64][][4]int64{
 
 func TestVanillaZoomSeed(t *testing.T) {
 	for seed, want := range map[int64]int64{1: -6467378160175308932, -4172144997902289642: 2159143436479834350} {
-		if got := vdZoomSeed(seed); got != want {
+		if got := vdmZoomSeed(seed); got != want {
 			t.Errorf("obfuscateSeed(%d) = %d, vanilla %d", seed, got, want)
 		}
 	}
 }
 
 func TestVanillaNetherMatchesVanilla(t *testing.T) {
-	for seed, chunks := range vnOracle {
+	for seed, chunks := range vdmNOracle {
 		v := newVanillaNether(seed, NewNetherGenerator(seed))
-		for _, p := range vnOracleDensity[seed] {
-			d := vdPointDensity(v.corner, 4, 8, int(p[0]), int(p[1]), int(p[2]))
+		for _, p := range vdmNOracleDensity[seed] {
+			d := vdmPointDensity(v.corner, 4, 8, int(p[0]), int(p[1]), int(p[2]))
 			if int32(math.Float32bits(d)) != int32(p[3]) {
 				t.Errorf("seed %d: final_density at %d,%d,%d = %v, vanilla %v", seed, p[0], p[1], p[2], d, math.Float32frombits(uint32(p[3])))
 			}
 		}
 		for _, c := range chunks {
 			fill := v.buildStages(c.cx, c.cz, 1)
-			if h := vdHashCodes(fill); h != c.fill {
+			if h := vdmHashCodes(fill); h != c.fill {
 				t.Errorf("seed %d chunk %d,%d: fill hash %d, vanilla %d", seed, c.cx, c.cz, h, c.fill)
-				vdDumpDiff(t, "nether", seed, c.cx, c.cz, "fill", fill)
+				vdmDumpDiff(t, "nether", seed, c.cx, c.cz, "fill", fill)
 				continue
 			}
 			bh := uint64(1469598103934665603)
 			for qy := 0; qy < 32; qy++ {
 				for qz := 0; qz < 4; qz++ {
 					for qx := 0; qx < 4; qx++ {
-						bh = vdHashName(bh, vnbNames[fill.biome[qz*4+qx]][10:])
+						bh = vdmHashName(bh, vdmNNames[fill.biome[qz*4+qx]][10:])
 					}
 				}
 			}
@@ -169,8 +169,8 @@ func TestVanillaNetherMatchesVanilla(t *testing.T) {
 			for _, y := range []int{0, 31, 32, 64, 100, 127} {
 				for z := 0; z < 16; z++ {
 					for x := 0; x < 16; x++ {
-						qx, _, qz := vdZoom(v.zoom, int(c.cx)*16+x, y, int(c.cz)*16+z)
-						zh = vdHashName(zh, vnbNames[v.noiseBiome(qx, qz)][10:])
+						qx, _, qz := vdmZoom(v.zoom, int(c.cx)*16+x, y, int(c.cz)*16+z)
+						zh = vdmHashName(zh, vdmNNames[v.noiseBiome(qx, qz)][10:])
 					}
 				}
 			}
@@ -178,21 +178,21 @@ func TestVanillaNetherMatchesVanilla(t *testing.T) {
 				t.Errorf("seed %d chunk %d,%d: zoomed biomes hash %d, vanilla %d", seed, c.cx, c.cz, zh, c.zoom)
 			}
 			surf := v.buildStages(c.cx, c.cz, 2)
-			if h := vdHashCodes(surf); h != c.surf {
+			if h := vdmHashCodes(surf); h != c.surf {
 				t.Errorf("seed %d chunk %d,%d: surface hash %d, vanilla %d", seed, c.cx, c.cz, h, c.surf)
-				vdDumpDiff(t, "nether", seed, c.cx, c.cz, "surf", surf)
+				vdmDumpDiff(t, "nether", seed, c.cx, c.cz, "surf", surf)
 				continue
 			}
 			full := v.buildStages(c.cx, c.cz, 3)
-			if h := vdHashCodes(full); h != c.carve {
+			if h := vdmHashCodes(full); h != c.carve {
 				t.Errorf("seed %d chunk %d,%d: carved hash %d, vanilla %d", seed, c.cx, c.cz, h, c.carve)
-				vdDumpDiff(t, "nether", seed, c.cx, c.cz, "carve", full)
+				vdmDumpDiff(t, "nether", seed, c.cx, c.cz, "carve", full)
 			}
 		}
 	}
 }
 
-var veOracle = map[int64][]vdOracleChunk{
+var vdmEOracle = map[int64][]vdmOracleChunk{
 	1: {
 		{0, 0, 15412342006762666883, 17233105309615549315, 5082070847555146623, 5082070847555146623, 5082070847555146623},
 		{3, -7, 15412342006762666883, 17233105309615549315, 2092149027815752579, 2092149027815752579, 2092149027815752579},
@@ -223,29 +223,29 @@ var veOracle = map[int64][]vdOracleChunk{
 	},
 }
 
-var veOracleDensity = map[int64][][4]int64{
+var vdmEOracleDensity = map[int64][][4]int64{
 	1:                    {{0, 0, 0, -1114026017}, {100, 40, -37, 1033942664}, {-1234, 64, 5678, -1091917141}, {17, 127, -3, -1091917141}, {4, 8, 4, -1119666167}, {-8000, 100, 9000, -1091917141}},
 	-4172144997902289642: {{0, 0, 0, -1114026017}, {100, 40, -37, -1110361538}, {-1234, 64, 5678, -1097419230}, {17, 127, -3, -1091917141}, {4, 8, 4, -1123511997}, {-8000, 100, 9000, -1091917141}},
 }
 
 func TestVanillaEndMatchesVanilla(t *testing.T) {
-	for seed, chunks := range veOracle {
+	for seed, chunks := range vdmEOracle {
 		v := newVanillaEnd(seed, NewEndGenerator(seed))
-		for _, p := range veOracleDensity[seed] {
-			d := vdPointDensity(v.corner, 8, 4, int(p[0]), int(p[1]), int(p[2]))
+		for _, p := range vdmEOracleDensity[seed] {
+			d := vdmPointDensity(v.corner, 8, 4, int(p[0]), int(p[1]), int(p[2]))
 			if int32(math.Float32bits(d)) != int32(p[3]) {
 				t.Errorf("seed %d: final_density at %d,%d,%d = %v, vanilla %v", seed, p[0], p[1], p[2], d, math.Float32frombits(uint32(p[3])))
 			}
 		}
 		for _, c := range chunks {
 			got := v.build(c.cx, c.cz)
-			if h := vdHashCodes(got); h != c.carve {
+			if h := vdmHashCodes(got); h != c.carve {
 				t.Errorf("seed %d chunk %d,%d: terrain hash %d, vanilla %d", seed, c.cx, c.cz, h, c.carve)
-				vdDumpDiff(t, "end", seed, c.cx, c.cz, "carve", got)
+				vdmDumpDiff(t, "end", seed, c.cx, c.cz, "carve", got)
 			}
 			bh := uint64(1469598103934665603)
 			for i := 0; i < 32*16; i++ {
-				bh = vdHashName(bh, vebNames[got.biome[i%16]][10:])
+				bh = vdmHashName(bh, vdmENames[got.biome[i%16]][10:])
 			}
 			if bh != c.biomes {
 				t.Errorf("seed %d chunk %d,%d: noise biomes hash %d, vanilla %d", seed, c.cx, c.cz, bh, c.biomes)
@@ -254,8 +254,8 @@ func TestVanillaEndMatchesVanilla(t *testing.T) {
 			for _, y := range []int{0, 31, 32, 64, 100, 127} {
 				for z := 0; z < 16; z++ {
 					for x := 0; x < 16; x++ {
-						qx, _, qz := vdZoom(vdZoomSeed(seed), int(c.cx)*16+x, y, int(c.cz)*16+z)
-						zh = vdHashName(zh, vebNames[v.chunkBiome(int32(qx>>2), int32(qz>>2))][10:])
+						qx, _, qz := vdmZoom(vdmZoomSeed(seed), int(c.cx)*16+x, y, int(c.cz)*16+z)
+						zh = vdmHashName(zh, vdmENames[v.chunkBiome(int32(qx>>2), int32(qz>>2))][10:])
 					}
 				}
 			}
