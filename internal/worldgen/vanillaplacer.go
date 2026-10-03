@@ -47,7 +47,7 @@ func newVanillaPlacer(ctx VanillaGenContext) VanillaPlacement {
 	if ctx.Dim != DimOverworld || ctx.Terrain == nil || ctx.Biomes == nil {
 		return nil
 	}
-	p := &vanillaPlacer{g: ctx.Gen, dim: ctx.Dim, terrain: ctx.Terrain, biomes: ctx.Biomes,
+	p := &vanillaPlacer{g: ctx.Gen, dim: ctx.Dim, terrain: newVPHeightCache(ctx.Terrain), biomes: ctx.Biomes,
 		zoom: vpObfuscateSeed(ctx.Seed), bcache: map[[2]int32][]string{}}
 	decor, err := newVanillaDecor(ctx.Seed, "overworld")
 	if err != nil {
@@ -56,7 +56,7 @@ func newVanillaPlacer(ctx VanillaGenContext) VanillaPlacement {
 	p.decor = decor
 	p.decor.minY, p.decor.seaLevel = ctx.Terrain.MinY(), ctx.Terrain.SeaLevel()
 	p.decor.height = min(ctx.Terrain.Ceiling(), MinY+SectionCount*16) - p.decor.minY
-	p.structs = newVanillaStructs(ctx.Seed, "overworld", p.noiseBiome, ctx.Terrain)
+	p.structs = newVanillaStructs(ctx.Seed, "overworld", p.noiseBiome, p.terrain)
 	if ctx.Preset == PresetSingleBiome {
 		p.structs.fixed = vpShort(ctx.Biomes.BiomeAt(0, 0, 0))
 	}
@@ -274,4 +274,51 @@ func vpFiddled(seed int64, x, y, z int, dx, dy, dz float64) float64 {
 func vpFiddle(r int64) float64 {
 	u := float64(((r>>24)%1024+1024)%1024) / 1024
 	return (u - 0.5) * 0.9
+}
+
+// vpHeightCache wraps a VanillaTerrain with a per-chunk cache of its two
+// WG heightmaps: the terrain computes a column's base height from the
+// noise each time it is asked, and placement asks for the same columns
+// over and over (every ore probes the columns round it, every chunk
+// replays its neighbours).
+type vpHeightCache struct {
+	VanillaTerrain
+	mu    sync.Mutex
+	cache map[[2]int32]*vpColHeights
+}
+
+type vpColHeights struct {
+	once         sync.Once
+	surface, sea [256]int16
+}
+
+func newVPHeightCache(t VanillaTerrain) *vpHeightCache {
+	return &vpHeightCache{VanillaTerrain: t, cache: map[[2]int32]*vpColHeights{}}
+}
+
+// Height is the terrain's WG height, computed once per chunk.
+func (c *vpHeightCache) Height(kind HeightmapType, x, z int) int {
+	k := [2]int32{int32(x >> 4), int32(z >> 4)}
+	c.mu.Lock()
+	h := c.cache[k]
+	if h == nil {
+		if len(c.cache) >= 16384 {
+			c.cache = map[[2]int32]*vpColHeights{}
+		}
+		h = &vpColHeights{}
+		c.cache[k] = h
+	}
+	c.mu.Unlock()
+	h.once.Do(func() {
+		for i := 0; i < 256; i++ {
+			cx, cz := int(k[0])<<4|i&15, int(k[1])<<4|i>>4
+			h.surface[i] = int16(c.VanillaTerrain.Height(HeightWorldSurfaceWG, cx, cz))
+			h.sea[i] = int16(c.VanillaTerrain.Height(HeightOceanFloorWG, cx, cz))
+		}
+	})
+	i := (z&15)<<4 | x&15
+	if kind == HeightOceanFloorWG || kind == HeightOceanFloor {
+		return int(h.sea[i])
+	}
+	return int(h.surface[i])
 }
