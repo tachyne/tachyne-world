@@ -46,3 +46,21 @@ func TestCachePromotesOncePerEpoch(t *testing.T) {
 		t.Errorf("touched = %d, epoch = %d", e.touched, w.epoch.Load())
 	}
 }
+
+// The void regenerates for nothing, so it takes the small cache budget the
+// Nether and End do, not the overworld's: two main budgets overran the pod's
+// memory limit the day the shipyard was first built in.
+func TestVoidTakesTheMinorCacheBudget(t *testing.T) {
+	ow := New(1)
+	v, err := NewVoid(1, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n, err := NewNether(1, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.cacheCap() != n.cacheCap() || v.cacheCap() >= ow.cacheCap() {
+		t.Errorf("cache caps: void %d, nether %d, overworld %d", v.cacheCap(), n.cacheCap(), ow.cacheCap())
+	}
+}

@@ -145,6 +145,11 @@ the public history since the project was open-sourced on 2026-07-10.
   player has built in keep their layout.
 
 ### Fixed
+- **The shipyard no longer crowds the server's memory.** It had been given
+  the overworld's large chunk cache, and with both full the world ran its
+  garbage collector almost without pause; an empty void now takes the small
+  cache the Nether and End use. `/list` also stops naming the console
+  (`@server`) while a bus command is running.
 - **Secure chat across shard borders**: the shard a player crosses into
   learns their chat session, so others there can verify their messages.
 - **Note blocks are audible again**: the server sends the note's sound, as

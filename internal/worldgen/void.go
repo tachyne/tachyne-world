@@ -22,6 +22,9 @@ func NewVoidGenerator(seed int64) *Generator {
 	return g
 }
 
+// Void reports whether this is the void's generator.
+func (g *Generator) Void() bool { return g.void }
+
 // voidPlatformAt reports whether a column carries the start platform:
 // within checkerboard distance 16 of (8, 8), in the chunks within one of
 // the chunk holding it (PLATFORM_RADIUS, PLATFORM_RADIUS_CHUNKS) — which

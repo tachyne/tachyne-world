@@ -35,14 +35,14 @@ const (
 )
 
 // cacheCap is the LRU entry limit for this world's chunk size. The budget is
-// PER WORLD — the engine runs three (overworld/nether/End), so the sum must
+// PER WORLD — the engine runs several (overworld, nether, End, shipyard), so the sum must
 // fit the pod's memory limit with GC headroom: a portal transit fills two
 // caches at once and 3×400 MB OOM-killed the 1Gi world pod the first time a
 // player toured the nether.
 func (w *World) cacheCap() int {
 	main, minor, _ := cacheBudgets()
 	budget := main
-	if w.noSky { // nether/End
+	if w.noSky || w.gen.Void() { // nether/End; a void costs nothing to regenerate
 		budget = minor
 	}
 	bytesPerChunk := w.Sections() * 4096 * 4

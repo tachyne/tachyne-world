@@ -1700,8 +1700,10 @@ func (h *hub) run() {
 				close(e.done)
 			case evList:
 				names := make([]string, 0, len(players))
-				for _, t := range players {
-					names = append(names, t.p.name)
+				for eid, t := range players {
+					if eid != consoleEID { // the console is in the map only while its command runs
+						names = append(names, t.p.name)
+					}
 				}
 				e.p.trySendEv(chatEv(
 					fmt.Sprintf("Players online (%d): %s", len(names), strings.Join(names, ", "))))
