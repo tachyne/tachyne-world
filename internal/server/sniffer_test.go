@@ -39,8 +39,7 @@ func TestSnifferEggHatches(t *testing.T) {
 	// Run the clock forward through all three stages.
 	info, _ := worldgen.InfoForState(snifferEggLo)
 	for stage := 0; stage < 3; stage++ {
-		h.tick.Store(h.tick.Load() + snifferHatchTicks)
-		tick()
+		runBlockTickNow(t, h, players, 0, pos) // each crack is the egg's scheduled tick
 	}
 	if got := h.world.At(pos.x, pos.y, pos.z); got != worldgen.Air {
 		t.Errorf("the egg is still there as %v (hatch=%s)", got,
@@ -76,10 +75,15 @@ func TestMossSpeedsTheSnifferEgg(t *testing.T) {
 		t.Error("moss did not count as a hatch boost")
 	}
 
+	h.world.SetBlock(plain.x, plain.y, plain.z, snifferEggLo)
+	h.world.SetBlock(mossy.x, mossy.y, mossy.z, snifferEggLo)
 	h.scheduleSnifferEgg(nil, 0, plain.x, plain.y, plain.z)
 	h.scheduleSnifferEgg(nil, 0, mossy.x, mossy.y, mossy.z)
-	slow := h.snifferEggs[simPos{dim: 0, blockPos: plain}]
-	fast := h.snifferEggs[simPos{dim: 0, blockPos: mossy}]
+	slow, _ := h.blockTickDue(0, plain, snifferEggLo)
+	fast, ok := h.blockTickDue(0, mossy, snifferEggLo)
+	if !ok {
+		t.Fatal("the mossy egg booked no crack")
+	}
 	if fast >= slow {
 		t.Errorf("mossy egg due at %d, plain at %d — moss should be sooner", fast, slow)
 	}

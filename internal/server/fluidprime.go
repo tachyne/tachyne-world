@@ -67,7 +67,14 @@ func (h *hub) primeFluids(players map[int32]*tracked) {
 					if e.State == frogspawnBlock {
 						h.scheduleFrogspawn(t.dim, blockPos{int(x)*16 + e.LX, e.Y, int(z)*16 + e.LZ})
 					}
-					h.composterOnPlace(t.dim, blockPos{int(x)*16 + e.LX, e.Y, int(z)*16 + e.LZ}, e.State)
+					ep := blockPos{int(x)*16 + e.LX, e.Y, int(z)*16 + e.LZ}
+					h.composterOnPlace(t.dim, ep, e.State)
+					// A tilted dripleaf and a target still giving a signal had
+					// a tick in flight too: each gets its stage's again.
+					if isBigDripleaf(e.State) {
+						h.dripleafRearm(t.dim, ep, e.State)
+					}
+					h.targetRearm(t.dim, ep, e.State)
 				}
 			}
 		}

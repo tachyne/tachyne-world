@@ -51,38 +51,45 @@ func clampF(v, lo, hi float64) float64 {
 	return v
 }
 
-// hitTarget energises a target block struck at (hx,hy,hz). arrow selects the
-// longer 20-tick hold. Runs in the target's own dimension: the write, the
-// reset record and both schedules used to be the overworld's whatever the
-// projectile had actually hit.
+// hitTarget is TargetBlock.onProjectileHit: a target with no tick pending
+// takes the hit's signal and schedules the tick that resets it (8 ticks, an
+// arrow's 20); one still holding a signal keeps it, and its reset stays
+// where it was. The hit is credited either way. Runs in the target's own
+// dimension.
 func (h *hub) hitTarget(players map[int32]*tracked, dim int, pos blockPos, state uint32, hx, hy, hz float64, arrow bool, a *arrowEntity) {
-	h.setBlockAt(players, dim, pos, targetWithPower(state, targetStrength(hx, hy, hz)))
+	strength := targetStrength(hx, hy, hz)
 	ticks := uint64(8)
 	if arrow {
 		ticks = 20
 	}
-	h.targetDue[simPos{dim: dim, blockPos: pos}] = h.tick.Load() + ticks
+	if !h.hasBlockTickIn(dim, pos, state) {
+		// setOutputPower: setBlockAndUpdate, then the reset tick.
+		h.setBlockAt(players, dim, pos, targetWithPower(state, strength))
+		h.scheduleBlockTickIn(dim, pos, ticks)
+		h.inDim(dim, func() { h.scheduleSignalAround(players, pos) }) // neighbours read the new signal at once
+	}
 	if a != nil && a.playerShot {
 		if s := players[a.shooter]; s != nil {
 			h.incCustom(s, "target_hit", 1)
-			h.advance(players, s, "target_hit", advMatch{signal: targetStrength(hx, hy, hz), distH: math.Hypot(a.x-a.ox, a.z-a.oz)})
+			h.advance(players, s, "target_hit", advMatch{signal: strength, distH: math.Hypot(a.x-a.ox, a.z-a.oz)})
 		}
 	}
-	h.scheduleIn(dim, pos, ticks)
-	h.inDim(dim, func() { h.scheduleSignalAround(players, pos) }) // neighbours read the new signal at once
 }
 
-// updateTarget decays a fired target back to 0 once its hold has elapsed. A
-// neighbour update before then leaves it holding.
-func (h *hub) updateTarget(players map[int32]*tracked, pos blockPos, state uint32) {
-	key := simPos{dim: h.rsDim, blockPos: pos}
-	due, ok := h.targetDue[key]
-	if !ok || h.tick.Load() < due {
-		return
-	}
-	delete(h.targetDue, key)
+// tickTarget is TargetBlock.tick, the reset: a target still giving a
+// signal drops to 0. A neighbour's change does nothing to a target.
+func (h *hub) tickTarget(players map[int32]*tracked, pos blockPos, state uint32) {
 	if targetPower(state) > 0 {
 		h.rsSet(players, pos, targetWithPower(state, 0))
 		h.scheduleSignalAround(players, pos)
+	}
+}
+
+// targetRearm books the reset of a target found giving a signal with no
+// reset pending — one from before a restart: vanilla saves the tick with
+// the chunk, this engine keeps ticks in memory.
+func (h *hub) targetRearm(dim int, pos blockPos, state uint32) {
+	if isTarget(state) && targetPower(state) > 0 && !h.hasBlockTickIn(dim, pos, state) {
+		h.scheduleBlockTickIn(dim, pos, 8)
 	}
 }

@@ -101,12 +101,8 @@ func TestPrimingRearmsFrogspawn(t *testing.T) {
 		h.primeFluids(players)
 	}
 	now := h.tick.Load()
-	for due, list := range h.pending {
-		for _, sp := range list {
-			if sp.blockPos == (blockPos{x, y, z}) && due >= now+frogspawnMinHatch && due < now+frogspawnMaxHatch {
-				return
-			}
-		}
+	due, ok := h.blockTickDue(0, blockPos{x, y, z}, frogspawnBlock)
+	if !ok || due < now+frogspawnMinHatch || due >= now+frogspawnMaxHatch {
+		t.Fatalf("the frogspawn left from before a restart was not armed to hatch in the window (due %d, pending %v)", due, ok)
 	}
-	t.Fatal("the frogspawn left from before a restart was never armed to hatch")
 }

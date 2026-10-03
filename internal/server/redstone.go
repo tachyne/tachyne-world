@@ -275,7 +275,8 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 	defer h.nbRun(players)
 	switch {
 	case isTarget(state):
-		h.updateTarget(players, pos, state)
+		// TargetBlock has no neighborChanged: its signal drops on its own
+		// scheduled tick (tickTarget), whatever changes beside it.
 	case isTripwireHook(state):
 		h.calcHook(players, pos, state) // re-evaluate its line (attached/powered)
 	case isCrafter(state):

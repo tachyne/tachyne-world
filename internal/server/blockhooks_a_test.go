@@ -760,8 +760,13 @@ func TestSculkHearsASnifferEggCrack(t *testing.T) {
 		pos := blockPos{7, 180, 4}
 		h.world.SetBlock(pos.x, pos.y, pos.z, snifferEggLo)
 		h.processUpdate(players, 0, pos) // first sight starts the clock
-		h.snifferEggs[simPos{blockPos: pos}] = h.tick.Load()
-		h.processUpdate(players, 0, pos) // the crack
+		due, ok := h.blockTickDue(0, pos, snifferEggLo)
+		if !ok {
+			t.Error("the egg booked no crack")
+			return
+		}
+		h.tick.Store(due - 1)
+		stepTicks(h, players, 1) // the crack, on its scheduled tick
 	})
 	if f != freqBlockPlace {
 		t.Errorf("the sensor heard %d, want BLOCK_PLACE %d", f, freqBlockPlace)

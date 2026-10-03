@@ -493,9 +493,6 @@ type hub struct {
 	spawnPub                       atomic.Pointer[[3]float64]
 	bodies                         atomic.Pointer[[]bodyBox] // publishBodies: what a placement must not overlap
 	shulkerLids                    map[simPos]*shulkerLid    // animating shulker box lids (shulkerlid.go)
-	composterDue                   map[simPos]uint64         // full composters' ready ticks (composter.go)
-	driedGhastDue                  map[simPos]uint64         // dried ghasts' scheduled hydration steps (happyghast.go)
-	frogspawnDue                   map[simPos]uint64         // frogspawn clutches' hatch ticks (frogspawn.go)
 
 	localCaps    *localCapState    // per-player category counts for this tick's spawning (localcap.go)
 	spawnCharges []pointCharge     // this tick\'s spawn-cost charges in the dimension being spawned (localcap.go)
@@ -555,10 +552,6 @@ type hub struct {
 	// fluidTicks are the fluid ticks waiting in pending, one per cell at
 	// most (the fluid half of LevelTicks): cell → the tick it is due.
 	fluidTicks map[simPos]uint64
-	// simTicks are the typed block ticks waiting in pending (the block
-	// half of LevelTicks, for the blocks off the redstone queue): cell →
-	// the block it was scheduled for and its trigger tick (simticks.go).
-	simTicks map[simPos]simTickMark
 	// movingBlocks are the moving_piston cells mid-animation (movingpiston.go).
 	movingBlocks map[simPos]movingBlock
 	// movingLive mirrors movingBlocks' keys for the session goroutines
@@ -619,8 +612,6 @@ type hub struct {
 	scratchSeen3  map[[3]int]bool         // runRandomTicks: chunks ticked this pass
 	scratchSim    map[simPos]struct{}     // runUpdates: positions processed this tick
 	scratchWant   map[int32]bool          // syncTracking's reusable in-view set
-	dripleafDue   map[simPos]uint64       // big dripleaf: the tick its next tilt stage is due
-	bubbleDue     map[simPos]uint64       // soul sand / magma: the tick its bubble column forms
 	items         map[int32]*itemEntity   // dropped-item entities (block drops)
 	arrows        map[int32]*arrowEntity  // in-flight/stuck projectiles (skeleton shots)
 	clouds        map[int32]*effectCloud  // lingering-potion area-effect clouds
@@ -664,7 +655,6 @@ type hub struct {
 
 	tnt          []*primedTNT           // lit TNT charges counting down
 	fangs        []*evokerFang          // conjured evoker fangs waiting to bite
-	snifferEggs  map[simPos]uint64      // egg position -> tick its next crack is due
 	brushes      map[blockPos]*brushing // suspicious blocks part-way brushed (not persisted)
 	hearts       map[simPos]*heartLink  // creaking hearts (by dimension) and the creaking each owns
 	bells        map[simPos]*bellEntity // rung bells' block entities: the swing and the resonation
@@ -684,13 +674,11 @@ type hub struct {
 
 	pressedAt map[simPos]uint64 // button-press ticks (for the unpress timer)
 	rsDue     map[simPos]uint64 // repeater flip due-ticks
-	targetDue map[simPos]uint64 // target-block signal reset ticks, per dimension
 	obsSeen   map[simPos]uint32 // observer last-seen watched state
 	compOut   map[simPos]int    // comparator output levels (vanilla block entity)
 	platesOn  map[simPos]uint64 // pressed pressure plates → the tick of their next checkPressed (20, weighted 10)
 	wiresOn   map[simPos]uint64 // tripwire strings' scheduled ticks (10-tick re-check, 1-tick release hold), by dimension
 	fireAge   map[simPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
-	fireDue   map[simPos]uint64 // fire blocks' booked ticks (fire.go armFire)
 
 	// Sculk vibration system (overworld). sculkList/catalysts are POI sets kept
 	// current on block change; the rest is per-block runtime state.
@@ -922,13 +910,11 @@ func newHub(w *world.World) *hub {
 		rules:         defaultRules(),
 		pressedAt:     map[simPos]uint64{},
 		rsDue:         map[simPos]uint64{},
-		targetDue:     map[simPos]uint64{},
 		obsSeen:       map[simPos]uint32{},
 		compOut:       map[simPos]int{},
 		platesOn:      map[simPos]uint64{},
 		wiresOn:       map[simPos]uint64{},
 		fireAge:       map[simPos]int{},
-		fireDue:       map[simPos]uint64{},
 		sculkList:     map[simPos]bool{},
 		catalysts:     map[simPos]bool{},
 		sculkSpread:   map[simPos]*sculkSpreader{},

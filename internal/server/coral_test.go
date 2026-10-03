@@ -57,16 +57,15 @@ func TestRemovingWaterSchedulesCoralDeath(t *testing.T) {
 	w.SetBlock(pos.x, pos.y, pos.z, live)
 	w.SetBlock(pos.x+1, pos.y, pos.z, worldgen.WaterBase)
 
-	before := len(h.pending)
 	h.scheduleCoralDeath(0, blockPos{pos.x + 1, pos.y, pos.z})
-	if len(h.pending) != before {
+	if h.hasBlockTickIn(0, pos, live) {
 		t.Error("coral still beside water should not be scheduled to die")
 	}
 	// A waterlogged plant survives even with no water around it.
 	w.SetBlock(pos.x, pos.y, pos.z, base)
 	w.SetBlock(pos.x+1, pos.y, pos.z, worldgen.Air)
 	h.scheduleCoralDeath(0, blockPos{pos.x + 1, pos.y, pos.z})
-	if len(h.pending) != before {
+	if h.hasBlockTickIn(0, pos, base) {
 		t.Error("waterlogged coral was scheduled to die")
 	}
 	w.SetBlock(pos.x, pos.y, pos.z, live)
@@ -74,7 +73,7 @@ func TestRemovingWaterSchedulesCoralDeath(t *testing.T) {
 
 	w.SetBlock(pos.x+1, pos.y, pos.z, worldgen.Air)
 	h.scheduleCoralDeath(0, blockPos{pos.x + 1, pos.y, pos.z})
-	if len(h.pending) == before {
+	if !h.hasBlockTickIn(0, pos, live) {
 		t.Error("coral left dry should have been scheduled to die")
 	}
 }

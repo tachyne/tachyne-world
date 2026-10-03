@@ -31,9 +31,8 @@ func TestBlockTickRescheduleWhilePendingIsIgnored(t *testing.T) {
 	if h.scheduleBlockTickIn(0, pos, 5) {
 		t.Error("a second schedule for the same block was added while one is pending")
 	}
-	key := simPos{dim: 0, blockPos: pos}
-	if m := h.simTicks[key]; m.due != now+30 {
-		t.Errorf("pending tick due %d, want %d (the first one kept)", m.due, now+30)
+	if due, _ := h.blockTickDue(0, pos, frostedIceMin); due != now+30 {
+		t.Errorf("pending tick due %d, want %d (the first one kept)", due, now+30)
 	}
 	if !h.hasBlockTickIn(0, pos, frostedIceMin+1) {
 		t.Error("an older age of the same block should count as the same block")
@@ -71,12 +70,12 @@ func TestFrostedIceOnPlaceBooksItsTick(t *testing.T) {
 	h, _, players, pos := simTickFixture(t)
 	now := h.tick.Load()
 	h.setBlockAt(players, 0, pos, frostedIceMin)
-	m, ok := h.simTicks[simPos{dim: 0, blockPos: pos}]
+	due, ok := h.blockTickDue(0, pos, frostedIceMin)
 	if !ok {
 		t.Fatal("placing frosted ice booked no tick")
 	}
-	if m.due < now+frostedFirstMin || m.due > now+frostedFirstMin+frostedFirstSpan-1 {
-		t.Errorf("first tick due in %d, want 60-120", m.due-now)
+	if due < now+frostedFirstMin || due > now+frostedFirstMin+frostedFirstSpan-1 {
+		t.Errorf("first tick due in %d, want 60-120", due-now)
 	}
 }
 
@@ -103,24 +102,24 @@ func TestCoralReactionBooksDieTickInsteadOfBleaching(t *testing.T) {
 
 // ServerLevel.tickBlock: a tick runs only for the block it was scheduled
 // for. A coral swapped for another before its die tick is not bleached by
-// the old one; the newcomer's own change books its own tick.
+// the old one, whose tick just drops.
 func TestBlockTickSkippedWhenItsBlockIsGone(t *testing.T) {
 	h, w, players, pos := simTickFixture(t)
 	tube, _, _ := worldgen.BlockRangeOK("tube_coral_block")
 	brain, _, _ := worldgen.BlockRangeOK("brain_coral_block")
 	w.SetBlock(pos.x, pos.y, pos.z, tube)
 	h.scheduleCoralDeath(0, pos)
-	m, ok := h.simTicks[simPos{dim: 0, blockPos: pos}]
+	due, ok := h.blockTickDue(0, pos, tube)
 	if !ok {
 		t.Fatal("the dry coral booked no die tick")
 	}
 	w.SetBlock(pos.x, pos.y, pos.z, brain)
-	stepTicks(h, players, int(m.due-h.tick.Load()))
+	stepTicks(h, players, int(due-h.tick.Load()))
 	if w.At(pos.x, pos.y, pos.z) != brain {
 		t.Fatal("the tube coral's tick bleached the brain coral that replaced it")
 	}
-	if !h.hasBlockTickIn(0, pos, brain) {
-		t.Error("the stale tick's update should reach the brain coral as a change and book its own tick")
+	if _, ok := h.blockTickDue(0, pos, tube); ok {
+		t.Error("the tube coral's tick is still pending after its trigger tick")
 	}
 }
 
@@ -141,4 +140,18 @@ func TestEyeblossomSwitchesOnlyOnItsTick(t *testing.T) {
 	if w.At(pos.x, pos.y, pos.z) != openEyeblossom {
 		t.Error("the eyeblossom's own tick did not open it at night")
 	}
+}
+
+// runBlockTickNow jumps the clock to the trigger tick of the tick pending
+// for the block at pos and runs that game tick, as the hub would.
+func runBlockTickNow(t *testing.T, h *hub, players map[int32]*tracked, dim int, pos blockPos) {
+	t.Helper()
+	w := h.worldFor(dim)
+	due, ok := h.blockTickDue(dim, pos, w.At(pos.x, pos.y, pos.z))
+	if !ok {
+		t.Fatalf("no tick pending at %v", pos)
+	}
+	w.ForceLoad(pos.x, pos.z, 2)
+	h.tick.Store(due - 1)
+	stepTicks(h, players, 1)
 }

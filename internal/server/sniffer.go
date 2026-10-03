@@ -48,35 +48,29 @@ func (h *hub) scheduleSnifferEgg(players map[int32]*tracked, dim, x, y, z int) {
 		h.levelEvent(players, dim, worldEventSnifferEggBoost, x, y, z, 0) // SnifferEggBlock.onPlace: the moss's green sparkle
 	}
 	delay := uint64(total/snifferEggHatchStages + h.rng.Intn(snifferHatchJitter))
-	if h.snifferEggs == nil {
-		h.snifferEggs = map[simPos]uint64{}
-	}
-	h.snifferEggs[simPos{dim: dim, blockPos: blockPos{x, y, z}}] = h.tick.Load() + delay
-	h.scheduleIn(dim, blockPos{x, y, z}, delay)
+	h.scheduleBlockTickIn(dim, blockPos{x, y, z}, delay)
 }
 
-// tickSnifferEgg cracks the egg, and opens it on the last stage.
-//
-// processUpdate fires for ANY neighbour change, not only for the tick we
-// booked, so the egg keeps its own due time: without that, walking past and
-// placing a torch would hatch it on the spot.
+// snifferEggShape is a neighbour's change reaching an egg: it does nothing
+// to it in vanilla. An egg with no crack booked (one from before a restart:
+// vanilla saves its tick with the chunk, this engine keeps ticks in memory)
+// is booked afresh, so it still hatches. Reports whether it was an egg.
+func (h *hub) snifferEggShape(players map[int32]*tracked, dim int, pos blockPos, state uint32) bool {
+	if !isSnifferEgg(state) {
+		return false
+	}
+	if !h.hasBlockTickIn(dim, pos, state) {
+		h.scheduleSnifferEgg(players, dim, pos.x, pos.y, pos.z)
+	}
+	return true
+}
+
+// tickSnifferEgg is SnifferEggBlock.tick, the egg's scheduled tick: it
+// cracks, and opens on the last stage.
 func (h *hub) tickSnifferEgg(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
 	if !isSnifferEgg(state) {
 		return false
 	}
-	key := simPos{dim: dim, blockPos: blockPos{x, y, z}}
-	now := h.tick.Load()
-	due, known := h.snifferEggs[key]
-	if !known {
-		// First time we have seen this egg — start its clock. Lazy rather than
-		// on-place so eggs already sitting in a loaded world also hatch.
-		h.scheduleSnifferEgg(players, dim, x, y, z)
-		return true
-	}
-	if now < due {
-		return true // its own tick has not come round yet
-	}
-	delete(h.snifferEggs, key)
 	info, ok := worldgen.InfoForState(state)
 	if !ok {
 		return true

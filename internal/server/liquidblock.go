@@ -88,6 +88,7 @@ func (h *hub) liquidOnPlace(players map[int32]*tracked, dim int, pos blockPos, s
 		return
 	}
 	h.scheduleFluidTick(dim, pos, fluidTickDelay(dim, state))
+	h.bubbleScheduleTick(dim, pos, state) // a source over soul sand or magma
 }
 
 // lavaFlowOpposites are LiquidBlock.POSSIBLE_FLOW_DIRECTIONS (down, south,

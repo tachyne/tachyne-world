@@ -11,8 +11,8 @@ import (
 // The lift and drag on a player are the client's own physics once the block
 // is there; the engine keeps the block right.
 
-// bubbleSourceDelay is the 20-tick tick soul sand and magma schedule when
-// water arrives above them (or when they are placed).
+// bubbleSourceDelay is the 20-tick tick a water source schedules when it
+// finds soul sand or magma under it (LiquidBlock.tryScheduleBubbleBlockColumn).
 const bubbleSourceDelay = 20
 
 // bubbleCanExistIn is canExistIn: a column cell, or a full water source.
@@ -53,29 +53,25 @@ func (h *hub) updateBubbleColumn(players map[int32]*tracked, dim int, pos blockP
 	return worldgen.IsBubbleColumn(col)
 }
 
-// tickBubbleSource handles an update on soul sand or magma: a neighbour
-// change with water above schedules the 20-tick tick; the tick itself
-// raises the column. Returns whether the block was a bubble source.
-func (h *hub) tickBubbleSource(players map[int32]*tracked, dim int, pos blockPos, state uint32) bool {
-	if !isBubbleSource(state) {
-		return false
+// bubbleScheduleTick is LiquidBlock.tryScheduleBubbleBlockColumn, run from
+// the water block's onPlace, neighborChanged and updateShape (its floor
+// changed): a full water source over soul sand or magma asks for its own
+// block tick 20 ticks out, which raises (or drops) the column. A tick
+// already pending is kept.
+func (h *hub) bubbleScheduleTick(dim int, pos blockPos, state uint32) {
+	if state != worldgen.WaterBase || !h.inWorldYIn(dim, pos.y-1) {
+		return
 	}
-	above := blockPos{pos.x, pos.y + 1, pos.z}
-	if !h.inWorldYIn(dim, above.y) || !bubbleCanExistIn(h.worldFor(dim).Block(above.x, above.y, above.z)) {
-		return true
+	if isBubbleSource(h.worldFor(dim).Block(pos.x, pos.y-1, pos.z)) {
+		h.scheduleBlockTickIn(dim, pos, bubbleSourceDelay)
 	}
-	key := simPos{dim: dim, blockPos: pos}
-	if due, ok := h.bubbleDue[key]; ok && h.tick.Load() >= due {
-		delete(h.bubbleDue, key)
-		h.updateBubbleColumn(players, dim, above)
-		return true
-	} else if ok {
-		return true // already scheduled
+}
+
+// tickBubbleWater is LiquidBlock.tick, the water block's scheduled tick:
+// a full source the column can occupy becomes a column from what is under
+// it, and the column climbs.
+func (h *hub) tickBubbleWater(players map[int32]*tracked, dim int, pos blockPos, state uint32) {
+	if state == worldgen.WaterBase {
+		h.updateBubbleColumn(players, dim, pos)
 	}
-	if h.bubbleDue == nil {
-		h.bubbleDue = map[simPos]uint64{}
-	}
-	h.bubbleDue[key] = h.tick.Load() + bubbleSourceDelay
-	h.scheduleIn(dim, pos, bubbleSourceDelay)
-	return true
 }

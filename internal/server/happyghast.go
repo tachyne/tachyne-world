@@ -29,15 +29,7 @@ func (h *hub) tickDriedGhast(players map[int32]*tracked, dim, x, y, z int, state
 	if !boolProp(state, "waterlogged") && driedGhastHydration(state) == 0 {
 		return true
 	}
-	key := simPos{dim: dim, blockPos: blockPos{x, y, z}}
-	if due, armed := h.driedGhastDue[key]; armed && due > h.tick.Load() {
-		return true // hasScheduledTick (a past due is a leftover of a broken block)
-	}
-	if h.driedGhastDue == nil {
-		h.driedGhastDue = map[simPos]uint64{}
-	}
-	h.driedGhastDue[key] = h.tick.Load() + driedGhastDelay
-	h.scheduleIn(dim, key.blockPos, driedGhastDelay)
+	h.scheduleBlockTickIn(dim, blockPos{x, y, z}, driedGhastDelay) // unless hasScheduledTick
 	return true
 }
 
@@ -53,20 +45,11 @@ func driedGhastHydration(state uint32) int {
 	return 0
 }
 
-// driedGhastStep is DriedGhastBlock.tick, on its own scheduled tick only (a
+// driedGhastStep is DriedGhastBlock.tick, its scheduled tick (a
 // neighbour's update reaching the cell does nothing): waterlogged, it takes
 // a step of water with the transition sound — or, full, hatches; dry, it
 // loses one. Each step is a BLOCK_CHANGE.
-func (h *hub) driedGhastStep(players map[int32]*tracked, dim int, pos blockPos, state uint32) bool {
-	if !isDriedGhast(state) {
-		return false
-	}
-	key := simPos{dim: dim, blockPos: pos}
-	due, armed := h.driedGhastDue[key]
-	if !armed || h.tick.Load() < due {
-		return true
-	}
-	delete(h.driedGhastDue, key)
+func (h *hub) driedGhastStep(players map[int32]*tracked, dim int, pos blockPos, state uint32) {
 	info, _ := worldgen.InfoForState(state)
 	hyd := driedGhastHydration(state)
 	x, y, z := pos.x, pos.y, pos.z
@@ -81,7 +64,6 @@ func (h *hub) driedGhastStep(players map[int32]*tracked, dim int, pos blockPos, 
 		h.setBlockAt(players, dim, pos, worldgen.SetProperty(info, state, "hydration", string(rune('0'+hyd-1))))
 		h.vib(dim, freqBlockChange, x, y, z, 0)
 	}
-	return true
 }
 
 // hatchGhastling consumes the dried_ghast and spawns a baby happy ghast at the

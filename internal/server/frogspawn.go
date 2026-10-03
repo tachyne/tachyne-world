@@ -73,16 +73,12 @@ const (
 	frogspawnMaxHatch = 12000
 )
 
-// scheduleFrogspawn arms a newly placed clutch (FrogspawnBlock.onPlace). The
-// clutch keeps its own due tick: the simulation queue also reaches the cell
-// for every neighbour change, and those must not hatch it early.
+// scheduleFrogspawn arms a newly placed clutch (FrogspawnBlock.onPlace):
+// its hatch is a scheduled tick 3600-12000 ticks out, which a second
+// schedule while it waits leaves alone.
 func (h *hub) scheduleFrogspawn(dim int, pos blockPos) {
 	delay := uint64(frogspawnMinHatch + h.rng.Intn(frogspawnMaxHatch-frogspawnMinHatch))
-	if h.frogspawnDue == nil {
-		h.frogspawnDue = map[simPos]uint64{}
-	}
-	h.frogspawnDue[simPos{dim: dim, blockPos: pos}] = h.tick.Load() + delay
-	h.scheduleIn(dim, pos, delay)
+	h.scheduleBlockTickIn(dim, pos, delay)
 }
 
 // frogspawnSurvives is FrogspawnBlock.canSurvive (mayPlaceOn): water below —
@@ -92,32 +88,31 @@ func frogspawnSurvives(below, above uint32) bool {
 	return worldgen.HoldsWater(below) && !worldgen.IsFluid(above) && !worldgen.IsWaterlogged(above)
 }
 
-// tickFrogspawn is FrogspawnBlock: on a neighbour's change (updateShape) a
-// clutch that can no longer survive is gone; on its own due tick (tick) it
-// hatches, or — no longer supported — is destroyed. Reports whether the
-// position was a clutch at all.
-func (h *hub) tickFrogspawn(players map[int32]*tracked, dim int, pos blockPos, state uint32) bool {
+// frogspawnShape is FrogspawnBlock.updateShape: a clutch that can no longer
+// survive (the water under it gone, a fluid over it) is gone at once.
+// Reports whether the position was a clutch at all.
+func (h *hub) frogspawnShape(players map[int32]*tracked, dim int, pos blockPos, state uint32) bool {
 	if state != frogspawnBlock {
 		return false
 	}
 	w := h.worldFor(dim)
-	survives := frogspawnSurvives(w.Block(pos.x, pos.y-1, pos.z), w.Block(pos.x, pos.y+1, pos.z))
-	key := simPos{dim: dim, blockPos: pos}
-	due, armed := h.frogspawnDue[key]
-	if !armed || h.tick.Load() < due {
-		if !survives { // updateShape: the water went, and so does the spawn
-			delete(h.frogspawnDue, key)
-			h.setBlockAt(players, dim, pos, worldgen.Air)
-		}
-		return true
+	if !frogspawnSurvives(w.Block(pos.x, pos.y-1, pos.z), w.Block(pos.x, pos.y+1, pos.z)) {
+		h.setBlockAt(players, dim, pos, worldgen.Air)
 	}
-	delete(h.frogspawnDue, key)
+	return true
+}
+
+// tickFrogspawn is FrogspawnBlock.tick, the clutch's scheduled tick: it
+// hatches, or — no longer supported — is destroyed.
+func (h *hub) tickFrogspawn(players map[int32]*tracked, dim int, pos blockPos, state uint32) {
+	w := h.worldFor(dim)
+	survives := frogspawnSurvives(w.Block(pos.x, pos.y-1, pos.z), w.Block(pos.x, pos.y+1, pos.z))
 	// Level.destroyBlock without drops: the break effect and BLOCK_DESTROY.
 	h.toNearbyEv(players, dim, float64(pos.x)+0.5, float64(pos.z)+0.5, blockBreakEvent(pos.x, pos.y, pos.z, state))
 	h.setBlockAt(players, dim, pos, worldgen.Air)
 	h.vib(dim, freqBlockDestroy, pos.x, pos.y, pos.z, 0)
 	if !survives {
-		return true
+		return
 	}
 	h.playSoundDim(players, dim, "minecraft:block.frogspawn.hatch", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
@@ -129,7 +124,6 @@ func (h *hub) tickFrogspawn(players map[int32]*tracked, dim int, pos blockPos, s
 			tp.yaw = float32(1 + h.rng.Intn(360))
 		}
 	}
-	return true
 }
 
 // frogLaySpawn is TryLaySpawnOnWaterNearLand: a pregnant frog standing on
