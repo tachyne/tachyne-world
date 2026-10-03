@@ -737,6 +737,9 @@ type hub struct {
 	lastPose         int8            // …and its pose + 1, for the drop that follows (copy_state)
 	hopperTicking    map[simPos]bool // hoppers among the block-entity tickers (tickHoppers)…
 	hopperOrder      []simPos        // …in the order they joined
+	daylightTicking  map[simPos]bool // daylight detectors among the block-entity tickers (betickers.go)…
+	daylightOrder    []simPos        // …in the order they joined
+	crafterArms      map[simPos]int  // crafters with the arm out → craftingTicksRemaining
 	lastBoxPos       simPos          // a shulker box just removed…
 	lastBoxID        int32           // …and the stowed contents its drop carries
 	lastBannerLayers []attachproto.BannerLayer
@@ -1113,8 +1116,9 @@ func (h *hub) run() {
 		}
 	}
 	h.reconcileFurnaceBlocks()
-	h.repairMultiface()    // lichen/vines placed from the wrong default state
-	h.rescheduleRedstone() // dust left powered by a source that is no longer there
+	h.registerBlockEntityTickers() // daylight detectors and crafter arms in the saved world
+	h.repairMultiface()            // lichen/vines placed from the wrong default state
+	h.rescheduleRedstone()         // dust left powered by a source that is no longer there
 	h.ticker = time.NewTicker(h.ticks.interval())
 	defer h.ticker.Stop()
 
@@ -1261,12 +1265,13 @@ func (h *hub) run() {
 					h.sendInventory(t) // self-heal a dropped mode-switch inventory push
 				}
 			}
-			h.updateEffects(players)      // status effects at 20 Hz (vanilla per-effect cadence)
-			h.shoulderTick(players)       // shoulder parrots: chatter, and what knocks them off
-			h.tickHoppers(players)        // HopperBlockEntity.pushItemsTick, every hopper, every tick
-			h.updateMobEffects(players)   // …and the mobs', on the same cadence
-			h.syncMobHealth(players)      // changed mob health to viewers (golem cracks, mount hearts)
-			h.riptideSpinAttacks(players) // a riptiding player strikes what it passes through
+			h.updateEffects(players)          // status effects at 20 Hz (vanilla per-effect cadence)
+			h.shoulderTick(players)           // shoulder parrots: chatter, and what knocks them off
+			h.tickHoppers(players)            // HopperBlockEntity.pushItemsTick, every hopper, every tick
+			h.tickBlockEntityTickers(players) // daylight detectors (every 20th game tick) and crafter arms
+			h.updateMobEffects(players)       // …and the mobs', on the same cadence
+			h.syncMobHealth(players)          // changed mob health to viewers (golem cracks, mount hearts)
+			h.riptideSpinAttacks(players)     // a riptiding player strikes what it passes through
 			if age%10 == 0 {
 				h.fastRegen(players)         // saturation regen at vanilla's 10-tick cadence
 				h.playerContactTick(players) // lava, fire, campfire, cactus: two hits a second
@@ -3000,6 +3005,7 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	pos := blockPos{e.x, e.y, e.z}
 	h.observersSee(players, e.dim, pos, e.state)
 	h.composterOnPlace(e.dim, pos, e.state) // a full composter set by a command or a paste
+	h.blockEntityOnPlace(e.dim, pos, e.state)
 	if e.broken == 0 {
 		h.fireOnPlace(players, e.dim, pos, worldgen.Air, e.state) // a placed fire in a frame lights it
 	}

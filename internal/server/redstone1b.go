@@ -404,7 +404,6 @@ func (h *hub) updateDaylight(players map[int32]*tracked, pos blockPos, state uin
 		h.rsSet(players, pos, daylightWith(daylightInverted(state), n))
 		h.scheduleSignalAround(players, pos)
 	}
-	h.rsSchedule(pos, 20) // vanilla re-checks every 20 ticks
 }
 
 // updatePlates is the per-tick occupancy scan: entities standing on plates

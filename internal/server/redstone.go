@@ -366,7 +366,8 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 	case isObserver(state):
 		h.updateObserver(players, pos, state)
 	case isDaylight(state):
-		h.updateDaylight(players, pos, state)
+		// No neighbour reaction: the detector reads the sky on its block
+		// entity's twenty-tick beat (betickers.go) and when flipped.
 	case isPistonBase(state):
 		h.updatePiston(players, pos, state)
 	case isMovingPiston(state):

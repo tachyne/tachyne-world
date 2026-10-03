@@ -64,3 +64,35 @@ func TestCrafter(t *testing.T) {
 		}
 	})
 }
+
+// CrafterBlockEntity.serverTick: a craft puts the arm out (CRAFTING) for
+// craftingTicksRemaining = 6 — the block entity's tick that same game tick
+// takes one, so the arm is back five ticks later — and a neighbour's update
+// does not pull it in early.
+func TestCrafterArmIsTheBlockEntityTicker(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	pos := blockPos{x, y + 1, z}
+	state := crafterMin + 24 + uint32(9*2) + 1 // east_up, not crafting
+	h.setBlockAt(players, 0, pos, state)
+	c := &bin{slots: make([]invStack, 9)}
+	c.slots[0] = invStack{item: itemByName["oak_log"], count: 4}
+	h.bins[simPos{blockPos: pos}] = c
+	crafting := func() bool { return (w.At(pos.x, pos.y, pos.z)-crafterMin)/24 == 0 }
+
+	h.crafterTick(players, simPos{blockPos: pos}, w.At(pos.x, pos.y, pos.z))
+	if !crafting() {
+		t.Fatal("the arm did not go out on the craft")
+	}
+	h.tickBlockEntityTickers(players) // the block entities' pass of the craft's own tick
+	h.updateCrafter(players, simPos{blockPos: pos}, w.At(pos.x, pos.y, pos.z))
+	for i := 1; i < crafterAnimTicks-1; i++ {
+		stepTicks(h, players, 1)
+		if !crafting() {
+			t.Fatalf("the arm came in after %d ticks", i)
+		}
+	}
+	stepTicks(h, players, 1)
+	if crafting() {
+		t.Fatalf("the arm is still out %d ticks after the craft", crafterAnimTicks-1)
+	}
+}

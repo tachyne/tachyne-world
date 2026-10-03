@@ -13,8 +13,9 @@ func stepTicks(h *hub, players map[int32]*tracked, n int) {
 		age := h.tick.Add(1)
 		h.runUpdates(players, age)
 		h.runBinFires(players, age)
-		h.tickHoppers(players)       // the block-entity tickers, as the hub loop runs them
-		h.tickFallingBlocks(players) // …and the entities
+		h.tickHoppers(players)            // the block-entity tickers, as the hub loop runs them
+		h.tickBlockEntityTickers(players) // …daylight detectors and crafter arms
+		h.tickFallingBlocks(players)      // …and the entities
 	}
 }
 

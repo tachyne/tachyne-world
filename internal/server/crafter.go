@@ -65,11 +65,6 @@ const crafterDelay = 4
 // updateCrafter is CrafterBlock.neighborChanged: a rising edge latches
 // TRIGGERED and schedules the craft; a falling edge clears the latch.
 func (h *hub) updateCrafter(players map[int32]*tracked, pos simPos, state uint32) {
-	// A crafting=true state is the animation flag — settle it back to false.
-	if (state-crafterMin)/24 == 0 {
-		state = crafterWithCrafting(state, false)
-		h.setBlockAt(players, pos.dim, pos.blockPos, state)
-	}
 	powered := h.inputPower(pos.x, pos.y, pos.z, false) > 0
 	if powered == crafterTriggered(state) {
 		return
@@ -91,7 +86,7 @@ func (h *hub) crafterTick(players map[int32]*tracked, pos simPos, state uint32) 
 	if cur := h.worldFor(pos.dim).At(pos.x, pos.y, pos.z); isCrafter(cur) {
 		h.setBlockAt(players, pos.dim, pos.blockPos, crafterWithCrafting(cur, true))
 	}
-	h.scheduleIn(pos.dim, pos.blockPos, crafterAnimTicks)
+	h.startCrafterArm(pos) // the block entity's countdown (betickers.go)
 }
 
 // crafterAnimTicks is CrafterBlock.MAX_CRAFTING_TICKS.

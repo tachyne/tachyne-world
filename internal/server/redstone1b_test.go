@@ -176,14 +176,28 @@ func TestPlatePressAndRelease(t *testing.T) {
 	}
 }
 
+// DaylightDetectorBlockEntity's ticker: a placed detector reads the sky on
+// the next game tick divisible by twenty, not before, and a neighbour's
+// update does not make it read (DaylightDetectorBlock has no
+// neighborChanged).
 func TestDaylightDetectorFollowsSun(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
-	w.SetBlock(x, y, z, daylightWith(false, 0))
 	h.dayTime.Store(6000) // noon
-	h.schedule(blockPos{x, y, z}, 1)
-	stepTicks(h, players, 3)
+	for h.tick.Load()%daylightCadence != 1 {
+		stepTicks(h, players, 1)
+	}
+	h.setBlockAt(players, 0, blockPos{x, y, z}, daylightWith(false, 0))
+	h.schedule(blockPos{x, y, z}, 1) // a neighbour's update: nothing
+	stepTicks(h, players, daylightCadence-2)
+	if p := daylightPower(w.At(x, y, z)); p != 0 {
+		t.Fatalf("read the sky %d ticks before its beat: %d", 1, p)
+	}
+	stepTicks(h, players, 1)
+	if h.tick.Load()%daylightCadence != 0 {
+		t.Fatalf("tick %d is not the beat", h.tick.Load())
+	}
 	if p := daylightPower(w.At(x, y, z)); p != 15 {
-		t.Fatalf("noon should read 15, got %d", p)
+		t.Fatalf("noon should read 15 on the beat, got %d", p)
 	}
 	// Invert: noon reads 0 — at once (updateSignalStrength in the click).
 	h.useRedstone1b(players, blockPos{x, y, z}, w.At(x, y, z))
