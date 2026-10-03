@@ -144,6 +144,9 @@ func TestCommandPlaceFeatureStamps(t *testing.T) {
 	stone, dirt := worldgen.BlockBase("stone"), worldgen.BlockBase("dirt")
 	onHub(t, h, func() {
 		w := h.world
+		// PlaceCommand.placeFeature checks the chunks one around the
+		// position are loaded; the geode at -20, 20 reaches chunk -3.
+		w.ForceLoad(-20, 20, 1)
 		for x := -1; x <= 11; x++ { // a stone block for the ore
 			for y := 94; y <= 106; y++ {
 				for z := -1; z <= 11; z++ {
