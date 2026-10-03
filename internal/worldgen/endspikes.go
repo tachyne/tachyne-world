@@ -273,7 +273,11 @@ func EndPodium(ox, oy, oz int, active bool) []PodiumCell {
 // 0,0 as generated (EnderDragonFight's MOTION_BLOCKING_NO_LEAVES height
 // there, one down).
 func (g *Generator) EndExitPortal() (x, y, z int) {
-	for y := EndSurfaceY + 16; y > MinY+1; y-- {
+	from := EndSurfaceY + 16
+	if g.vEnd() != nil {
+		from = vdmH - 1 // the vanilla island's top, wherever it stands
+	}
+	for y := from; y > MinY+1; y-- {
 		if g.endBlockCol(0, y, 0, 0, 0, false) == EndStone {
 			return 0, y, 0
 		}

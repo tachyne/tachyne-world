@@ -469,6 +469,9 @@ func oceanName(shallow, deep string, isDeep bool) string {
 // temperature/humidity split (crimson vs warped forest, soul-sand valleys,
 // basalt deltas), so fog, mobs and vegetation vary across the dimension.
 func (g *Generator) netherBiome(wx, wz int) string {
+	if v := g.vNether(); v != nil {
+		return v.blockBiome(wx, 64, wz)
+	}
 	t := g.temp.FBm(float64(wx)/320, float64(wz)/320, 2, 2, 0.5)
 	hm := g.humid.FBm(float64(wx)/320, float64(wz)/320, 2, 2, 0.5)
 	switch {
@@ -488,6 +491,9 @@ func (g *Generator) netherBiome(wx, wz int) string {
 // tier through highlands/midlands/barrens, with scattered small islands in the
 // deep void.
 func (g *Generator) endBiome(wx, wz int) string {
+	if v := g.vEnd(); v != nil {
+		return vdmENames[v.chunkBiome(int32(wx>>4), int32(wz>>4))]
+	}
 	d := math.Hypot(float64(wx), float64(wz))
 	switch {
 	case d < 1000:

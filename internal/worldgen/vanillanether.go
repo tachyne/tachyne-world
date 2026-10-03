@@ -71,6 +71,7 @@ type vanillaNether struct {
 	wart, soulLayer, gravelLayer   *vnNormal
 	world, floorRand, roofRand     vdmLegacyPos
 	zoom                           int64
+	place                          VanillaPlacement // the placement pass, nil = the engine's own features
 	slots                          [vdmSlots]atomic.Pointer[vdmTerrain]
 }
 

@@ -28,6 +28,9 @@ func NewEndGenerator(seed int64) *Generator {
 // endBlock assembles one End cell (a point read: the outer islands'
 // column is worked out per call; the chunk loop hoists it).
 func (g *Generator) endBlock(x, y, z int) uint32 {
+	if v := g.vEnd(); v != nil {
+		return v.cell(x, y, z)
+	}
 	top, bottom, ok := 0, 0, false
 	if x*x+z*z > EndIslandR*EndIslandR {
 		top, bottom, ok = g.endOuterColumn(x, z)
@@ -37,6 +40,9 @@ func (g *Generator) endBlock(x, y, z int) uint32 {
 
 // endBlockCol is endBlock given the column's outer-island plate.
 func (g *Generator) endBlockCol(x, y, z, top, bottom int, ok bool) uint32 {
+	if v := g.vEnd(); v != nil {
+		return v.cell(x, y, z)
+	}
 	if x*x+z*z <= endSpikeReach*endSpikeReach {
 		if s, ok := endSpikeCell(g.EndSpikes(), x, y, z); ok {
 			return s // the obsidian spikes (endspikes.go)

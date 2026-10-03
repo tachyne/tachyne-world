@@ -54,7 +54,8 @@ func (r *netherRegion) set(x, y, z int, s uint32) {
 }
 
 func (r *netherRegion) driver() FungusDriver {
-	return FungusDriver{Read: r.read, Set: r.set, InWorld: func(y int) bool { return y >= MinY && y < NetherCeiling }}
+	f := r.g.nf()
+	return FungusDriver{Read: r.read, Set: r.set, InWorld: func(y int) bool { return y >= f.floor && y < f.ceiling }}
 }
 
 // netherPlantMayPlaceOn: nylium, soul soil, mycelium, dirt, farmland.
@@ -81,7 +82,8 @@ func (g *Generator) netherChunkFeatures(reg *netherRegion, ncx, ncz int32) {
 	ox, oz := int(ncx)*16, int(ncz)*16
 	r := newTreeRNG(g.seed^0x4E7E, ox, oz)
 	d := reg.driver()
-	fullRangeY := func() int { return MinY + 5 + r.Intn(NetherCeiling-MinY-10) }
+	f := g.nf()
+	fullRangeY := func() int { return f.floor + 5 + r.Intn(f.ceiling-f.floor-10) }
 	// WEEPING_VINES ×10, full range, crimson forest
 	for i := 0; i < 10; i++ {
 		x, z := ox+r.Intn(16), oz+r.Intn(16)
@@ -133,15 +135,16 @@ func (g *Generator) netherChunkFeatures(reg *netherRegion, ncx, ncz int32) {
 // count random columns each, until a layer yields nothing.
 func (g *Generator) onEveryLayer(r TreeRNG, reg *netherRegion, ox, oz, count int, place func(x, y, z int)) {
 	empty := func(s uint32) bool { return s == Air || s == Water || s == Lava }
+	f := g.nf()
 	for layer := 0; ; layer++ {
 		found := false
 		for i := 0; i < count; i++ {
 			x, z := ox+r.Intn(16), oz+r.Intn(16)
 			// findOnGroundYPosition from the roof
-			cur := reg.read(x, NetherCeiling, z)
+			cur := reg.read(x, f.ceiling, z)
 			y := 1 << 20
 			seen := 0
-			for py := NetherCeiling; py >= MinY+1; py-- {
+			for py := f.ceiling; py >= f.floor+1; py-- {
 				below := reg.read(x, py-1, z)
 				if !empty(below) && empty(cur) && below != Bedrock {
 					if seen == layer {
@@ -187,7 +190,7 @@ func (g *Generator) netherForestVegetation(r TreeRNG, x, y, z int, d FungusDrive
 			}
 			pick -= w
 		}
-		if d.Read(px, py, pz) == Air && py > MinY && netherPlantMayPlaceOn(d.Read(px, py-1, pz)) {
+		if d.Read(px, py, pz) == Air && py > g.nf().floor && netherPlantMayPlaceOn(d.Read(px, py-1, pz)) {
 			d.Set(px, py, pz, s)
 		}
 	}
@@ -254,15 +257,16 @@ func (g *Generator) twistingVinesFeature(r TreeRNG, x, y, z, width, height, maxH
 	if invalid(x, y, z) {
 		return
 	}
+	floor := g.nf().floor
 	for i := 0; i < width*width; i++ {
 		px := x + r.Intn(2*width+1) - width
 		py := y + r.Intn(2*height+1) - height
 		pz := z + r.Intn(2*width+1) - width
-		for d.Read(px, py, pz) == Air && py > MinY {
+		for d.Read(px, py, pz) == Air && py > floor {
 			py--
 		}
 		py++
-		if py <= MinY || invalid(px, py, pz) {
+		if py <= floor || invalid(px, py, pz) {
 			continue
 		}
 		n := 1 + r.Intn(maxHeight)

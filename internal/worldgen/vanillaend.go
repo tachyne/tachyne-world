@@ -35,6 +35,7 @@ type vanillaEnd struct {
 	g      *Generator
 	base   *vdmBlended
 	island *vdmSimplex
+	place  VanillaPlacement // the placement pass, nil = the engine's own features
 	slots  [vdmSlots]atomic.Pointer[vdmTerrain]
 }
 
