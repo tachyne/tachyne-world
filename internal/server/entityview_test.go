@@ -175,6 +175,10 @@ func TestTrackRangesAreVanillas(t *testing.T) {
 	pl.x, pl.y, pl.z = 0, 70, 0
 	// The viewer's own render distance clamps it: six chunks here, so a cow
 	// at seven is out even though its type reaches ten.
+	pl.p.view.Lock()
+	pl.p.view.known, pl.p.view.r = true, 6
+	pl.p.view.sent = map[[3]int32]bool{{0, 5, 0}: true, {0, 7, 0}: true} // dim, cx, cz
+	pl.p.view.Unlock()
 	if inRangeOf(pl, 0, 7*16, 0, entityCow) {
 		t.Error("the viewer's render distance should clamp the type's range")
 	}

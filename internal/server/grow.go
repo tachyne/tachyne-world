@@ -25,10 +25,10 @@ const (
 	// because much of a sweep is fixed overhead. The sweep runs every tick a
 	// player is online, so at 10 it is half a tick's budget on THIS hardware.
 	//
-	// The default stays at 4 rather than quietly doubling the cost of the
-	// running world; -simradius raises it, and the slow-tick log says at once
-	// whether the box can take it.
-	defaultSimRadius = 4
+	// The default is vanilla's 10 since 2026-10-03 (Wesley's call: parity
+	// over the cost); -simradius lowers it on a box that cannot take it, and
+	// the slow-tick log says at once whether it can.
+	defaultSimRadius = 10
 )
 
 // simRadius is the live value, set once from -simradius before the hub runs.
