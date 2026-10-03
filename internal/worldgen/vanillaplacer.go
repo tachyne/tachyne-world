@@ -31,6 +31,8 @@ type vanillaPlacer struct {
 
 	bmu    sync.Mutex
 	bcache map[[2]int32][]string // a chunk's noise biomes (short names)
+
+	sections vpSectionCache // the terrain's sections placement has read
 }
 
 // vpPlacers finds a generator's placement pass (the structure code asks
@@ -152,7 +154,47 @@ func (l vpTerrainLevel) Block(x, y, z int) uint32 {
 	if y < l.p.terrain.MinY() || y >= l.p.terrain.Ceiling() {
 		return Air
 	}
-	return l.p.terrain.BlockAt(x, y, z)
+	return l.p.sections.block(l.p.terrain, x, y, z)
+}
+
+// vpSectionCache keeps copies of the terrain's 16³ sections that placement
+// reads: a chunk's decoration reads the terrain two chunks round it, more
+// chunks than the terrain's own cache is sure to hold at once, and a
+// section copied here is never rebuilt for a read.
+type vpSectionCache struct {
+	mu   sync.Mutex
+	secs map[[3]int32]*[4096]uint32
+}
+
+const vpSectionCap = 4096 // ≈64 MB of sections
+
+func (c *vpSectionCache) block(t VanillaTerrain, x, y, z int) uint32 {
+	k := [3]int32{int32(x >> 4), int32(y >> 4), int32(z >> 4)}
+	c.mu.Lock()
+	sec := c.secs[k]
+	c.mu.Unlock()
+	if sec == nil {
+		sec = new([4096]uint32)
+		bx, by, bz := int(k[0])<<4, int(k[1])<<4, int(k[2])<<4
+		for ly := 0; ly < 16; ly++ {
+			for lz := 0; lz < 16; lz++ {
+				for lx := 0; lx < 16; lx++ {
+					yy := by + ly
+					if yy < t.MinY() || yy >= t.Ceiling() {
+						continue
+					}
+					sec[(ly*16+lz)*16+lx] = t.BlockAt(bx+lx, yy, bz+lz)
+				}
+			}
+		}
+		c.mu.Lock()
+		if c.secs == nil || len(c.secs) >= vpSectionCap {
+			c.secs = map[[3]int32]*[4096]uint32{}
+		}
+		c.secs[k] = sec
+		c.mu.Unlock()
+	}
+	return sec[((y&15)*16+(z&15))*16+(x&15)]
 }
 
 // Height is the heightmap decoration reads: the terrain's own WG
