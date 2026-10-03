@@ -30,6 +30,13 @@ func golemStrollRig(t *testing.T) (*hub, map[int32]*tracked, *mob) {
 
 // An idle golem walks its village at 0.6 of its pace, toward a villager that
 // wants a golem more often than not; it used to stand where it was made.
+//
+// The pace is the golem's own walk. A villager that walks into it shoves it
+// (Entity.push: the golem is pushable, and IronGolem.doPush only adds its
+// 1-in-20 targeting roll), which moves it well past 0.6 for a tick or two, as
+// in vanilla. So the cap skips an update whose ticks began with the golem
+// touching another body, and the few after it while that motion bleeds off
+// (0.546 a tick: under 1% of the shove is left after five updates).
 func TestIronGolemStrollsTheVillage(t *testing.T) {
 	h, players, g := golemStrollRig(t)
 	v := h.spawnSpecies(players, entityVillager, 0, 20.5, 180, 0.5)
@@ -37,15 +44,31 @@ func TestIronGolemStrollsTheVillage(t *testing.T) {
 	v.lastSlept = h.tick.Load() + 1
 	h.gridDirty()
 	cap := walkPerUpdate(g, golemStrollSpeed) * 1.05
-	walked := 0.0
+	const shoveFade = 5 // updates a shove's motion is still worth more than the 5% slack
+	walked, lastShove, checked := 0.0, -shoveFade-1, 0
 	for i := 0; i < 1500; i++ {
 		px, pz := g.x, g.z
 		h.tick.Add(mobMoveInterval)
-		h.mobUpdate(players)
-		if d := math.Hypot(g.x-px, g.z-pz); d > cap {
+		for k := 0; k < mobGoalInterval; k++ {
+			for _, o := range h.mobs {
+				if o != g && g.overlaps(o) {
+					lastShove = i // pushMobs, at the head of this tick, shoves the pair apart
+				}
+			}
+			h.updateMobs(players)
+		}
+		d := math.Hypot(g.x-px, g.z-pz)
+		walked += d
+		if i-lastShove <= shoveFade {
+			continue
+		}
+		checked++
+		if d > cap {
 			t.Fatalf("update %d: an idle golem walks at 0.6 (%.3f), not %.3f", i, cap, d)
 		}
-		walked += math.Hypot(g.x-px, g.z-pz)
+	}
+	if checked < 1000 {
+		t.Fatalf("the pace was checked on only %d of 1500 updates: the golem spent the test being shoved", checked)
 	}
 	if walked < 10 {
 		t.Fatalf("the golem should have strolled about the village, walked %.1f blocks", walked)
