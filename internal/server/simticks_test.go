@@ -155,3 +155,51 @@ func runBlockTickNow(t *testing.T, h *hub, players map[int32]*tracked, dim int, 
 	h.tick.Store(due - 1)
 	stepTicks(h, players, 1)
 }
+
+// LecternBlock.signalPageChange asks for the 2-tick tick that ends the
+// pulse; a page turned while it is pending leaves it, so the pulse ends two
+// ticks after the first turn, not the last.
+func TestLecternPulseKeepsItsFirstTick(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	pos := blockPos{x + 3, y, z}
+	w.SetBlock(pos.x, pos.y, pos.z, setBoolProp(worldgen.BlockBase("lectern"), "powered", false))
+	h.lecternPulse(players, simPos{blockPos: pos})
+	if !boolProp(w.At(pos.x, pos.y, pos.z), "powered") {
+		t.Fatal("a page turn did not power the lectern")
+	}
+	stepTicks(h, players, 1)
+	h.lecternPulse(players, simPos{blockPos: pos})
+	stepTicks(h, players, 1)
+	if boolProp(w.At(pos.x, pos.y, pos.z), "powered") {
+		t.Error("the second turn pushed the pulse's end back")
+	}
+}
+
+// A button's unpress is its scheduled tick: a neighbour's update in the
+// middle of the press does not release it, and it pops up on time.
+func TestButtonUnpressIsItsTick(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	pos := blockPos{x + 3, y, z}
+	btn := worldgen.BlockBase("stone_button")
+	info, _ := worldgen.InfoForState(btn)
+	btn = setBoolProp(worldgen.SetProperty(info, worldgen.SetProperty(info, btn, "face", "floor"), "facing", "north"), "powered", false)
+	w.SetBlock(pos.x, pos.y, pos.z, btn)
+	ticks, _, _, _ := buttonKind(btn)
+	h.inDim(0, func() { h.pressButton(players, pos, btn, nil) })
+	if !boolProp(w.At(pos.x, pos.y, pos.z), "powered") {
+		t.Fatal("the button did not press")
+	}
+	due, ok := h.blockTickDue(0, pos, btn)
+	if !ok || due != h.tick.Load()+uint64(ticks) {
+		t.Fatalf("the unpress is due %d (pending %v), want %d out", due, ok, ticks)
+	}
+	stepTicks(h, players, ticks-1)
+	h.notifyAround(players, 0, pos)
+	if !boolProp(w.At(pos.x, pos.y, pos.z), "powered") {
+		t.Fatal("the button came up early")
+	}
+	stepTicks(h, players, 1)
+	if boolProp(w.At(pos.x, pos.y, pos.z), "powered") {
+		t.Error("the button stayed down past its press")
+	}
+}

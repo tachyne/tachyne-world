@@ -199,8 +199,7 @@ func (h *hub) lecternPulse(players map[int32]*tracked, pos simPos) {
 		if !boolProp(st, "powered") {
 			h.rsSet(players, pos.blockPos, setBoolProp(st, "powered", true))
 		}
-		h.rsDue[pos] = h.tick.Load() + 2
-		h.rsSchedule(pos.blockPos, 2)
+		h.scheduleTick(pos.blockPos, 2, tickNormal) // a tick already pending is kept
 		h.scheduleSignalAround(players, pos.blockPos)
 		h.updateNeighbourForOutputSignal(players, pos.blockPos)
 	})

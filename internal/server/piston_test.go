@@ -216,7 +216,13 @@ func TestPlacedPoweredRodSwitchesOff(t *testing.T) {
 	info, _ := worldgen.InfoForState(rod)
 	rod = setBoolProp(worldgen.SetProperty(info, rod, "facing", "up"), "powered", true)
 	h.setBlockAt(players, 0, blockPos{x + 4, y, z}, rod)
-	stepTicks(h, players, 5)
+	// LightningRodBlock.onPlace schedules the rod's tick eight ticks out, as
+	// a strike does (this test once pinned the engine's old one tick).
+	stepTicks(h, players, 7)
+	if !boolProp(w.At(x+4, y, z), "powered") {
+		t.Fatal("the rod switched off before its eight-tick tick")
+	}
+	stepTicks(h, players, 1)
 	if boolProp(w.At(x+4, y, z), "powered") {
 		t.Fatal("a rod placed powered stayed powered")
 	}

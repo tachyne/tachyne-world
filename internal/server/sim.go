@@ -65,11 +65,13 @@ func (h *hub) scheduleAroundIn(dim int, pos blockPos, delay uint64) {
 	}
 }
 
-// runUpdates is a tick's block-update phase, in vanilla's order: the
-// scheduled block ticks (blockticks.go), then the simulation queue below
-// (fluids, falling blocks, fire, growth…), then the block events (pistons),
-// then the moving pistons' own tick, which vanilla runs with the block
-// entities after all of that.
+// runUpdates is a tick's block-update phase, in ServerLevel.tick's order:
+// the block tick list (blockticks.go — every block's scheduled tick, by
+// trigger tick, priority and scheduling order), then the fluid ticks riding
+// the simulation queue below (with the restart re-checks and the updates
+// that waited for their chunk), then the block events (pistons), then the
+// moving pistons' own tick, which vanilla runs with the block entities
+// after all of that.
 func (h *hub) runUpdates(players map[int32]*tracked, age uint64) {
 	ran := h.runBlockTicks(players, age)
 	h.runSimUpdates(players, age, maxBlockTicksPerTick-ran)
@@ -341,11 +343,9 @@ func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, stat
 			h.inDim(dim, func() { h.tripwireUpdateSource(players, pos) })
 		}
 		// LightningRodBlock.onPlace: a rod set down powered with no tick of
-		// its own pending gets one, which switches it off.
-		if isLightningRod(state) && boolProp(state, "powered") {
-			if _, ok := h.rsDue[simPos{dim: dim, blockPos: pos}]; !ok {
-				h.inDim(dim, func() { h.rsSchedule(pos, 1) })
-			}
+		// its own pending gets one, eight ticks out, which switches it off.
+		if isLightningRod(state) && boolProp(state, "powered") && blockKind(old) != blockKind(state) {
+			h.inDim(dim, func() { h.rodOnPlace(pos, state) })
 		}
 		// LiquidBlock.onPlace, last: a water or lava state written here
 		// schedules its fluid tick, or — lava meeting water — sets solid.

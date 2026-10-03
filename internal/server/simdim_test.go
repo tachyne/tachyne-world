@@ -123,8 +123,4 @@ func TestSimSideTablesAreKeyedByDimension(t *testing.T) {
 			h.compOut[over], h.compOut[under])
 	}
 
-	h.pressedAt[over], h.pressedAt[under] = 10, 20
-	if h.pressedAt[over] == h.pressedAt[under] {
-		t.Error("button press times collided across dimensions")
-	}
 }

@@ -672,13 +672,11 @@ type hub struct {
 	// chunk data (edits, containers, mobs) pause until /save-on (savecmd.go).
 	saveOff atomic.Bool
 
-	pressedAt map[simPos]uint64 // button-press ticks (for the unpress timer)
-	rsDue     map[simPos]uint64 // repeater flip due-ticks
-	obsSeen   map[simPos]uint32 // observer last-seen watched state
-	compOut   map[simPos]int    // comparator output levels (vanilla block entity)
-	platesOn  map[simPos]uint64 // pressed pressure plates → the tick of their next checkPressed (20, weighted 10)
-	wiresOn   map[simPos]uint64 // tripwire strings' scheduled ticks (10-tick re-check, 1-tick release hold), by dimension
-	fireAge   map[simPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
+	obsSeen  map[simPos]uint32 // observer last-seen watched state
+	compOut  map[simPos]int    // comparator output levels (vanilla block entity)
+	platesOn map[simPos]uint64 // pressed pressure plates → the tick of their next checkPressed (20, weighted 10)
+	wiresOn  map[simPos]uint64 // tripwire strings' scheduled ticks (10-tick re-check, 1-tick release hold), by dimension
+	fireAge  map[simPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
 
 	// Sculk vibration system (overworld). sculkList/catalysts are POI sets kept
 	// current on block change; the rest is per-block runtime state.
@@ -908,8 +906,6 @@ func newHub(w *world.World) *hub {
 		chests:        map[simPos]*chest{},
 		rng:           rand.New(rand.NewSource(1)),
 		rules:         defaultRules(),
-		pressedAt:     map[simPos]uint64{},
-		rsDue:         map[simPos]uint64{},
 		obsSeen:       map[simPos]uint32{},
 		compOut:       map[simPos]int{},
 		platesOn:      map[simPos]uint64{},

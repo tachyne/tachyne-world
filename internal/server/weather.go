@@ -582,9 +582,8 @@ func (h *hub) rodStruck(players map[int32]*tracked, dim int, pos blockPos) {
 		}
 	}
 	h.inDim(dim, func() {
-		h.rsDue[h.rsKey(pos)] = h.tick.Load() + 8
+		h.scheduleTick(pos, 8, tickNormal) // first: the write's onPlace finds it pending
 		h.rsSet(players, pos, setBoolProp(st, "powered", true))
-		h.rsSchedule(pos, 8)
 		h.scheduleSignalAround(players, pos)
 	})
 }
