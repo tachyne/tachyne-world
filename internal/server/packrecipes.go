@@ -79,6 +79,7 @@ type packRecipes struct {
 	removed     map[string]bool    // vanilla recipe names a pack replaced or removed
 	count       int                // recipes applied
 	station     *stationRecipes    // stonecutting, smithing and brewing (packstations.go)
+	setOverride map[uint16][]int32 // vanilla ingredient sets re-resolved for changed tags (packretag.go)
 }
 
 func newPackRecipes() *packRecipes {
@@ -112,6 +113,11 @@ func (pc *packContent) recipeSet() *packRecipes {
 // pack recipe's.
 func ingredientSet(set uint16) []int32 {
 	if int(set) < len(ingredientSets) {
+		if pr := currentPack().recipeSet(); pr != nil && pr.setOverride != nil {
+			if s, ok := pr.setOverride[set]; ok {
+				return s
+			}
+		}
 		return ingredientSets[set]
 	}
 	if pr := currentPack().recipeSet(); pr != nil {
@@ -193,6 +199,7 @@ func buildPackRecipes(files map[string]packFile, tags *tagRegistry, unapplied ma
 			pr.removeVanilla(bookRecipeName(id))
 		}
 	}
+	pr.retagVanilla(tags)
 	pr.finishStations()
 	return pr
 }

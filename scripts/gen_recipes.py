@@ -69,8 +69,9 @@ def tag_items(tag):
 
 
 def ingredient(ing):
-    """An ingredient as a sorted tuple of item ids. Items outside the registry
-    (feature-flagged extras the jar carries) are dropped."""
+    """An ingredient as (sorted tuple of item ids, sorted tuple of the refs it
+    was written with). Items outside the registry (feature-flagged extras the
+    jar carries) are dropped."""
     refs = ing if isinstance(ing, list) else [ing]
     out = set()
     for r in refs:
@@ -78,15 +79,21 @@ def ingredient(ing):
             out |= tag_items(r[1:])
         elif ns(r) in item_id:
             out.add(item_id[ns(r)])
-    return tuple(sorted(out))
+    return (tuple(sorted(out)), tuple(sorted(refs)))
 
 
-sets = {(): 0}  # ingredient tuple -> index; index 0 is the empty set
+# An ingredient's set is keyed by what it was written as, not only by its
+# items: a pack may change a tag, and the recipes naming that tag — and only
+# they — must take its new members (ingredientSetRefs).
+sets = {((), ()): 0}  # (items, refs) -> index; index 0 is the empty set
+set_refs = {}         # index -> refs, for the sets written with a #tag
 
 
 def set_index(t):
     if t not in sets:
         sets[t] = len(sets)
+        if any(r.startswith("#") for r in t[1]):
+            set_refs[sets[t]] = t[1]
     return sets[t]
 
 
@@ -135,15 +142,15 @@ for path in sorted(n for n in inner.namelist() if n.startswith(prefix) and n.end
         cells = []
         for row in rows:
             for ch in row.ljust(w):
-                cells.append(() if ch == " " else ingredient(r["key"][ch]))
-        if any(ch != " " and not cells[i] for i, ch in enumerate("".join(x.ljust(w) for x in rows))):
+                cells.append(((), ()) if ch == " " else ingredient(r["key"][ch]))
+        if any(ch != " " and not cells[i][0] for i, ch in enumerate("".join(x.ljust(w) for x in rows))):
             skipped.append((name, "an ingredient with no registered item"))
             continue
         shaped.append((name, w, h, [set_index(c) for c in cells], item_id[res], count))
     else:
         ings = ([r["input"], r["material"]] if kind == "crafting_transmute" else r["ingredients"])
         ings = [ingredient(i) for i in ings]
-        if not all(ings):
+        if not all(i[0] for i in ings):
             skipped.append((name, "an ingredient with no registered item"))
             continue
         shapeless.append((name, sorted(set_index(i) for i in ings), item_id[res], count,
@@ -162,7 +169,17 @@ L = [
     "var ingredientSets = [][]int32{",
 ]
 for t in ordered_sets:
-    L.append("\t{%s}," % ", ".join(map(str, t)))
+    L.append("\t{%s}," % ", ".join(map(str, t[0])))
+L += [
+    "}",
+    "",
+    "// ingredientSetRefs are the ingredients written with an item tag, as",
+    "// written: a data pack that changes the tag re-resolves them",
+    "// (packretag.go).",
+    "var ingredientSetRefs = map[uint16][]string{",
+]
+for i in sorted(set_refs):
+    L.append("\t%d: {%s}," % (i, ", ".join('"%s"' % r for r in set_refs[i])))
 L += [
     "}",
     "",

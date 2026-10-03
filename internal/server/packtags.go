@@ -23,10 +23,10 @@ import (
 // name at the time it asks: worldgen.BlockTag/ItemTag/BlockTagNames (the
 // overlay below), the biome tags of /fillbiome and `execute if biome`, the
 // item tags of `execute if items` and /clear-style item predicates, and
-// every tag a pack's own recipes, loot tables and predicates name. Lookups
-// the engine baked into a table at start-up (the vanilla recipes' own
-// ingredient sets, the advancement tree's expanded tags) keep vanilla's
-// members.
+// every tag a pack's own recipes, loot tables and predicates name. The
+// vanilla recipes' tag-written ingredients are re-resolved against a load's
+// changed tags (packretag.go); what else the engine baked into a table at
+// start-up (the advancement tree's expanded tags) keeps vanilla's members.
 
 // tagRegistries are the registries whose tags packs may change, by their
 // folder under data/<ns>/tags/.
