@@ -29,7 +29,7 @@ func TestMobCombatKillDropsBeef(t *testing.T) {
 		h.attackMob(players, 999, m.eid)
 	}
 	for h.mobs[m.eid] != nil { // let the death animation play out → despawn + drops
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	beef := 0
 	for _, it := range h.items {
@@ -58,7 +58,7 @@ func TestHitCowPanicsAndFlees(t *testing.T) {
 	// the cow must be running somewhere.
 	x0, z0 := m.x, m.z
 	for i := 0; i < 20; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if math.Hypot(m.x-x0, m.z-z0) < 0.5 {
 		t.Errorf("a panicking cow barely moved: (%v,%v) -> (%v,%v)", x0, z0, m.x, m.z)

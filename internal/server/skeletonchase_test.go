@@ -33,7 +33,7 @@ func skeletonRig(t *testing.T) (*hub, map[int32]*tracked, *tracked) {
 func runUpdates(h *hub, players map[int32]*tracked, m *mob, n int) float64 {
 	top := 0.0
 	for i := 0; i < n; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		top = math.Max(top, math.Hypot(m.vx, m.vz))
 	}
 	return top
@@ -87,7 +87,7 @@ func TestBowmenStrafeSlowAndIllusionerClosesAtHalf(t *testing.T) {
 	il.illMirrorNext = 1 << 40 // no spell in the way
 	fastest := 0.0
 	for i := 0; i < 16 && il.x < 3.2; i++ { // still outside its radius
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		fastest = math.Max(fastest, math.Hypot(il.vx, il.vz))
 	}
 	if !il.hasTarget {

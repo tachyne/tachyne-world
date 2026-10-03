@@ -38,7 +38,7 @@ func TestBabyPiglinsRideABabyHoglin(t *testing.T) {
 	for i := 0; i < 1200 && !stacked; i++ {
 		h.tick.Add(mobMoveInterval)
 		pl.health, pl.dead = 20, false
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		stacked = a.mount != 0 && b.mount != 0
 	}
 	if !stacked {
@@ -55,7 +55,7 @@ func TestBabyPiglinsRideABabyHoglin(t *testing.T) {
 	for i := 0; i < 400 && (a.mount != 0 || b.mount != 0); i++ {
 		h.tick.Add(mobMoveInterval)
 		a.rideTicker, b.rideTicker = 1<<20, 1<<20 // no fresh ride in the meantime
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if a.mount != 0 || b.mount != 0 {
 		t.Fatalf("with RIDE_TARGET gone a baby riding a baby gets off (a→%d b→%d)", a.mount, b.mount)

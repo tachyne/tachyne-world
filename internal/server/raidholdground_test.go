@@ -13,7 +13,7 @@ func TestPatrolPillagerHoldsGround(t *testing.T) {
 	m.patrolling, mate.patrolling = true, true
 	x0 := m.x
 	for i := 0; i < 20; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if !m.hasTarget {
 		t.Fatal("the pillager should have seen the player")
@@ -26,13 +26,13 @@ func TestPatrolPillagerHoldsGround(t *testing.T) {
 		t.Errorf("a pillager holding its ground stays put, moved %.2f", m.x-x0)
 	}
 	pl.x = 11.5 // seven blocks from the first, eleven from its mate (four behind it)
-	h.updateMobs(players)
-	h.updateMobs(players)
+	h.mobUpdate(players)
+	h.mobUpdate(players)
 	if !m.aggressive || !mate.aggressive || m.holdingGround || mate.holdingGround {
 		t.Fatalf("within ten blocks the stand-off ends for both: %v/%v", m.aggressive, mate.aggressive)
 	}
 	for i := 0; i < 4; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if m.cbState == cbUncharged {
 		t.Error("once aggressive the crossbow goal draws")
@@ -43,8 +43,8 @@ func TestPatrolPillagerHoldsGround(t *testing.T) {
 	o := h2.spawnHostileYIn(players2, entityPillager, dimOverworld, 4.5, 200, 0.5)
 	o.patrolling = true
 	o.hurtByPlayer, o.hurtByPlayerTil = pl2.p.eid, h2.tick.Load()+1000
-	h2.updateMobs(players2)
-	h2.updateMobs(players2)
+	h2.mobUpdate(players2)
+	h2.mobUpdate(players2)
 	if o.holdingGround || !o.aggressive {
 		t.Error("a pillager a player has hurt does not hold its ground")
 	}

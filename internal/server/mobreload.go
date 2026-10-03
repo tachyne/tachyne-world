@@ -41,6 +41,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 		return nil // plugin-cancelled or unknown species
 	}
 	m.dim = sm.Dim
+	m.aiTicks = uint32(m.eid & 1) // a chunk's mobs come back together: stagger their goal ticks by id
 	m.yaw, m.syaw = sm.Yaw, sm.Yaw
 	if sm.Health > 0 {
 		m.health = sm.Health

@@ -5,10 +5,10 @@ import (
 	"testing"
 )
 
-// Every knock site stores its shove in the same units: vanilla's per-tick
-// deltaMovement × mobMoveInterval in m.v*, so mobKnockVelocity reads back
-// the vanilla figure. The push sites (mace, wind burst) and the knockback
-// helpers used to store the per-tick figure raw, which read back at half.
+// Every knock site lands its shove in the same units: a walker's per-tick
+// deltaMovement (m.dmx, m.dmz), what walking travel then flies. The push
+// sites (mace, wind burst) and the knockback helpers once stored a
+// per-tick figure where a per-update one was read, at half strength.
 
 // MaceItem.knockback: (3.5 − distance) × 0.7 a tick, added to the motion.
 func TestMaceShockwaveShovesInTickUnits(t *testing.T) {
@@ -18,11 +18,8 @@ func TestMaceShockwaveShovesInTickUnits(t *testing.T) {
 	cow.vx, cow.vz = 0, 0
 	h.smashAround(players, attacker, 0, 70, 0, 9999, 2)
 	want := (maceKnockRadius - 2) * maceKnockPower * cow.kbScale()
-	if got := cow.vx / mobMoveInterval; math.Abs(got-want) > 1e-9 {
-		t.Errorf("the shockwave shoved %.4f a tick, want %.4f", got, want)
-	}
-	if cow.kbFlight && math.Abs(cow.kvx-want) > 1e-9 {
-		t.Errorf("the flight carries %.4f a tick, want %.4f", cow.kvx, want)
+	if got := cow.dmx; !cow.kbFlight || math.Abs(got-want) > 1e-9 {
+		t.Errorf("the shockwave shoved %.4f a tick (flight %v), want %.4f", got, cow.kbFlight, want)
 	}
 }
 
@@ -34,7 +31,7 @@ func TestWindBurstPushesInTickUnits(t *testing.T) {
 	const radius = 1.2
 	h.windPush(players, 0, 0, 70, 0, radius)
 	want := (1 - 1/(radius*2)) * windChargeKnockback * cow.kbScale()
-	if got := cow.vx / mobMoveInterval; math.Abs(got-want) > 1e-9 {
+	if got := cow.dmx; math.Abs(got-want) > 1e-9 {
 		t.Errorf("the burst pushed %.4f a tick, want %.4f", got, want)
 	}
 }
@@ -50,7 +47,7 @@ func TestDamageCommandKnocksMobInTickUnits(t *testing.T) {
 		t.Fatal("the blow did not land")
 	}
 	want := 0.4 * cow.kbScale()
-	if got := cow.vx / mobMoveInterval; math.Abs(got-want) > 1e-9 {
+	if got := cow.dmx; math.Abs(got-want) > 1e-9 {
 		t.Errorf("knocked %.4f a tick, want %.4f", got, want)
 	}
 }
@@ -67,7 +64,7 @@ func TestGolemPunchKnocksInTickUnits(t *testing.T) {
 		t.Fatal("the golem's punch did not knock the zombie")
 	}
 	want := 0.4 * z.kbScale()
-	if got := z.vx / mobMoveInterval; math.Abs(got-want) > 1e-9 {
+	if got := z.dmx; math.Abs(got-want) > 1e-9 {
 		t.Errorf("knocked %.4f a tick, want %.4f", got, want)
 	}
 }

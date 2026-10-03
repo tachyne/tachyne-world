@@ -27,7 +27,7 @@ func TestPolarBearHuntsFoxes(t *testing.T) {
 		h.gridDirty()
 		bitten := false
 		for i := 0; i < 80 && !bitten; i++ {
-			h.updateMobs(players)
+			h.mobUpdate(players)
 			bitten = fox.health < 1000
 		}
 		if bitten == cub {

@@ -40,7 +40,7 @@ func TestProvokedWolfCalmsDown(t *testing.T) {
 		t.Fatalf("PERSISTENT_ANGER_TIME is 20-39 s: %d updates", m.anger)
 	}
 	delete(players, a.p.eid) // the attacker leaves
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if m.targetEID == b.p.eid || m.tx == b.x {
 		t.Fatal("an angry wolf went for a bystander")
 	}
@@ -48,8 +48,8 @@ func TestProvokedWolfCalmsDown(t *testing.T) {
 		t.Fatal("it is still angry while its anger lasts")
 	}
 	m.anger = 1
-	h.updateMobs(players)
-	h.updateMobs(players)
+	h.mobUpdate(players)
+	h.mobUpdate(players)
 	if m.hostile || m.hasTarget {
 		t.Fatalf("its anger spent and its attacker gone, the wolf calms: hostile %v target %v", m.hostile, m.hasTarget)
 	}
@@ -65,7 +65,7 @@ func TestLlamaSpitsOnceAtItsAttacker(t *testing.T) {
 		t.Fatal("a hit llama turns on its attacker")
 	}
 	for i := 0; i < 60 && len(h.arrows) == 0; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if len(h.arrows) != 1 {
 		t.Fatalf("one spit, got %d", len(h.arrows))
@@ -79,7 +79,7 @@ func TestLlamaSpitsOnceAtItsAttacker(t *testing.T) {
 		t.Fatal("having spat, the llama drops its target")
 	}
 	for i := 0; i < 40; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if len(h.arrows) > 1 {
 		t.Fatalf("it spat again: %d spits", len(h.arrows))
@@ -102,7 +102,7 @@ func TestProvokedBeeCalmsDown(t *testing.T) {
 		// Keep ahead of it: always twelve blocks off, in plain sight.
 		a.x, a.z = m.x+12, m.z
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if !m.hostile {
 			calmAt = i
 			break
@@ -132,13 +132,13 @@ func TestStungBeeStopsBeingAngry(t *testing.T) {
 	h.attackMob(players, a.p.eid, m.eid)
 	for i := 0; i < 400 && m.beeStingDie == 0; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if m.beeStingDie == 0 {
 		t.Fatal("the bee never stung its attacker")
 	}
 	h.tick.Add(mobMoveInterval)
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if m.hostile || m.anger != 0 {
 		t.Fatalf("a bee that has stung is no longer angry: hostile %v anger %d", m.hostile, m.anger)
 	}

@@ -606,6 +606,7 @@ type hub struct {
 	signMayEdit map[string]int32 // transient edit locks (vanilla playerWhoMayEdit), keyed by signKey
 
 	mobs        map[int32]*mob // server-controlled entities (living world)
+	mobTicks    uint64         // updateMobs calls: the mob tick count (pushMobs runs on every goal interval)
 	mgrid       mobGrid        // per-tick spatial index over mobs (mobgrid.go); gridDirty on insert/delete
 	names       *nameStore     // custom item names by id (names.go); persisted in containers.json
 	wiresSilent bool           // RedStoneWireBlock.shouldSignal=false while dust computes its block signal (signal.go)
@@ -1195,11 +1196,13 @@ func (h *hub) run() {
 			// loop (not inside updateMobs) so tests that drive updateMobs directly
 			// are unaffected. Before this gate the boot herds walked the world for
 			// nobody, generating terrain into the chunk cache around the clock.
-			if age%mobMoveInterval == 0 && (len(players) > 0 || h.anyForced() || len(h.tickets) > 0) {
-				h.updateMobs(players)      // living world: mob behaviour + movement
-				h.updateOpenDoors(players) // shut wooden doors villagers left open
-				h.updateShadows(players)   // cross-seam: push near-border entities to neighbours
-				h.syncTracking(players)    // per-viewer entity tracking: what came into view, what left
+			if len(players) > 0 || h.anyForced() || len(h.tickets) > 0 {
+				h.updateMobs(players) // living world: mob movement every tick, goals every other (mobGoalInterval)
+				if age%mobGoalInterval == 0 {
+					h.updateOpenDoors(players) // shut wooden doors villagers left open
+					h.updateShadows(players)   // cross-seam: push near-border entities to neighbours
+					h.syncTracking(players)    // per-viewer entity tracking: what came into view, what left
+				}
 			}
 			h.phases.lap(phaseMobs)
 			h.playerInsideTick(players)   // block contact for players: every tick, or a sprint misses it

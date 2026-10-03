@@ -74,7 +74,7 @@ func TestFoxDefendingHoldsItsGround(t *testing.T) {
 	friend.lastHurtByMob = z.eid
 	fox.panic = 20
 	h.gridDirty()
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if fox.foxFlags&foxFlagDefending == 0 || fox.foxPrey != z.eid {
 		t.Fatalf("the fox goes for the zombie, defending: flags=%#x prey=%d", fox.foxFlags, fox.foxPrey)
 	}
@@ -100,7 +100,7 @@ func TestFoxDefendingHoldsItsGround(t *testing.T) {
 	// The zombie gone, the defence is over.
 	h.despawnMob(players, z)
 	h.gridDirty()
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if fox.foxFlags&foxFlagDefending != 0 {
 		t.Error("with its quarry gone the fox stands down")
 	}

@@ -107,7 +107,7 @@ func TestInvisibilityRangeThroughUpdateMobs(t *testing.T) {
 			pl.armor[i] = invStack{item: itemByName["iron_chestplate"], count: 1}
 		}
 		pl.sneaking = tc.sneak
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if got := z.hasTarget && z.targetEID == pl.p.eid; got != tc.want {
 			t.Errorf("%s: zombie targeting %v, want %v", tc.name, got, tc.want)
 		}
@@ -119,7 +119,7 @@ func TestInvisibilityRangeThroughUpdateMobs(t *testing.T) {
 // follows the same rule.
 func TestHeldTargetIgnoresInvisibility(t *testing.T) {
 	h, players, pl, z := invisPad(t, 12.5)
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if z.targetEID != pl.p.eid {
 		t.Fatal("the zombie did not pick out the visible player")
 	}

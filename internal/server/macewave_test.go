@@ -23,16 +23,16 @@ func TestTheShockwaveIsCentredOnTheTarget(t *testing.T) {
 	attacker := leashPlayer(t, h, players, 0, 70, 0)
 	// Struck entity ten blocks away; a bystander stands right beside IT.
 	bystander := putMob(t, h, players, entityCow, 11, 70, 0)
-	bystander.vx, bystander.vz = 0, 0
+	bystander.dmx, bystander.dmz = 0, 0
 
 	h.smashAround(players, attacker, 10, 70, 0, 9999, 1)
 
-	if bystander.vx == 0 && bystander.vz == 0 {
+	if bystander.dmx == 0 && bystander.dmz == 0 {
 		t.Error("a mob beside the struck entity was not shoved; the wave is " +
 			"centred on the attacker rather than the target")
 	}
-	if bystander.vx <= 0 {
-		t.Errorf("shoved by vx=%.3f, want it pushed AWAY from the impact", bystander.vx)
+	if bystander.dmx <= 0 {
+		t.Errorf("shoved by vx=%.3f, want it pushed AWAY from the impact", bystander.dmx)
 	}
 }
 
@@ -43,7 +43,7 @@ func TestTheShockwaveStopsAtItsRadius(t *testing.T) {
 	far := putMob(t, h, players, entityCow, maceKnockRadius+2, 70, 0)
 
 	h.smashAround(players, attacker, 0, 70, 0, 9999, 1)
-	if far.vx != 0 || far.vz != 0 {
+	if far.dmx != 0 || far.dmz != 0 {
 		t.Errorf("a mob %.1f blocks out was shoved", maceKnockRadius+2)
 	}
 }
@@ -67,9 +67,9 @@ func TestAHeavySmashHitsTwiceAsHard(t *testing.T) {
 		h, players := maceHub(t)
 		attacker := leashPlayer(t, h, players, 0, 70, 0)
 		m := putMob(t, h, players, entityCow, 2, 70, 0)
-		m.vx = 0
+		m.dmx = 0
 		h.smashAround(players, attacker, 0, 70, 0, 9999, fall)
-		return math.Abs(m.vx)
+		return math.Abs(m.dmx)
 	}
 	light, heavy := shove(2), shove(maceHeavyThreshold+1)
 	if heavy <= light {

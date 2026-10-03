@@ -956,6 +956,9 @@ func (h *hub) sulfurHop(players map[int32]*tracked, m *mob) {
 	if d := math.Hypot(dx, dz); d > 1e-6 {
 		m.vx, m.vz = dx/d*m.moveSpeed(), dz/d*m.moveSpeed()
 	}
+	if m.onGround {
+		m.vy = 0.42 // the bound is a real jump, travel flies it
+	}
 	h.toNearbyEv(players, m.dim, m.x, m.z, attachproto.Velocity{
 		EID: m.eid, VX: m.vx / mobMoveInterval, VY: 0.42, VZ: m.vz / mobMoveInterval})
 	name := "minecraft:entity.sulfur_cube.jump"

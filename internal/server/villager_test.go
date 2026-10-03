@@ -291,7 +291,7 @@ func TestTradingVillagerStandsAndFaces(t *testing.T) {
 		t.Fatalf("the customer should be the trading partner, got %v", got)
 	}
 	m.vx, m.vz = 1, 1
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if m.vx != 0 || m.vz != 0 {
 		t.Errorf("a trading villager stands still, got %v %v", m.vx, m.vz)
 	}

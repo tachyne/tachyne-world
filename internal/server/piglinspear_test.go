@@ -27,7 +27,7 @@ func TestPiglinFightsWithSpear(t *testing.T) {
 		for i := 0; i < 80; i++ {
 			h.tick.Add(1)
 			before := pl.health
-			h.updateMobs(players)
+			h.mobUpdate(players)
 			if m.spearUseAt != 0 && m.handActive {
 				lowered = true
 			}

@@ -29,7 +29,7 @@ func TestLevitatingMobRises(t *testing.T) {
 	h.applyMobEffectTicks(players, cow, effLevitation, 0, 200)
 	for i := 0; i < 40; i++ {
 		cow.vx, cow.vz = 0, 0
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if cow.y < 181 {
 		t.Fatalf("a levitating cow should rise, at y=%.2f", cow.y)

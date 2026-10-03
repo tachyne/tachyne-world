@@ -321,7 +321,7 @@ func TestPotentSulfurLaunch(t *testing.T) {
 			checked = true
 			y := m.y
 			m.rest, m.stroll = 0, 100 // walking, not idling (an idler skips its step)
-			h.updateMobs(players)
+			h.mobUpdate(players)
 			if m.y != y {
 				t.Fatalf("updateMobs moved a lifted cow from %.2f to %.2f", y, m.y)
 			}

@@ -99,7 +99,7 @@ func TestStruckAxolotlPlaysDeadNotPanics(t *testing.T) {
 		}
 		for j := 0; j < 6 && !played; j++ { // a sword's recharge: the knockback settles
 			h.tick.Add(mobMoveInterval)
-			h.updateMobs(players)
+			h.mobUpdate(players)
 			played = ax.axDead > 0
 			if ax.panic != 0 {
 				t.Fatalf("hit %d: the axolotl bolted", i)

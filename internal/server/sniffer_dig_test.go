@@ -122,7 +122,7 @@ func TestSnifferPanicResetsDig(t *testing.T) {
 	s := h.spawnSpecies(players, entitySniffer, 0, 0.5, 180, 0.5)
 	h.tick.Store(1000)
 	s.sniffState, s.sniffTarget, s.sniffStart, s.sniffUntil = sniffDigging, blockPos{0, 179, 0}, 1000, 1170
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if s.sniffState != sniffDigging {
 		t.Fatalf("an undisturbed dig carries on: state=%d", s.sniffState)
 	}
@@ -130,7 +130,7 @@ func TestSnifferPanicResetsDig(t *testing.T) {
 	if s.panic == 0 {
 		t.Fatal("a struck sniffer panics")
 	}
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if s.sniffState != sniffIdling || s.sniffCD != 0 || s.sniffExploredHas(blockPos{0, 179, 0}) {
 		t.Fatalf("the panic should break off the dig: state=%d cd=%d", s.sniffState, s.sniffCD)
 	}

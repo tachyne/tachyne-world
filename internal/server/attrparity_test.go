@@ -52,7 +52,7 @@ func flierRun(t *testing.T, set func(h *hub, players map[int32]*tracked)) (dist 
 	}
 	for i := 0; i < 200; i++ {
 		ox, oz := m.x, m.z
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		dist += math.Hypot(m.x-ox, m.z-oz)
 	}
 	return dist, m
@@ -116,8 +116,8 @@ func TestLowGravityPlayerIsNotGrounded(t *testing.T) {
 	}
 }
 
-// A zombie on /attribute gravity 0 stays put when the ground under it is
-// dug out; at the default it drops to the new floor.
+// A pig on /attribute gravity 0 stays put when the ground under it is
+// dug out; at the default it falls to the new floor.
 func TestZeroGravityMobHangsInTheAir(t *testing.T) {
 	drop := func(zero bool) float64 {
 		h, _, players := cmdHub()
@@ -134,7 +134,9 @@ func TestZeroGravityMobHangsInTheAir(t *testing.T) {
 			h.applyAttributeCommand(players, evAttributeCmd{by: 1, target: "@e[type=pig]", id: attr.Gravity, op: "base set", value: 0})
 		}
 		h.world.SetBlock(10, 179, 10, 0) // dig it out
-		h.updateMobs(players)
+		for i := 0; i < 20; i++ {        // a second: the fall takes its ticks now
+			h.mobUpdate(players)
+		}
 		return m.y
 	}
 	if y := drop(false); y > 172 {
@@ -198,7 +200,12 @@ func TestSlowFallingMobTakesNoFallDamage(t *testing.T) {
 		}
 		before := m.health
 		h.world.SetBlock(10, 179, 10, 0)
-		h.updateMobs(players)
+		for i := 0; i < 40 && (i == 0 || !m.onGround); i++ {
+			h.mobUpdate(players)
+		}
+		if m.y > 162 {
+			t.Fatalf("the pig never reached the floor: y=%.2f", m.y)
+		}
 		return m.health < before
 	}
 	if !hurt(false) {
@@ -300,7 +307,7 @@ func TestPiglinMeleeSparesGold(t *testing.T) {
 	h, players, pg, gold, _ := piglinFixture(t)
 	for i := 0; i < 6; i++ {
 		pg.x, pg.y, pg.z = 8.5, 180, 8.5 // held in place beside the bystander
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if gold.health < 20 {
 			t.Fatalf("the piglin hit the player in gold (update %d)", i)
 		}
@@ -320,7 +327,7 @@ func TestPiglinRetaliatesAgainstGold(t *testing.T) {
 	for i := 0; i < 20 && gold.health >= hp; i++ {
 		pg.x, pg.y, pg.z = 8.5, 180, 8.5
 		pg.attackCD = 0
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if gold.health >= hp {
 		t.Fatal("the piglin never hit back at the player in gold who struck it")

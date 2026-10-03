@@ -35,7 +35,7 @@ func courtRig(t *testing.T, etype int) (*hub, map[int32]*tracked, *mob, *mob) {
 func TestCourtingAnimalsWalkToEachOther(t *testing.T) {
 	h, players, a, b := courtRig(t, entityCow)
 	for i := 0; i < 30 && math.Hypot(a.x-b.x, a.z-b.z) > breedMeetRange; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		h.gridDirty()
 	}
 	if d := math.Hypot(a.x-b.x, a.z-b.z); d > breedMeetRange {
@@ -49,13 +49,13 @@ func TestCatCourtsAtItsGoalSpeed(t *testing.T) {
 	fastest := 0.0
 	for i := 0; i < 8; i++ {
 		ox, oz := a.x, a.z
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		h.gridDirty()
 		fastest = math.Max(fastest, math.Hypot(a.x-ox, a.z-oz))
 	}
-	sp := a.moveSpeed()
-	if fastest > 0.8*sp*1.01 || fastest < 0.5*sp {
-		t.Fatalf("courting cat's fastest step %.4f, want about 0.8 × %.4f", fastest, sp)
+	want := walkPerUpdate(a, 0.8)
+	if fastest > want*1.01 || fastest < 0.7*want {
+		t.Fatalf("courting cat's fastest update %.4f, want about %.4f (0.8 of its speed)", fastest, want)
 	}
 }
 
@@ -66,7 +66,7 @@ func TestLoneCourtingAnimalIdles(t *testing.T) {
 	h.removeMob(players, b)
 	idle := 0
 	for i := 0; i < 40; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if a.rest > 0 {
 			idle++
 		}

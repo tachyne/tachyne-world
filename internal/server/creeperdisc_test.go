@@ -20,7 +20,7 @@ func TestParchedKillDropsCreeperDisc(t *testing.T) {
 		}
 		for j := 0; j < 2*deathAnimTicks && h.mobs[cr.eid] != nil; j++ { // the death animation, then the drops
 			h.tick.Add(1)
-			h.updateMobs(players)
+			h.mobUpdate(players)
 		}
 		for _, it := range h.items {
 			for _, d := range creeperDiscs {

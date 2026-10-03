@@ -18,7 +18,7 @@ func TestRavagerSpeedSwap(t *testing.T) {
 	}
 	pl.x = 30.5 // far enough that it never bites
 	for i := 0; i < 30; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if !m.hasTarget {
 		t.Fatal("the ravager should be after the player")
@@ -27,14 +27,14 @@ func TestRavagerSpeedSwap(t *testing.T) {
 		t.Errorf("with a target the speed eases to 0.35, got %.4f", got)
 	}
 	m.ravAttackTick = ravagerAttackTicks
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if base() != 0 {
 		t.Errorf("a biting ravager has no speed, got %v", base())
 	}
 	m.ravAttackTick = 0
 	pl.gamemode = gmCreative // nothing to chase
 	for i := 0; i < 40; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if got := base(); math.Abs(got-ravagerBaseSpeed) > 0.001 {
 		t.Errorf("without a target it settles at 0.3, got %.4f", got)

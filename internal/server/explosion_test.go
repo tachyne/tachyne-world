@@ -86,7 +86,7 @@ func TestExplosionHurtsMobs(t *testing.T) {
 	if d := hp - m.health; d < 5 || d > 6 {
 		t.Fatalf("the cow took %v, want ~5.5", d)
 	}
-	if m.vx <= 0 || m.kb == 0 {
-		t.Fatalf("the cow was not shoved: vx %v kb %d", m.vx, m.kb)
+	if m.dmx <= 0 || m.kb == 0 {
+		t.Fatalf("the cow was not shoved: dx %v kb %d", m.dmx, m.kb)
 	}
 }

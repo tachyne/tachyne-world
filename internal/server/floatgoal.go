@@ -13,12 +13,12 @@ import (
 // creeper, a villager, an illager. The ones registered without it sink and
 // walk the bed: the zombie and skeleton families, piglins, hoglins, the
 // iron golem, the creaking. tachyne seated every walker on the floor under
-// the water, so a cow that fell in a pond drowned in fifteen seconds.
+// the water, so a cow that fell in a pond drowned in fifteen seconds. Walking
+// travel (mobtravel.go) now does it as vanilla does: the jump in water is
+// +0.04 a tick against travelInWater's drag and a sixteenth of gravity.
 
 const (
-	floatEyeAbove   = 0.1  // the eyes ride this far above the surface
-	floatRisePerUpd = 0.15 // how fast a sunk floater comes up (jumpInLiquid +0.04/tick against gravity)
-	fluidJumpThresh = 0.4  // LivingEntity.getFluidJumpThreshold (0 for eyes under 0.4)
+	fluidJumpThresh = 0.4 // LivingEntity.getFluidJumpThreshold (0 for eyes under 0.4)
 )
 
 // mobSinks are the walkers vanilla gives no FloatGoal or Swim behaviour.
@@ -37,35 +37,7 @@ var mobSinks = map[int]bool{
 
 // mobFloats reports whether a walker bobs up in deep water.
 func mobFloats(m *mob) bool {
-	return !m.flies && !m.swims && !mobSinks[m.etype]
-}
-
-// floatLevel is where a floater's feet ride in the water column standing
-// on floor (the seated feet height): the surface less the eye height plus a
-// little, never below the floor. false when it is not in water past the
-// jump threshold (shallow water is waded).
-func (h *hub) floatLevel(m *mob, fx, fz int, floor float64) (float64, bool) {
-	w := h.worldFor(m.dim)
-	bottom := int(math.Floor(floor))
-	if !worldgen.IsWater(w.At(fx, bottom, fz)) {
-		return 0, false
-	}
-	top := bottom
-	for worldgen.IsWater(w.At(fx, top+1, fz)) {
-		top++
-	}
-	thr := fluidJumpThresh
-	if eye := mobEyeHeight(m); eye < fluidJumpThresh {
-		thr = 0
-	}
-	if float64(top+1)-floor <= thr {
-		return 0, false
-	}
-	y := float64(top+1) - mobEyeHeight(m) + floatEyeAbove
-	if y <= floor {
-		return 0, false // too shallow to lift it: it wades along the bed
-	}
-	return y, true
+	return !m.flies && !m.swims && !mobSinks[m.etype] && !waterGlider(m.etype) // the gliders hold their depth
 }
 
 // floatSwims reports whether a floater at its own level can move into the

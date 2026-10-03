@@ -233,7 +233,7 @@ func stepCreaking(h *hub, players map[int32]*tracked, n int) {
 	for i := 0; i < n; i++ {
 		h.tick.Add(mobMoveInterval)
 		h.updateCreakings(players)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 }
 

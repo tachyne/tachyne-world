@@ -46,7 +46,7 @@ func TestDrownedSwimsUpAtNight(t *testing.T) {
 		m := h.spawnHostileY(players, entityDrowned, 1.5, 41, 1.5)
 		for i := 0; i < 220; i++ {
 			h.tick.Add(mobMoveInterval)
-			h.updateMobs(players)
+			h.mobUpdate(players)
 		}
 		switch {
 		case night && m.y < float64(worldgen.SeaLevel-3):

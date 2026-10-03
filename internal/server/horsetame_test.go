@@ -89,7 +89,7 @@ func TestLlamaTamedByRiding(t *testing.T) {
 			h.interactMob(players, pl, m, false)
 		}
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if m.temper > 30 {
 			t.Fatalf("a llama's temper tops out at 30, got %d", m.temper)
 		}

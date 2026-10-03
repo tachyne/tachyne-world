@@ -24,7 +24,7 @@ func TestZombifiedPiglinGrudge(t *testing.T) {
 		for i := 0; i < n; i++ {
 			h.tick.Add(mobMoveInterval)
 			a.health, b.health = 20, 20 // the fight is not the point
-			h.updateMobs(players)
+			h.mobUpdate(players)
 		}
 	}
 	step(3)

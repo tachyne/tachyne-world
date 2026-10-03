@@ -227,7 +227,7 @@ func TestCaveMobsStayUnderground(t *testing.T) {
 	bat := h.spawnMob(players, entityBat, 10.5, 11, 10.5)
 	h.applySpecies(players, bat)
 	for i := 0; i < 200; i++ { // 10 seconds of mob updates
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if zom.y > 13 {
 		t.Fatalf("cave zombie was hoisted to the surface: y=%v", zom.y)

@@ -45,7 +45,7 @@ func brainSetup(t *testing.T, dayTime uint64) (*hub, map[int32]*tracked, int, in
 func brainRun(h *hub, players map[int32]*tracked, steps int, done func() bool) bool {
 	for i := 0; i < steps; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if h.tick.Load()%survivalTickN == 0 {
 			h.updateBreeding(players)
 		}

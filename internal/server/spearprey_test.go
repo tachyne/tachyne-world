@@ -20,7 +20,7 @@ func TestSpearZombieChargesItsVillager(t *testing.T) {
 	for i := 0; i < 200 && v.health == hp; i++ {
 		h.tick.Add(mobMoveInterval)
 		z.preyTarget, z.hasTarget = v.eid, true // keep the fixture's target
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		lowered = lowered || z.handActive
 		if v.dying > 0 {
 			break
@@ -46,7 +46,7 @@ func TestSpearChargeSparesItsOwnKind(t *testing.T) {
 	z.yaw = 0
 	z.spearUseAt = h.tick.Load() - uint64(spearOf(itemIronSpear).delay) - 1
 	z.spearHits = map[int32]uint64{}
-	z.vx, z.vz = 0, 0.2
+	z.dmx, z.dmz = 0, 0.1 // its motion: 0.1 blocks a tick
 	vh, oh := v.health, other.health
 	h.mobSpearTick(players, z)
 	if v.health >= vh {

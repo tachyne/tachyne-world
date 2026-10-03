@@ -38,7 +38,7 @@ func TestPiglinHuntsHoglin(t *testing.T) {
 	mate := walkPiglin(t, h, players, float64(x)+0.5, float64(y), float64(z)+3.5)
 	g := walkHoglin(t, h, players, float64(x)+6.5, float64(y), float64(z)+0.5)
 	h.tick.Add(mobMoveInterval)
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if p.targetEID != g.eid || mate.targetEID != g.eid {
 		t.Fatalf("the hunt was not started and shared: targets %d, %d, want %d", p.targetEID, mate.targetEID, g.eid)
 	}
@@ -54,7 +54,7 @@ func TestPiglinHuntsHoglin(t *testing.T) {
 	bitten := false
 	for i := 0; i < 300 && !bitten; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		bitten = g.health < full
 	}
 	if !bitten {
@@ -84,7 +84,7 @@ func TestPiglinHuntGates(t *testing.T) {
 		}
 		for i := 0; i < 20; i++ {
 			h.tick.Add(mobMoveInterval)
-			h.updateMobs(players)
+			h.mobUpdate(players)
 		}
 		if p.targetEID == g.eid || p.preyTarget == g.eid {
 			t.Errorf("%s: the piglin hunted the hoglin", c)
@@ -133,7 +133,7 @@ func TestPiglinCelebratesKill(t *testing.T) {
 		p.huntedUntil = h.tick.Load() + 10000
 		h.piglinAngerAtMob(p, g)
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if p.piglinFoe != g.eid {
 			t.Fatalf("the piglin is not fighting the hoglin (foe %d)", p.piglinFoe)
 		}
@@ -144,7 +144,7 @@ func TestPiglinCelebratesKill(t *testing.T) {
 			}
 		}
 		h.tick.Add(want - h.tick.Load())
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if p.celebrateUntil == 0 {
 			t.Fatal("the piglin did not celebrate the kill")
 		}
@@ -160,7 +160,7 @@ func TestPiglinCelebratesKill(t *testing.T) {
 		start := math.Abs(p.x - (float64(x) + 8.5))
 		for i := 0; i < 40; i++ {
 			h.tick.Add(mobMoveInterval)
-			h.updateMobs(players)
+			h.mobUpdate(players)
 		}
 		if d := math.Abs(p.x - (float64(x) + 8.5)); d >= start-2 {
 			t.Fatalf("the piglin did not go to where the hoglin fell (%.1f → %.1f)", start, d)
@@ -186,13 +186,13 @@ func TestPiglinsFightNemesis(t *testing.T) {
 	}
 	full := ws.health
 	h.tick.Add(mobMoveInterval)
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if !p.hasTarget || p.preyTarget != ws.eid {
 		t.Fatalf("the piglin ignores the wither skeleton (target %v, prey %d)", p.hasTarget, p.preyTarget)
 	}
 	for i := 0; i < 200 && ws.health >= full && ws.dying == 0; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if ws.health >= full && ws.dying == 0 {
 		t.Fatal("the piglin never struck its nemesis")
@@ -204,13 +204,13 @@ func TestPiglinsFightNemesis(t *testing.T) {
 	ws = h.spawnHostileYIn(players, entityWitherSkeleton, 0, float64(x)+0.5, float64(y), float64(z)+0.5)
 	ws.frozen = true // hold it still: the question is the baby's
 	h.tick.Add(mobMoveInterval)
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if baby.piglinFlee <= 0 || baby.piglinFleeFrom != ws.eid {
 		t.Fatalf("the baby does not avoid the wither skeleton (flee %d from %d)", baby.piglinFlee, baby.piglinFleeFrom)
 	}
 	for i := 0; i < 20; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if baby.x < float64(x)+4 {
 		t.Fatalf("the baby did not run from the wither skeleton (x %.1f)", baby.x)
@@ -221,7 +221,7 @@ func TestPiglinsFightNemesis(t *testing.T) {
 	ws = h.spawnHostileYIn(players, entityWitherSkeleton, 0, float64(x)+6.5, float64(y), float64(z)+0.5)
 	ws.frozen = true
 	h.tick.Add(mobMoveInterval)
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if !b.hasTarget || b.preyTarget != ws.eid {
 		t.Fatalf("the brute ignores the wither skeleton (target %v, prey %d)", b.hasTarget, b.preyTarget)
 	}

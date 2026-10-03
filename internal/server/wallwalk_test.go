@@ -40,7 +40,7 @@ func TestSheepDoesNotWalkIntoATallWall(t *testing.T) {
 	for i := 0; i < 400; i++ {
 		s.vx, s.vz = s.moveSpeed(), 0 // keep walking at the wall
 		s.reroute = 0
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if int(math.Floor(s.x)) == 2 {
 			t.Fatalf("tick %d: the sheep walked into the wall at x=%.2f y=%.2f", i, s.x, s.y)
 		}

@@ -16,6 +16,14 @@ import (
 // back toward the water body if it would leave it. Vanilla fish/squid drift and
 // dart; ours wander within the sea and bob to stay submerged.
 func (h *hub) swimMove(m *mob, nx, nz float64, fnx, fnz int) {
+	h.swimStep(m, nx, nz, fnx, fnz, 1, true)
+}
+
+// swimStep is swimMove for a share of a goal update: the mob loop moves a
+// swimmer every tick by share of its update's step (nx, nz are already that
+// share), and the per-update changes — the drag on its rise, the wander,
+// the column's pull — land on the goal tick.
+func (h *hub) swimStep(m *mob, nx, nz float64, fnx, fnz int, share float64, goal bool) {
 	w := h.worldFor(m.dim)
 	// Entity.onAboveBubbleColumn: in an updraft's top cell, with nothing
 	// over it, the push is min(1.8, dy + 0.1) — enough to throw the swimmer
@@ -23,7 +31,7 @@ func (h *hub) swimMove(m *mob, nx, nz float64, fnx, fnz int) {
 	// falls back in, or flops where it lands.
 	cx, cy, cz := int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z))
 	updraftTop := w.At(cx, cy, cz) == worldgen.BubbleColumnUp && bubbleColumnTop(w, cx, cy, cz)
-	if updraftTop {
+	if updraftTop && goal {
 		m.vy = math.Min(columnTopUpCap, math.Max(m.vy, 0)+columnTopUpStep)
 		if !worldgen.HoldsWater(w.At(cx, int(math.Floor(m.y+m.vy)), cz)) {
 			m.leaping, m.leapVX, m.leapVY, m.leapVZ = true, m.vx, m.vy, m.vz
@@ -31,13 +39,16 @@ func (h *hub) swimMove(m *mob, nx, nz float64, fnx, fnz int) {
 			return
 		}
 	}
-	ny := m.y + m.vy
+	ny := m.y + m.vy*share
 	// Only advance into cells that are still water — otherwise bounce off the
 	// bank/surface and pick a new heading, so the fish never beaches itself.
 	if worldgen.HoldsWater(w.At(fnx, int(math.Floor(ny)), fnz)) {
 		m.x, m.y, m.z = nx, ny, nz
 	} else {
 		m.vx, m.vy, m.vz = -m.vx*0.5, -m.vy, -m.vz*0.5
+	}
+	if !goal {
+		return
 	}
 	// Small vertical wander so schools don't sit on one plane.
 	if !updraftTop && h.rng.Intn(20) == 0 {
@@ -77,6 +88,12 @@ func bubbleColumnTop(w *world.World, x, y, z int) bool {
 // with free horizontal movement (no step collision) and a gentle vertical
 // spring so it neither sinks into the ground nor drifts to the sky.
 func (h *hub) flyMove(m *mob, nx, nz float64, fnx, fnz int) {
+	h.flyStep(m, nx, nz, fnx, fnz, 1)
+}
+
+// flyStep is flyMove for a share of a goal update (the mob loop moves a
+// flier every tick; nx, nz are already that share of the step).
+func (h *hub) flyStep(m *mob, nx, nz float64, fnx, fnz int, share float64) {
 	w := h.worldFor(m.dim)
 	// Hover relative to the floor at the mob's OWN level (a cave bat hovers
 	// over the cave floor, not the mountain top far above it).
@@ -110,7 +127,7 @@ func (h *hub) flyMove(m *mob, nx, nz float64, fnx, fnz int) {
 	// Vertical spring toward the desired altitude — but never into a ceiling
 	// (the unchecked spring carried cave bats up through solid rock).
 	climb := m.moveSpeed() * m.flyingFactor()
-	ny := m.y + math.Max(-climb, math.Min(climb, (want-m.y)*0.1))
+	ny := m.y + math.Max(-climb, math.Min(climb, (want-m.y)*0.1))*share
 	if !worldgen.Collides(w.At(int(math.Floor(m.x)), int(math.Floor(ny)), int(math.Floor(m.z)))) {
 		m.y = ny
 	}

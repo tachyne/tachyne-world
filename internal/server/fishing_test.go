@@ -153,8 +153,8 @@ func TestReelHookedMobPullsIt(t *testing.T) {
 	b := poolBobber(h, pl)
 	b.state, b.hooked = bobberHooked, 9
 	h.reelBobber(players, pl, b)
-	if m.vx >= 0 { // player is west of the cow: the yank must point −x
-		t.Fatalf("hooked mob should be pulled toward the player, vx=%v", m.vx)
+	if m.dmx >= 0 { // player is west of the cow: the yank must point −x
+		t.Fatalf("hooked mob should be pulled toward the player, dx=%v", m.dmx)
 	}
 	if pl.inv.slots[0].dmg != 5 {
 		t.Fatalf("reeling a hooked mob should cost 5 durability, got %d", pl.inv.slots[0].dmg)

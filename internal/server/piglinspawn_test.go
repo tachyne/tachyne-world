@@ -134,7 +134,7 @@ func TestCrossbowPiglinShoots(t *testing.T) {
 	hp := pl.health
 	for i := 0; i < 400 && len(h.arrows) == 0; i++ {
 		h.tick.Add(1)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		pl.x, pl.y, pl.z = 6.5, 180, 0.5
 	}
 	if len(h.arrows) == 0 {

@@ -240,7 +240,7 @@ func TestPetWalksAfterOwnerThroughMobTick(t *testing.T) {
 	start := m.x
 	for i := 0; i < 40; i++ {
 		h.tick.Add(1)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if m.x > start-2 {
 		t.Errorf("after 40 ticks the wolf is at x=%.2f (from %.2f), want it walking toward its owner at 0.5", m.x, start)

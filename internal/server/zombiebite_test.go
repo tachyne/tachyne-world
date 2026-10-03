@@ -37,7 +37,7 @@ func TestZombieBitesIdlePlayer(t *testing.T) {
 	m := h.spawnHostile(players, entityZombie, px, pz+2)
 	start := pl.health
 	for i := 0; i < 300; i++ { // 300 mob updates ≈ 30 s of game time
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if pl.health < start {
 			// Vanilla zombie melee at normal difficulty = 3 HP (oracle-measured).
 			if got := int(start) - int(pl.health); got != 3 {

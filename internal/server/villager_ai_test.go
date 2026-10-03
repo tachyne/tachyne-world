@@ -7,6 +7,21 @@ import (
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
+// oakDoor is an oak door state: facing, half, open (hinge left, unpowered).
+func oakDoor(facing, half string, open bool) uint32 {
+	base := worldgen.BlockBase("oak_door")
+	info, _ := worldgen.InfoForState(base)
+	s := worldgen.SetProperty(info, base, "facing", facing)
+	s = worldgen.SetProperty(info, s, "half", half)
+	s = worldgen.SetProperty(info, s, "hinge", "left")
+	s = worldgen.SetProperty(info, s, "powered", "false")
+	o := "false"
+	if open {
+		o = "true"
+	}
+	return worldgen.SetProperty(info, s, "open", o)
+}
+
 // placeClosedDoor stamps a closed oak door standing on the natural surface at
 // (x,z) with clear headroom, and returns the door's lower-half y (the mob-feet
 // cell). Placing it on real ground keeps MobFeet landing ON the door.
@@ -208,8 +223,10 @@ func TestVillagerEscapesDooredRoom(t *testing.T) {
 		wall(1, z)
 		wall(5, z)
 	}
-	w.SetBlock(5, fy, 3, (worldgen.BlockBase("oak_door") + 27))   // oak_door lower, closed — the only way out
-	w.SetBlock(5, fy+1, 3, (worldgen.BlockBase("oak_door") + 19)) // oak_door upper, closed
+	// A closed door facing out of the east wall — the only way out. (Its
+	// slab spans the doorway; a south-facing one would close nothing here.)
+	w.SetBlock(5, fy, 3, oakDoor("east", "lower", false))
+	w.SetBlock(5, fy+1, 3, oakDoor("east", "upper", false))
 
 	m := h.spawnMob(players, entityVillager, 3.5, float64(fy), 3.5)
 	m.usesDoors = true
@@ -219,7 +236,7 @@ func TestVillagerEscapesDooredRoom(t *testing.T) {
 	opened := false
 	for i := 0; i < 800; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		h.updateOpenDoors(players)
 		if boolProp(w.At(5, fy, 3), "open") {
 			opened = true

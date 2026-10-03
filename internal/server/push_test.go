@@ -336,7 +336,7 @@ func TestAShovedMobDoesNotTurnToFaceTheShove(t *testing.T) {
 	a.vx, a.vz, a.yaw = 0, 0, 0                        // standing still, facing +z
 
 	startX := a.x
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if a.x == startX {
 		t.Fatal("the cow was never shoved, so there is nothing to prove")
 	}

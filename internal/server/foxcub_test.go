@@ -26,7 +26,7 @@ func TestFoxKitFollowsAnAdult(t *testing.T) {
 	h.gridDirty()
 	d0 := math.Hypot(adult.x-kit.x, adult.z-kit.z)
 	for i := 0; i < 20; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		h.gridDirty()
 	}
 	if d := math.Hypot(adult.x-kit.x, adult.z-kit.z); d > d0-2 {

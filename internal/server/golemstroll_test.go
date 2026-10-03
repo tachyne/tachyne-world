@@ -36,12 +36,12 @@ func TestIronGolemStrollsTheVillage(t *testing.T) {
 	v.bed = blockPos{20, 180, 2} // a claimed bed makes this a village
 	v.lastSlept = h.tick.Load() + 1
 	h.gridDirty()
-	cap := g.moveSpeed() * golemStrollSpeed * 1.05
+	cap := walkPerUpdate(g, golemStrollSpeed) * 1.05
 	walked := 0.0
 	for i := 0; i < 1500; i++ {
 		px, pz := g.x, g.z
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if d := math.Hypot(g.x-px, g.z-pz); d > cap {
 			t.Fatalf("update %d: an idle golem walks at 0.6 (%.3f), not %.3f", i, cap, d)
 		}

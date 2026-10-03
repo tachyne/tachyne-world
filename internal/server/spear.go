@@ -157,6 +157,9 @@ func (h *hub) mobMotion(m *mob) (float64, float64, float64) {
 			m = v
 		}
 	}
+	if h.travels(m) {
+		return m.dmx, m.vy, m.dmz // a walker's deltaMovement
+	}
 	return m.vx / mobMoveInterval, 0, m.vz / mobMoveInterval
 }
 
@@ -494,10 +497,8 @@ func (h *hub) stabMobByPlayer(players map[int32]*tracked, t *tracked, m *mob, to
 		// LivingEntity.knockback along the wielder's facing: half what the mob
 		// had, plus the shove.
 		dx, dz := math.Sin(float64(t.yaw)*math.Pi/180), math.Cos(float64(t.yaw)*math.Pi/180)
-		step := stabKnock(st.enchLvl(enchKnockback)) * m.kbScale() * mobMoveInterval
-		m.vx, m.vz = m.vx/2-dx*step, m.vz/2+dz*step
-		m.kb, m.reroute = 3, 0
-		h.mobKnockVelocity(players, m)
+		p := stabKnock(st.enchLvl(enchKnockback)) * m.kbScale()
+		h.mobShove(players, m, 0.5, -dx*p, dz*p, 0, 3)
 	}
 	dismounted := b.dismount && h.unseatMob(players, m)
 	if !landed && !b.knock && !dismounted {

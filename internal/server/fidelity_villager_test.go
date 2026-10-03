@@ -163,13 +163,13 @@ func TestRiderGluedToVehicle(t *testing.T) {
 
 	// Move the ravager; the rider should be glued to it on the next mob update.
 	rav.x, rav.y, rav.z = 20, 72, 25
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if rider.x != rav.x || rider.z != rav.z {
 		t.Fatalf("rider not glued to vehicle: rider(%v,%v) vehicle(%v,%v)", rider.x, rider.z, rav.x, rav.z)
 	}
 	// Kill the vehicle: the rider dismounts (mount cleared) and rejoins the world.
 	rav.dying = 1
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if rider.mount != 0 {
 		t.Fatalf("rider must dismount when its vehicle dies: mount=%d", rider.mount)
 	}

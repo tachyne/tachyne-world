@@ -82,7 +82,7 @@ func TestNetherCatalystBloomsOnDeath(t *testing.T) {
 	h.killMob(players, m)
 	for i := 0; i < deathAnimTicks+2 && h.mobs[m.eid] != nil; i++ {
 		h.tick.Add(1)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if h.mobs[m.eid] != nil {
 		t.Fatal("the blaze never finished dying")
@@ -241,7 +241,7 @@ func TestNetherVillagerOpensNetherDoor(t *testing.T) {
 	m.home = blockPos{x, y, z}
 	for i := 0; i < mobMoveInterval*2; i++ {
 		h.tick.Add(1)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if worldgen.IsClosedDoor(nw.At(door.x, door.y, door.z)) {
 		t.Fatal("the Nether villager did not open the Nether door beside it")

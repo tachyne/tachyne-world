@@ -122,7 +122,7 @@ func TestOpenEyeblossomPoisonsBees(t *testing.T) {
 	if bee.hasEffect(effPoison) != 0 {
 		t.Fatal("the one-second sweep no longer runs the eyeblossom")
 	}
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if bee.hasEffect(effPoison) == 0 {
 		t.Fatal("the bee should be poisoned on its update")
 	}
@@ -131,13 +131,13 @@ func TestOpenEyeblossomPoisonsBees(t *testing.T) {
 	}
 	delete(bee.effects, effPoison) // the dose ran out
 	bee.x, bee.y, bee.z = 0.5, 180, 0.5
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if bee.hasEffect(effPoison) == 0 {
 		t.Fatal("a bee still in the flower is poisoned again at once")
 	}
 	w.SetBlock(0, 180, 0, closedEyeblossom)
 	bee2 := h.spawnMob(players, entityBee, 0.5, 180, 0.5)
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if bee2.hasEffect(effPoison) != 0 {
 		t.Fatal("a closed eyeblossom does nothing")
 	}

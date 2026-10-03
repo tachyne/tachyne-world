@@ -45,7 +45,7 @@ func TestGolemWalksOffTheFountainPillar(t *testing.T) {
 	g.home = blockPos{-249, 76, -588}
 	for i := 0; i < 3000; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if g.y < 77 && math.Hypot(g.x+248.5, g.z+585.5) > 2.5 {
 			return // down and away from the fountain
 		}

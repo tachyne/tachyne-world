@@ -200,7 +200,7 @@ func TestParrotLandsThroughMobTick(t *testing.T) {
 	m := tamedParrot(t, h, players, pl, 1, 6.5, 0.5) // beyond FollowOwnerGoal's five-block start
 	for i := 0; i < 400 && !pl.shoulderOccupied(); i++ {
 		h.tick.Add(1)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if !pl.shoulderOccupied() || h.mobs[m.eid] != nil {
 		t.Fatalf("after 400 ticks the parrot is at %.2f,%.2f,%.2f and the shoulders are %v", m.x, m.y, m.z, pl.shoulders)

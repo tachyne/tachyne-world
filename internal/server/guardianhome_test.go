@@ -29,14 +29,14 @@ func TestElderGuardianSwimsHome(t *testing.T) {
 	players[pl.p.eid] = pl
 	m := h.spawnHostileY(players, entityElderGuardian, 1.5, 151, 0.5)
 	h.tick.Add(mobMoveInterval)
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if m.homeR != elderHomeRadius || abs(m.homePos.x-floorInt(m.x)) > 1 {
 		t.Fatalf("the elder takes where it is as home: %+v r=%d", m.homePos, m.homeR)
 	}
 	m.x, m.sx = 30.5, 30.5 // carried off
 	for i := 0; i < 300 && m.x > float64(m.homePos.x+elderHomeRadius); i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if m.x > float64(m.homePos.x+elderHomeRadius) {
 		t.Errorf("an elder guardian outside its home swims back, still at x=%.1f", m.x)

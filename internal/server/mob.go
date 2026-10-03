@@ -17,7 +17,16 @@ import (
 // primitives plug in where stepWander is called.
 
 const (
-	mobMoveInterval = 2 // step + broadcast mob movement every N ticks
+	// mobGoalInterval is Mob.serverAiStep's cadence: the goal and target
+	// selectors run in full every other tick ((tickCount + id) % 2), the
+	// navigation, move control and travel every tick. updateMobs runs every
+	// tick; a mob's goals (and the viewers' position update) every second one.
+	mobGoalInterval = 2
+	// mobMoveInterval is the ticks one goal update covers. Every per-update
+	// clock and per-update odds in the goal code is in these units, which
+	// are vanilla's own: a goal that does not require an update every tick
+	// counts its delays in reducedTickDelay, half the ticks.
+	mobMoveInterval = mobGoalInterval
 	// Vanilla-measured duty cycle (oracle diff, MECHANICS "Vanilla oracle"):
 	// unprovoked mobs IDLE most of the time and stroll briefly — passives drift
 	// ~0.16 b/s perceived (≈15-20% moving), unaggroed hostiles ~0.05 b/s. Idle
@@ -45,6 +54,8 @@ type mob struct {
 	lastHurt        float64 // the raw amount of that blow: only a bigger blow's excess lands while > 10
 	eid             int32
 	etype           int
+	aiTicks         uint32   // updateMobs ticks it has run: its goals run on the even ones (goalTurn)
+	moveHeld        bool     // the last goal update held it where it is (sitting, riding, asleep…): the ticks between do not move it
 	behavior        Behavior // per-tick steering primitive (wander/herd/…)
 	herd            int      // index into hub.herds — the goal a herd mob steers toward
 	reroute         int      // ticks left committed to an escape heading after a block
@@ -55,10 +66,16 @@ type mob struct {
 	panic           int      // ticks left fleeing after being hit
 	kb              int      // knockback updates left (velocity decays, no steering/clamp)
 	kbFlight        bool     // …and the knock launched it: it flies its arc on travel's physics (knockflight.go)
-	kvx, kvz        float64  // …that flight's horizontal deltaMovement, per TICK
-	rest            int      // grazing pause: updates left standing still (passive idling)
-	fleeX, fleeZ    float64  // the threat that set it panicking
-	panicTX         float64  // the random spot it is running to (PanicGoal), when panicHasT
+	dmx, dmz        float64  // a walker's horizontal deltaMovement, per tick (mobtravel.go; m.vy is the vertical)
+	onGround        bool     // a walker's Entity.onGround: its last move came down on something
+	horizColl       bool     // …and its last move was stopped across (horizontalCollision)
+	jumpWanted      bool     // the move control's jump for the next tick (a step a block high)
+	jumpDelay       int      // LivingEntity.noJumpDelay
+	stuckSet        bool     // makeStuckInBlock: the next move is cut by stuckX (across) and stuckY
+	stuckX, stuckY  float64
+	rest            int     // grazing pause: updates left standing still (passive idling)
+	fleeX, fleeZ    float64 // the threat that set it panicking
+	panicTX         float64 // the random spot it is running to (PanicGoal), when panicHasT
 	panicTZ         float64
 	panicHasT       bool
 	panicLeg        int          // updates spent on the current panic leg
@@ -710,6 +727,7 @@ func (h *hub) spawnMobCause(players map[int32]*tracked, etype, dim int, x, y, z 
 	eid := h.allocEID()
 	m := &mob{living: living{attrs: newMobAttributes(etype)}, eid: eid, etype: etype, dim: dim, behavior: wanderBehavior{}, health: mobHealth(etype), x: x, y: y, z: z, sx: x, sy: y, sz: z, spawnTick: h.tick.Load()}
 	binary.BigEndian.PutUint32(m.uuid[12:], uint32(eid)) // unique enough for the client
+	m.onGround = h.mobSupported(m)                       // placed on a floor, it stands on it from the start
 	if etype == entitySheep {
 		m.color = h.rollSheepColor() // vanilla's spread: mostly white, pink 1-in-600
 	}
@@ -742,8 +760,23 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 	if len(h.golemChests) > 0 {
 		h.golemChestSweep(players) // a golem gone with a chest open leaves it
 	}
-	h.pushMobs(players) // crowding: mobs standing in one another shove apart
+	h.mobTicks++
+	if h.mobTicks%mobGoalInterval == 0 {
+		h.pushMobs(players) // crowding: mobs standing in one another shove apart (per goal update)
+	}
 	for _, m := range h.mobs {
+		// Mob.serverAiStep: the goal selectors run in full every other tick
+		// (by the mob's own count); the tick between moves the body only.
+		goal := m.goalTurn()
+		if !goal {
+			if m.moveHeld || m == h.dragon || m.dying > 0 || m.health <= 0 {
+				h.mobCarryTick(m)
+				continue
+			}
+			h.mobMoveTick(players, m, false)
+			continue
+		}
+		m.moveHeld = true // until the goals below let it move this tick
 		if m.invulnTicks > 0 {
 			m.invulnTicks -= mobMoveInterval
 		}
@@ -1221,8 +1254,12 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				chase = chaseSpeedMod(m)
 			}
 			dvx, dvz = dvx*chase, dvz*chase
-			m.vx = m.vx*0.85 + dvx*0.15 // momentum → smooth
-			m.vz = m.vz*0.85 + dvz*0.15
+			if h.travels(m) {
+				m.vx, m.vz = dvx, dvz // a walker's momentum is its travel's
+			} else {
+				m.vx = m.vx*0.85 + dvx*0.15 // momentum → smooth
+				m.vz = m.vz*0.85 + dvz*0.15
+			}
 			// An amble runs at the stroll goal's own speed — a ravager
 			// lumbers at 0.4 of its pace, a horse at 0.7 — while a mob with
 			// somewhere to be (a hunt, a mate) moves at its full speed.
@@ -1237,216 +1274,11 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 
 		h.leapCheck(players, m) // LeapAtTargetGoal: a spider, wolf, cat, ocelot or fox springs at its target
-		h.applyFluidPush(m)     // a current carries whatever is standing in it
-
-		// Move, by locomotion mode: walkers collide with terrain, fliers float
-		// free, swimmers stay inside their water column, anchored mobs hold.
-		// The crowding shove rides on top of the steering: vanilla applies it
-		// after the AI has moved (pushEntities is the tail of aiStep), and it
-		// deliberately escapes the speed clamp above — squeezing out of a
-		// packed pen is meant to outrun a walk.
-		// Block.getSpeedFactor: soul sand and honey take a walker down to 0.4×
-		// (Entity.getBlockSpeedFactor reads the feet cell, else the one below).
-		sf := 1.0
-		if !m.flies && !m.swims {
-			sf = h.mobSpeedFactor(m)
+		m.moveHeld = false
+		if h.mobMoveTick(players, m, true) {
+			continue // stepped into a neighbour shard — handed off, done this tick
 		}
-		sf *= h.webFactor(m)
-		if m.flies {
-			sf *= m.flyingFactor() // FlyingMoveControl: airborne, FLYING_SPEED sets the pace
-		}
-		nx, nz := m.x+m.vx*sf+m.pushX, m.z+m.vz*sf+m.pushZ
-		fnx, fnz := int(math.Floor(nx)), int(math.Floor(nz))
-		switch {
-		case m.statik:
-			m.vx, m.vz = 0, 0 // anchored (shulker)
-		case m.geyserFly:
-			m.vx, m.vz = 0, 0 // lifted by a geyser: geyserFlights moves it, tick by tick
-		case m.leaping:
-			h.leapFlight(players, m) // LeapAtTargetGoal's spring, gravity and all
-		case (m.etype == entityGoat || m.etype == entityFrog) && m.goatJumping:
-			h.goatFlight(players, m) // the long jump's arc
-		case m.etype == entityBreeze && m.brzState == brzJumping:
-			h.breezeFlight(players, m) // the long jump's arc, gravity and all
-		case m.etype == entityVex:
-			h.vexFlight(players, m) // wanted-point flight through blocks, charges and drifts
-		case m.flies:
-			h.flyMove(m, nx, nz, fnx, fnz)
-		case m.swims:
-			h.swimMove(m, nx, nz, fnx, fnz)
-		case isAmphibious(m.etype) && h.inWater(m.dim, m.x, m.y, m.z):
-			// Drowned.travelInWater: in water it swims rather than walking the
-			// floor, which is what lets it come up at a target instead of
-			// trudging along the seabed under them.
-			h.swimMove(m, nx, nz, fnx, fnz)
-		default:
-			// Walk — but never onto water, into a tree, up a step taller than
-			// one block or off a drop deeper than three (mobStepOK holds the
-			// rules). When blocked, commit to a fresh random heading for a while
-			// to escape.
-			//
-			// The shove gets a second chance first: a mob being pressed into a
-			// wall by the crowd should slide along it, as vanilla's axis-separated
-			// collision does, not read the wall as "my route is blocked" and pick
-			// a random new heading. Dropping the shove and retrying the mob's own
-			// step keeps a herd against a fence from twitching.
-			stepFn := h.mobStepOK
-			if m.kbFlight {
-				stepFn = h.knockStepOK // a knocked body goes where the blow sends it, not where it would walk
-			}
-			stepOK := stepFn(m, nx, nz)
-			if !stepOK && (m.pushX != 0 || m.pushZ != 0) {
-				nx, nz = m.x+m.vx, m.z+m.vz
-				stepOK = stepFn(m, nx, nz)
-			}
-			switch {
-			case stepOK && h.ownedAt(nx, nz):
-				m.x, m.z = nx, nz
-			case stepOK && h.migrateMobAcross(players, m, nx, nz):
-				continue // stepped into a neighbour shard — handed off, done this tick
-			case climbsWalls(m.etype):
-				// Spider.tick: setClimbing(horizontalCollision) — a spider is
-				// climbing exactly when it walked into something, and then goes
-				// UP rather than looking for a way round.
-				h.setClimbing(players, m, true)
-				m.y++
-			case m.kbFlight:
-				h.knockHitsWall(m, nx, nz) // Entity.collide: the blocked axis stops, the other slides on
-			default:
-				// A hunting zombie stopped by a closed wooden door beats on it
-				// (BreakDoorGoal) instead of picking a new heading.
-				if m.breaksDoors && m.hasTarget {
-					if door, ok := h.doorAhead(m, nx, nz); ok && h.zombieBeatsDoor(players, m, door) {
-						break
-					}
-				}
-				if m.etype == entityVindicator && h.raiderInActiveRaid(m) {
-					if door, ok := h.doorAhead(m, nx, nz); ok && h.vindicatorAtDoor(players, m, door) {
-						break
-					}
-				}
-				ang := h.rng.Float64() * 2 * math.Pi
-				m.vx, m.vz = math.Cos(ang)*m.moveSpeed(), math.Sin(ang)*m.moveSpeed()
-				m.reroute = 15 + h.rng.Intn(15)
-			}
-			if stepOK && m.doorPos != (blockPos{}) {
-				h.zombieStopDoor(players, m) // walked on: the door is no longer in the way
-			}
-			if climbsWalls(m.etype) && stepOK {
-				h.setClimbing(players, m, false) // nothing in the way any more
-			}
-			// Seat the feet on the real (edit-aware) floor every tick, so digging
-			// the block under a mob drops it and a placed block lifts it — but never
-			// onto a fence (the floor scan excludes fence-tops, so placing a fence
-			// on a mob doesn't teleport it up onto the fence and strand it). The
-			// floor is found from the mob's own height, NOT the column surface —
-			// seating against the surface teleported every cave mob into daylight.
-			oldY := m.y
-			fx, fz := int(math.Floor(m.x)), int(math.Floor(m.z))
-			floor := float64(h.mobFeetAt(m, fx, fz, int(math.Floor(m.y)))) // a snow walker stops on powder snow
-			if m.stepsOverFences() {
-				if top, ok := h.fenceTopAt(m, fx, int(floor), fz); ok {
-					floor = top // a camel stands on the fence it stepped onto
-				}
-			}
-			if lvl := m.hasEffect(effLevitation); lvl > 0 {
-				// LivingEntity.travel under Levitation: each tick dy eases
-				// toward 0.05 × level (dy += (target − dy) × 0.2) and nothing
-				// pulls it down; a ceiling stops the rise. When the effect
-				// ends the floor below takes it back — and the fall hurts.
-				ht := m.box().h
-				for i := 0; i < mobMoveInterval; i++ {
-					m.vy += (0.05*float64(lvl) - m.vy) * 0.2
-					top := int(math.Floor(m.y + m.vy + ht))
-					if worldgen.Collides(h.worldFor(m.dim).At(fx, top, fz)) {
-						m.vy = 0
-						break
-					}
-					m.y += m.vy
-				}
-			} else if h.mobAirborneStep(players, m, fx, fz, floor) {
-				// A bubble column, a bounce off slime, a web or a honey wall:
-				// the vertical integrator moved it (mobairborne.go).
-			} else if fl, ok := h.floatLevel(m, fx, fz, floor); ok && mobFloats(m) {
-				// FloatGoal / Swim: in deep water it bobs up until its eyes clear the surface.
-				if m.y < fl {
-					m.y = math.Min(fl, m.y+floatRisePerUpd)
-				} else {
-					m.y = fl
-				}
-			} else if floor < m.y && m.gravity() <= 0 {
-				// No GRAVITY (or less than none): nothing pulls it down onto
-				// the lower floor, so it stays where it is, as a vanilla mob
-				// on /attribute gravity 0 hangs in the air.
-			} else {
-				m.y = floor
-				// Water, a web, powder snow or a honey side on the way down
-				// reset the fall: only what lies below the last of them counts.
-				fell := h.fallAfterResets(m, fx, fz, oldY, m.y)
-				if v := slimeLaunch(fell, m.gravity()); oldY > m.y && v > 0 && isSlimeBlock(h.worldFor(m.dim).At(fx, floorInt(m.y)-1, fz)) {
-					// SlimeBlock: no damage, and the landing turns into a
-					// bounce the integrator carries from here.
-					m.airborne, m.vy, m.airFall = true, v, 0
-				} else {
-					if fell > 0.5 {
-						h.mobTrample(players, m, fell) // FarmlandBlock.fallOn
-					}
-					if oldY > m.y {
-						h.mobFallOnEgg(players, m) // TurtleEggBlock.fallOn
-					}
-					if fell > m.safeFallDistance() { // the ground dropped out under it
-						h.mobFall(players, m, fell)
-					}
-				}
-			}
-		}
-		if (m.vx != 0 || m.vz != 0) && !m.kbFlight { // a knocked body does not turn to face its flight
-			m.yaw = float32(math.Atan2(-m.vx, m.vz) * 180 / math.Pi)
-		}
-		// A standing NPC turns to face the nearest player (it's listening to you).
-		if _, isNPC := h.npcs[m.eid]; isNPC && math.Hypot(m.vx, m.vz) < 0.02 {
-			if t := h.nearestPlayer(players, m.x, m.z, npcFaceRange); t != nil {
-				m.yaw = float32(math.Atan2(-(t.x-m.x), t.z-m.z) * 180 / math.Pi)
-			}
-		}
-		// LookAtPlayerGoal / RandomLookAroundGoal: the head watches a player
-		// or glances around while the body goes on about its business.
-		h.idleLook(players, m)
-		if m.etype == entityEnderman {
-			h.endermanFaceTarget(players, m) // a held enderman looks its starer in the eye
-		}
-
-		// Only emit when the mob actually moved — broadcasting a no-op move
-		// every tick for every mob overflows slow clients' send queues. The
-		// event carries the absolute position; each viewer's renderer derives
-		// its own relative deltas.
-		if m.x != m.sx || m.y != m.sy || m.z != m.sz {
-			h.mobFootsteps(players, m, m.x-m.sx, m.y-m.sy, m.z-m.sz)
-			// A walking or swimming mob's STEP/SWIM vibration (Entity.move →
-			// gameEvent), throttled like a player's; fliers make none.
-			if (m.x != m.sx || m.z != m.sz) && !m.flies && !flyerSpecies(m.etype) && h.tick.Load() >= h.sculkStep[m.eid] {
-				h.sculkStep[m.eid] = h.tick.Load() + 3
-				h.vibStep(m.dim, m.x, m.y, m.z, m.eid)
-			}
-			m.sx, m.sy, m.sz = m.x, m.y, m.z
-			h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
-		}
-		// Facing only when it changed meaningfully (saves packets). BOTH the head
-		// rotation and a zero-delta move ride the same latch: the move carries the
-		// BODY yaw, without which a mob turning in place (tracking a target while
-		// stationary) renders with a frozen torso — visible as a direction snap at
-		// a shard crossing, where the shadow pipeline had been streaming the live
-		// body yaw all along.
-		if math.Abs(float64(m.yaw-m.syaw)) > 8 {
-			m.syaw = m.yaw
-			h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
-		}
-		// The head is its own rotation: a mob watching a player turns it
-		// without turning the body (vanilla's ClientboundRotateHeadPacket).
-		if math.Abs(float64(m.headYaw-m.sheadYaw)) > 8 {
-			m.sheadYaw = m.headYaw
-			h.toTracking(players, m.eid, m.dim, m.x, m.z, entHead(m.eid, m.headYaw))
-		}
+		h.mobFaceAndBroadcast(players, m)
 		if m.etype == entityEnderDragon {
 			continue // the dragon flies on its own update (updateDragon)
 		}
@@ -1454,116 +1286,272 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			h.golemCrackSound(players, m) // a blow that cracks it further clanks
 			h.golemMelee(players, m)      // the guardian punches hostiles (not hostile itself)
 		}
-		if m.etype == entityEnderman {
-			h.endermanCarry(players, m) // pick up / put down blocks (even while neutral)
-			if m.enderHeld {
-				continue // EndermanFreezeWhenLookedAt holds MOVE: no melee while it stares back
+		h.mobAfterMove(players, m)
+	}
+}
+
+// goalTurn counts a tick of the mob and reports whether its goal selectors
+// run on it: its first tick, then every other one — Mob.serverAiStep's
+// (tickCount + id) % 2, the stagger set where a batch of mobs is placed
+// at once (reloadMob).
+func (m *mob) goalTurn() bool {
+	m.aiTicks++
+	return (m.aiTicks-1)%mobGoalInterval == 0
+}
+
+// mobCarryTick is the tick between goal updates for a mob that is not
+// moving itself: one riding another mob or a cart stays where it is
+// carried.
+func (h *hub) mobCarryTick(m *mob) {
+	if m.dying > 0 || m.health <= 0 {
+		return
+	}
+	switch {
+	case m.mount != 0 && !m.mountDrives:
+		if v := h.mobs[m.mount]; v != nil && v.dying == 0 {
+			m.x, m.y, m.z, m.dim = v.x, v.y+mountRideHeight, v.z, v.dim
+		}
+	case m.mobRider != 0:
+		if r := h.mobs[m.mobRider]; r != nil && r.mountDrives && r.mount == m.eid {
+			m.x, m.y, m.z, m.dim = r.x, r.y, r.z, r.dim
+		}
+	case m.cart != 0:
+		if v := h.vehicles[m.cart]; v != nil {
+			m.x, m.y, m.z, m.dim = v.x, v.y+cartRideHeight, v.z, v.dim
+		}
+	}
+}
+
+// mobMoveTick is one tick of a mob's movement — what LivingEntity.aiStep's
+// travel does every tick, whether or not the goals ran on it. goal is true
+// on the ticks the goal selectors ran. Reports whether the mob left for a
+// neighbour shard.
+//
+// m.vx/m.vz (and a swimmer's m.vy) are what the goals asked for over a goal
+// update of mobGoalInterval ticks; each tick moves a share of it.
+func (h *hub) mobMoveTick(players map[int32]*tracked, m *mob, goal bool) bool {
+	const share = 1.0 / mobGoalInterval
+	if goal {
+		h.applyFluidPush(m) // a current carries whatever is standing in it (a goal update's worth)
+	}
+
+	// Move, by locomotion mode: walkers travel (mobtravel.go), fliers float
+	// free, swimmers stay inside their water column, anchored mobs hold.
+	// For the fliers and swimmers the crowding shove rides on top of the
+	// steering: vanilla applies it after the AI has moved (pushEntities is
+	// the tail of aiStep), and it deliberately escapes the speed clamp —
+	// squeezing out of a packed pen is meant to outrun a walk.
+	step := func() (nx, nz float64, fnx, fnz int) {
+		// Block.getSpeedFactor: soul sand and honey slow a wader (Entity.getBlockSpeedFactor
+		// reads the feet cell, else the one below); a flier's FLYING_SPEED sets its pace.
+		sf := 1.0
+		if !m.flies && !m.swims {
+			sf = h.mobSpeedFactor(m)
+		}
+		sf *= h.webFactor(m)
+		if m.flies {
+			sf *= m.flyingFactor()
+		}
+		nx, nz = m.x+(m.vx*sf+m.pushX)*share, m.z+(m.vz*sf+m.pushZ)*share
+		return nx, nz, int(math.Floor(nx)), int(math.Floor(nz))
+	}
+	switch {
+	case m.statik:
+		m.vx, m.vz = 0, 0 // anchored (shulker)
+	case m.geyserFly:
+		m.vx, m.vz = 0, 0 // lifted by a geyser: geyserFlights moves it, tick by tick
+	case m.leaping && !h.travels(m):
+		h.leapFlight(players, m) // a swimmer's spring out of the water, gravity and all
+	case m.etype == entityVex:
+		if goal {
+			h.vexGoals(players, m) // the charge and the drift
+		}
+		h.vexFlyTick(players, m) // wanted-point flight through blocks
+	case m.flies:
+		nx, nz, fnx, fnz := step()
+		h.flyStep(m, nx, nz, fnx, fnz, share)
+	case m.swims || isAmphibious(m.etype) && h.inWater(m.dim, m.x, m.y, m.z):
+		// A drowned in water swims rather than walking the floor
+		// (Drowned.travelInWater), which is what lets it come up at a target
+		// instead of trudging along the seabed under them.
+		nx, nz, fnx, fnz := step()
+		h.swimStep(m, nx, nz, fnx, fnz, share, goal)
+	default:
+		// Walk: LivingEntity.travel, tick by tick (mobtravel.go).
+		if h.mobTravel(players, m, goal) {
+			return true // stepped into a neighbour shard — handed off, done this tick
+		}
+	}
+	return false
+}
+
+// mobFaceAndBroadcast turns the body to its heading and tells the viewers
+// what moved, once per goal update (vanilla's tracker sends a mob's
+// position every few ticks, not every tick).
+func (h *hub) mobFaceAndBroadcast(players map[int32]*tracked, m *mob) {
+	if (m.vx != 0 || m.vz != 0) && !m.kbFlight { // a knocked body does not turn to face its flight
+		m.yaw = float32(math.Atan2(-m.vx, m.vz) * 180 / math.Pi)
+	}
+	// A standing NPC turns to face the nearest player (it's listening to you).
+	if _, isNPC := h.npcs[m.eid]; isNPC && math.Hypot(m.vx, m.vz) < 0.02 {
+		if t := h.nearestPlayer(players, m.x, m.z, npcFaceRange); t != nil {
+			m.yaw = float32(math.Atan2(-(t.x-m.x), t.z-m.z) * 180 / math.Pi)
+		}
+	}
+	// LookAtPlayerGoal / RandomLookAroundGoal: the head watches a player
+	// or glances around while the body goes on about its business.
+	h.idleLook(players, m)
+	if m.etype == entityEnderman {
+		h.endermanFaceTarget(players, m) // a held enderman looks its starer in the eye
+	}
+
+	// Only emit when the mob actually moved — broadcasting a no-op move
+	// every tick for every mob overflows slow clients' send queues. The
+	// event carries the absolute position; each viewer's renderer derives
+	// its own relative deltas.
+	if m.x != m.sx || m.y != m.sy || m.z != m.sz {
+		h.mobFootsteps(players, m, m.x-m.sx, m.y-m.sy, m.z-m.sz)
+		// A walking or swimming mob's STEP/SWIM vibration (Entity.move →
+		// gameEvent), throttled like a player's; fliers make none.
+		if (m.x != m.sx || m.z != m.sz) && !m.flies && !flyerSpecies(m.etype) && h.tick.Load() >= h.sculkStep[m.eid] {
+			h.sculkStep[m.eid] = h.tick.Load() + 3
+			h.vibStep(m.dim, m.x, m.y, m.z, m.eid)
+		}
+		m.sx, m.sy, m.sz = m.x, m.y, m.z
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
+	}
+	// Facing only when it changed meaningfully (saves packets). BOTH the head
+	// rotation and a zero-delta move ride the same latch: the move carries the
+	// BODY yaw, without which a mob turning in place (tracking a target while
+	// stationary) renders with a frozen torso — visible as a direction snap at
+	// a shard crossing, where the shadow pipeline had been streaming the live
+	// body yaw all along.
+	if math.Abs(float64(m.yaw-m.syaw)) > 8 {
+		m.syaw = m.yaw
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
+	}
+	// The head is its own rotation: a mob watching a player turns it
+	// without turning the body (vanilla's ClientboundRotateHeadPacket).
+	if math.Abs(float64(m.headYaw-m.sheadYaw)) > 8 {
+		m.sheadYaw = m.headYaw
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entHead(m.eid, m.headYaw))
+	}
+}
+
+// mobAfterMove is the rest of a goal update after the move: the species'
+// own ticks and the attacks.
+func (h *hub) mobAfterMove(players map[int32]*tracked, m *mob) {
+	if m.etype == entityEnderman {
+		h.endermanCarry(players, m) // pick up / put down blocks (even while neutral)
+		if m.enderHeld {
+			return // EndermanFreezeWhenLookedAt holds MOVE: no melee while it stares back
+		}
+	}
+	if m.etype == entityFrog {
+		h.frogLaySpawn(players, m) // a pregnant frog drops its clutch on the water beside it
+	}
+	h.updateAggression(players, m) // the zombie family's arms go up while it chases
+	if m.etype == entityZombifiedPiglin {
+		h.zombifiedPiglinAngerTick(players, m) // the angry pace and the first grunt
+	}
+	if m.etype == entityWolf {
+		h.begStep(players, m) // head tilt at a held bone or meat (look only)
+	}
+	if m.etype == entityPolarBear {
+		h.polarBearStep(players, m) // guarding a cub, rearing up before a bite
+	}
+	if m.etype == entityStrider {
+		h.striderShiverTick(players, m) // cold off lava: the shiver and the slow walk
+	}
+	if m.etype == entityParrot {
+		h.parrotImitateTick(players, m) // a monster's call, now and then
+		if h.parrotLandOnShoulder(players, m) {
+			return // it rides its owner's shoulder now, not the world
+		}
+	}
+	if m.etype == entityTadpole {
+		h.tadpoleTick(players, m) // growing up
+		if h.mobs[m.eid] == nil {
+			return
+		}
+	}
+	if m.etype == entityPhantom && m.hasTarget && h.phantomFearsCats(players, m) {
+		m.hasTarget = false // PhantomSweepAttackGoal: a cat about, the swoop is off
+	}
+	if m.etype == entityEndermite {
+		h.endermiteTick(players, m) // two minutes to live
+		if h.mobs[m.eid] == nil {
+			return
+		}
+	}
+	if !m.hostile && isLlama(m.etype) {
+		h.llamaWolfTick(players, m) // LlamaAttackWolfGoal: spits at wild wolves
+	}
+	if m.hostile {
+		switch m.etype {
+		case entitySkeleton, entityStray, entityBogged, entityParched:
+			h.bowDrawTick(players, m)   // the pull before the shot
+			h.skeletonShoot(players, m) // ranged: arrows from bow distance
+		case entityPillager:
+			if !m.holdingGround { // the crossbow goal waits out the stand-off
+				h.pillagerTick(players, m) // the crossbow: draw, aim, fire
 			}
-		}
-		if m.etype == entityFrog {
-			h.frogLaySpawn(players, m) // a pregnant frog drops its clutch on the water beside it
-		}
-		h.updateAggression(players, m) // the zombie family's arms go up while it chases
-		if m.etype == entityZombifiedPiglin {
-			h.zombifiedPiglinAngerTick(players, m) // the angry pace and the first grunt
-		}
-		if m.etype == entityWolf {
-			h.begStep(players, m) // head tilt at a held bone or meat (look only)
-		}
-		if m.etype == entityPolarBear {
-			h.polarBearStep(players, m) // guarding a cub, rearing up before a bite
-		}
-		if m.etype == entityStrider {
-			h.striderShiverTick(players, m) // cold off lava: the shiver and the slow walk
-		}
-		if m.etype == entityParrot {
-			h.parrotImitateTick(players, m) // a monster's call, now and then
-			if h.parrotLandOnShoulder(players, m) {
-				continue // it rides its owner's shoulder now, not the world
+		case entityIllusioner:
+			h.illusionerTick(players, m) // mirror and blindness spells, then the bow
+		case entityBlaze:
+			h.blazeTick(players, m) // the flare, the volley of three, the rest
+		case entityGhast:
+			h.ghastTick(players, m) // the twenty-tick charge, the fireball, the rest
+		case entityWither:
+			h.witherShoot(players, m) // ranged: wither skulls
+		case entityShulker:
+			h.shulkerTick(players, m) // the shell, the bullets, the teleport
+		case entityLlama, entityTraderLlama:
+			h.llamaSpit(players, m) // ranged: the spit IS the llama's only attack
+		case entityEvoker:
+			h.evokerCast(players, m) // fangs + vex summoning
+		case entityVex:
+			// VexChargeAttackGoal: the blow lands in vexFlight, on contact.
+		case entityWarden:
+			h.wardenTick(players, m) // darkness aura + sonic boom + dig-away
+		case entityGuardian, entityElderGuardian:
+			h.guardianTick(players, m) // beam attack (+ elder mining-fatigue aura)
+		case entityCreeper:
+			h.creeperFuse(players, m) // fuse + swell + bang
+		case entityWitch:
+			h.witchTick(players, m) // splash potions from a distance
+		case entityDrowned:
+			if m.trident {
+				h.drownedThrow(players, m) // ranged: hurl a trident
+			} else {
+				h.mobMelee(players, m)
 			}
-		}
-		if m.etype == entityTadpole {
-			h.tadpoleTick(players, m) // growing up
-			if h.mobs[m.eid] == nil {
-				continue
-			}
-		}
-		if m.etype == entityPhantom && m.hasTarget && h.phantomFearsCats(players, m) {
-			m.hasTarget = false // PhantomSweepAttackGoal: a cat about, the swoop is off
-		}
-		if m.etype == entityEndermite {
-			h.endermiteTick(players, m) // two minutes to live
-			if h.mobs[m.eid] == nil {
-				continue
-			}
-		}
-		if !m.hostile && isLlama(m.etype) {
-			h.llamaWolfTick(players, m) // LlamaAttackWolfGoal: spits at wild wolves
-		}
-		if m.hostile {
-			switch m.etype {
-			case entitySkeleton, entityStray, entityBogged, entityParched:
-				h.bowDrawTick(players, m)   // the pull before the shot
-				h.skeletonShoot(players, m) // ranged: arrows from bow distance
-			case entityPillager:
-				if !m.holdingGround { // the crossbow goal waits out the stand-off
-					h.pillagerTick(players, m) // the crossbow: draw, aim, fire
-				}
-			case entityIllusioner:
-				h.illusionerTick(players, m) // mirror and blindness spells, then the bow
-			case entityBlaze:
-				h.blazeTick(players, m) // the flare, the volley of three, the rest
-			case entityGhast:
-				h.ghastTick(players, m) // the twenty-tick charge, the fireball, the rest
-			case entityWither:
-				h.witherShoot(players, m) // ranged: wither skulls
-			case entityShulker:
-				h.shulkerTick(players, m) // the shell, the bullets, the teleport
-			case entityLlama, entityTraderLlama:
-				h.llamaSpit(players, m) // ranged: the spit IS the llama's only attack
-			case entityEvoker:
-				h.evokerCast(players, m) // fangs + vex summoning
-			case entityVex:
-				// VexChargeAttackGoal: the blow lands in vexFlight, on contact.
-			case entityWarden:
-				h.wardenTick(players, m) // darkness aura + sonic boom + dig-away
-			case entityGuardian, entityElderGuardian:
-				h.guardianTick(players, m) // beam attack (+ elder mining-fatigue aura)
-			case entityCreeper:
-				h.creeperFuse(players, m) // fuse + swell + bang
-			case entityWitch:
-				h.witchTick(players, m) // splash potions from a distance
-			case entityDrowned:
-				if m.trident {
-					h.drownedThrow(players, m) // ranged: hurl a trident
-				} else {
-					h.mobMelee(players, m)
-				}
-			case entityPiglin:
-				switch {
-				case m.held == itemCrossbow:
-					h.piglinCrossbowTick(players, m) // CrossbowAttack: a crossbow piglin never melees
-				case m.baby:
-					// StartAttacking is gated on isAdult: a baby piglin never fights
-				case spearOf(m.held) != nil:
-					// SpearAttack's lowered spear is the whole attack: MeleeAttack
-					// skips a piglin holding a kinetic weapon (canUseNonMeleeWeapon).
-					h.mobSpearTick(players, m)
-				default:
-					h.mobMelee(players, m)
-				}
+		case entityPiglin:
+			switch {
+			case m.held == itemCrossbow:
+				h.piglinCrossbowTick(players, m) // CrossbowAttack: a crossbow piglin never melees
+			case m.baby:
+				// StartAttacking is gated on isAdult: a baby piglin never fights
+			case spearOf(m.held) != nil:
+				// SpearAttack's lowered spear is the whole attack: MeleeAttack
+				// skips a piglin holding a kinetic weapon (canUseNonMeleeWeapon).
+				h.mobSpearTick(players, m)
 			default:
-				if m.spearGoal != nil {
-					h.mobSpearTick(players, m) // SpearUseGoal outranks the melee goal: the charge is its attack
-				} else {
-					h.mobMelee(players, m) // bite a player in reach (on cooldown)
-				}
+				h.mobMelee(players, m)
+			}
+		default:
+			if m.spearGoal != nil {
+				h.mobSpearTick(players, m) // SpearUseGoal outranks the melee goal: the charge is its attack
+			} else {
+				h.mobMelee(players, m) // bite a player in reach (on cooldown)
 			}
 		}
 	}
 }
 
-// mobStepOK reports whether a walker may stand at (nx, nz): never onto water,
+// mobStepOK is the whole-column walk rule a walker stopped across consults
+// before it jumps a step (walkBlocked; walking itself is travel now).
+// It reports whether a walker may stand at (nx, nz): never onto water,
 // into a tree, up a step taller than its climb (one block, or more on a
 // raised STEP_HEIGHT), or off a drop deeper than
 // Mob.getMaxFallDistance's comfortable three (pathMaxFall — the same drop the
@@ -1587,7 +1575,7 @@ func (h *hub) mobStepOK(m *mob, nx, nz float64) bool {
 	// A mob whose CURRENT cell is unwalkable (knocked/summoned into water)
 	// may move regardless — steering walks it ashore like vanilla wading;
 	// without this it was permanently trapped, every destination rejected.
-	destOK := w.Walkable(fnx, fnz) || !w.Walkable(cx, cz)
+	destOK := h.dryFooting(m, fnx, fnz) || !h.dryFooting(m, cx, cz)
 	// Even a blindly-wandering mob won't step into a hazard its kind treats as
 	// impassable (lava/fire/cactus) — unless it's already standing in one, so a
 	// mob knocked into lava can still scramble out. Striders/fire-immune mobs
@@ -1609,6 +1597,17 @@ func (h *hub) mobStepOK(m *mob, nx, nz float64) bool {
 	}
 	roomOK := h.bodyFits(m, fnx, fy+step, fnz) || !h.bodyFits(m, cx, fy, cz)
 	return destOK && hazardOK && roomOK && step <= m.climb() && step >= -pathMaxFall && !w.TallObstacle(fnx, fnz)
+}
+
+// dryFooting is World.Walkable at the mob's own level: where it would
+// stand in column (x, z) — the floor found from its height, not the
+// column's surface — is not water (nor a waterlogged block). A tree rooted
+// in the column far below is no obstacle at this height; a trunk at it is
+// a wall the body test meets.
+func (h *hub) dryFooting(m *mob, x, z int) bool {
+	w := h.worldFor(m.dim)
+	y := h.mobFeetAt(m, x, z, int(math.Floor(m.y)))
+	return !worldgen.HoldsWater(w.At(x, y, z)) && !worldgen.HoldsWater(w.At(x, y-1, z))
 }
 
 // bodyFits reports whether this mob's height of cells from feet y up is

@@ -17,7 +17,7 @@ func TestMobStaysOnLand(t *testing.T) {
 
 	prevY := m.y
 	for i := 0; i < 400; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if d := math.Abs(m.y - prevY); d > 1 {
 			t.Fatalf("mob stepped off a ledge: y jumped %v in one step", d)
 		}
@@ -37,28 +37,29 @@ func TestMobStaysOnLand(t *testing.T) {
 
 // TestMobPennedByFence builds a fence ring around a mob and checks it can never
 // escape — a land mob must not climb or jump over a fence (1.5-block collision).
+// The ring is two out, so the cow stands in the 3×3 inside it rather than in
+// the fence: a body already inside a shape is not held by it.
 func TestMobPennedByFence(t *testing.T) {
 	h := newTestHub(world.New(1))
 	players := map[int32]*tracked{}
 	cx, cz := h.findLand(0, 0)
 	g := h.world.GroundY(cx, cz)
 	oakFence := worldgen.BlockBase("oak_fence") + 31 // default state
-	// Fence the 3x3 pen: a ring one block out from the centre column, seated on
-	// the surface of each column so it acts as a wall the mob can't cross.
-	for dx := -1; dx <= 1; dx++ {
-		for dz := -1; dz <= 1; dz++ {
-			if dx == 0 && dz == 0 {
+	flatPad(h, cx, cz, g)
+	for dx := -2; dx <= 2; dx++ {
+		for dz := -2; dz <= 2; dz++ {
+			if abs(dx) < 2 && abs(dz) < 2 {
 				continue
 			}
 			fx, fz := cx+dx, cz+dz
-			h.world.SetBlock(fx, h.world.SurfaceFeet(fx, fz), fz, oakFence)
+			h.world.SetBlock(fx, g, fz, oakFence)
 		}
 	}
-	m := h.spawnMob(players, entityCow, float64(cx), float64(g), float64(cz))
+	m := h.spawnMob(players, entityCow, float64(cx)+0.5, float64(g), float64(cz)+0.5)
 	m.behavior = wanderBehavior{}
 	for i := 0; i < 2000; i++ {
-		h.updateMobs(players)
-		if int(math.Floor(m.x)) != cx || int(math.Floor(m.z)) != cz {
+		h.mobUpdate(players)
+		if abs(int(math.Floor(m.x))-cx) > 1 || abs(int(math.Floor(m.z))-cz) > 1 {
 			t.Fatalf("mob escaped its fenced pen to (%v,%v) at step %d", m.x, m.z, i)
 		}
 	}
@@ -76,7 +77,7 @@ func TestFenceAboveMobDoesNotTeleport(t *testing.T) {
 	oakFence := worldgen.BlockBase("oak_fence") + 31
 	w.SetBlock(cx, feet, cz, oakFence) // fence dropped right where the cow stands
 
-	h.updateMobs(players)
+	h.mobUpdate(players)
 	if int(math.Floor(m.y)) > feet {
 		t.Fatalf("mob was teleported up onto the fence: y=%v (feet was %d)", m.y, feet)
 	}

@@ -48,7 +48,7 @@ func TestRiddenMobPausesAI(t *testing.T) {
 	before := m.x
 	for i := 0; i < 5; i++ {
 		h.tick.Add(mobMoveInterval)
-		h.updateMobs(players)
+		h.mobUpdate(players)
 	}
 	if m.x != before {
 		t.Fatalf("a ridden mob's AI must be paused: x %v -> %v", before, m.x)

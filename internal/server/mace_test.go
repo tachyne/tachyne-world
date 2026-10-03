@@ -83,7 +83,7 @@ func TestMaceShockwaveKnocksNearby(t *testing.T) {
 	bystander := &mob{eid: 10, etype: entityPig, health: 20, x: 1.5, y: 80, z: 6.0} // within 3.5 of the attacker
 	h.mobs[10] = bystander
 	h.attackMob(players, pl.p.eid, m.eid)
-	if bystander.vx == 0 && bystander.vz == 0 {
+	if bystander.dmx == 0 && bystander.dmz == 0 {
 		t.Fatal("the smash shockwave should knock back a nearby mob")
 	}
 }

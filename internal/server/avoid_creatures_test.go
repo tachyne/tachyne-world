@@ -33,7 +33,7 @@ func TestWanderingTraderAvoidsIllagersAndZombies(t *testing.T) {
 		m := h.spawnMob(players, entityWanderingTrader, 0.5, 180, 0.5)
 		o := h.spawnMob(players, tc.threat, tc.at, 180, 0.5)
 		h.gridDirty()
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if got := m.avoidLeft > 0 && m.avoidEID == o.eid; got != tc.avoids {
 			t.Errorf("trader avoiding %s at %.1f: %v, want %v", advEntityName[tc.threat], tc.at, got, tc.avoids)
 		}
@@ -52,7 +52,7 @@ func TestWorriedPandaAvoidsMonsters(t *testing.T) {
 		m.variant = packPandaGenes(trait, trait)
 		z := h.spawnHostileY(players, entityZombie, 3.5, 180, 0.5)
 		h.gridDirty()
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		if got := m.avoidLeft > 0 && m.avoidEID == z.eid; got != (trait == pandaWorried) {
 			t.Errorf("panda trait %d avoiding a zombie: %v", trait, got)
 		}

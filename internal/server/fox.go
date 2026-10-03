@@ -232,7 +232,7 @@ func (h *hub) foxTick(players map[int32]*tracked, m *mob) {
 	// Eating what it carries: a fox with food in its mouth, on the ground,
 	// awake and after nothing, eats it past six hundred ticks.
 	m.foxEatTicks += mobMoveInterval
-	if m.held != 0 && foodPoints[m.held] > 0 && m.foxPrey == 0 && m.foxFlags&foxFlagSleeping == 0 && h.mobOnGround(m) {
+	if m.held != 0 && foodPoints[m.held] > 0 && m.foxPrey == 0 && m.foxFlags&foxFlagSleeping == 0 && m.onGround {
 		if m.foxEatTicks > foxEatAfter {
 			m.held, m.foxEatTicks = 0, 0
 			h.playSoundDim(players, m.dim, "minecraft:entity.fox.eat", sndNeutral, m.x, m.y, m.z, 1, 1)

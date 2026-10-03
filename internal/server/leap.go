@@ -59,7 +59,7 @@ func (h *hub) leapCheck(players map[int32]*tracked, m *mob) {
 	if d2 < leapMinSq || d2 > leapMaxSq {
 		return
 	}
-	if !h.mobOnGround(m) {
+	if !m.onGround {
 		return
 	}
 	hit := false
@@ -72,7 +72,7 @@ func (h *hub) leapCheck(players map[int32]*tracked, m *mob) {
 		return
 	}
 	dx, dz := tx-m.x, tz-m.z
-	vx, vz := m.vx*leapCarry, m.vz*leapCarry
+	vx, vz := m.dmx*leapCarry, m.dmz*leapCarry
 	if hd := math.Hypot(dx, dz); hd > 1e-6 {
 		vx += dx / hd * leapSpeed
 		vz += dz / hd * leapSpeed
@@ -80,37 +80,29 @@ func (h *hub) leapCheck(players map[int32]*tracked, m *mob) {
 	m.leaping, m.leapVX, m.leapVY, m.leapVZ = true, vx, yd, vz
 }
 
-// mobOnGround: its feet sit on the floor at its own level.
-func (h *hub) mobOnGround(m *mob) bool {
-	w := h.worldFor(m.dim)
-	return m.y <= float64(w.MobFeetFrom(int(math.Floor(m.x)), int(math.Floor(m.z)), int(math.Floor(m.y))))+1e-6
-}
-
-// leapFlight flies the spring: gravity each tick, the ground stops it.
+// leapFlight is one tick of the spring: gravity, and the ground stops it.
 func (h *hub) leapFlight(players map[int32]*tracked, m *mob) {
 	w := h.worldFor(m.dim)
-	for i := 0; i < mobMoveInterval; i++ {
-		nx, nz := m.x+m.leapVX, m.z+m.leapVZ
-		if h.ownedAt(nx, nz) && !worldgen.Collides(w.At(int(math.Floor(nx)), int(math.Floor(m.y)), int(math.Floor(nz)))) {
-			m.x, m.z = nx, nz
-		} else {
-			m.leapVX, m.leapVZ = 0, 0
-		}
-		m.y += m.leapVY
-		// LivingEntity.travelInAir: gravity, then air drag — 0.91 across,
-		// 0.98 down — every tick the leap is in the air.
-		m.leapVX, m.leapVZ = m.leapVX*0.91, m.leapVZ*0.91
-		m.leapVY = (m.leapVY - m.effectiveGravity(m.leapVY)) * 0.98
-		if m.swims && m.leapVY < 0 && worldgen.HoldsWater(w.At(floorInt(m.x), floorInt(m.y), floorInt(m.z))) {
-			m.leaping, m.leapVX, m.leapVY, m.leapVZ = false, 0, 0, 0 // a leaping swimmer is home again
-			return
-		}
-		feet := float64(w.MobFeetFrom(int(math.Floor(m.x)), int(math.Floor(m.z)), int(math.Floor(m.y))))
-		if m.leapVY < 0 && m.y <= feet {
-			m.y = feet
-			m.leaping, m.leapVX, m.leapVY, m.leapVZ = false, 0, 0, 0
-			return
-		}
+	nx, nz := m.x+m.leapVX, m.z+m.leapVZ
+	if h.ownedAt(nx, nz) && !worldgen.Collides(w.At(int(math.Floor(nx)), int(math.Floor(m.y)), int(math.Floor(nz)))) {
+		m.x, m.z = nx, nz
+	} else {
+		m.leapVX, m.leapVZ = 0, 0
+	}
+	m.y += m.leapVY
+	// LivingEntity.travelInAir: gravity, then air drag — 0.91 across,
+	// 0.98 down — every tick the leap is in the air.
+	m.leapVX, m.leapVZ = m.leapVX*0.91, m.leapVZ*0.91
+	m.leapVY = (m.leapVY - m.effectiveGravity(m.leapVY)) * 0.98
+	if m.swims && m.leapVY < 0 && worldgen.HoldsWater(w.At(floorInt(m.x), floorInt(m.y), floorInt(m.z))) {
+		m.leaping, m.leapVX, m.leapVY, m.leapVZ = false, 0, 0, 0 // a leaping swimmer is home again
+		return
+	}
+	feet := float64(w.MobFeetFrom(int(math.Floor(m.x)), int(math.Floor(m.z)), int(math.Floor(m.y))))
+	if m.leapVY < 0 && m.y <= feet {
+		m.y = feet
+		m.leaping, m.leapVX, m.leapVY, m.leapVZ = false, 0, 0, 0
+		return
 	}
 	m.vx, m.vz = 0, 0
 }

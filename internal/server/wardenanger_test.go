@@ -97,7 +97,7 @@ func TestWardenSyncsClientAnger(t *testing.T) {
 	}
 	var evs []any
 	for i := 0; i < 5; i++ {
-		h.updateMobs(players)
+		h.mobUpdate(players)
 		evs = append(evs, drainEvs(pl.p)...)
 	}
 	var sent []int32
