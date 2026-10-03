@@ -32,15 +32,15 @@ import (
 // folder under data/<ns>/tags/.
 var tagRegistries = []string{"item", "block", "entity_type", "fluid", "worldgen/biome"}
 
-// tagSet is one load's resolved tags: registry → tag id → member ids, both
+// packTagSet is one load's resolved tags: registry → tag id → member ids, both
 // as namespaced ids ("minecraft:planks" → "minecraft:oak_planks", …).
-type tagSet map[string]map[string][]string
+type packTagSet map[string]map[string][]string
 
 // tagRegistry is the tags a pack load produced, and which of them the packs
 // changed from the vanilla pack's own (new tags, tags with other members,
 // and vanilla tags that no longer load).
 type tagRegistry struct {
-	tags    tagSet
+	tags    packTagSet
 	changed map[string]map[string]bool
 }
 
@@ -57,8 +57,8 @@ func (r *tagRegistry) members(reg, id string) ([]string, bool) {
 // changedTags is the tags the packs changed, with their members as they now
 // stand (an empty list for a vanilla tag that no longer loads) — what a
 // client must be sent again (onPackRegistriesChanged).
-func (r *tagRegistry) changedTags() tagSet {
-	out := tagSet{}
+func (r *tagRegistry) changedTags() packTagSet {
+	out := packTagSet{}
 	if r == nil {
 		return out
 	}
@@ -92,13 +92,13 @@ func vanillaTagRefs(entries []string) []tagRef {
 
 var (
 	vanillaTagsOnce  sync.Once
-	vanillaTagsBuilt tagSet
+	vanillaTagsBuilt packTagSet
 )
 
 // vanillaTags is the vanilla pack's tags alone, resolved once.
-func vanillaTags() tagSet {
+func vanillaTags() packTagSet {
 	vanillaTagsOnce.Do(func() {
-		vanillaTagsBuilt = tagSet{}
+		vanillaTagsBuilt = packTagSet{}
 		for _, reg := range tagRegistries {
 			entries := map[string][]tagRef{}
 			for id, ents := range vanillaTagFiles[reg] {
@@ -219,7 +219,7 @@ func resolveTags(reg string, entries map[string][]tagRef, quiet bool) map[string
 // buildTagRegistry merges the packs' tag files (registry → tag id → files,
 // bottom pack first) onto the vanilla files and resolves every registry.
 func buildTagRegistry(files map[string]map[string][]packFile) *tagRegistry {
-	r := &tagRegistry{tags: tagSet{}, changed: map[string]map[string]bool{}}
+	r := &tagRegistry{tags: packTagSet{}, changed: map[string]map[string]bool{}}
 	van := vanillaTags()
 	for _, reg := range tagRegistries {
 		entries := map[string][]tagRef{}

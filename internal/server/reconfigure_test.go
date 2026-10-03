@@ -215,7 +215,7 @@ func TestReloadSendsUpdateTags(t *testing.T) {
 // so the client's built-in members do not stand.
 func TestPackTagSetsEmptyForUnloadedTag(t *testing.T) {
 	pc := &packContent{tags: &tagRegistry{
-		tags:    tagSet{"item": {}},
+		tags:    packTagSet{"item": {}},
 		changed: map[string]map[string]bool{"item": {"minecraft:planks": true}},
 	}}
 	sets := packTagSets(pc)
