@@ -51,7 +51,7 @@ ORE_NOISES = ["ore_veininess", "ore_vein_a", "ore_vein_b", "ore_gap"]
 # Block tags the code asks directly (would_survive's canSurvive rules), on
 # top of those the data names.
 CODE_BLOCK_TAGS = ["supports_vegetation", "supports_mangrove_propagule", "supports_cactus",
-                   "supports_sugar_cane", "supports_sugar_cane_adjacently"]
+                   "supports_sugar_cane", "supports_sugar_cane_adjacently", "overrides_mushroom_light_requirement"]
 
 # Biome tags the structure code asks directly.
 CODE_BIOME_TAGS = ["required_ocean_monument_surrounding"]
@@ -168,7 +168,8 @@ def main():
             if t == "minecraft:matching_fluids" and isinstance(o.get("fluids"), str) and o["fluids"].startswith("#"):
                 used_fluid_tags.add(short(o["fluids"][1:]))
             for k, v in o.items():
-                if k in ("blocks", "can_place_on", "can_replace", "replaceable") and isinstance(v, str) and v.startswith("#"):
+                if k in ("blocks", "can_place_on", "can_replace", "replaceable", "cannot_place_on", "accepted_neighbors",
+                         "can_be_placed_on", "valid_blocks", "replaceable_blocks") and isinstance(v, str) and v.startswith("#"):
                     used_block_tags.add(short(v[1:]))
                 scan_tags(v)
         elif isinstance(o, list):

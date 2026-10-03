@@ -146,3 +146,45 @@ func TestVanillaPlacementLeavesNativeAlone(t *testing.T) {
 		t.Errorf("native generation hash %d, frozen %d", got, frozen)
 	}
 }
+
+// TestVanillaPlacementDataParses parses every configured feature, its
+// placed features and their providers, and wants every tag they name baked
+// and every feature type the dimensions use handled or knowingly left out.
+func TestVanillaPlacementDataParses(t *testing.T) {
+	d := mustVPData()
+	seen := map[*vpFeature]bool{}
+	var walk func(f *vpFeature)
+	walkPlaced := func(pf *vpPlacedFeature) {
+		if pf != nil {
+			walk(pf.feature())
+		}
+	}
+	walk = func(f *vpFeature) {
+		if f == nil || seen[f] {
+			return
+		}
+		seen[f] = true
+		f.once.Do(f.parse)
+		for _, pf := range f.choose {
+			walkPlaced(pf)
+		}
+		for _, s := range f.sel {
+			walkPlaced(s.pf)
+		}
+		walkPlaced(f.def)
+		if f.ext3 != nil {
+			walkPlaced(f.ext3.cap)
+		}
+	}
+	for name := range d.Features {
+		walk(vpFeatureNamed(name))
+	}
+	for _, pf := range d.Placed {
+		walkPlaced(pf)
+	}
+	vpTagRangesMu.Lock()
+	defer vpTagRangesMu.Unlock()
+	for tag := range vpMissingTags {
+		t.Errorf("block tag %s is named but not baked (scripts/gen_vanilla_placement.py)", tag)
+	}
+}

@@ -782,6 +782,7 @@ var (
 	vpFluidTags   map[string][]string
 	vpTagRangesMu sync.Mutex
 	vpTagRanges   = map[string][][2]uint32{}
+	vpMissingTags = map[string]bool{}
 )
 
 // vpLoadTags reads the baked tags on their own: the placement data's
@@ -809,7 +810,7 @@ func vpTagRangesOf(tag string) [][2]uint32 {
 	}
 	names, ok := vpBlockTags[tag]
 	if !ok {
-		panic("vanilla placement: block tag " + tag + " not baked")
+		vpMissingTags[tag] = true // matches nothing; the data tests list these
 	}
 	r := vpBlockRanges(names)
 	vpTagRanges[tag] = r
