@@ -11,6 +11,15 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-10-04
+
+### Fixed
+- **Every world's caches fit the memory limit together.** The cache shares
+  were fixed for three worlds; with the shipyard as a fourth they could
+  reach three quarters of the limit. All worlds' caches now share half of
+  it however many run: the overworld half of that, the other worlds a
+  quarter between them, and every world's light the last quarter.
+
 ## 2026-10-03
 
 ### Added
@@ -148,8 +157,7 @@ the public history since the project was open-sourced on 2026-07-10.
 - **The shipyard no longer crowds the server's memory.** It had been given
   the overworld's large chunk cache, and with both full the world ran its
   garbage collector almost without pause; an empty void now takes the small
-  cache the Nether and End use, and every world's caches together now share
-  half of the memory limit however many worlds run. `/list` also stops naming the console
+  cache the Nether and End use. `/list` also stops naming the console
   (`@server`) while a bus command is running.
 - **Secure chat across shard borders**: the shard a player crosses into
   learns their chat session, so others there can verify their messages.
