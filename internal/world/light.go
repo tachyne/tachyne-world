@@ -133,8 +133,8 @@ type lightCacheEntry struct {
 func (w *World) lightCacheCap() int {
 	_, _, budget := cacheBudgets()
 	n := budget / (w.Sections() * 4096 * 2)
-	if n < 64 {
-		n = 64
+	if n < MinCachedChunks {
+		n = MinCachedChunks
 	}
 	return n
 }

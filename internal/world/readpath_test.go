@@ -79,3 +79,21 @@ func TestCachePoolFitsEveryWorld(t *testing.T) {
 		}
 	}
 }
+
+// Every world, on whatever budget, caches at least a player's whole view
+// window: a chunk evicted beside a player stops being simulated.
+func TestEveryWorldCachesAViewWindow(t *testing.T) {
+	v, err := NewVoid(1, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n, err := NewNether(1, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, w := range map[string]*World{"overworld": New(1), "void": v, "nether": n} {
+		if w.cacheCap() < MinCachedChunks || w.lightCacheCap() < MinCachedChunks {
+			t.Errorf("%s: caches hold %d and %d chunks, want at least %d", name, w.cacheCap(), w.lightCacheCap(), MinCachedChunks)
+		}
+	}
+}

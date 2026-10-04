@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-10-04
 
 ### Fixed
+- **Doors and redstone beside you in the Nether, the End and the shipyard.**
+  Those worlds' smaller chunk caches could hold fewer chunks than a
+  player's view, and a chunk dropped from the cache stops being simulated:
+  a pressure plate pressed in one chunk never released, and a door in the
+  next never heard it. Every world's caches now hold at least a whole view
+  window.
 - **Every world's caches fit the memory limit together.** The cache shares
   were fixed for three worlds; with the shipyard as a fourth they could
   reach three quarters of the limit. All worlds' caches now share half of

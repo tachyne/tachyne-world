@@ -31,8 +31,17 @@ const (
 	genCacheBudgetDefault      = 256 << 20 // main-world cached generator output
 	genCacheBudgetMinorDefault = 64 << 20  // nether/End: toured rarely, cheap to regen
 	lightCacheBudgetDefault    = 48 << 20  // per world
-	genCacheMin                = 128       // floor: lighting reads 3×3, keep a useful window
+	genCacheMin                = MinCachedChunks
 )
+
+// MinCachedChunks is the fewest chunks any world's caches hold: a whole
+// view window (radius 10, the server's view distance) and the ring lighting
+// reads around it. A chunk counts as loaded while its generated base is
+// cached (Loaded), and only loaded chunks are simulated, so a cache smaller
+// than the window evicted chunks beside a player: in the shipyard, on the
+// small budget, a pressure plate pressed in one chunk never released, and a
+// door in the next never heard it.
+const MinCachedChunks = (2*10 + 3) * (2*10 + 3)
 
 // cacheCap is the LRU entry limit for this world's chunk size. The budget is
 // PER WORLD — the engine runs several (overworld, nether, End, shipyard), so the sum must
