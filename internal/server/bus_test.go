@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 	"github.com/tachyne/tachyne-world/plugin"
 )
 
@@ -241,4 +242,24 @@ func hubBarrier(h *hub) {
 	done := make(chan struct{})
 	h.post(evRunOnHub{fn: func() { close(done) }})
 	<-done
+}
+
+// block_change names its dimension: the web map follows the overworld and
+// painted every other world's edits onto it while the event carried none.
+func TestBlockChangeNamesItsDimension(t *testing.T) {
+	h := newTestHub(world.New(1))
+	rec := &recordingBus{}
+	h.bus = rec
+	h.setBlockLive(map[int32]*tracked{}, dimNether, 3, 70, 4, worldgen.Stone)
+	raw, ok := rec.get("block_change")
+	if !ok {
+		t.Fatal("block_change was not published")
+	}
+	var ev struct {
+		X, Y, Z int
+		Dim     *int `json:"dim"`
+	}
+	if err := json.Unmarshal(raw, &ev); err != nil || ev.Dim == nil || *ev.Dim != dimNether || ev.X != 3 || ev.Z != 4 {
+		t.Fatalf("block_change payload %s (err %v)", raw, err)
+	}
 }

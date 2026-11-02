@@ -11,6 +11,16 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-11-02
+
+### Fixed
+- **The web map no longer shows other worlds' building on the overworld.**
+  The engine's `block_change` bus event carried no dimension, and the map
+  applied every change to its overworld view: a block placed in the Nether,
+  the End or the shipyard appeared on the overworld map at the same
+  coordinates until the map restarted. The event now carries `dim`, and the
+  map follows only its own world.
+
 ## 2026-10-04
 
 ### Fixed

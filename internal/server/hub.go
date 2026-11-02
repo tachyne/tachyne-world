@@ -2969,7 +2969,7 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	h.beaconsOnBlockChange(players, e.dim, e.x, e.y, e.z, e.state)
 	h.bannersOnBlockChange(players, e.dim, e.x, e.y, e.z, e.state, e.by)
 	h.spillContainer(players, e.dim, e.x, e.y, e.z, e.broken, e.state) // a broken container scatters
-	h.bus.publish("block_change", map[string]any{"x": e.x, "y": e.y, "z": e.z, "state": e.state, "by": e.by})
+	h.bus.publish("block_change", map[string]any{"x": e.x, "y": e.y, "z": e.z, "dim": e.dim, "state": e.state, "by": e.by})
 	// Lightning rods are the OVERWORLD's system: the rod POI set is where
 	// storms look, and only the overworld has weather.
 	if e.dim == dimOverworld {
@@ -3134,7 +3134,7 @@ func (h *hub) setBlockLive(players map[int32]*tracked, dim, x, y, z int, state u
 	h.afterRemoval(players, dim, blockPos{x, y, z}, old, state)
 	h.potentSulfurChanged(players, dim, blockPos{x, y, z}, old, state)
 	h.nbFrom(old, func() { h.notifyAround(players, dim, blockPos{x, y, z}) }) // setBlockAndUpdate's neighbour update
-	h.bus.publish("block_change", map[string]any{"x": x, "y": y, "z": z, "state": state, "by": "world"})
+	h.bus.publish("block_change", map[string]any{"x": x, "y": y, "z": z, "dim": dim, "state": state, "by": "world"})
 }
 
 // teleportPlayer moves a player server-side (plugin/bus): position sync to

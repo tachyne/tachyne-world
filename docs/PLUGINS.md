@@ -179,7 +179,10 @@ lowercase/snake_case, e.g. on `mc.event.mob_spawn`:
 Cancelled events are not published (the action didn't happen). A few engine events without a catalog equivalent yet publish ad-hoc
 payloads on the same namespace (`block_change`, `item_drop`, `explosion`,
 `lightning`, `enchant`, `npc_say`, and the raw `chat` line); they'll migrate
-into the catalog as it grows.
+into the catalog as it grows. `block_change` is
+`{"x","y","z","dim","state","by"}`: `dim` is the dimension id (0 overworld,
+1 Nether, 2 End, 3 the shipyard), so a consumer that follows one world —
+the web map — can ignore the others.
 
 **Commands** — publish (or request) `mc.cmd.<name>` with JSON args; with
 request-reply you get `{"ok":true[,"data":…]}` or `{"ok":false,"error":…}`:
